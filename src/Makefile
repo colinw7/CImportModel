@@ -27,28 +27,6 @@ CImportPLG.cpp \
 CImportScene.cpp \
 CImportV3D.cpp \
 CImportX3D.cpp \
-\
-CGeomAxes3D.cpp \
-CGeomBox3D.cpp \
-CGeomCamera3D.cpp \
-CGeomCone3D.cpp \
-CGeomCube3D.cpp \
-CGeomCylinder3D.cpp \
-CGeometry3D.cpp \
-CGeomFace3D.cpp \
-CGeomFill3D.cpp \
-CGeomLight3D.cpp \
-CGeomLine3D.cpp \
-CGeomObject3D.cpp \
-CGeomParticle3D.cpp \
-CGeomPoint3D.cpp \
-CGeomPyramid3D.cpp \
-CGeomScene3D.cpp \
-CGeomSphere3D.cpp \
-CGeomTorus3D.cpp \
-CGeomTriangle3D.cpp \
-CGeomUtil3D.cpp \
-CGeomVertex3D.cpp \
 
 CPP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
 
@@ -57,6 +35,7 @@ CPPFLAGS = \
 $(CDEBUG) \
 -I$(INC_DIR) \
 -I../../CImportModel/include \
+-I../../CGeometry3D/include \
 -I../../CImageLib/include \
 -I../../CFont/include \
 -I../../CFile/include \
