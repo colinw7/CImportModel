@@ -7,17 +7,10 @@
 #include <CAutoPtr.h>
 
 class CImport3DRW {
- private:
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  bool                     debug_;
-
  public:
-  CImport3DRW(CGeomScene3D *scene=NULL, const std::string &name="3drw");
+  CImport3DRW(CGeomScene3D *scene=nullptr, const std::string &name="3drw");
 
- ~CImport3DRW() { }
+ ~CImport3DRW();
 
   void setDebug(bool debug=true) { debug_ = debug; }
 
@@ -41,6 +34,13 @@ class CImport3DRW {
  private:
   void swapInt(int *word);
   void swapShort(short *word);
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  bool                     debug_ { false };
 };
 
 #endif

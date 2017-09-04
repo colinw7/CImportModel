@@ -10,16 +10,10 @@ class CGeomImportCOB : public CImportCOB {
   typedef std::vector<uint>      FaceList;
   typedef std::map<int,FaceList> MaterialFaceList;
 
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  MaterialFaceList         material_face_list_;
-
  public:
-  CGeomImportCOB(CGeomScene3D *scene=NULL, const std::string &name="cob");
+  CGeomImportCOB(CGeomScene3D *scene=nullptr, const std::string &name="cob");
 
- ~CGeomImportCOB() { }
+ ~CGeomImportCOB();
 
   CGeomObject3D &getObject() { return *object_; }
 
@@ -52,6 +46,13 @@ class CGeomImportCOB : public CImportCOB {
   void setFacesMaterial(int imat, CMaterial *material);
 
   FaceList &getMaterialFaces(int num);
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  MaterialFaceList         material_face_list_;
 };
 
 #endif

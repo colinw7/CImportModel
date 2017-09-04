@@ -9,20 +9,10 @@ class CImportDXF {
  private:
   typedef std::vector<CGeomVertex3D *> VertexList;
 
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  CFile                   *file_;
-  bool                     debug_;
-  int                      line_num_;
-  std::string              buffer_;
-  bool                     buffer_valid_;
-
  public:
-  CImportDXF(CGeomScene3D *scene=NULL, const std::string &name="dxf");
+  CImportDXF(CGeomScene3D *scene=nullptr, const std::string &name="dxf");
 
- ~CImportDXF() { }
+ ~CImportDXF();
 
   void setDebug(bool debug=true) { debug_ = debug; }
 
@@ -56,6 +46,17 @@ class CImportDXF {
   bool readLine(std::string &line);
   void unreadLine(std::string line);
   void badLine(std::string line);
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  CFile                   *file_ { nullptr };
+  bool                     debug_ { false };
+  int                      line_num_ { 0 };
+  std::string              buffer_;
+  bool                     buffer_valid_ { false };
 };
 
 #endif

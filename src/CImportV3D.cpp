@@ -6,7 +6,7 @@ CImportV3D::
 CImportV3D(CGeomScene3D *scene, const std::string &name) :
  scene_(scene), both_sides_(false), debug_(false)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -15,7 +15,7 @@ CImportV3D(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
 }
 
@@ -44,7 +44,7 @@ read(CFile &file)
   for (int i = 0; i < num_vertices; i++) {
     file.readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     if (words.size() != 3)
       throw "Invalid Point";
@@ -62,7 +62,7 @@ read(CFile &file)
   int face_num = -1;
 
   while (file.readLine(line)) {
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     if (words.size() == 0)
       continue;
@@ -76,7 +76,7 @@ read(CFile &file)
       for (int i = 0; i < num_faces; i++) {
         file.readLine(line);
 
-        CStrWords words = CStrUtil::toWords(line, NULL);
+        CStrWords words = CStrUtil::toWords(line, nullptr);
 
         long num_vertices = CStrUtil::toInteger(words[0].getWord());
 

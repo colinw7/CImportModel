@@ -6,18 +6,10 @@
 #include <CAutoPtr.h>
 
 class CImportX3D {
- private:
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  CFile                   *file_;
-  bool                     debug_;
-
  public:
   CImportX3D(CGeomScene3D *scene=NULL, const std::string &name="x3d");
 
- ~CImportX3D() { }
+ ~CImportX3D();
 
   void setDebug(bool debug=true) { debug_ = debug; }
 
@@ -37,6 +29,14 @@ class CImportX3D {
 
     return object_;
   }
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  CFile                   *file_ { nullptr };
+  bool                     debug_ { false };
 };
 
 #endif

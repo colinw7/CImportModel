@@ -5,7 +5,7 @@ CGeomImportPLG::
 CGeomImportPLG(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -14,7 +14,7 @@ CGeomImportPLG(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
 }
 
@@ -27,8 +27,7 @@ addVertex(double x, double y, double z)
 
 void
 CGeomImportPLG::
-addITriangle(int i1, int i2, int i3, CDrawType3D,
-             CShadeType3D, const CRGBA &rgba)
+addITriangle(int i1, int i2, int i3, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
   CMaterial *material = new CMaterial;
 
@@ -41,8 +40,7 @@ addITriangle(int i1, int i2, int i3, CDrawType3D,
 
 void
 CGeomImportPLG::
-addITriangles(uint *inds, uint num_inds, CDrawType3D,
-              CShadeType3D, const CRGBA &rgba)
+addITriangles(uint *inds, uint num_inds, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
   CMaterial *material = new CMaterial;
 

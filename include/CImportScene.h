@@ -15,9 +15,9 @@ class CGeomVertex3D;
 
 class CImportScene {
  public:
-  CImportScene(CGeomScene3D *scene=NULL, const std::string &name="scene");
+  CImportScene(CGeomScene3D *scene=nullptr, const std::string &name="scene");
 
- ~CImportScene() { }
+ ~CImportScene();
 
   void setDebug(bool debug=true) { debug_ = debug; }
 
@@ -51,15 +51,15 @@ class CImportScene {
   void           getRGBA(int color, CRGBA *rgba);
 
  private:
-  CGeomScene3D                           *scene_;
+  CGeomScene3D                           *scene_ { nullptr };
   CAutoPtr<CGeomScene3D>                  pscene_;
-  CFile                                  *file_;
-  bool                                    debug_;
+  CFile                                  *file_ { nullptr };
+  bool                                    debug_ { false };
   std::map<std::string, CGeomObject3D *>  objects_;
   std::map<std::string, CGeomObject3D *>  primitives_;
   std::vector<std::string>                colors_;
   std::vector<std::string>                textures_;
-  int                                     orientation_;
+  int                                     orientation_ { 1 };
 };
 
 #endif

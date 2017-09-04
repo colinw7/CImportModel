@@ -27,7 +27,7 @@ commands[] = {
   "Colors",
   "Colours",
   "Textures",
-  NULL,
+  nullptr,
 };
 
 #define SCENE_OBJECT_CMD     1
@@ -43,7 +43,7 @@ scene_commands[] = {
   "Eye",
   "Window",
   "End",
-  NULL,
+  nullptr,
 };
 
 #define PRIMITIVE_FACES_CMD     1
@@ -63,7 +63,7 @@ primitive_commands[] = {
   "Points",
   "Rotate",
   "End",
-  NULL,
+  nullptr,
 };
 
 #define OBJECT_PRIMITIVE_CMD       1
@@ -101,7 +101,7 @@ object_commands[] = {
   "CoverMask",
   "Transforms",
   "End",
-  NULL,
+  nullptr,
 };
 
 #define FACES_END_CMD 1
@@ -109,7 +109,7 @@ object_commands[] = {
 static const char *
 faces_commands[] = {
   "End",
-  NULL,
+  nullptr,
 };
 
 #define LINES_END_CMD 1
@@ -117,7 +117,7 @@ faces_commands[] = {
 static const char *
 lines_commands[] = {
   "End",
-  NULL,
+  nullptr,
 };
 
 #define POINTS_END_CMD 1
@@ -125,7 +125,7 @@ lines_commands[] = {
 static const char *
 points_commands[] = {
   "End",
-  NULL,
+  nullptr,
 };
 
 #define ROTATE_END_CMD 1
@@ -133,7 +133,7 @@ points_commands[] = {
 static const char *
 rotate_commands[] = {
   "End",
-  NULL,
+  nullptr,
 };
 
 #define COLORS_END_CMD 1
@@ -141,7 +141,7 @@ rotate_commands[] = {
 static const char *
 colors_commands[] = {
   "End",
-  NULL,
+  nullptr,
 };
 
 #define TRANSFORMS_TRANSLATE_CMD 1
@@ -159,17 +159,22 @@ transforms_commands[] = {
   "RotateY",
   "RotateZ",
   "End",
-  NULL,
+  nullptr,
 };
 
 CImportScene::
 CImportScene(CGeomScene3D *scene, const std::string &) :
- scene_(scene), orientation_(1)
+ scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
+}
+
+CImportScene::
+~CImportScene()
+{
 }
 
 bool
@@ -186,7 +191,7 @@ read(CFile &file)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), commands);
 
@@ -237,7 +242,7 @@ readScene()
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), scene_commands);
 
@@ -245,7 +250,7 @@ readScene()
       case SCENE_OBJECT_CMD: {
         CGeomObject3D *object = getPrimitive(words[1].getWord());
 
-        if (object == NULL) {
+        if (! object) {
           std::cerr << "Unrecognised Object " << words[1].getWord() << std::endl;
           return;
         }
@@ -277,7 +282,7 @@ addObject(const std::string &name)
 {
   CGeomObject3D *primitive = getPrimitive(name);
 
-  if (primitive == NULL) {
+  if (! primitive) {
     if      (name == "Sphere") {
       primitive = CGeometryInst->createObject3D(scene_, "sphere");
 
@@ -290,7 +295,7 @@ addObject(const std::string &name)
     }
   }
 
-  if (primitive == NULL) {
+  if (! primitive) {
     std::cerr << "Unrecognised Primitive " << name << std::endl;
     return;
   }
@@ -318,7 +323,7 @@ readPrimitive(const std::string &name)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), primitive_commands);
 
@@ -398,7 +403,7 @@ readObject(const std::string &name)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), object_commands);
 
@@ -408,7 +413,7 @@ readObject(const std::string &name)
 
         CGeomObject3D *primitive = getPrimitive(name1);
 
-        if (primitive == NULL) {
+        if (! primitive) {
           if      (name1 == "Sphere") {
             primitive = CGeometryInst->createObject3D(scene_, name);
 
@@ -421,7 +426,7 @@ readObject(const std::string &name)
           }
         }
 
-        if (primitive == NULL) {
+        if (! primitive) {
           std::cerr << "Unrecognised Primitive " << name1 << std::endl;
           break;
         }
@@ -575,7 +580,7 @@ readFaces(CGeomObject3D *object, int pface_num)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), faces_commands);
 
@@ -659,7 +664,7 @@ readLines(CGeomObject3D *object, int pface_num)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), lines_commands);
 
@@ -695,7 +700,7 @@ readVertices(CGeomObject3D *object)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), points_commands);
 
@@ -731,7 +736,7 @@ readRotate(CGeomObject3D *object, int num_patches)
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), rotate_commands);
 
@@ -782,7 +787,7 @@ readColors()
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), colors_commands);
 
@@ -811,7 +816,7 @@ readTextures()
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), colors_commands);
 
@@ -844,7 +849,7 @@ readTransforms()
     if (line == "" || line[0] == ';' || line[0] == '#')
       continue;
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int command_num = lookupCommand(words[0].getWord(), transforms_commands);
 
@@ -939,7 +944,7 @@ int
 CImportScene::
 lookupCommand(const std::string &command, const char **commands)
 {
-  for (int i = 0; commands[i] != NULL; i++)
+  for (int i = 0; commands[i] != nullptr; i++)
     if (strcmp(commands[i], command.c_str()) == 0)
       return i + 1;
 

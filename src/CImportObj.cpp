@@ -4,7 +4,7 @@
 
 namespace {
   static std::string line;
-  static int         line_num;
+  static int         line_num { 0 };
 
   void error(const char *msg) {
     std::cerr << "Error: " << msg << ": '" << line << "'@" << line_num << std::endl;
@@ -13,9 +13,9 @@ namespace {
 
 CImportObj::
 CImportObj(CGeomScene3D *scene, const std::string &name) :
- scene_(scene), vnum_(0), vnnum_(0), vtnum_(0), debug_(false)
+ scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -24,8 +24,13 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
+}
+
+CImportObj::
+~CImportObj()
+{
 }
 
 bool
@@ -83,6 +88,10 @@ read(CFile &file)
       if (! readGroupName(line1))
         error("Invalid group name line");
     }
+    else if (len == 1 && line1[0] == 'g') {
+      if (! readGroupName(""))
+        error("Invalid group name line");
+    }
     else if (len > 2 && line1[0] == 'f' && line1[1] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -101,8 +110,9 @@ read(CFile &file)
     else if (len > 6 && line1.substr(0, 6) == "usemtl") {
       // todo
     }
-    else
+    else {
       error("Unrecognised line");
+    }
   }
 
   return true;
@@ -219,8 +229,10 @@ readParameterVertex(const std::string &)
 
 bool
 CImportObj::
-readGroupName(const std::string &)
+readGroupName(const std::string &line)
 {
+  groupName_ = line;
+
   return true;
 }
 
@@ -263,7 +275,17 @@ readFace(const std::string &line)
     assert(num2 >= -1 && num3 >= -1);
   }
 
-  object_->addFace(vertices);
+  int faceNum = object_->addFace(vertices);
+
+  if (groupName_ != "") {
+    CGeomObject3D::Group &group = object_->getGroup(groupName_);
+
+    group.addFace(faceNum);
+
+    CGeomFace3D &face = object_->getFace(faceNum);
+
+    face.setGroup(group.id());
+  }
 
   return true;
 }

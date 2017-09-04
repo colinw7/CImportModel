@@ -21,24 +21,6 @@ class CImportCOB {
     TRANSFORM_WORLD      = (1<<8)
   };
 
- private:
-  CFile*                   file_;
-  bool                     debug_;
-  uint                     flags_;
-  std::string              line_;
-  std::string              name_;
-  int                      num_vertices_;
-  int                      num_texture_vertices_;
-  int                      num_faces_;
-  CPoint3D                 center_;
-  CPoint3D                 x_axis_;
-  CPoint3D                 y_axis_;
-  CPoint3D                 z_axis_;
-  CMatrix3D                local_matrix_;
-  CMatrix3D                world_matrix_;
-  std::string              pattern_;
-  std::vector<std::string> match_strs_;
-
  public:
   CImportCOB();
 
@@ -71,6 +53,24 @@ class CImportCOB {
   bool readMaterial(int i);
 
   bool readNextLine();
+
+ private:
+  CFile*                   file_ { nullptr };
+  bool                     debug_ { false };
+  uint                     flags_ { 0 };
+  std::string              line_;
+  std::string              name_;
+  int                      num_vertices_ { 0 };
+  int                      num_texture_vertices_ { 0 };
+  int                      num_faces_ { 0 };
+  CPoint3D                 center_;
+  CPoint3D                 x_axis_;
+  CPoint3D                 y_axis_;
+  CPoint3D                 z_axis_;
+  CMatrix3D                local_matrix_;
+  CMatrix3D                world_matrix_;
+  std::string              pattern_;
+  std::vector<std::string> match_strs_;
 };
 
 #endif

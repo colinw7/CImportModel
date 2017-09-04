@@ -62,14 +62,14 @@ chunk_names[] = {
   { MAT_TWO_SIDED_ID   , "MAT_TWO_SIDED_ID", },
   { MAT_SHADING_ID     , "MAT_SHADING"     , },
   { MAT_ENTRY_ID       , "MAT_ENTRY"       , },
-  { 0                  , NULL              , },
+  { 0                  , nullptr           , },
 };
 
 CImport3DS::
 CImport3DS(CGeomScene3D *scene, const std::string &) :
  scene_(scene), debug_(false)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -81,7 +81,7 @@ read(CFile &file)
 {
   file_ = &file;
 
-  CImport3DSChunk chunk(NULL);
+  CImport3DSChunk chunk(nullptr);
 
   readChunk(&chunk);
 
@@ -795,7 +795,7 @@ bool
 CImport3DS::
 readChunk(CImport3DSChunk *chunk)
 {
-  if (chunk->parent != NULL && chunk->parent->left <= 0)
+  if (chunk->parent != nullptr && chunk->parent->left <= 0)
     return false;
 
   chunk->left = 6;
@@ -899,7 +899,7 @@ std::string
 CImport3DS::
 readString(CImport3DSChunk *chunk)
 {
-  static char  *buffer = NULL;
+  static char  *buffer = nullptr;
   static int    buffer_max = 0;
 
   if (chunk->left > buffer_max) {
@@ -959,10 +959,10 @@ getChunkName(CImport3DSChunk *chunk)
 {
   static char name[256];
 
-  if (chunk == NULL)
+  if (! chunk)
     return("<NULL>");
 
-  for (int i = 0; chunk_names[i].name != NULL; ++i) {
+  for (int i = 0; chunk_names[i].name != nullptr; ++i) {
     if (chunk_names[i].id != chunk->id) continue;
 
     sprintf(name, "%s (%x)", chunk_names[i].name, chunk->id);
@@ -981,7 +981,7 @@ adjustChunkLeft(CImport3DSChunk *chunk, int offset)
 {
   chunk->left -= offset;
 
-  if (chunk->parent != NULL)
+  if (chunk->parent)
     adjustChunkLeft(chunk->parent, offset);
 }
 
@@ -1002,7 +1002,7 @@ getChunkDepth(CImport3DSChunk *chunk)
 
   CImport3DSChunk *parent = chunk->parent;
 
-  while (parent != NULL) {
+  while (parent) {
     ++depth;
 
     parent = parent->parent;

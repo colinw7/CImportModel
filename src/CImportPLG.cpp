@@ -13,8 +13,7 @@
 #define PLX_SHADE_MODE_SHADE_MASK   0x6000
 
 CImportPLG::
-CImportPLG() :
- debug_(false), palette_loaded_(false), palette_(NULL)
+CImportPLG()
 {
 }
 

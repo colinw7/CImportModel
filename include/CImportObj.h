@@ -6,19 +6,10 @@
 #include <CAutoPtr.h>
 
 class CImportObj {
- private:
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  CFile                   *file_;
-  int                      vnum_, vnnum_, vtnum_;
-  bool                     debug_;
-
  public:
-  CImportObj(CGeomScene3D *scene=NULL, const std::string &name="obj");
+  CImportObj(CGeomScene3D *scene=nullptr, const std::string &name="obj");
 
- ~CImportObj() { }
+ ~CImportObj();
 
   void setDebug(bool debug=true) { debug_ = debug; }
 
@@ -46,6 +37,16 @@ class CImportObj {
   bool readParameterVertex(const std::string &line);
   bool readGroupName(const std::string &line);
   bool readFace(const std::string &line);
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  CFile                   *file_ { nullptr };
+  int                      vnum_ { 0 }, vnnum_ { 0 }, vtnum_ { 0 };
+  bool                     debug_ { false };
+  std::string              groupName_;
 };
 
 #endif

@@ -15,9 +15,9 @@ struct Face {
 
 CImport3DRW::
 CImport3DRW(CGeomScene3D *scene, const std::string &name) :
- scene_(scene), debug_(false)
+ scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -26,8 +26,13 @@ CImport3DRW(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
+}
+
+CImport3DRW::
+~CImport3DRW()
+{
 }
 
 bool

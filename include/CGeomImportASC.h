@@ -6,16 +6,10 @@
 #include <CGeomObject3D.h>
 
 class CGeomImportASC : public CImportASC {
- private:
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-
  public:
-  CGeomImportASC(CGeomScene3D *scene=NULL, const std::string &name="asc");
+  CGeomImportASC(CGeomScene3D *scene=nullptr, const std::string &name="asc");
 
- ~CGeomImportASC() { }
+ ~CGeomImportASC();
 
   CGeomObject3D &getObject() { return *object_; }
 
@@ -35,6 +29,12 @@ class CGeomImportASC : public CImportASC {
   void addVertex(double x, double y, double z);
 
   void addITriangle(int i1, int i2, int i3, const CRGBA &rgba);
+
+ private:
+  CGeomScene3D            *scene_ { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_ { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
 };
 
 #endif

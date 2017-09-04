@@ -6,7 +6,7 @@ CImportX3D::
 CImportX3D(CGeomScene3D *scene, const std::string &name) :
  scene_(scene), debug_(false)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -15,8 +15,13 @@ CImportX3D(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
+}
+
+CImportX3D::
+~CImportX3D()
+{
 }
 
 bool
@@ -29,7 +34,7 @@ read(CFile &file)
 
   file_->readLine(line);
 
-  CStrWords words = CStrUtil::toWords(line, NULL);
+  CStrWords words = CStrUtil::toWords(line, nullptr);
 
   int num_points = CStrUtil::toInteger(words[0].getWord());
   int num_lines  = CStrUtil::toInteger(words[1].getWord());
@@ -37,7 +42,7 @@ read(CFile &file)
   for (int i = 0; i < num_points; i++) {
     file_->readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     double x =  CStrUtil::toReal(words[0].getWord());
     double y = -CStrUtil::toReal(words[1].getWord());
@@ -49,7 +54,7 @@ read(CFile &file)
   for (int j = 0; j < num_lines; j++) {
     file_->readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, NULL);
+    CStrWords words = CStrUtil::toWords(line, nullptr);
 
     int start = CStrUtil::toInteger(words[0].getWord());
     int end   = CStrUtil::toInteger(words[1].getWord());

@@ -5,7 +5,7 @@ CGeomImportCOB::
 CGeomImportCOB(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -14,8 +14,13 @@ CGeomImportCOB(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
+}
+
+CGeomImportCOB::
+~CGeomImportCOB()
+{
 }
 
 void

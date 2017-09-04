@@ -5,9 +5,9 @@
 
 CImportDXF::
 CImportDXF(CGeomScene3D *scene, const std::string &name) :
- scene_(scene), debug_(false), line_num_(0), buffer_valid_(false)
+ scene_(scene)
 {
-  if (scene_ == NULL) {
+  if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = scene_;
   }
@@ -16,8 +16,13 @@ CImportDXF(CGeomScene3D *scene, const std::string &name) :
 
   scene_->addObject(object_);
 
-  if (scene_ == NULL)
+  if (! pobject_)
     pobject_ = object_;
+}
+
+CImportDXF::
+~CImportDXF()
+{
 }
 
 bool
