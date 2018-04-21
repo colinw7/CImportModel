@@ -18,6 +18,11 @@ CGeomImportPLG(CGeomScene3D *scene, const std::string &name) :
     pobject_ = object_;
 }
 
+CGeomImportPLG::
+~CGeomImportPLG()
+{
+}
+
 void
 CGeomImportPLG::
 addVertex(double x, double y, double z)
