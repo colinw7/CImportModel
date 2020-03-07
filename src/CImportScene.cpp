@@ -19,7 +19,7 @@
 #define TEXTURES_CMD    7
 
 static const char *
-commands[] = {
+global_commands[] = {
   "Orientation",
   "Scene",
   "Object",
@@ -193,7 +193,7 @@ read(CFile &file)
 
     CStrWords words = CStrUtil::toWords(line, nullptr);
 
-    int command_num = lookupCommand(words[0].getWord(), commands);
+    int command_num = lookupCommand(words[0].getWord(), global_commands);
 
     switch (command_num) {
       case ORIENTATION_CMD:

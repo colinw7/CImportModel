@@ -492,9 +492,9 @@ readPolyLineEntity()
 
     readLine(line);
 
-    int code = CStrUtil::toInteger(line);
+    int code1 = CStrUtil::toInteger(line);
 
-    if (code != 0) {
+    if (code1 != 0) {
       badLine(line);
       return false;
     }
@@ -610,14 +610,14 @@ readVertexEntity(int color)
         vertices.push_back(face_num[1] - 1);
         vertices.push_back(face_num[2] - 1);
 
-        uint face_num = object_->addFace(vertices);
+        uint face_num1 = object_->addFace(vertices);
 
         if (color > 0 && color < 255) {
           CImportDXFColor *dxf_color = &dxf_colors[color];
 
           CRGBA rgba(dxf_color->r, dxf_color->g, dxf_color->b, 1.0);
 
-          object_->setFaceColor(face_num, rgba);
+          object_->setFaceColor(face_num1, rgba);
         }
       }
       else {
@@ -628,14 +628,14 @@ readVertexEntity(int color)
         vertices.push_back(face_num[2] - 1);
         vertices.push_back(face_num[3] - 1);
 
-        uint face_num = object_->addFace(vertices);
+        uint face_num1 = object_->addFace(vertices);
 
         if (color > 0 && color < 255) {
           CImportDXFColor *dxf_color = &dxf_colors[color];
 
           CRGBA rgba(dxf_color->r, dxf_color->g, dxf_color->b, 1.0);
 
-          object_->setFaceColor(face_num, rgba);
+          object_->setFaceColor(face_num1, rgba);
         }
       }
     }

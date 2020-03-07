@@ -42,11 +42,11 @@ read(CFile &file)
   for (int i = 0; i < num_points; i++) {
     file_->readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, nullptr);
+    CStrWords words1 = CStrUtil::toWords(line, nullptr);
 
-    double x =  CStrUtil::toReal(words[0].getWord());
-    double y = -CStrUtil::toReal(words[1].getWord());
-    double z =  CStrUtil::toReal(words[2].getWord());
+    double x =  CStrUtil::toReal(words1[0].getWord());
+    double y = -CStrUtil::toReal(words1[1].getWord());
+    double z =  CStrUtil::toReal(words1[2].getWord());
 
     object_->addVertex(CPoint3D(x, y, z));
   }
@@ -54,10 +54,10 @@ read(CFile &file)
   for (int j = 0; j < num_lines; j++) {
     file_->readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, nullptr);
+    CStrWords words1 = CStrUtil::toWords(line, nullptr);
 
-    int start = CStrUtil::toInteger(words[0].getWord());
-    int end   = CStrUtil::toInteger(words[1].getWord());
+    int start = CStrUtil::toInteger(words1[0].getWord());
+    int end   = CStrUtil::toInteger(words1[1].getWord());
 
     object_->addLine(start, end);
   }

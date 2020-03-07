@@ -3,11 +3,11 @@
 #include <CStrUtil.h>
 
 namespace {
-  static std::string line;
-  static int         line_num { 0 };
+  static std::string s_line;
+  static int         s_line_num { 0 };
 
   void error(const char *msg) {
-    std::cerr << "Error: " << msg << ": '" << line << "'@" << line_num << std::endl;
+    std::cerr << "Error: " << msg << ": '" << s_line << "'@" << s_line_num << std::endl;
   }
 }
 
@@ -42,10 +42,10 @@ read(CFile &file)
   vnum_  = 0;
   vnnum_ = 0;
 
-  while (file_->readLine(line)) {
-    ++line_num;
+  while (file_->readLine(s_line)) {
+    ++s_line_num;
 
-    std::string line1 = CStrUtil::stripSpaces(line);
+    std::string line1 = CStrUtil::stripSpaces(s_line);
 
     int len = line1.size();
 

@@ -7,14 +7,6 @@
 #include <CAutoPtr.h>
 
 class CImportV3D {
- private:
-  CGeomScene3D            *scene_;
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_;
-  CAutoPtr<CGeomObject3D>  pobject_;
-  bool                     both_sides_;
-  bool                     debug_;
-
  public:
   CImportV3D(CGeomScene3D *scene=NULL, const std::string &name="v3d");
 
@@ -41,6 +33,14 @@ class CImportV3D {
 
  private:
   void getColorRGBA(long color, CRGBA *rgba);
+
+ private:
+  CGeomScene3D            *scene_      { nullptr };
+  CAutoPtr<CGeomScene3D>   pscene_;
+  CGeomObject3D           *object_     { nullptr };
+  CAutoPtr<CGeomObject3D>  pobject_;
+  bool                     both_sides_ { false };
+  bool                     debug_      { false };
 };
 
 #endif

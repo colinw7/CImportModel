@@ -4,7 +4,7 @@
 
 CImportV3D::
 CImportV3D(CGeomScene3D *scene, const std::string &name) :
- scene_(scene), both_sides_(false), debug_(false)
+ scene_(scene)
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
@@ -76,27 +76,27 @@ read(CFile &file)
       for (int i = 0; i < num_faces; i++) {
         file.readLine(line);
 
-        CStrWords words = CStrUtil::toWords(line, nullptr);
+        CStrWords words1 = CStrUtil::toWords(line, nullptr);
 
-        long num_vertices = CStrUtil::toInteger(words[0].getWord());
+        long num_vertices_1 = CStrUtil::toInteger(words1[0].getWord());
 
-        if (words.size() < num_vertices + 2)
+        if (words1.size() < num_vertices_1 + 2)
           throw "Invalid Sub Face/Line";
 
-        if (num_vertices <= 1)
+        if (num_vertices_1 <= 1)
           throw "Invalid Sub Face/Line";
 
-        long color = CStrUtil::toInteger(words[num_vertices + 1].getWord());
+        long color = CStrUtil::toInteger(words1[num_vertices_1 + 1].getWord());
 
         CRGBA rgba;
 
         getColorRGBA(color, &rgba);
 
-        if (num_vertices > 2) {
+        if (num_vertices_1 > 2) {
           std::vector<uint> vertices;
 
-          for (int j = 0; j < num_vertices; j++) {
-            long vertex_num = CStrUtil::toInteger(words[j + 1].getWord());
+          for (int j = 0; j < num_vertices_1; j++) {
+            long vertex_num = CStrUtil::toInteger(words1[j + 1].getWord());
 
             if (vertex_num < 0 || vertex_num >= (int) object_->getNumVertices())
               throw "Invalid Sub Face";
@@ -109,8 +109,8 @@ read(CFile &file)
           object_->setSubFaceColor(face_num, ind, rgba);
         }
         else {
-          long vertex_num1 = CStrUtil::toInteger(words[1].getWord());
-          long vertex_num2 = CStrUtil::toInteger(words[2].getWord());
+          long vertex_num1 = CStrUtil::toInteger(words1[1].getWord());
+          long vertex_num2 = CStrUtil::toInteger(words1[2].getWord());
 
           uint ind =
             object_->addFaceSubLine(face_num, vertex_num1, vertex_num2);
@@ -120,24 +120,24 @@ read(CFile &file)
       }
     }
     else {
-      long num_vertices = CStrUtil::toInteger(words[0].getWord());
+      long num_vertices_1 = CStrUtil::toInteger(words[0].getWord());
 
-      if (words.size() < num_vertices + 2)
+      if (words.size() < num_vertices_1 + 2)
         throw "Invalid Face/Line";
 
-      if (num_vertices <= 1)
+      if (num_vertices_1 <= 1)
         throw "Invalid Face/Line";
 
-      long color = CStrUtil::toInteger(words[num_vertices + 1].getWord());
+      long color = CStrUtil::toInteger(words[num_vertices_1 + 1].getWord());
 
       CRGBA rgba;
 
       getColorRGBA(color, &rgba);
 
-      if (num_vertices > 2) {
+      if (num_vertices_1 > 2) {
         std::vector<uint> vertices;
 
-        for (int i = 0; i < num_vertices; i++) {
+        for (int i = 0; i < num_vertices_1; i++) {
           long vertex_num = CStrUtil::toInteger(words[i + 1].getWord());
 
           if (vertex_num < 0 || vertex_num >= (int) object_->getNumVertices())
@@ -151,18 +151,18 @@ read(CFile &file)
         object_->setFaceColor(face_num, rgba);
 
         if (both_sides_) {
-          std::vector<uint> vertices;
+          std::vector<uint> vertices1;
 
-          for (int i = num_vertices - 1; i >= 0; i--) {
+          for (int i = num_vertices_1 - 1; i >= 0; i--) {
             long vertex_num = CStrUtil::toInteger(words[i + 1].getWord());
 
             if (vertex_num < 0 || vertex_num >= (int) object_->getNumVertices())
               throw "Invalid Face";
 
-            vertices.push_back(vertex_num);
+            vertices1.push_back(vertex_num);
           }
 
-          face_num = object_->addFace(vertices);
+          face_num = object_->addFace(vertices1);
 
           object_->setFaceColor(face_num, rgba);
         }
