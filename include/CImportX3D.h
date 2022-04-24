@@ -1,19 +1,20 @@
 #ifndef CIMPORT_X3D_H
 #define CIMPORT_X3D_H
 
-#include <CFile.h>
+#include <CImportBase.h>
 #include <CGeomObject3D.h>
+#include <CFile.h>
 #include <CAutoPtr.h>
 
-class CImportX3D {
+class CImportX3D : public CImportBase {
  public:
-  CImportX3D(CGeomScene3D *scene=NULL, const std::string &name="x3d");
+  CImportX3D(CGeomScene3D *scene=nullptr, const std::string &name="x3d");
 
  ~CImportX3D();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
+  bool read(CFile &file) override;
 
-  bool read(CFile &file);
+  CGeomScene3D &getScene() override { return *scene_; }
 
   CGeomObject3D &getObject() { return *object_; }
 
@@ -31,12 +32,11 @@ class CImportX3D {
   }
 
  private:
-  CGeomScene3D            *scene_ { nullptr };
+  CGeomScene3D            *scene_  { nullptr };
   CAutoPtr<CGeomScene3D>   pscene_;
   CGeomObject3D           *object_ { nullptr };
   CAutoPtr<CGeomObject3D>  pobject_;
-  CFile                   *file_ { nullptr };
-  bool                     debug_ { false };
+  CFile                   *file_   { nullptr };
 };
 
 #endif

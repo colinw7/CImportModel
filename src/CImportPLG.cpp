@@ -106,7 +106,7 @@ readTriangles()
   uint attr, shade;
   uint ind, inds[32], num_inds;
 
-  uint max_inds = (int) (sizeof(inds)/sizeof(int));
+  uint max_inds = int(sizeof(inds)/sizeof(int));
 
   for (uint i = 0; i < num_polygons_; ++i) {
     if (! readNextLine())
@@ -146,16 +146,16 @@ readTriangles()
     //setTwoSided(attr & PLX_2SIDED_FLAG);
 
     if (attr & PLX_COLOR_MODE_RGB_FLAG) {
-      r = ((attr & 0x0f00) >> 8) << 4;
-      g = ((attr & 0x00f0) >> 4) << 4;
-      b = ((attr & 0x000f) >> 0) << 4;
+      r = int(((attr & 0x0f00) >> 8) << 4);
+      g = int(((attr & 0x00f0) >> 4) << 4);
+      b = int(((attr & 0x000f) >> 0) << 4);
 
       color = CRGBA(r/255.0, g/255.0, b/255.0);
     }
     else {
       ind = attr & 0x00ff;
 
-      color = paletteLookup(ind);
+      color = paletteLookup(int(ind));
     }
 
     CDrawType3D  draw_type;
@@ -178,11 +178,9 @@ readTriangles()
       draw_type = CDRAW_TYPE_3D_WIREFRAME;
 
     if (num_inds == 3)
-      addITriangle(inds[0], inds[1], inds[2],
-                   draw_type, shade_type, color);
+      addITriangle(int(inds[0]), int(inds[1]), int(inds[2]), draw_type, shade_type, color);
     else
-      addITriangles(inds, num_inds,
-                    draw_type, shade_type, color);
+      addITriangles(inds, num_inds, draw_type, shade_type, color);
   }
 
   return true;

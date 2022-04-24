@@ -47,7 +47,7 @@ read(CFile &file)
 
     std::string line1 = CStrUtil::stripSpaces(s_line);
 
-    int len = line1.size();
+    auto len = line1.size();
 
     if (len <= 0 || line1[0] == '#')
       continue;
@@ -213,7 +213,7 @@ readVertexNormal(const std::string &line)
 
   CVector3D v(x, y, z);
 
-  CGeomVertex3D &vertex = object_->getVertex(vnnum_);
+  CGeomVertex3D &vertex = object_->getVertex(uint(vnnum_));
 
   vertex.setNormal(v);
 
@@ -246,9 +246,9 @@ readFace(const std::string &line)
 
   CStrUtil::addWords(line, words);
 
-  int num_words = words.size();
+  auto num_words = words.size();
 
-  for (int i = 0; i < num_words; i++) {
+  for (uint i = 0; i < num_words; i++) {
     std::vector<std::string> fields;
 
     CStrUtil::addFields(words[i], fields, "/");
@@ -256,9 +256,9 @@ readFace(const std::string &line)
     while (fields.size() < 3)
       fields.push_back("");
 
-    int num1 = -1;
-    int num2 = -1;
-    int num3 = -1;
+    long num1 = -1;
+    long num2 = -1;
+    long num3 = -1;
 
     if (CStrUtil::isInteger(fields[0]))
       num1 = CStrUtil::toInteger(fields[0]);
@@ -270,12 +270,12 @@ readFace(const std::string &line)
       num3 = CStrUtil::toInteger(fields[2]);
 
     if (num1 > 0)
-      vertices.push_back(num1 - 1);
+      vertices.push_back(uint(num1 - 1));
 
     assert(num2 >= -1 && num3 >= -1);
   }
 
-  int faceNum = object_->addFace(vertices);
+  auto faceNum = object_->addFace(vertices);
 
   if (groupName_ != "") {
     CGeomObject3D::Group &group = object_->getGroup(groupName_);

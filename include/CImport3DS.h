@@ -3,60 +3,45 @@
 
 #include <CFile.h>
 #include <CRGBA.h>
+#include <CImportBase.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CAutoPtr.h>
 
 struct CImport3DSMaterial {
+  CImport3DSMaterial() { }
+
   std::string name;
   CMaterial   material;
-  double      transparency;
-  int         shading; // 1=flat, 2=gouraud, 3=phong, 4=metal
-  bool        two_sided;
-
-  CImport3DSMaterial() :
-   name(), material(), transparency(0.0), shading(0), two_sided(false) {
-  }
+  double      transparency { 0.0 };
+  int         shading      { 0 }; // 1=flat, 2=gouraud, 3=phong, 4=metal
+  bool        two_sided    { false };
 };
+
+//---
 
 struct CImport3DSChunk {
   CImport3DSChunk(CImport3DSChunk *parent1) :
-   parent(parent1), id(0), len(0), left(0) {
+   parent(parent1) {
   }
 
-  CImport3DSChunk *parent;
-  ushort           id;
-  uint             len;
-  int              left;
+  CImport3DSChunk *parent { nullptr };
+  ushort           id     { 0 };
+  uint             len    { 0 };
+  int              left   { 0 };
 };
 
-class CImport3DS {
- private:
-  typedef std::vector<CImport3DSMaterial *> MaterialList;
-  typedef std::vector<uint>                 FaceList;
-  typedef std::map<uint, FaceList>          VertexFaceList;
-  typedef std::map<uint, FaceList>          SmoothGroupFaceList;
+//---
 
-  CFile                  *file_;
-  CGeomScene3D           *scene_;
-  CAutoPtr<CGeomScene3D>  pscene_;
-  CGeomObject3D          *object_;
-  CImport3DSMaterial     *material_;
-  MaterialList            materials_;
-  VertexFaceList          vertexFaceList_;
-  SmoothGroupFaceList     smoothGroupFaceList_;
-  bool                    debug_;
-
+class CImport3DS : public CImportBase {
  public:
-  CImport3DS(CGeomScene3D *scene=NULL, const std::string &name="3ds");
+  CImport3DS(CGeomScene3D *scene=nullptr, const std::string &name="3ds");
 
  ~CImport3DS() { }
 
-  void setDebug(bool debug = true) { debug_ = debug; }
+  bool read(CFile &file) override;
 
-  bool read(CFile &file);
-
-  CGeomScene3D &getScene() { return *scene_; }
+  CGeomScene3D &getScene() override { return *scene_; }
 
   CGeomScene3D *releaseScene() {
     pscene_.release();
@@ -100,6 +85,21 @@ class CImport3DS {
   void        printChunk          (CImport3DSChunk *chunk);
   uint        getChunkDepth       (CImport3DSChunk *chunk);
   std::string getChunkPad         (CImport3DSChunk *chunk);
+
+ private:
+  typedef std::vector<CImport3DSMaterial *> MaterialList;
+  typedef std::vector<uint>                 FaceList;
+  typedef std::map<uint, FaceList>          VertexFaceList;
+  typedef std::map<uint, FaceList>          SmoothGroupFaceList;
+
+  CFile                  *file_     { nullptr };
+  CGeomScene3D           *scene_    { nullptr };
+  CAutoPtr<CGeomScene3D>  pscene_;
+  CGeomObject3D          *object_   { nullptr };
+  CImport3DSMaterial     *material_ { nullptr };
+  MaterialList            materials_;
+  VertexFaceList          vertexFaceList_;
+  SmoothGroupFaceList     smoothGroupFaceList_;
 };
 
 #endif

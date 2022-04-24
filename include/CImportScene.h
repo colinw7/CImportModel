@@ -1,6 +1,7 @@
 #ifndef CIMPORT_SCENE_H
 #define CIMPORT_SCENE_H
 
+#include <CImportBase.h>
 #include <CFile.h>
 #include <CMatrix3D.h>
 #include <CRGBA.h>
@@ -13,25 +14,23 @@ class CGeomFace3D;
 class CGeomLine3D;
 class CGeomVertex3D;
 
-class CImportScene {
+class CImportScene : public CImportBase {
  public:
   CImportScene(CGeomScene3D *scene=nullptr, const std::string &name="scene");
 
  ~CImportScene();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
+  bool read(CFile &file) override;
 
-  bool read(CFile &file);
+  CGeomScene3D &getScene() override { return *scene_; }
 
-  CGeomScene3D &getScene() { return *scene_; }
+  CGeomObject3D &getObject();
 
   CGeomScene3D *releaseScene() {
     pscene_.release();
 
     return scene_;
   }
-
-  CGeomObject3D &getObject();
 
  private:
   void           readScene();
@@ -51,15 +50,17 @@ class CImportScene {
   void           getRGBA(int color, CRGBA *rgba);
 
  private:
-  CGeomScene3D                           *scene_ { nullptr };
-  CAutoPtr<CGeomScene3D>                  pscene_;
-  CFile                                  *file_ { nullptr };
-  bool                                    debug_ { false };
-  std::map<std::string, CGeomObject3D *>  objects_;
-  std::map<std::string, CGeomObject3D *>  primitives_;
-  std::vector<std::string>                colors_;
-  std::vector<std::string>                textures_;
-  int                                     orientation_ { 1 };
+  using NameObjMap = std::map<std::string, CGeomObject3D *>;
+  using Names      = std::vector<std::string>;
+
+  CGeomScene3D*          scene_ { nullptr };
+  CAutoPtr<CGeomScene3D> pscene_;
+  CFile*                 file_  { nullptr };
+  NameObjMap             objects_;
+  NameObjMap             primitives_;
+  Names                  colors_;
+  Names                  textures_;
+  int                    orientation_ { 1 };
 };
 
 #endif

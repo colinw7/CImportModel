@@ -197,7 +197,7 @@ read(CFile &file)
 
     switch (command_num) {
       case ORIENTATION_CMD:
-        orientation_ = CStrUtil::toInteger(words[1].getWord());
+        orientation_ = int(CStrUtil::toInteger(words[1].getWord()));
 
         break;
       case SCENE_CMD:
@@ -334,14 +334,14 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_SUB_FACES_CMD: {
-        int face_num = CStrUtil::toInteger(words[1].getWord());
+        auto face_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (face_num <= 0 || face_num > (int) primitive->getNumFaces()) {
+        if (face_num <= 0 || face_num > int(primitive->getNumFaces())) {
           std::cout << "SubFace Face " << face_num << " Not Found" << std::endl;
           break;
         }
 
-        readFaces(primitive, face_num - 1);
+        readFaces(primitive, int(face_num - 1));
 
         break;
       }
@@ -351,14 +351,14 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_SUB_LINES_CMD: {
-        int face_num = CStrUtil::toInteger(words[1].getWord());
+        auto face_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (face_num <= 0 || face_num > (int) primitive->getNumFaces()) {
+        if (face_num <= 0 || face_num > int(primitive->getNumFaces())) {
           std::cout << "SubLine Face " << face_num << " Not Found" << std::endl;
           break;
         }
 
-        readLines(primitive, face_num - 1);
+        readLines(primitive, int(face_num - 1));
 
         break;
       }
@@ -368,9 +368,9 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_ROTATE_CMD: {
-        int num_patches = CStrUtil::toInteger(words[1].getWord());
+        auto num_patches = CStrUtil::toInteger(words[1].getWord());
 
-        readRotate(primitive, num_patches);
+        readRotate(primitive, int(num_patches));
 
         break;
       }
@@ -450,10 +450,10 @@ readObject(const std::string &name)
         CRGBA rgba;
 
         if (CStrUtil::isInteger(words[1].getWord())) {
-          int color_num = CStrUtil::toInteger(words[1].getWord());
+          auto color_num = CStrUtil::toInteger(words[1].getWord());
 
-          if (color_num >= 0 && color_num <= (int) colors_.size())
-            rgba = CRGBName::toRGBA(colors_[color_num]);
+          if (color_num >= 0 && color_num <= int(colors_.size()))
+            rgba = CRGBName::toRGBA(colors_[uint(color_num)]);
           else
             rgba = CRGBA(0,0,0,0);
         }
@@ -466,9 +466,9 @@ readObject(const std::string &name)
       }
       case OBJECT_SUB_FACE_COLOR_CMD:
       case OBJECT_SUB_FACE_COLOUR_CMD: {
-        int color_num = CStrUtil::toInteger(words[1].getWord());
+        auto color_num = CStrUtil::toInteger(words[1].getWord());
 
-        CRGBA rgba = CRGBName::toRGBA(colors_[color_num]);
+        CRGBA rgba = CRGBName::toRGBA(colors_[uint(color_num)]);
 
         object->setSubFaceColor(rgba);
 
@@ -481,10 +481,10 @@ readObject(const std::string &name)
       case OBJECT_SUB_LINE_COLOUR_CMD:
         break;
       case OBJECT_TEXTURE_CMD: {
-        int texture_num = CStrUtil::toInteger(words[1].getWord());
+        auto texture_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (texture_num >= 1 && texture_num <= (int) textures_.size()) {
-          CFile file(textures_[texture_num - 1]);
+        if (texture_num >= 1 && texture_num <= int(textures_.size())) {
+          CFile file(textures_[uint(texture_num - 1)]);
 
           CImageFileSrc src(file);
 
@@ -498,10 +498,10 @@ readObject(const std::string &name)
         break;
       }
       case OBJECT_COVER_TEXTURE_CMD: {
-        int texture_num = CStrUtil::toInteger(words[1].getWord());
+        auto texture_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (texture_num >= 1 && texture_num <= (int) textures_.size()) {
-          CFile file(textures_[texture_num - 1]);
+        if (texture_num >= 1 && texture_num <= int(textures_.size())) {
+          CFile file(textures_[uint(texture_num - 1)]);
 
           CImageFileSrc src(file);
 
@@ -515,10 +515,10 @@ readObject(const std::string &name)
         break;
       }
       case OBJECT_MASK_CMD: {
-        int mask_num = CStrUtil::toInteger(words[1].getWord());
+        auto mask_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (mask_num >= 1 && mask_num <= (int) textures_.size()) {
-          CFile file(textures_[mask_num - 1]);
+        if (mask_num >= 1 && mask_num <= int(textures_.size())) {
+          CFile file(textures_[uint(mask_num - 1)]);
 
           CImageFileSrc src(file);
 
@@ -532,10 +532,10 @@ readObject(const std::string &name)
         break;
       }
       case OBJECT_COVER_MASK_CMD: {
-        int mask_num = CStrUtil::toInteger(words[1].getWord());
+        auto mask_num = CStrUtil::toInteger(words[1].getWord());
 
-        if (mask_num >= 1 && mask_num <= (int) textures_.size()) {
-          CFile file(textures_[mask_num - 1]);
+        if (mask_num >= 1 && mask_num <= int(textures_.size())) {
+          CFile file(textures_[uint(mask_num - 1)]);
 
           CImageFileSrc src(file);
 
@@ -598,49 +598,49 @@ readFaces(CGeomObject3D *object, int pface_num)
           if (words[i].getWord() == ":")
             break;
 
-          int point_num = CStrUtil::toInteger(words[i].getWord());
+          auto point_num = CStrUtil::toInteger(words[i].getWord());
 
-          points.push_back(point_num);
+          points.push_back(int(point_num));
 
           i++;
         }
 
-        int num_points = points.size();
+        auto num_points = points.size();
 
         std::vector<uint> face_points;
 
         if (orientation_ == 1) {
-          for (int j = 0; j < num_points; ++j) {
+          for (size_t j = 0; j < num_points; ++j) {
             int point_num = points[j] - 1;
 
-            face_points.push_back(point_num);
+            face_points.push_back(uint(point_num));
           }
         }
         else {
-          for (int j = num_points - 1; j >= 0; --j) {
-            int point_num = points[j] - 1;
+          for (int j = int(num_points) - 1; j >= 0; --j) {
+            int point_num = points[uint(j)] - 1;
 
-            face_points.push_back(point_num);
+            face_points.push_back(uint(point_num));
           }
         }
 
         uint face_num;
 
         if (pface_num != -1)
-          face_num = object->addFaceSubFace(pface_num, face_points);
+          face_num = object->addFaceSubFace(uint(pface_num), face_points);
         else
           face_num = object->addFace(face_points);
 
-        if (i < words.size() && words[i].getWord() == ":") {
+        if (i < int(words.size()) && words[i].getWord() == ":") {
           i++;
 
-          int face_color = CStrUtil::toInteger(words[i].getWord());
+          auto face_color = CStrUtil::toInteger(words[i].getWord());
 
-          if (face_color >= 0 && face_color < (int) colors_.size()) {
-            CRGBA rgba = CRGBName::toRGBA(colors_[face_color]);
+          if (face_color >= 0 && face_color < int(colors_.size())) {
+            CRGBA rgba = CRGBName::toRGBA(colors_[uint(face_color)]);
 
             if (pface_num != -1)
-              object->setSubFaceColor(pface_num, face_num, rgba);
+              object->setSubFaceColor(uint(pface_num), face_num, rgba);
             else
               object->setFaceColor(face_num, rgba);
           }
@@ -674,13 +674,13 @@ readLines(CGeomObject3D *object, int pface_num)
 
         break;
       default: {
-        int start = CStrUtil::toInteger(words[0].getWord());
-        int end   = CStrUtil::toInteger(words[1].getWord());
+        auto start = CStrUtil::toInteger(words[0].getWord());
+        auto end   = CStrUtil::toInteger(words[1].getWord());
 
         if (pface_num != -1)
-          object->addFaceSubLine(pface_num, start, end);
+          object->addFaceSubLine(uint(pface_num), uint(start), uint(end));
         else
-          object->addLine(start, end);
+          object->addLine(uint(start), uint(end));
 
         break;
       }
@@ -756,7 +756,7 @@ readRotate(CGeomObject3D *object, int num_patches)
     }
   }
 
-  int num_xy = points.size();
+  auto num_xy = points.size();
 
   if (num_xy < 2)
     return;
@@ -764,12 +764,12 @@ readRotate(CGeomObject3D *object, int num_patches)
   double *x = new double [num_xy];
   double *y = new double [num_xy];
 
-  for (int i = 0; i < num_xy; i++) {
+  for (size_t i = 0; i < num_xy; i++) {
     x[i] = points[i].x;
     y[i] = points[i].y;
   }
 
-  object->addBodyRev(x, y, num_xy, num_patches);
+  object->addBodyRev(x, y, uint(num_xy), uint(num_patches));
 
   delete [] x;
   delete [] y;
@@ -955,10 +955,10 @@ void
 CImportScene::
 getRGBA(int color, CRGBA *rgba)
 {
-  int num_colors = colors_.size();
+  auto num_colors = colors_.size();
 
-  if (color > 0 && color <= num_colors)
-    *rgba = CRGBName::toRGBA(colors_[color - 1]);
+  if (color > 0 && color <= int(num_colors))
+    *rgba = CRGBName::toRGBA(colors_[uint(color - 1)]);
   else
     *rgba = CRGBA(1, 0, 0, 1);
 }

@@ -3,8 +3,8 @@
 
 #include <CDrawType3D.h>
 #include <CShadeType3D.h>
-#include <CFile.h>
 #include <CGeomObject3D.h>
+#include <CFile.h>
 
 class CImportPLG {
  public:
@@ -12,7 +12,8 @@ class CImportPLG {
 
   virtual ~CImportPLG();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
+  bool isDebug() const { return debug_; }
+  void setDebug(bool b) { debug_ = b; }
 
   bool read(CFile &file);
 
@@ -33,14 +34,14 @@ class CImportPLG {
                              CShadeType3D shade_type, const CRGBA &rgba) = 0;
 
  private:
-  CFile       *file_ { nullptr };
-  bool         debug_ { false };
-  std::string  line_;
-  std::string  name_;
-  uint         num_vertices_ { 0 };
-  uint         num_polygons_ { 0 };
-  bool         palette_loaded_ { false };
-  CRGBA       *palette_ { nullptr };
+  CFile*      file_           { nullptr };
+  bool        debug_          { false };
+  std::string line_;
+  std::string name_;
+  uint        num_vertices_   { 0 };
+  uint        num_polygons_   { 0 };
+  bool        palette_loaded_ { false };
+  CRGBA*      palette_        { nullptr };
 };
 
 #endif

@@ -1,19 +1,20 @@
 #ifndef CIMPORT_OBJ_H
 #define CIMPORT_OBJ_H
 
-#include <CFile.h>
+#include <CImportBase.h>
 #include <CGeomObject3D.h>
+#include <CFile.h>
 #include <CAutoPtr.h>
 
-class CImportObj {
+class CImportObj : public CImportBase {
  public:
   CImportObj(CGeomScene3D *scene=nullptr, const std::string &name="obj");
 
  ~CImportObj();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
+  bool read(CFile &file) override;
 
-  bool read(CFile &file);
+  CGeomScene3D &getScene() override { return *scene_; }
 
   CGeomObject3D &getObject() { return *object_; }
 
@@ -45,7 +46,6 @@ class CImportObj {
   CAutoPtr<CGeomObject3D>  pobject_;
   CFile                   *file_ { nullptr };
   int                      vnum_ { 0 }, vnnum_ { 0 }, vtnum_ { 0 };
-  bool                     debug_ { false };
   std::string              groupName_;
 };
 

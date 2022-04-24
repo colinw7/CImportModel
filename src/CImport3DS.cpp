@@ -67,7 +67,7 @@ chunk_names[] = {
 
 CImport3DS::
 CImport3DS(CGeomScene3D *scene, const std::string &) :
- scene_(scene), debug_(false)
+ scene_(scene)
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
@@ -649,7 +649,7 @@ readFaceArray(CImport3DSChunk *chunk)
       normal += face.getNormal();
     }
 
-    normal /= (*p1).second.size();
+    normal /= int((*p1).second.size());
 
     normal.normalize();
 
@@ -728,7 +728,7 @@ readSmoothGroup(CImport3DSChunk *chunk)
 {
   smoothGroupFaceList_.clear();
 
-  ushort num_faces = chunk->left/sizeof(uint);
+  ushort num_faces = ushort(uint(chunk->left)/sizeof(uint));
 
   if (debug_)
     std::cout << num_faces << std::endl;
@@ -806,7 +806,7 @@ readChunk(CImport3DSChunk *chunk)
   if (! readLong(chunk, &chunk->len))
     return false;
 
-  chunk->left = chunk->len - 6;
+  chunk->left = ushort(chunk->len - 6);
 
   if (debug_)
     printChunk(chunk);
@@ -847,7 +847,7 @@ readChar(CImport3DSChunk *chunk, uchar *c)
   if (c1 == EOF)
     return false;
 
-  *c = c1;
+  *c = uchar(c1);
 
   adjustChunkLeft(chunk, sizeof(uchar));
 
@@ -867,7 +867,7 @@ readShort(CImport3DSChunk *chunk, ushort *s)
     return false;
   }
 
-  *s = (file_data.getDataPos(1) << 8) | file_data.getDataPos(0);
+  *s = ushort((file_data.getDataPos(1) << 8) | file_data.getDataPos(0));
 
   adjustChunkLeft(chunk, sizeof(ushort));
 
@@ -887,8 +887,8 @@ readLong(CImport3DSChunk *chunk, uint *l)
     return false;
   }
 
-  *l = (file_data.getDataPos(3) << 24) | (file_data.getDataPos(2) << 16) |
-       (file_data.getDataPos(1) <<  8) |  file_data.getDataPos(0);
+  *l = uint((file_data.getDataPos(3) << 24) | (file_data.getDataPos(2) << 16) |
+            (file_data.getDataPos(1) <<  8) |  file_data.getDataPos(0));
 
   adjustChunkLeft(chunk, 4);
 
@@ -899,11 +899,11 @@ std::string
 CImport3DS::
 readString(CImport3DSChunk *chunk)
 {
-  static char  *buffer = nullptr;
-  static int    buffer_max = 0;
+  static char *buffer = nullptr;
+  static uint  buffer_max = 0;
 
-  if (chunk->left > buffer_max) {
-    buffer_max = chunk->left + 32;
+  if (uint(chunk->left) > buffer_max) {
+    buffer_max = uint(chunk->left + 32);
 
     delete [] buffer;
 
@@ -923,7 +923,7 @@ readString(CImport3DSChunk *chunk)
     if (c == '\0')
       break;
 
-    buffer[i++] = c;
+    buffer[i++] = char(c);
   }
 
   buffer[i] = '\0';
