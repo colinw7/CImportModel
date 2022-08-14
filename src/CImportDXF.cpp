@@ -34,7 +34,7 @@ read(CFile &file)
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code != 0) {
       badLine(line);
@@ -66,7 +66,7 @@ readSection()
 
   readLine(line);
 
-  int code = CStrUtil::toInteger(line);
+  int code = int(CStrUtil::toInteger(line));
 
   if (code != 2) {
     badLine(line);
@@ -106,7 +106,7 @@ readHeader()
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       readLine(line);
@@ -128,7 +128,7 @@ readTables()
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       readLine(line);
@@ -150,7 +150,7 @@ readBlocks()
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       readLine(line);
@@ -172,7 +172,7 @@ readEntities()
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     switch (code) {
       case 0:
@@ -247,7 +247,7 @@ read3DFaceEntity()
   int num_points = 0;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       unreadLine(line);
@@ -284,13 +284,13 @@ read3DFaceEntity()
       case 62:
         readLine(line);
 
-        color = CStrUtil::toInteger(line);
+        color = int(CStrUtil::toInteger(line));
 
         break;
       case 70: {
         readLine(line);
 
-        int flags = CStrUtil::toInteger(line);
+        int flags = int(CStrUtil::toInteger(line));
 
         for (int i = 0; i < 4; i++) {
           if (flags & (1<<i))
@@ -325,7 +325,7 @@ read3DFaceEntity()
     vertices.push_back(ind);
   }
 
-  int face_num = object_->addFace(vertices);
+  auto face_num = object_->addFace(vertices);
 
   for (int i = 0; i < 4; i++) {
     if (! visible[i]) {
@@ -373,7 +373,7 @@ readPolyLineEntity()
   //int n_density = 0;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       unreadLine(line);
@@ -406,7 +406,7 @@ readPolyLineEntity()
       case 62:
         readLine(line);
 
-        color = CStrUtil::toInteger(line);
+        color = int(CStrUtil::toInteger(line));
 
         break;
       case 66:
@@ -418,7 +418,7 @@ readPolyLineEntity()
       case 70: {
         readLine(line);
 
-        int flags = CStrUtil::toInteger(line);
+        int flags = int(CStrUtil::toInteger(line));
 
         //if (flags & (1<<0)) closed = true;
         //if (flags & (1<<1)) curve_fit_vertices_added = true;
@@ -434,25 +434,25 @@ readPolyLineEntity()
       case 71:
         readLine(line);
 
-        //num_m_vertices = CStrUtil::toInteger(line);
+        //num_m_vertices = int(CStrUtil::toInteger(line));
 
         break;
       case 72:
         readLine(line);
 
-        //num_n_vertices = CStrUtil::toInteger(line);
+        //num_n_vertices = int(CStrUtil::toInteger(line));
 
         break;
       case 73:
         readLine(line);
 
-        //m_density = CStrUtil::toInteger(line);
+        //m_density = int(CStrUtil::toInteger(line));
 
         break;
       case 74:
         readLine(line);
 
-        //n_density = CStrUtil::toInteger(line);
+        //n_density = int(CStrUtil::toInteger(line));
 
         break;
       case 75:
@@ -471,7 +471,7 @@ readPolyLineEntity()
 
   readLine(line);
 
-  int code = CStrUtil::toInteger(line);
+  int code = int(CStrUtil::toInteger(line));
 
   if (code != 0) {
     badLine(line);
@@ -492,7 +492,7 @@ readPolyLineEntity()
 
     readLine(line);
 
-    int code1 = CStrUtil::toInteger(line);
+    int code1 = int(CStrUtil::toInteger(line));
 
     if (code1 != 0) {
       badLine(line);
@@ -529,7 +529,7 @@ readVertexEntity(int color)
   int face_num[4] = { 0, 0, 0, 0 };
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       unreadLine(line);
@@ -564,13 +564,13 @@ readVertexEntity(int color)
       case 62:
         readLine(line);
 
-        color = CStrUtil::toInteger(line);
+        color = int(CStrUtil::toInteger(line));
 
         break;
       case 70: {
         readLine(line);
 
-        int flags = CStrUtil::toInteger(line);
+        int flags = int(CStrUtil::toInteger(line));
 
         if (flags & (1<<6))
           vertex = true;
@@ -585,7 +585,7 @@ readVertexEntity(int color)
       case 74:
         readLine(line);
 
-        face_num[code - 71] = CStrUtil::toInteger(line);
+        face_num[code - 71] = int(CStrUtil::toInteger(line));
 
         break;
       default:
@@ -606,9 +606,9 @@ readVertexEntity(int color)
       if (face_num[2] != face_num[3]) {
         std::vector<uint> vertices;
 
-        vertices.push_back(face_num[0] - 1);
-        vertices.push_back(face_num[1] - 1);
-        vertices.push_back(face_num[2] - 1);
+        vertices.push_back(uint(face_num[0] - 1));
+        vertices.push_back(uint(face_num[1] - 1));
+        vertices.push_back(uint(face_num[2] - 1));
 
         uint face_num1 = object_->addFace(vertices);
 
@@ -623,10 +623,10 @@ readVertexEntity(int color)
       else {
         std::vector<uint> vertices;
 
-        vertices.push_back(face_num[0] - 1);
-        vertices.push_back(face_num[1] - 1);
-        vertices.push_back(face_num[2] - 1);
-        vertices.push_back(face_num[3] - 1);
+        vertices.push_back(uint(face_num[0] - 1));
+        vertices.push_back(uint(face_num[1] - 1));
+        vertices.push_back(uint(face_num[2] - 1));
+        vertices.push_back(uint(face_num[3] - 1));
 
         uint face_num1 = object_->addFace(vertices);
 
@@ -651,7 +651,7 @@ readEntity()
   std::string line;
 
   while (readLine(line)) {
-    int code = CStrUtil::toInteger(line);
+    int code = int(CStrUtil::toInteger(line));
 
     if (code == 0) {
       unreadLine(line);

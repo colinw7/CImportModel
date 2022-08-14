@@ -1,10 +1,11 @@
 #ifndef CIMPORT_ASC_H
 #define CIMPORT_ASC_H
 
+#include <CImportBase.h>
 #include <CFile.h>
 #include <CRGBA.h>
 
-class CImportASC {
+class CImportASC : public CImportBase {
   enum {
     INVERT_X             = (1<<0),
     INVERT_Y             = (1<<1),
@@ -15,27 +16,12 @@ class CImportASC {
     INVERT_WINDING_ORDER = (1<<6)
   };
 
- private:
-  typedef std::vector<std::string> StringList;
-
-  CFile      *file_;
-  bool        debug_;
-  int         flags_;
-  std::string line_;
-  std::string name_;
-  int         num_vertices_;
-  int         num_faces_;
-  std::string pattern_;
-  StringList  match_strs_;
-
  public:
   CImportASC();
 
   virtual ~CImportASC();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
-
-  bool read(CFile &file);
+  bool read(CFile &file) override;
 
   virtual void addVertex(double x, double y, double z) = 0;
 
@@ -47,6 +33,18 @@ class CImportASC {
   bool readVertices();
   bool readFaces();
   bool readNextLine();
+
+ private:
+  typedef std::vector<std::string> StringList;
+
+  CFile      *file_  { nullptr };
+  int         flags_ { 0 };
+  std::string line_;
+  std::string name_;
+  int         num_vertices_ { 0 };
+  int         num_faces_ { 0 };
+  std::string pattern_;
+  StringList  match_strs_;
 };
 
 #endif

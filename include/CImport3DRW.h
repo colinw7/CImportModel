@@ -1,24 +1,26 @@
 #ifndef CIMPORT_3DRW_H
 #define CIMPORT_3DRW_H
 
+#include <CImportBase.h>
+#include <CGeomObject3D.h>
+
 #include <CFile.h>
 #include <CRGBA.h>
-#include <CGeomObject3D.h>
 #include <CAutoPtr.h>
 
-class CImport3DRW {
+class CImport3DRW : public CImportBase {
  public:
   CImport3DRW(CGeomScene3D *scene=nullptr, const std::string &name="3drw");
 
  ~CImport3DRW();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
+  bool read(CFile &file) override;
 
-  bool read(CFile &file);
+  CGeomScene3D &getScene() override { return *scene_; }
 
   CGeomObject3D &getObject() { return *object_; }
 
-  CGeomScene3D *releaseScene() {
+  CGeomScene3D *releaseScene() override {
     pscene_ .release();
     pobject_.release();
 
@@ -40,7 +42,6 @@ class CImport3DRW {
   CAutoPtr<CGeomScene3D>   pscene_;
   CGeomObject3D           *object_ { nullptr };
   CAutoPtr<CGeomObject3D>  pobject_;
-  bool                     debug_ { false };
 };
 
 #endif

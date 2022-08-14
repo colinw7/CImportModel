@@ -1,13 +1,14 @@
 #ifndef CIMPORT_COB_H
 #define CIMPORT_COB_H
 
+#include <CImportBase.h>
 #include <CFile.h>
 #include <CPoint3D.h>
 #include <CMatrix3D.h>
 #include <CShadeType3D.h>
 #include <CRGBA.h>
 
-class CImportCOB {
+class CImportCOB : public CImportBase {
  public:
   enum {
     INVERT_X             = (1<<0),
@@ -26,11 +27,9 @@ class CImportCOB {
 
   virtual ~CImportCOB();
 
-  void setDebug(bool debug=true) { debug_ = debug; }
-
   void addFlag(uint flag) { flags_ |= flag; }
 
-  bool read(CFile &file);
+  bool read(CFile &file) override;
 
   virtual void addVertex(double x, double y, double z) = 0;
 
@@ -56,7 +55,6 @@ class CImportCOB {
 
  private:
   CFile*                   file_ { nullptr };
-  bool                     debug_ { false };
   uint                     flags_ { 0 };
   std::string              line_;
   std::string              name_;

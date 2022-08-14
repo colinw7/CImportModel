@@ -11,9 +11,11 @@ class CGeomImportPLG : public CImportPLG {
 
  ~CGeomImportPLG();
 
+  CGeomScene3D &getScene() override { return *scene_; }
+
   CGeomObject3D &getObject() { return *object_; }
 
-  CGeomScene3D *releaseScene() {
+  CGeomScene3D *releaseScene() override {
     pscene_ .release();
     pobject_.release();
 
@@ -26,12 +28,12 @@ class CGeomImportPLG : public CImportPLG {
     return object_;
   }
 
-  void addVertex(double x, double y, double z);
+  void addVertex(double x, double y, double z) override;
 
   void addITriangle(int i1, int i2, int i3, CDrawType3D draw_type,
-                    CShadeType3D shade_type, const CRGBA &rgba);
+                    CShadeType3D shade_type, const CRGBA &rgba) override;
   void addITriangles(uint *inds, uint num_inds, CDrawType3D draw_type,
-                     CShadeType3D shade_type, const CRGBA &rgba);
+                     CShadeType3D shade_type, const CRGBA &rgba) override;
 
  private:
   CGeomScene3D            *scene_ { nullptr };

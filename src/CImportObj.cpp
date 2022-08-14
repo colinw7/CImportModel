@@ -6,8 +6,8 @@ namespace {
   static std::string s_line;
   static int         s_line_num { 0 };
 
-  void error(const char *msg) {
-    std::cerr << "Error: " << msg << ": '" << s_line << "'@" << s_line_num << std::endl;
+  void error(const std::string &msg) {
+    std::cerr << "Error: " << msg << ": '" << s_line << "'@" << s_line_num << "\n";
   }
 }
 
@@ -45,7 +45,7 @@ read(CFile &file)
   while (file_->readLine(s_line)) {
     ++s_line_num;
 
-    std::string line1 = CStrUtil::stripSpaces(s_line);
+    auto line1 = CStrUtil::stripSpaces(s_line);
 
     auto len = line1.size();
 
@@ -104,11 +104,21 @@ read(CFile &file)
     else if (len > 2 && line1[0] == 's' && line1[1] == ' ') {
       // skip smoothing group
     }
-    else if (len > 6 && line1.substr(0, 6) == "mtllib") {
-      // todo
+    else if (len > 6 && line1.substr(0, 6) == "mtllib" && line1[6] == ' ') {
+      line1 = CStrUtil::stripSpaces(line1.substr(6));
+
+      if (! readMaterialFile(line1))
+        error("Invalid material file");
     }
-    else if (len > 6 && line1.substr(0, 6) == "usemtl") {
-      // todo
+    else if (len > 6 && line1.substr(0, 6) == "usemtl" && line1[6] == ' ') {
+      line1 = CStrUtil::stripSpaces(line1.substr(6));
+
+      auto pm = materials_.find(line1);
+
+      if (pm != materials_.end())
+        material_ = (*pm).second;
+      else
+        error("Invalid material name");
     }
     else {
       error("Unrecognised line");
@@ -153,21 +163,17 @@ readTextureVertex(const std::string &line)
 
   CStrUtil::addWords(line, words);
 
+  CPoint3D p;
+
   if      (words.size() == 2) {
     if (! CStrUtil::isReal(words[0]) ||
         ! CStrUtil::isReal(words[1]))
       return false;
 
-#if 0
     double x = CStrUtil::toReal(words[0]);
     double y = CStrUtil::toReal(words[1]);
 
-    CPoint2D p(x, y);
-
-    CGeomVertex3D &vertex = object_->getVertex(vtnum_);
-
-    vertex->setTextureMap(p);
-#endif
+    p = CPoint3D(x, y, 0.0);
   }
   else if (words.size() == 3) {
     if (! CStrUtil::isReal(words[0]) ||
@@ -175,18 +181,16 @@ readTextureVertex(const std::string &line)
         ! CStrUtil::isReal(words[2]))
       return false;
 
-#if 0
     double x = CStrUtil::toReal(words[0]);
     double y = CStrUtil::toReal(words[1]);
     double z = CStrUtil::toReal(words[1]);
 
-    CPoint3D p(x, y, z);
-
-    CGeomVertex3D &vertex = object_->getVertex(vtnum_);
-
-    vertex->setTextureMap(p);
-#endif
+    p = CPoint3D(x, y, z);
   }
+
+  object_->addTexturePoint(p);
+
+  texturePoints_.push_back(p);
 
   return true;
 }
@@ -213,9 +217,11 @@ readVertexNormal(const std::string &line)
 
   CVector3D v(x, y, z);
 
-  CGeomVertex3D &vertex = object_->getVertex(uint(vnnum_));
+  auto &vertex = object_->getVertex(uint(vnnum_));
 
   vertex.setNormal(v);
+
+  object_->addNormal(v);
 
   return true;
 }
@@ -224,6 +230,8 @@ bool
 CImportObj::
 readParameterVertex(const std::string &)
 {
+  std::cerr << "readParameterVertex not implemented\n";
+
   return true;
 }
 
@@ -241,6 +249,8 @@ CImportObj::
 readFace(const std::string &line)
 {
   std::vector<uint> vertices;
+  std::vector<uint> texturePoints;
+  std::vector<uint> normals;
 
   std::vector<std::string> words;
 
@@ -260,12 +270,15 @@ readFace(const std::string &line)
     long num2 = -1;
     long num3 = -1;
 
+    // vertex number
     if (CStrUtil::isInteger(fields[0]))
       num1 = CStrUtil::toInteger(fields[0]);
 
+    // texture number
     if (CStrUtil::isInteger(fields[1]))
       num2 = CStrUtil::toInteger(fields[1]);
 
+    // normal number
     if (CStrUtil::isInteger(fields[2]))
       num3 = CStrUtil::toInteger(fields[2]);
 
@@ -273,18 +286,310 @@ readFace(const std::string &line)
       vertices.push_back(uint(num1 - 1));
 
     assert(num2 >= -1 && num3 >= -1);
+
+    if (num2 > 0)
+      texturePoints.push_back(uint(num2 - 1));
+
+    if (num3 > 0)
+      normals.push_back(uint(num3 - 1));
   }
 
   auto faceNum = object_->addFace(vertices);
 
+  auto &face = object_->getFace(faceNum);
+
   if (groupName_ != "") {
-    CGeomObject3D::Group &group = object_->getGroup(groupName_);
+    auto &group = object_->getGroup(groupName_);
 
     group.addFace(faceNum);
 
-    CGeomFace3D &face = object_->getFace(faceNum);
-
     face.setGroup(group.id());
+  }
+
+  //---
+
+  auto nt = texturePoints.size();
+  auto nn = normals.size();
+
+  assert(nt == nn);
+
+  for (size_t i = 0; i < nt; ++i) {
+    auto &v = object_->getVertex(face.getVertex(uint(i)));
+
+    const auto &p = object_->texturePoint(texturePoints[i]);
+    const auto &n = object_->normal      (normals      [i]);
+
+    v.setTextureMap(p);
+    v.setNormal(n);
+  }
+
+  //---
+
+  if (material_) {
+    CMaterial material;
+
+    material.setAmbient (material_->ka);
+    material.setDiffuse (material_->kd);
+    material.setSpecular(material_->ks);
+
+    object_->setFaceMaterial(uint(faceNum), material);
+
+    if (! material_->mapKd.name.empty()) {
+      auto pm = textureMap_.find(material_->mapKd.name);
+
+      if (pm == textureMap_.end()) {
+        auto *texture = CGeometryInst->createTexture(material_->mapKd.image);
+
+        pm = textureMap_.insert(pm, TextureMap::value_type(material_->mapKd.name, texture));
+      }
+
+      object_->setFaceDiffuseTexture(uint(faceNum), (*pm).second);
+    }
+
+    if (! material_->mapKs.name.empty()) {
+      auto pm = textureMap_.find(material_->mapKs.name);
+
+      if (pm == textureMap_.end()) {
+        auto *texture = CGeometryInst->createTexture(material_->mapKs.image);
+
+        pm = textureMap_.insert(pm, TextureMap::value_type(material_->mapKs.name, texture));
+      }
+
+      object_->setFaceSpecularTexture(uint(faceNum), (*pm).second);
+    }
+
+    if (! material_->mapBump.name.empty()) {
+      auto pm = textureMap_.find(material_->mapBump.name);
+
+      if (pm == textureMap_.end()) {
+        auto *texture = CGeometryInst->createTexture(material_->mapBump.image);
+
+        pm = textureMap_.insert(pm, TextureMap::value_type(material_->mapBump.name, texture));
+      }
+
+      object_->setFaceNormalTexture(uint(faceNum), (*pm).second);
+    }
+  }
+
+  return true;
+}
+
+bool
+CImportObj::
+readMaterialFile(const std::string &filename)
+{
+  CFile file(filename);
+
+  if (! file.exists())
+    return false;
+
+  auto base = file.getBase();
+
+  auto readRGB = [&](const std::string &line, CRGBA &rgba) {
+    std::vector<std::string> words;
+
+    CStrUtil::addWords(line, words);
+
+    if (words.size() != 3 ||
+        ! CStrUtil::isReal(words[0]) ||
+        ! CStrUtil::isReal(words[1]) ||
+        ! CStrUtil::isReal(words[2]))
+      return false;
+
+    auto r = CStrUtil::toReal(words[0]);
+    auto g = CStrUtil::toReal(words[1]);
+    auto b = CStrUtil::toReal(words[2]);
+
+    rgba = CRGBA(r, g, b);
+
+    return true;
+  };
+
+  auto *material = new Material;
+
+  material->name = "default";
+
+  materials_[material->name] = material;
+
+  while (file.readLine(s_line)) {
+    auto line1 = CStrUtil::stripSpaces(s_line);
+
+    auto len = line1.size();
+
+    if (len <= 0 || line1[0] == '#')
+      continue;
+
+    if      (len > 6 && line1.substr(0, 6) == "newmtl" && line1[6] == ' ') {
+      auto name = CStrUtil::stripSpaces(line1.substr(6));
+      //std::cout << "newmtl " << name << "\n";
+
+      material = new Material;
+
+      material->name = name;
+
+      materials_[material->name] = material;
+
+      auto p = materials_.find(base);
+
+      if (p == materials_.end())
+        materials_[base] = material;
+    }
+    // ambient
+    else if (len > 2 && line1.substr(0, 2) == "Ka" && line1[2] == ' ') {
+      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->ka))
+        error("Invalid data for Ka");
+    }
+    // diffuse
+    else if (len > 2 && line1.substr(0, 2) == "Kd" && line1[2] == ' ') {
+      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->kd))
+        error("Invalid data for Kd");
+    }
+    // emissive
+    else if (len > 2 && line1.substr(0, 2) == "Ke" && line1[2] == ' ') {
+      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->ke))
+        error("Invalid data for Ke");
+    }
+    // specular
+    else if (len > 2 && line1.substr(0, 2) == "Ks" && line1[2] == ' ') {
+      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->ks))
+        error("Invalid data for Ks");
+    }
+    // illumination model
+    //   0. Color on and Ambient off
+    //   1. Color on and Ambient on
+    //   2. Highlight on
+    //   3. Reflection on and Ray trace on
+    //   4. Transparency: Glass on, Reflection: Ray trace on
+    //   5. Reflection: Fresnel on and Ray trace on
+    //   6. Transparency: Refraction on, Reflection: Fresnel off and Ray trace on
+    //   7. Transparency: Refraction on, Reflection: Fresnel on and Ray trace on
+    //   8. Reflection on and Ray trace off
+    //   9. Transparency: Glass on, Reflection: Ray trace off
+    //  10. Casts shadows onto invisible surfaces
+    else if (len > 5 && line1.substr(0, 5) == "illum" && line1[5] == ' ') {
+      auto rhs = CStrUtil::stripSpaces(line1.substr(5));
+
+      if (CStrUtil::isInteger(rhs))
+        material->illum = int(CStrUtil::toInteger(rhs));
+      else
+        error("Invalid data for illum");
+    }
+    // specular exponent
+    else if (len > 2 && line1.substr(0, 2) == "Ns" && line1[2] == ' ') {
+      auto rhs = CStrUtil::stripSpaces(line1.substr(2));
+
+      if (CStrUtil::isReal(rhs))
+        material->ns = CStrUtil::toReal(rhs);
+      else
+        error("Invalid data for Ns");
+    }
+    // optical density
+    else if (len > 2 && line1.substr(0, 2) == "Ni" && line1[2] == ' ') {
+      auto rhs = CStrUtil::stripSpaces(line1.substr(2));
+
+      if (CStrUtil::isReal(rhs))
+        material->ni = CStrUtil::toReal(rhs);
+      else
+        error("Invalid data for Ni");
+    }
+    // transparency
+    else if (len > 2 && line1.substr(0, 2) == "Tr" && line1[2] == ' ') {
+      auto rhs = CStrUtil::stripSpaces(line1.substr(2));
+
+      if (CStrUtil::isReal(rhs))
+        material->tr = CStrUtil::toReal(rhs);
+      else
+        error("Invalid data for Tr");
+    }
+    else if (len > 1 && line1.substr(0, 1) == "d" && line1[1] == ' ') {
+      auto rhs = CStrUtil::stripSpaces(line1.substr(1));
+
+      if (CStrUtil::isReal(rhs))
+        material->tr = 1.0 - CStrUtil::toReal(rhs);
+      else
+        error("Invalid data for d");
+    }
+    // ambient
+    else if (len > 6 && line1.substr(0, 6) == "map_Ka" && line1[6] == ' ') {
+      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+
+      CFile imageFile(imageFilename);
+
+      if (imageFile.exists()) {
+        CImageFileSrc src(imageFile);
+
+        auto image = CImageMgrInst->createImage(src);
+
+        image = image->flippedH();
+
+        material->mapKa.image = image;
+        material->mapKa.name  = imageFilename;
+      }
+      else
+        error("Invalid file '" + imageFilename + "' for map_Ka");
+    }
+    // diffuse
+    else if (len > 6 && line1.substr(0, 6) == "map_Kd" && line1[6] == ' ') {
+      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+
+      CFile imageFile(imageFilename);
+
+      if (imageFile.exists()) {
+        CImageFileSrc src(imageFile);
+
+        auto image = CImageMgrInst->createImage(src);
+
+        image = image->flippedH();
+
+        material->mapKd.image = image;
+        material->mapKd.name  = imageFilename;
+      }
+      else
+        error("Invalid file for map_Kd");
+    }
+    // specular
+    else if (len > 6 && line1.substr(0, 6) == "map_Ks" && line1[6] == ' ') {
+      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+
+      CFile imageFile(imageFilename);
+
+      if (imageFile.exists()) {
+        CImageFileSrc src(imageFile);
+
+        auto image = CImageMgrInst->createImage(src);
+
+        image = image->flippedH();
+
+        material->mapKs.image = image;
+        material->mapKs.name  = imageFilename;
+      }
+      else
+        error("Invalid file for map_Ks");
+    }
+    // normal
+    else if (len > 8 && (line1.substr(0, 8) == "map_Bump" ||
+                         line1.substr(0, 8) == "map_bump") && line1[8] == ' ') {
+      auto imageFilename = CStrUtil::stripSpaces(line1.substr(8));
+
+      CFile imageFile(imageFilename);
+
+      if (imageFile.exists()) {
+        CImageFileSrc src(imageFile);
+
+        auto image = CImageMgrInst->createImage(src);
+
+        image = image->flippedH();
+
+        material->mapBump.image = image;
+        material->mapBump.name  = imageFilename;
+      }
+      else
+        error("Invalid file for map_Bump");
+    }
+    else {
+      // TODO: map_Ns, map_d, bump, disp, decal
+      error("Unrecognised line");
+    }
   }
 
   return true;

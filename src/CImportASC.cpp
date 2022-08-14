@@ -4,8 +4,7 @@
 #include <CStrParse.h>
 
 CImportASC::
-CImportASC() :
- debug_(false), flags_(0)
+CImportASC()
 {
 }
 

@@ -34,11 +34,11 @@ void
 CGeomImportASC::
 addITriangle(int i1, int i2, int i3, const CRGBA &rgba)
 {
-  CMaterial *material = new CMaterial;
+  auto *material = new CMaterial;
 
   material->setAmbient(rgba);
 
-  uint face_num = object_->addITriangle(i1, i2, i3);
+  uint face_num = object_->addITriangle(uint(i1), uint(i2), uint(i3));
 
   object_->setFaceMaterial(face_num, *material);
 }

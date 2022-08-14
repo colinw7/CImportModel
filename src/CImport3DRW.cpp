@@ -41,7 +41,7 @@ read(CFile &file)
 {
   char id[4];
 
-  if (! file.read((uchar *) id, sizeof(id)))
+  if (! file.read(reinterpret_cast<uchar *>(id), sizeof(id)))
     return false;
 
   if (strncmp(id, "3DRW", 4) != 0)
@@ -49,19 +49,19 @@ read(CFile &file)
 
   short ver;
 
-  if (! file.read((uchar *) &ver, sizeof(ver)))
+  if (! file.read(reinterpret_cast<uchar *>(&ver), sizeof(ver)))
     return false;
 
   int offset;
 
-  if (! file.read((uchar *) &offset, sizeof(offset)))
+  if (! file.read(reinterpret_cast<uchar *>(&offset), sizeof(offset)))
     return false;
 
   swapInt(&offset);
 
   short num_faces;
 
-  if (! file.read((uchar *) &num_faces, sizeof(num_faces)))
+  if (! file.read(reinterpret_cast<uchar *>(&num_faces), sizeof(num_faces)))
     return false;
 
   swapShort(&num_faces);
@@ -71,9 +71,9 @@ read(CFile &file)
   if (debug_)
     std::cerr << "Num Faces = " << num_faces << std::endl;
 
-  Face *faces = new Face [num_faces];
+  auto *faces = new Face [uint(num_faces)];
 
-  if (! file.read((uchar *) faces, num_faces*sizeof(Face)))
+  if (! file.read(reinterpret_cast<uchar *>(faces), uint(num_faces)*sizeof(Face)))
     return false;
 
   for (int i = 0; i < num_faces; ++i) {
@@ -97,7 +97,7 @@ read(CFile &file)
 
   short num_points;
 
-  if (! file.read((uchar *) &num_points, sizeof(num_points)))
+  if (! file.read(reinterpret_cast<uchar *>(&num_points), sizeof(num_points)))
     return false;
 
   swapShort(&num_points);
@@ -107,9 +107,9 @@ read(CFile &file)
   if (debug_)
     std::cerr << "Num Points = " << num_points << std::endl;
 
-  Point *points = new Point [num_points];
+  auto *points = new Point [uint(num_points)];
 
-  if (! file.read((uchar *) points, num_points*sizeof(Point)))
+  if (! file.read(reinterpret_cast<uchar *>(points), uint(num_points)*sizeof(Point)))
     return false;
 
   for (int i = 0; i < num_points; ++i) {
@@ -131,9 +131,9 @@ read(CFile &file)
   face_points.resize(3);
 
   for (int i = 0; i < num_faces; i++) {
-    face_points[0] = faces[i].point11;
-    face_points[1] = faces[i].point21;
-    face_points[2] = faces[i].point31;
+    face_points[0] = uint(faces[i].point11);
+    face_points[1] = uint(faces[i].point21);
+    face_points[2] = uint(faces[i].point31);
 
     object_->addFace(face_points);
   }
@@ -153,7 +153,7 @@ swapInt(int *word)
   int word3 = (*word >> 16) & 0x000000FF;
   int word4 = (*word >> 24) & 0x000000FF;
 
-  *word = word1 << 24 | word2 << 16 | word3 << 8 | word4;
+  *word = int(word1 << 24 | word2 << 16 | word3 << 8 | word4);
 }
 
 void
@@ -163,5 +163,5 @@ swapShort(short *word)
   int word1 =  *word        & 0x000000FF;
   int word2 = (*word >> 8 ) & 0x000000FF;
 
-  *word = word1 << 8 | word2;
+  *word = short(word1 << 8 | word2);
 }

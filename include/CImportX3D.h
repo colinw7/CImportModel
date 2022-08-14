@@ -18,7 +18,7 @@ class CImportX3D : public CImportBase {
 
   CGeomObject3D &getObject() { return *object_; }
 
-  CGeomScene3D *releaseScene() {
+  CGeomScene3D *releaseScene() override {
     pscene_ .release();
     pobject_.release();
 

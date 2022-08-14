@@ -40,7 +40,7 @@ void
 CGeomImportCOB::
 addITriangle(int i1, int i2, int i3, int, int, int, int imat)
 {
-  int face_num = object_->addITriangle(i1, i2, i3);
+  auto face_num = object_->addITriangle(uint(i1), uint(i2), uint(i3));
 
   //face->setTextureIds(t1, t2, t3);
 
@@ -54,8 +54,7 @@ setFacesMaterial(int imat, CShadeType3D,
                  const CRGBA &specular, const CRGBA &emission, double shininess,
                  const std::string &)
 {
-  CMaterial *material =
-    new CMaterial(ambient, diffuse, specular, emission, shininess);
+  auto *material = new CMaterial(ambient, diffuse, specular, emission, shininess);
 
   setFacesMaterial(imat, material);
 }

@@ -34,11 +34,11 @@ void
 CGeomImportPLG::
 addITriangle(int i1, int i2, int i3, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
-  CMaterial *material = new CMaterial;
+  auto *material = new CMaterial;
 
   material->setColor(rgba);
 
-  int face_num = object_->addITriangle(i1, i2, i3);
+  auto face_num = object_->addITriangle(uint(i1), uint(i2), uint(i3));
 
   object_->setFaceMaterial(face_num, *material);
 }
@@ -47,7 +47,7 @@ void
 CGeomImportPLG::
 addITriangles(uint *inds, uint num_inds, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
-  CMaterial *material = new CMaterial;
+  auto *material = new CMaterial;
 
   material->setColor(rgba);
 

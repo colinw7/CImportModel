@@ -1,21 +1,19 @@
 #ifndef CIMPORT_PLG_H
 #define CIMPORT_PLG_H
 
+#include <CImportBase.h>
+#include <CGeomObject3D.h>
 #include <CDrawType3D.h>
 #include <CShadeType3D.h>
-#include <CGeomObject3D.h>
 #include <CFile.h>
 
-class CImportPLG {
+class CImportPLG : public CImportBase {
  public:
   CImportPLG();
 
   virtual ~CImportPLG();
 
-  bool isDebug() const { return debug_; }
-  void setDebug(bool b) { debug_ = b; }
-
-  bool read(CFile &file);
+  bool read(CFile &file) override;
 
  private:
   bool readHeader();
@@ -35,7 +33,6 @@ class CImportPLG {
 
  private:
   CFile*      file_           { nullptr };
-  bool        debug_          { false };
   std::string line_;
   std::string name_;
   uint        num_vertices_   { 0 };

@@ -488,7 +488,7 @@ readObject(const std::string &name)
 
           CImageFileSrc src(file);
 
-          CImagePtr image = CImageMgrInst->createImage(src);
+          auto image = CImageMgrInst->createImage(src);
 
           object->setTexture(image);
         }
@@ -505,7 +505,7 @@ readObject(const std::string &name)
 
           CImageFileSrc src(file);
 
-          CImagePtr image = CImageMgrInst->createImage(src);
+          auto image = CImageMgrInst->createImage(src);
 
           object->mapTexture(image);
         }
@@ -522,7 +522,7 @@ readObject(const std::string &name)
 
           CImageFileSrc src(file);
 
-          CImagePtr image = CImageMgrInst->createImage(src);
+          auto image = CImageMgrInst->createImage(src);
 
           object->setMask(image);
         }
@@ -539,7 +539,7 @@ readObject(const std::string &name)
 
           CImageFileSrc src(file);
 
-          CImagePtr image = CImageMgrInst->createImage(src);
+          auto image = CImageMgrInst->createImage(src);
 
           object->mapMask(image);
         }
@@ -594,7 +594,7 @@ readFaces(CGeomObject3D *object, int pface_num)
 
         int i = 0;
 
-        while (i < words.size()) {
+        while (i < int(words.size())) {
           if (words[i].getWord() == ":")
             break;
 
@@ -761,8 +761,8 @@ readRotate(CGeomObject3D *object, int num_patches)
   if (num_xy < 2)
     return;
 
-  double *x = new double [num_xy];
-  double *y = new double [num_xy];
+  auto *x = new double [num_xy];
+  auto *y = new double [num_xy];
 
   for (size_t i = 0; i < num_xy; i++) {
     x[i] = points[i].x;

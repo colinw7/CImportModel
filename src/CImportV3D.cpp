@@ -81,7 +81,7 @@ read(CFile &file)
 
         long num_vertices_1 = CStrUtil::toInteger(words1[0].getWord());
 
-        if (words1.size() < num_vertices_1 + 2)
+        if (int(words1.size()) < num_vertices_1 + 2)
           throw "Invalid Sub Face/Line";
 
         if (num_vertices_1 <= 1)
@@ -122,7 +122,7 @@ read(CFile &file)
     else {
       long num_vertices_1 = CStrUtil::toInteger(words[0].getWord());
 
-      if (words.size() < num_vertices_1 + 2)
+      if (long(words.size()) < num_vertices_1 + 2)
         throw "Invalid Face/Line";
 
       if (num_vertices_1 <= 1)
