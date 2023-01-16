@@ -188,8 +188,8 @@ getColorRGBA(long color, CRGBA *rgba)
   if (color < 0)
     color = -color;
 
-  *rgba = CRGBA(((color >> 0) & 0x7)/7.0,
-                ((color >> 3) & 0x7)/7.0,
-                ((color >> 6) & 0x7)/7.0,
+  *rgba = CRGBA(double(((color >> 0) & 0x7))/7.0,
+                double(((color >> 3) & 0x7))/7.0,
+                double(((color >> 6) & 0x7))/7.0,
                 1.0);
 }
