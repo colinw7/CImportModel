@@ -5,9 +5,10 @@
 namespace {
   static std::string s_line;
   static int         s_line_num { 0 };
+  static std::string s_line1;
 
   void error(const std::string &msg) {
-    std::cerr << "Error: " << msg << ": '" << s_line << "'@" << s_line_num << "\n";
+    std::cerr << "Error: " << msg << ": '" << s_line1 << "' @" << s_line_num << "\n";
   }
 }
 
@@ -51,6 +52,8 @@ read(CFile &file)
 
     if (len <= 0 || line1[0] == '#')
       continue;
+
+    s_line1 = line1;
 
     if      (len > 2 && line1[0] == 'v' && line1[1] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
@@ -121,7 +124,7 @@ read(CFile &file)
         error("Invalid material name");
     }
     else {
-      error("Unrecognised line");
+      error("Unrecognised material line");
     }
   }
 
@@ -217,10 +220,6 @@ readVertexNormal(const std::string &line)
 
   CVector3D v(x, y, z);
 
-  auto &vertex = object_->getVertex(uint(vnnum_));
-
-  vertex.setNormal(v);
-
   object_->addNormal(v);
 
   return true;
@@ -249,12 +248,16 @@ CImportObj::
 readFace(const std::string &line)
 {
   std::vector<uint> vertices;
-  std::vector<uint> texturePoints;
-  std::vector<uint> normals;
+  std::vector<long> texturePoints;
+  std::vector<long> normals;
 
   std::vector<std::string> words;
 
   CStrUtil::addWords(line, words);
+
+  auto nv = object_->getNumVertices();
+  auto nt = object_->getNumTextuePoints();
+  auto nn = object_->getNumNormals();
 
   auto num_words = words.size();
 
@@ -266,33 +269,64 @@ readFace(const std::string &line)
     while (fields.size() < 3)
       fields.push_back("");
 
-    long num1 = -1;
-    long num2 = -1;
-    long num3 = -1;
+    //---
 
     // vertex number
+    long num1 = -1;
+
     if (CStrUtil::isInteger(fields[0]))
       num1 = CStrUtil::toInteger(fields[0]);
 
-    // texture number
-    if (CStrUtil::isInteger(fields[1]))
-      num2 = CStrUtil::toInteger(fields[1]);
-
-    // normal number
-    if (CStrUtil::isInteger(fields[2]))
-      num3 = CStrUtil::toInteger(fields[2]);
+    if (num1 < 0)
+      num1 += nv + 1;
 
     if (num1 > 0)
       vertices.push_back(uint(num1 - 1));
+    else
+      assert(false);
 
-    assert(num2 >= -1 && num3 >= -1);
+    //---
 
-    if (num2 > 0)
-      texturePoints.push_back(uint(num2 - 1));
+    // texture number (optional)
+    if (fields[1] != "") {
+      long num2 = -1;
 
-    if (num3 > 0)
-      normals.push_back(uint(num3 - 1));
+      if (CStrUtil::isInteger(fields[1]))
+        num2 = CStrUtil::toInteger(fields[1]);
+
+      if (num2 < 0)
+        num2 += nt + 1;
+
+      if (num2 > 0)
+        texturePoints.push_back(long(num2 - 1));
+      else
+        assert(false);
+    }
+    else
+      texturePoints.push_back(-1);
+
+    //---
+
+    // normal number (optional)
+    if (fields[2] != "") {
+      long num3 = -1;
+
+      if (CStrUtil::isInteger(fields[2]))
+        num3 = CStrUtil::toInteger(fields[2]);
+
+      if (num3 < 0)
+         num3 += nn + 1;
+
+      if (num3 > 0)
+        normals.push_back(long(num3 - 1));
+      else
+        assert(false);
+    }
+    else
+      normals.push_back(-1);
   }
+
+  //---
 
   auto faceNum = object_->addFace(vertices);
 
@@ -308,19 +342,29 @@ readFace(const std::string &line)
 
   //---
 
-  auto nt = texturePoints.size();
-  auto nn = normals.size();
+  auto ntp = texturePoints.size();
+  auto nn1 = normals.size();
 
-  assert(nt == nn);
+  assert(ntp == nn1);
 
-  for (size_t i = 0; i < nt; ++i) {
+  for (size_t i = 0; i < ntp; ++i) {
     auto &v = object_->getVertex(face.getVertex(uint(i)));
 
-    const auto &p = object_->texturePoint(texturePoints[i]);
-    const auto &n = object_->normal      (normals      [i]);
+    auto ti = texturePoints[i];
 
-    v.setTextureMap(p);
-    v.setNormal(n);
+    if (ti >= 0) {
+      const auto &p = object_->texturePoint(uint(ti));
+
+      v.setTextureMap(p);
+    }
+
+    auto ni = normals[i];
+
+    if (ni >= 0) {
+      const auto &n = object_->normal(uint(ni));
+
+      v.setNormal(n);
+    }
   }
 
   //---
@@ -419,6 +463,8 @@ readMaterialFile(const std::string &filename)
     if (len <= 0 || line1[0] == '#')
       continue;
 
+    s_line1 = line1;
+
     if      (len > 6 && line1.substr(0, 6) == "newmtl" && line1[6] == ' ') {
       auto name = CStrUtil::stripSpaces(line1.substr(6));
       //std::cout << "newmtl " << name << "\n";
@@ -501,6 +547,11 @@ readMaterialFile(const std::string &filename)
       else
         error("Invalid data for Tr");
     }
+    else if (len > 2 && line1.substr(0, 2) == "Tf" && line1[2] == ' ') {
+      CRGBA tf;
+      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), tf))
+        error("Invalid data for Tf");
+    }
     else if (len > 1 && line1.substr(0, 1) == "d" && line1[1] == ' ') {
       auto rhs = CStrUtil::stripSpaces(line1.substr(1));
 
@@ -566,7 +617,7 @@ readMaterialFile(const std::string &filename)
       else
         error("Invalid file for map_Ks");
     }
-    // normal
+    // bump map
     else if (len > 8 && (line1.substr(0, 8) == "map_Bump" ||
                          line1.substr(0, 8) == "map_bump") && line1[8] == ' ') {
       auto imageFilename = CStrUtil::stripSpaces(line1.substr(8));
@@ -585,6 +636,13 @@ readMaterialFile(const std::string &filename)
       }
       else
         error("Invalid file for map_Bump");
+    }
+    // map d ?
+    else if (len > 5 && line1.substr(0, 5) == "map_d" && line1[5] == ' ') {
+    }
+    // bump
+    else if (len > 8 && (line1.substr(0, 4) == "bump") && line1[4] == ' ') {
+      // TODO
     }
     else {
       // TODO: map_Ns, map_d, bump, disp, decal

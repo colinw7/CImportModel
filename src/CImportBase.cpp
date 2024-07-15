@@ -8,6 +8,7 @@
 #include <CImportDXF.h>
 #include <CImportObj.h>
 #include <CImportScene.h>
+#include <CImportSTL.h>
 #include <CImportV3D.h>
 #include <CImportX3D.h>
 
@@ -26,6 +27,7 @@ createModel(CGeom3DType type)
     case CGEOM_3D_TYPE_OBJ:   import = new CImportObj    ; break;
     case CGEOM_3D_TYPE_PLG:   import = new CGeomImportPLG; break;
     case CGEOM_3D_TYPE_SCENE: import = new CImportScene  ; break;
+    case CGEOM_3D_TYPE_STL:   import = new CImportSTL    ; break;
     case CGEOM_3D_TYPE_V3D:   import = new CImportV3D    ; break;
     case CGEOM_3D_TYPE_X3D:   import = new CImportX3D    ; break;
     default: return nullptr;
