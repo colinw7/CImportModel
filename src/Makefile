@@ -28,6 +28,7 @@ CImportScene.cpp \
 CImportSTL.cpp \
 CImportV3D.cpp \
 CImportX3D.cpp \
+CImportBase.cpp \
 
 CPP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
 
