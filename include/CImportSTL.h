@@ -9,9 +9,6 @@
 #include <set>
 
 class CImportSTL : public CImportBase {
- private:
-  typedef std::vector<CGeomVertex3D *> VertexList;
-
  public:
   struct Vector {
     float x { 0.0 };

@@ -1,6 +1,5 @@
 #include <CImportSTL.h>
 #include <CGeometry3D.h>
-#include <CStrUtil.h>
 
 CImportSTL::
 CImportSTL(CGeomScene3D *scene, const std::string &name) :
