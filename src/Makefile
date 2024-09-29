@@ -24,6 +24,7 @@ CImportCOB.cpp \
 CImportDXF.cpp \
 CImportObj.cpp \
 CImportPLG.cpp \
+CImportPly.cpp \
 CImportScene.cpp \
 CImportSTL.cpp \
 CImportV3D.cpp \

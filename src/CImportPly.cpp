@@ -319,9 +319,9 @@ read(CFile &file)
         v.ny = std::stod(word);
       else if (p.name == "nz")
         v.nz = std::stod(word);
-      else if (p.name == "s")
+      else if (p.name == "s" || p.name == "u")
         v.s = std::stod(word);
-      else if (p.name == "t")
+      else if (p.name == "t" || p.name == "v")
         v.t = std::stod(word);
       else
         std::cerr << "Bad vertex name : " << p.name << "\n";
