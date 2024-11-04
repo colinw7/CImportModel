@@ -392,7 +392,7 @@ read(CFile &file)
 
     object_->setVertexNormal(i, CVector3D(v.nx, v.ny, v.nz));
 
-    object_->setVertexTextureMap(i, CPoint3D(v.s, v.t, 0.0));
+    object_->setVertexTextureMap(i, CPoint2D(v.s, v.t));
 
     ++i;
   }

@@ -6,6 +6,7 @@
 #include <CImport3DS.h>
 #include <CImport3DRW.h>
 #include <CImportDXF.h>
+#include <CImportGLTF.h>
 #include <CImportObj.h>
 #include <CImportPly.h>
 #include <CImportScene.h>
@@ -25,6 +26,7 @@ createModel(CGeom3DType type)
     case CGEOM_3D_TYPE_ASC:   import = new CGeomImportASC; break;
     case CGEOM_3D_TYPE_COB:   import = new CGeomImportCOB; break;
     case CGEOM_3D_TYPE_DXF:   import = new CImportDXF    ; break;
+    case CGEOM_3D_TYPE_GLTF:  import = new CImportGLTF   ; break;
     case CGEOM_3D_TYPE_OBJ:   import = new CImportObj    ; break;
     case CGEOM_3D_TYPE_PLG:   import = new CGeomImportPLG; break;
     case CGEOM_3D_TYPE_PLY:   import = new CImportPly    ; break;

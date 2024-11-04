@@ -1,5 +1,5 @@
-#ifndef CIMPORT_STL_H
-#define CIMPORT_STL_H
+#ifndef CImportSTL_H
+#define CImportSTL_H
 
 #include <CImportBase.h>
 #include <CGeomObject3D.h>
@@ -58,7 +58,7 @@ class CImportSTL : public CImportBase {
   CAutoPtr<CGeomObject3D>  pobject_;
   CFile                   *file_    { nullptr };
 
-  Triangles   triangles_;
+  Triangles triangles_;
 
   Vector minV_;
   Vector maxV_;

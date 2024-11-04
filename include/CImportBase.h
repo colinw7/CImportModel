@@ -30,6 +30,7 @@ class CImportBase {
     else if (suffix == "asc"  ) return CGEOM_3D_TYPE_ASC;
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;
     else if (suffix == "dxf"  ) return CGEOM_3D_TYPE_DXF;
+    else if (suffix == "gltf" ) return CGEOM_3D_TYPE_GLTF;
     else if (suffix == "obj"  ) return CGEOM_3D_TYPE_OBJ;
     else if (suffix == "plg"  ) return CGEOM_3D_TYPE_PLG;
     else if (suffix == "ply"  ) return CGEOM_3D_TYPE_PLY;

@@ -355,7 +355,7 @@ readFace(const std::string &line)
     if (ti >= 0) {
       const auto &p = object_->texturePoint(uint(ti));
 
-      v.setTextureMap(p);
+      v.setTextureMap(CPoint2D(p.x, p.y));
     }
 
     auto ni = normals[i];
