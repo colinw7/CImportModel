@@ -289,7 +289,7 @@ addObject(const std::string &name)
       CGeomSphere3D::addGeometry(primitive, CPoint3D(0, 0, 0), 1);
     }
     else if (name == "Cube") {
-      primitive = CGeometryInst->createObject3D(scene_, "sphere");
+      primitive = CGeometryInst->createObject3D(scene_, "cube");
 
       CGeomBox3D::addGeometry(primitive, 0, 0, 0, 1, 1, 1);
     }
