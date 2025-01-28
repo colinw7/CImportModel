@@ -2,6 +2,7 @@
 #include <CGeometry3D.h>
 #include <CJson.h>
 #include <CMinMax.h>
+#include <CEncode64.h>
 
 namespace {
 
@@ -16,6 +17,10 @@ auto warnMsg(const std::string &msg) -> void {
 
 auto debugMsg(const std::string &msg) -> void {
   std::cerr << "[31m" << msg << "[0m\n";
+}
+
+auto TODO(const std::string &msg) -> void {
+  std::cerr << "[34mTODO[0m: " << msg << "\n";
 }
 
 enum Constants {
@@ -35,6 +40,19 @@ enum Constants {
   MODE_TRIANGLE_FAN   = 6,
 };
 
+CRGBA colorRGBA(const CImportGLTF::Color &c) {
+  return CRGBA(c.r, c.g, c.b, c.a);
+}
+
+template<typename T>
+void printVector(const std::string &name, const std::vector<T> &v) {
+  if (v.empty()) return;
+  std::cerr << name << "\n";
+  for (const auto &v1 : v)
+    std::cerr << " " << v1;
+  std::cerr << "\n";
+}
+
 }
 
 //---
@@ -48,7 +66,12 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
     pscene_ = scene_;
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  auto name1 = name;
+
+  if (name1 == "")
+    name1 = "gltf";
+
+  object_ = CGeometryInst->createObject3D(scene_, name1);
 
   scene_->addObject(object_);
 
@@ -67,6 +90,8 @@ read(CFile &file)
 {
   file_ = &file;
 
+  binary_ = false;
+
   //---
 
   // check magic for bin file
@@ -74,15 +99,24 @@ read(CFile &file)
 
   if (file_->read(buffer, 4)) {
     // 'glTF'
-    if (buffer[0] == 0x67 && buffer[1] == 0x6c && buffer[2] == 0x54 && buffer[3] == 0x46)
-      return readBin();
+    if (buffer[0] == 0x67 && buffer[1] == 0x6c && buffer[2] == 0x54 && buffer[3] == 0x46) {
+      binary_ = true;
+
+      if (! readBin())
+        return false;
+
+      return true;
+    }
   }
 
   //---
 
   file_->rewind();
 
-  return readJson();
+  if (! readJson())
+    return false;
+
+  return true;
 }
 
 bool
@@ -119,11 +153,14 @@ readBin()
 
   //---
 
+  uint fpos = 0;
+
   // get file length (including 12 byte header)
   uint length;
   if (! readInteger(&length))
     return false;
 
+  fpos   += 12;
   length -= 12;
 
   //---
@@ -151,6 +188,7 @@ readBin()
     if (! parseJson(str, jsonData_))
       return false;
 
+    fpos   += chunk.length + 8;
     length -= chunk.length + 8;
 
     //---
@@ -162,7 +200,7 @@ readBin()
     if (! file_->read(&chunk.buffer.data[0], chunk.length))
       return errorMsg("failed to read chunk");
 
-    jsonData_.chunks.push_back(chunk);
+    jsonData_.chunks.push_back(std::move(chunk));
   }
   else if (version_ == 2) {
     // read chunks
@@ -203,11 +241,12 @@ readBin()
         jsonData_.chunks.push_back(chunk);
 
         if (isDebug())
-          std::cerr << "BIN: " << chunk.length << "\n";
+          std::cerr << "BIN: " << fpos << " " << chunk.length << "\n";
       }
       else
         return errorMsg("Invalid chunk");
 
+      fpos   += chunk.length + 8;
       length -= chunk.length + 8;
 
       ++ic;
@@ -249,12 +288,12 @@ bool
 CImportGLTF::
 processData()
 {
-  auto getChunk = [&](long ind, Chunk &chunk) {
+  auto getChunk = [&](long ind, Chunk* &chunk) {
     if (ind >= 0) {
       if (ind >= long(jsonData_.chunks.size()))
         return false;
 
-      chunk = jsonData_.chunks[ind];
+      chunk = &jsonData_.chunks[ind];
     }
     else
       return false;
@@ -272,22 +311,81 @@ processData()
     if (! getBufferView(accessor.bufferView, bufferView))
       return errorMsg("Invalid accessor buffer view");
 
-    Chunk chunk;
+    Buffer buffer;
 
-    if (version_ == 1) {
-      if (! getChunk(0, chunk))
-        return errorMsg("Invalid buffer chunk");
+    if (! getBuffer(bufferView.buffer, buffer))
+      return errorMsg("Invalid accessor buffer view");
+
+    auto byteOffset = bufferView.byteOffset;
+
+    if (byteOffset < 0)
+      byteOffset = 0;
+
+    const uchar *data = nullptr;
+
+    Chunk *chunk { nullptr };
+
+    if (binary_) {
+      if (version_ == 1) {
+        if (! getChunk(0, chunk))
+          return errorMsg("Invalid buffer chunk");
+      }
+      else {
+        if (! getChunk(bufferView.buffer.ind, chunk))
+          return errorMsg("Invalid buffer chunk");
+      }
+
+      if (byteOffset < 0 || byteOffset + bufferView.byteLength > long(chunk->buffer.data.size()))
+        return errorMsg("Invalid buffer chunk data");
+
+      data = &chunk->buffer.data[byteOffset];
     }
     else {
-      if (! getChunk(bufferView.buffer.ind, chunk))
-        return errorMsg("Invalid buffer chunk");
+      if (buffer.uri != "") {
+        auto pi = uriDataMap_.find(buffer.uri);
+
+        if (pi == uriDataMap_.end()) {
+          static std::string uri_base64 = "data:application/octet-stream;base64,";
+          static size_t      uri_base64_len = uri_base64.size();
+
+          if (buffer.uri.size() > uri_base64_len &&
+              buffer.uri.substr(0, uri_base64_len) == uri_base64) {
+            auto str1 = CEncode64Inst->decode(buffer.uri.substr(uri_base64_len));
+
+            auto len1 = str1.size();
+
+            uchar *data1 = new uchar [len1 + 1];
+
+            memcpy(data1, str1.c_str(), len1);
+            data1[len1] = '\0';
+
+            uriDataMap_[buffer.uri] = UriData(data1, uint(len1));
+          }
+          else {
+            CFile file1(buffer.uri);
+
+            uchar *data1;
+            size_t len1;
+
+            if (! file1.readAll(&data1, &len1))
+              return errorMsg("Invalid buffer file '" + buffer.uri + "'");
+
+            uriDataMap_[buffer.uri] = UriData(data1, uint(len1));
+          }
+
+          pi = uriDataMap_.find(buffer.uri);
+        }
+
+        auto &uriData = (*pi).second;
+
+        if (byteOffset < 0 || byteOffset + bufferView.byteLength > uriData.len)
+          return errorMsg("Invalid buffer file data");
+
+        data = &uriData.data[byteOffset];
+      }
+      else
+        return errorMsg("Invalid buffer");
     }
-
-    if (bufferView.byteOffset < 0 ||
-        bufferView.byteOffset + bufferView.byteLength >= long(chunk.buffer.data.size()))
-      return errorMsg("Invalid buffer chunk data");
-
-    const uchar *data = &chunk.buffer.data[bufferView.byteOffset];
 
     auto readFloat = [&](long i) {
       const auto *fdata = &data[i];
@@ -300,7 +398,7 @@ processData()
       return *reinterpret_cast<float *>(&fi);
     };
 
-     auto readShort = [&](long i) {
+    auto readShort = [&](long i) {
        const auto *sdata = &data[i];
 
        ushort s = ((sdata[0] & 0xFF)      ) |
@@ -309,18 +407,75 @@ processData()
        return s;
     };
 
+    auto readInt = [&](long i) {
+      const auto *idata = &data[i];
+
+      uint l = ((idata[0] & 0xFF)      ) |
+               ((idata[1] & 0xFF) <<  8) |
+               ((idata[2] & 0xFF) << 16) |
+               ((idata[3] & 0xFF) << 24);
+
+      return l;
+    };
+
+    auto readByte = [&](long i) {
+       const auto *bdata = &data[i];
+
+       uchar c = bdata[0];
+
+       return c;
+    };
+
     MeshData meshData;
 
     // 1 component
     if      (accessor.type == "SCALAR") {
-      if (accessor.componentType == Constants::TYPE_UNSIGNED_SHORT) {
+      if      (accessor.componentType == Constants::TYPE_UNSIGNED_SHORT) {
         if (bufferView.byteLength < accessor.count*2)
           return errorMsg("Invalid SCALAR count");
 
-        for (long i = 0; i < accessor.count; ++i) {
-          auto s = readShort(i*2);
+        int id1 = 0;
 
-          meshData.scalars.push_back(s);
+        for (long i = 0; i < accessor.count; ++i) {
+          auto s = readShort(id1); id1 += 2;
+
+          meshData.iscalars.push_back(s);
+        }
+      }
+      else if (accessor.componentType == Constants::TYPE_UNSIGNED_INT) {
+        if (bufferView.byteLength < accessor.count*4)
+          return errorMsg("Invalid SCALAR count");
+
+        int id1 = 0;
+
+        for (long i = 0; i < accessor.count; ++i) {
+          auto l = readInt(id1); id1 += 4;
+
+          meshData.iscalars.push_back(l);
+        }
+      }
+      else if (accessor.componentType == Constants::TYPE_UNSIGNED_BYTE) {
+        if (bufferView.byteLength < accessor.count)
+          return errorMsg("Invalid SCALAR count");
+
+        int id1 = 0;
+
+        for (long i = 0; i < accessor.count; ++i) {
+          auto l = readByte(id1); ++id1;
+
+          meshData.iscalars.push_back(l);
+        }
+      }
+      else if (accessor.componentType == Constants::TYPE_FLOAT) {
+        if (bufferView.byteLength < accessor.count*4)
+          return errorMsg("Invalid SCALAR count");
+
+        int id1 = 0;
+
+        for (long i = 0; i < accessor.count; ++i) {
+          auto f = readFloat(id1); id1 += 4;
+
+          meshData.fscalars.push_back(f);
         }
       }
       else {
@@ -374,7 +529,24 @@ processData()
     }
     // 4 components
     else if (accessor.type == "VEC4") {
-      if (accessor.componentType == Constants::TYPE_FLOAT) {
+      if      (accessor.componentType == Constants::TYPE_UNSIGNED_SHORT) {
+        if (bufferView.byteLength < accessor.count*2*4)
+          return errorMsg("Invalid VEC4 count");
+
+        int id1 = 0;
+
+        for (long i = 0; i < accessor.count; ++i) {
+          Vec4 v;
+
+          v.x = readShort(id1); id1 += 4;
+          v.y = readShort(id1); id1 += 4;
+          v.z = readShort(id1); id1 += 4;
+          v.w = readShort(id1); id1 += 4;
+
+          meshData.vec4.push_back(v);
+        }
+      }
+      else if (accessor.componentType == Constants::TYPE_FLOAT) {
         if (bufferView.byteLength < accessor.count*4*4)
           return errorMsg("Invalid VEC4 count");
 
@@ -396,21 +568,32 @@ processData()
     }
     // 4 componenents
     else if (accessor.type == "MAT2") {
-      // TODO
+      // TODO: 4 values
+      TODO("Unhandled MAT2 accessor type");
     }
     // 9 componenents
     else if (accessor.type == "MAT3") {
-      // TODO
+      // TODO:  9 values
+      TODO("Unhandled MAT3 accessor type");
     }
     // 16 componenents
     else if (accessor.type == "MAT4") {
-      // TODO
+      // TODO:  16 values
+      TODO("Unhandled MAT4 accessor type");
     }
     else {
       //std::cerr << "  byteOffset: " << bufferView.byteOffset << "\n";
       //std::cerr << "  byteLength: " << bufferView.byteLength << "\n";
 
       return errorMsg("Invalid type '" + accessor.type + "'");
+    }
+
+    if (isDebugData()) {
+      printVector<CImportGLTF::Vec4 >("VEC4"  ,  meshData.vec4);
+      printVector<CImportGLTF::Vec3 >("VEC3"  ,  meshData.vec3);
+      printVector<CImportGLTF::Vec2 >("VEC2"  ,  meshData.vec2);
+      printVector<long              >("SCALAR",  meshData.iscalars);
+      printVector<float             >("SCALAR",  meshData.fscalars);
     }
 
     meshDatas_.add(meshData, indName);
@@ -432,14 +615,16 @@ processData()
     if (! getImageData(image, data, len))
       return false;
 
-    if (image.mimeType == "image/png" || image.mimeType == "image/jpeg") {
-      if (isSaveImage() && image.name != "") {
-        if (! writeFile(image.name, data, len))
-          return errorMsg("Image write failed");
+    if (image.uri == "") {
+      if (image.mimeType == "image/png" || image.mimeType == "image/jpeg") {
+        if (isSaveImage() && image.name != "") {
+          if (! writeFile(image.name, data, len))
+            return errorMsg("Image write failed");
+        }
       }
-    }
-    else {
-      return errorMsg("Invalid image type");
+      else {
+        warnMsg("Invalid image type");
+      }
     }
 
     return true;
@@ -452,244 +637,37 @@ processData()
 
   //---
 
-  // get meshes
+  // process scenes
+  for (const auto &ps : jsonData_.scenes) {
+    for (const auto &pn : ps.second.nodes) {
+      Node node;
 
-  auto getMeshData = [&](const IndName &indName) {
-    MeshData *meshData = nullptr;
+      if (! getNode(pn, node))
+        continue;
 
-    auto pm = meshDatas_.find(indName);
-
-    if (pm != meshDatas_.end())
-      meshData = &(*pm).second;
-
-    return meshData;
-  };
-
-  auto processMesh = [&](const Mesh &mesh) {
-    for (const auto &primitive : mesh.primitives) {
-      std::vector<ushort> indices;
-      std::vector<Vec3>   positions;
-      std::vector<Vec3>   normals;
-      std::vector<Vec2>   textCoords0;
-
-      if (! primitive.indices.isEmpty()) {
-        auto *indMeshData = getMeshData(primitive.indices);
-        if (! indMeshData)
-          return errorMsg("Invalid indices mesh");
-        //std::cerr << " indices\n";
-        //printMeshData(*indMeshData);
-        indices = indMeshData->scalars;
-      }
-
-      if (! primitive.position.isEmpty()) {
-        auto *positionMeshData = getMeshData(primitive.position);
-        if (! positionMeshData)
-          return errorMsg("Invalid mesh POSITION");
-        //std::cerr << " POSITION\n";
-        //printMeshData(*positionMeshData);
-        positions = positionMeshData->vec3;
-      }
-
-      if (! primitive.normal.isEmpty()) {
-        auto *normalMeshData = getMeshData(primitive.normal);
-        if (! normalMeshData)
-          return errorMsg("Invalid mesh NORMAL");
-        //std::cerr << " NORMAL\n";
-        //printMeshData(*normalMeshData);
-        normals = normalMeshData->vec3;
-      }
-
-      if (! primitive.texCoord0.isEmpty()) {
-        auto *texCoord0MeshData = getMeshData(primitive.texCoord0);
-        if (! texCoord0MeshData)
-          return errorMsg("Invalid mesh TEXCOORD_0");
-        //std::cerr << " TEXCOORD_0\n";
-        //printMeshData(*texCoord0MeshData);
-        textCoords0 = texCoord0MeshData->vec2;
-      }
-
-      CIMinMax indMinMax;
-      for (auto i : indices)
-        indMinMax.add(i);
-
-      auto ni = indices    .size();
-      auto np = positions  .size();
-      auto nn = normals    .size();
-      auto nt = textCoords0.size();
-
-      if (ni == 0) {
-        indices.resize(np);
-
-        for (int i = 0; i < int(np); ++i)
-          indices[i] = short(i);
-
-        indMinMax.add(0);
-        indMinMax.add(int(np - 1));
-
-        ni = np;
-      }
-
-      if (np == 0)
-        return errorMsg("No mesh positions");
-
-      if (indMinMax.max() >= int(np))
-        warnMsg("Invalid mesh indices size");
-
-      if (nn > 0 && np != nn)
-        warnMsg("Invalid mesh normals size");
-
-      if (nt > 0 && np != nt)
-        warnMsg("Invalid mesh textCoords0 size");
-
-      //---
-
-      for (const auto &p : positions) {
-        auto ind = object_->addVertex(CPoint3D(p.x, p.y, p.z));
-
-        auto &v = object_->getVertex(ind);
-
-        if (ind < nn) {
-          const auto &n = normals[ind];
-
-          v.setNormal(CVector3D(n.x, n.y, n.z));
-        }
-
-        if (ind < nt) {
-          const auto &t = textCoords0[ind];
-
-          v.setTextureMap(CPoint2D(t.x, t.y));
-        }
-      }
-
-      uint numTriangles = uint(indices.size()/3);
-
-      for (uint i = 0; i < numTriangles; ++i) {
-        int i1 = indices[i*3 + 0];
-        int i2 = indices[i*3 + 1];
-        int i3 = indices[i*3 + 2];
-
-        if (i1 >= int(np) || i2 >= int(np) || i3 >= int(np))
-          continue;
-
-        indMinMax.add(i1);
-        indMinMax.add(i2);
-        indMinMax.add(i3);
-
-        object_->addITriangle(i1, i2, i3);
-      }
-
-      //---
-
-      if (! primitive.material.isEmpty()) {
-        Material material;
-
-        if (! getMaterial(primitive.material, material))
-          return errorMsg("Invalid mesh material");
-
-        //printMaterial(material, primitive.material);
-
-        //---
-
-        if (material.baseColorTexture.index >= 0) {
-          Texture texture;
-
-          if (! getTexture(IndName(material.baseColorTexture.index), texture))
-            return errorMsg("Invalid base color texture");
-
-          if (! texture.source.isEmpty()) {
-            auto pi = jsonData_.images.find(texture.source);
-
-            if (pi == jsonData_.images.end())
-              return errorMsg("Invalid base color texture image");
-
-            const auto &image = (*pi).second;
-
-            const uchar* data;
-            long         len;
-
-            if (! getImageData(image, data, len))
-              return false;
-
-            if      (image.mimeType == "image/png") {
-              auto image1 = CImageMgrInst->createImage();
-
-              if (! image1->read(data, len, CFILE_TYPE_IMAGE_PNG))
-                return false;
-
-              object_->setDiffuseTexture(CGeometryInst->createTexture(image1));
-            }
-            else if (image.mimeType == "image/jpeg") {
-              auto image1 = CImageMgrInst->createImage();
-
-              if (! image1->read(data, len, CFILE_TYPE_IMAGE_JPG))
-                return false;
-
-              object_->setDiffuseTexture(CGeometryInst->createTexture(image1));
-            }
-            else
-              return errorMsg("Invalid base color texture image type");
-          }
-          else {
-            warnMsg("Unhandled base color texture " + material.baseColorTexture.index);
-          }
-        }
-
-        if (material.normalTexture.index >= 0) {
-          Texture texture;
-
-          if (! getTexture(IndName(material.normalTexture.index), texture))
-            return errorMsg("Invalid normal texture");
-
-          if (! texture.source.isEmpty()) {
-            auto pi = jsonData_.images.find(texture.source);
-
-            if (pi == jsonData_.images.end())
-              return errorMsg("Invalid normal texture source");
-
-            const auto &image = (*pi).second;
-
-            const uchar* data;
-            long         len;
-
-            if (! getImageData(image, data, len))
-              return false;
-
-            if      (image.mimeType == "image/png") {
-              auto image1 = CImageMgrInst->createImage();
-
-              if (! image1->read(data, len, CFILE_TYPE_IMAGE_PNG))
-                return false;
-
-              object_->setNormalTexture(CGeometryInst->createTexture(image1));
-            }
-            else if (image.mimeType == "image/jpeg") {
-              auto image1 = CImageMgrInst->createImage();
-
-              if (! image1->read(data, len, CFILE_TYPE_IMAGE_JPG))
-                return false;
-
-              object_->setNormalTexture(CGeometryInst->createTexture(image1));
-            }
-            else
-              return errorMsg("Invalid normal texture image type");
-          }
-          else {
-            warnMsg("Unhandled normal texture " + material.baseColorTexture.index);
-          }
-        }
-      }
+      if (! processNode(node))
+        continue;
     }
+  }
 
-    return true;
-  };
+#if 0
+  // process nodes
+  for (const auto &pn : jsonData_.nodes)
+    processNode(pn.second);
+#endif
 
+#if 0
+  // process meshes
   for (const auto &pm : jsonData_.meshes) {
-    object_ = CGeometryInst->createObject3D(scene_, pm.first.name);
+    auto name = pm.first.name;
+
+    object_ = CGeometryInst->createObject3D(scene_, name);
 
     scene_->addObject(object_);
 
     processMesh(pm.second);
   }
+#endif
 
   //---
 
@@ -705,22 +683,12 @@ processData()
       if (pi == jsonData_.images.end())
         return errorMsg("Invalid texture image");
 
-      const auot &image = (*pi).second;
+      const auto &image = (*pi).second;
 
-      const uchar* data;
-      long         len;
-
-      if (! getImageData(image, data, len))
+      if (! resolveImage(image))
         return false;
 
-      if (image.mimeType == "image/png") {
-        auto image1 = CImageMgrInst->createImage();
-
-        if (! image1->read(data, len, CFILE_TYPE_IMAGE_PNG))
-          return false;
-
-        object_->setDiffuseTexture(CGeometryInst->createTexture(image1));
-      }
+      object_->setDiffuseTexture(CGeometryInst->createTexture(image.image));
     }
 
     if (texture.sampler.isEmpty()) {
@@ -745,44 +713,371 @@ processData()
 
 bool
 CImportGLTF::
+processNode(const Node &node)
+{
+  auto name = node.name;
+
+  if (name == "")
+    name = "node" + node.name;
+
+  object_ = CGeometryInst->createObject3D(scene_, name);
+
+  scene_->addObject(object_);
+
+  //---
+
+  Mesh mesh;
+
+  auto meshIndName = node.mesh;
+
+  if (meshIndName.isEmpty())
+    meshIndName = IndName(0);
+
+  if (! getMesh(meshIndName, mesh))
+    return false;
+
+  if (! processMesh(mesh))
+    return false;
+
+  auto ms = CMatrix3D::identity();
+  auto mr = CMatrix3D::identity();
+  auto mt = CMatrix3D::identity();
+
+  if (node.scale)
+    ms = CMatrix3D::scale(node.scale->x, node.scale->y, node.scale->z);
+
+  if (node.rotation) {
+    auto v = CVector3D(node.rotation->x, node.rotation->y, node.rotation->z);
+
+    mr.setRotation(node.rotation->w, v);
+  }
+
+  if (node.translation)
+    mt = CMatrix3D::translation(node.translation->x, node.translation->y, node.translation->z);
+
+  auto m = ms*mr*mt;
+
+  object_->transform(m);
+
+  //---
+
+  for (const auto &pc : node.children) {
+    Node node1;
+
+    if (! getNode(pc, node1))
+      continue;
+
+    if (! processNode(node1))
+      continue;
+
+    object_->transform(m);
+  }
+
+  return true;
+}
+
+bool
+CImportGLTF::
+processMesh(const Mesh &mesh)
+{
+  auto getMeshData = [&](const IndName &indName) {
+    MeshData *meshData = nullptr;
+
+    auto pm = meshDatas_.find(indName);
+
+    if (pm != meshDatas_.end())
+      meshData = &(*pm).second;
+
+    return meshData;
+  };
+
+  for (const auto &primitive : mesh.primitives) {
+    std::vector<long> indices;
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+    std::vector<Vec2> textCoords0;
+
+    if (! primitive.indices.isEmpty()) {
+      auto *indMeshData = getMeshData(primitive.indices);
+      if (! indMeshData)
+        return errorMsg("Invalid indices mesh");
+
+      //std::cerr << " indices\n";
+      //printMeshData(*indMeshData);
+
+      indices = indMeshData->iscalars;
+    }
+
+    if (! primitive.position.isEmpty()) {
+      auto *positionMeshData = getMeshData(primitive.position);
+      if (! positionMeshData)
+        return errorMsg("Invalid mesh POSITION");
+
+      //std::cerr << " POSITION\n";
+      //printMeshData(*positionMeshData);
+
+      positions = positionMeshData->vec3;
+    }
+
+    if (! primitive.normal.isEmpty()) {
+      auto *normalMeshData = getMeshData(primitive.normal);
+      if (! normalMeshData)
+        return errorMsg("Invalid mesh NORMAL");
+
+      //std::cerr << " NORMAL\n";
+      //printMeshData(*normalMeshData);
+
+      normals = normalMeshData->vec3;
+    }
+
+    if (! primitive.texCoord0.isEmpty()) {
+      auto *texCoord0MeshData = getMeshData(primitive.texCoord0);
+      if (! texCoord0MeshData)
+        return errorMsg("Invalid mesh TEXCOORD_0");
+
+      //std::cerr << " TEXCOORD_0\n";
+      //printMeshData(*texCoord0MeshData);
+
+      textCoords0 = texCoord0MeshData->vec2;
+    }
+
+    auto ni = indices    .size();
+    auto np = positions  .size();
+    auto nn = normals    .size();
+    auto nt = textCoords0.size();
+
+    CIMinMax indMinMax;
+    for (int i = 0; i < int(ni); ++i)
+      indMinMax.add(int(indices[i]));
+
+#if 0
+    auto setDefaultIndices = [&]() {
+      indices.resize(np);
+
+      for (int i = 0; i < int(np); ++i)
+        indices[i] = short(i);
+
+      indMinMax.reset();
+
+      indMinMax.add(0);
+      indMinMax.add(int(np - 1));
+
+      ni = np;
+    };
+#endif
+
+    if (np == 0)
+      return errorMsg("No mesh positions");
+
+    if (ni > 0 && indMinMax.max() >= int(np))
+      warnMsg("Invalid mesh indices size");
+
+    if (nn > 0 && np != nn)
+      warnMsg("Invalid mesh normals size");
+
+    if (nt > 0 && np != nt)
+      warnMsg("Invalid mesh textCoords0 size");
+
+    //---
+
+    for (const auto &p : positions) {
+      auto ind = object_->addVertex(CPoint3D(p.x, p.y, p.z));
+
+      auto &v = object_->getVertex(ind);
+
+      if (ind < nn) {
+        const auto &n = normals[ind];
+
+        v.setNormal(CVector3D(n.x, n.y, n.z));
+      }
+
+      if (ind < nt) {
+        const auto &t = textCoords0[ind];
+
+        v.setTextureMap(CPoint2D(t.x, t.y));
+      }
+    }
+
+    uint numTriangles = uint(ni/3);
+
+    for (uint i = 0; i < numTriangles; ++i) {
+      auto i1 = indices[i*3 + 0];
+      auto i2 = indices[i*3 + 1];
+      auto i3 = indices[i*3 + 2];
+
+      if (i1 < 0 || i1 >= int(np) ||
+          i2 < 0 || i2 >= int(np) ||
+          i3 < 0 || i3 >= int(np))
+        continue;
+
+      object_->addITriangle(uint(i1), uint(i2), uint(i3));
+    }
+
+    //---
+
+    if (! primitive.material.isEmpty()) {
+      Material material;
+
+      if (! getMaterial(primitive.material, material))
+        return errorMsg("Invalid mesh material");
+
+      //printMaterial(material, primitive.material);
+
+      //---
+
+      if (material.diffuse) {
+        object_->setFaceDiffuse(colorRGBA(material.diffuse.value()));
+      }
+
+      if (material.specular) {
+        object_->setFaceSpecular(colorRGBA(material.specular.value()));
+      }
+
+      if (material.baseColorTexture.index >= 0) {
+        Texture texture;
+
+        if (! getTexture(IndName(material.baseColorTexture.index), texture))
+          return errorMsg("Invalid base color texture");
+
+        if (! texture.source.isEmpty()) {
+          auto pi = jsonData_.images.find(texture.source);
+
+          if (pi == jsonData_.images.end())
+            return errorMsg("Invalid base color texture image");
+
+          const auto &image = (*pi).second;
+
+          if (! resolveImage(image))
+            return false;
+
+          object_->setDiffuseTexture(CGeometryInst->createTexture(image.image));
+        }
+        else {
+          warnMsg("Unhandled base color texture " + material.baseColorTexture.index);
+        }
+      }
+
+      if (material.normalTexture.index >= 0) {
+        Texture texture;
+
+        if (! getTexture(IndName(material.normalTexture.index), texture))
+          return errorMsg("Invalid normal texture");
+
+        if (! texture.source.isEmpty()) {
+          auto pi = jsonData_.images.find(texture.source);
+
+          if (pi == jsonData_.images.end())
+            return errorMsg("Invalid normal texture source");
+
+          const auto &image = (*pi).second;
+
+          if (! resolveImage(image))
+            return false;
+
+          object_->setNormalTexture(CGeometryInst->createTexture(image.image));
+        }
+        else {
+          warnMsg("Unhandled normal texture " + material.baseColorTexture.index);
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+bool
+CImportGLTF::
+resolveImage(const Image &image)
+{
+  if (image.image.isValid())
+    return true;
+
+  const uchar* data;
+  long         len;
+
+  if (! getImageData(image, data, len))
+    return false;
+
+  if      (image.mimeType == "image/png") {
+    auto image1 = CImageMgrInst->createImage();
+
+    if (! image1->read(data, len, CFILE_TYPE_IMAGE_PNG))
+      return errorMsg("Invalid image data");
+
+    image.image = image1;
+  }
+  else if (image.mimeType == "image/jpeg") {
+    auto image1 = CImageMgrInst->createImage();
+
+    if (! image1->read(data, len, CFILE_TYPE_IMAGE_JPG))
+      return errorMsg("Invalid image data");
+
+    image.image = image1;
+  }
+  else
+    return errorMsg("Invalid image type '" + image.mimeType + "'");
+
+  return true;
+}
+
+bool
+CImportGLTF::
 getImageData(const Image &image, const uchar* &data, long &len)
 {
-  BufferView bufferView;
+  if      (! image.bufferView.isEmpty()) {
+    BufferView bufferView;
 
-  if (! getBufferView(image.bufferView, bufferView))
-    return errorMsg("Invalid image buffer view");
+    if (! getBufferView(image.bufferView, bufferView))
+      return errorMsg("Invalid image buffer view");
 
-  Chunk *chunk = nullptr;
+    Chunk *chunk = nullptr;
 
-  if      (bufferView.buffer.ind >= 0) {
-    if (bufferView.buffer.ind >= long(jsonData_.chunks.size()))
+    if      (bufferView.buffer.ind >= 0) {
+      if (bufferView.buffer.ind >= long(jsonData_.chunks.size()))
+        return errorMsg("Invalid buffer chunk");
+
+      chunk = &jsonData_.chunks[bufferView.buffer.ind];
+    }
+    else if (bufferView.buffer.name != "") {
+      auto pb = jsonData_.buffers.find(bufferView.buffer);
+
+      if (pb == jsonData_.buffers.end())
+        return errorMsg("Invalid buffer chunk");
+
+      //auto *buffer = &(*pb).second;
+
+      if (version_ == 1)
+        chunk = &jsonData_.chunks[0];
+      else
+        return errorMsg("Invalid buffer chunk");
+    }
+    else {
       return errorMsg("Invalid buffer chunk");
+    }
 
-    chunk = &jsonData_.chunks[bufferView.buffer.ind];
+    auto byteOffset = bufferView.byteOffset;
+
+    if (byteOffset < 0)
+      byteOffset = 0;
+
+    if (byteOffset < 0 || byteOffset + bufferView.byteLength >= long(chunk->buffer.data.size()))
+      return errorMsg("Invalid buffer chunk data");
+
+    data = &chunk->buffer.data[byteOffset];
+    len  = bufferView.byteLength;
   }
-  else if (bufferView.buffer.name != "") {
-    auto pb = jsonData_.buffers.find(bufferView.buffer);
+  else if (image.uri != "") {
+    if (! image.image) {
+      image.image = CImageMgrInst->createImage();
 
-    if (pb == jsonData_.buffers.end())
-      return errorMsg("Invalid buffer chunk");
-
-    //auto *buffer = &(*pb).second;
-
-    if (version_ == 1)
-      chunk = &jsonData_.chunks[0];
-    else
-      return errorMsg("Invalid buffer chunk");
+      if (! image.image->read(image.uri))
+        return errorMsg("Invalid image file '" + image.uri + "'");
+    }
   }
   else {
-    return errorMsg("Invalid buffer chunk");
+    return errorMsg("Invalid image data");
   }
-
-  if (bufferView.byteOffset < 0 ||
-      bufferView.byteOffset + bufferView.byteLength >= long(chunk->buffer.data.size()))
-    return errorMsg("Invalid buffer chunk data");
-
-  data = &chunk->buffer.data[bufferView.byteOffset];
-  len  = bufferView.byteLength;
 
   return true;
 }
@@ -795,6 +1090,18 @@ getBufferView(const IndName &indName, BufferView &bufferView) const
   if (pn == jsonData_.bufferViews.end()) return false;
 
   bufferView = (*pn).second;
+
+  return true;
+}
+
+bool
+CImportGLTF::
+getBuffer(const IndName &indName, Buffer &buffer) const
+{
+  auto pn = jsonData_.buffers.find(indName);
+  if (pn == jsonData_.buffers.end()) return false;
+
+  buffer = (*pn).second;
 
   return true;
 }
@@ -819,6 +1126,30 @@ getTexture(const IndName &indName, Texture &texture) const
   if (pt == jsonData_.textures.end()) return false;
 
   texture = (*pt).second;
+
+  return true;
+}
+
+bool
+CImportGLTF::
+getNode(const IndName &indName, Node &node) const
+{
+  auto pn = jsonData_.nodes.find(indName);
+  if (pn == jsonData_.nodes.end()) return false;
+
+  node = (*pn).second;
+
+  return true;
+}
+
+bool
+CImportGLTF::
+getMesh(const IndName &indName, Mesh &mesh) const
+{
+  auto pm = jsonData_.meshes.find(indName);
+  if (pm == jsonData_.meshes.end()) return false;
+
+  mesh = (*pm).second;
 
   return true;
 }
@@ -919,6 +1250,23 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     return true;
   };
 
+  auto arrayNumbers = [&](const CJson::ValueP &value, std::vector<float> &values) {
+   if (! value->isArray())
+     return false;
+
+    auto *arr = value->cast<CJson::Array>();
+
+    for (const auto &pv : arr->values()) {
+      double r;
+      if (! valueNumber(pv, r))
+        return false;
+
+      values.push_back(float(r));
+    }
+
+    return true;
+  };
+
   //---
 
   if (isDebug())
@@ -995,7 +1343,12 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             }
           }
           else if (pnv1.first == "name") {
+            if (! valueString(pnv1.second, accessor.name))
+              return errorMsg("Invalid accessor name");
+          }
+          else if (pnv1.first == "normalized") {
             // TODO
+            TODO("Unhandled accessor normalized");
           }
           else
             return errorMsg("Invalid accessors name " + pnv1.first);
@@ -1069,12 +1422,15 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         }
         else if (pnv1.first == "premultipliedAlpha") {
           // TODO : bool
+          TODO("Unhandled asset premultipliedAlpha");
         }
         else if (pnv1.first == "profile") {
           // TODO : object
+          TODO("Unhandled asset profile");
         }
         else if (pnv1.first == "copyright") {
-          // TODO : string
+          if (! valueString(pnv1.second, jsonData.asset.copyright))
+            return errorMsg("Invalid asset copyright");
         }
         else {
           debugMsg("  " + pnv.first + "/" + pnv1.first + " : " + pnv1.second->typeName());
@@ -1105,7 +1461,8 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
               return errorMsg("Invalid bufferViews target number");
           }
           else if (pnv2.first == "name") {
-            // TODO
+            if (! valueString(pnv2.second, bufferView.name))
+              return errorMsg("Unhandled bufferViews name");
           }
           else {
             return errorMsg("Invalid buffer name " + pnv2.first);
@@ -1388,12 +1745,14 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
               }
               else if (pnv3.first == "scale") {
                 // TODO
+                TODO("Unhandled materials scale");
               }
               else if (pnv3.first == "extensions") {
                 // TODO
+                TODO("Unhandled materials extensions");
               }
               else {
-                errorMsg("Invalid normalTexture name " + pnv3.first);
+                warnMsg("Invalid normalTexture name " + pnv3.first);
               }
             }
           }
@@ -1429,20 +1788,23 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                   }
                   else if (pnv4.first == "extensions") {
                     // TODO
+                    TODO("Unhandled material pbrMetallicRoughness extensions");
                   }
                   else {
-                    errorMsg("Invalid baseColorTexture name " + pnv4.first);
+                    warnMsg("Invalid material baseColorTexture name " + pnv4.first);
                   }
                 }
               }
               else if (pnv3.first == "metallicRoughnessTexture") {
                 // TODO
+                TODO("Unhandled material metallicRoughnessTexture");
               }
               else if (pnv3.first == "baseColorFactor") {
                 // TODO
+                TODO("Unhandled material baseColorFactor");
               }
               else {
-                errorMsg("Invalid pbrMetallicRoughness name " + pnv3.first);
+                warnMsg("Invalid pbrMetallicRoughness name " + pnv3.first);
               }
             }
           }
@@ -1460,28 +1822,40 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
               auto name = pnv3.first;
 
               if      (name == "ambient") {
-                if (! valueColor(pnv3.second, material.ambient))
+                Color ambient;
+                if (! valueColor(pnv3.second, ambient))
                   return errorMsg("Invalid nodes ambient color");
+                material.ambient = ambient;
               }
               else if (name == "diffuse") {
-                if (! valueColor(pnv3.second, material.diffuse))
+                Color diffuse;
+                if (! valueColor(pnv3.second, diffuse))
                   return errorMsg("Invalid nodes diffuse color");
+                material.diffuse = diffuse;
               }
               else if (name == "emission") {
-                if (! valueColor(pnv3.second, material.emission))
-                  return errorMsg("Invalid nodes diffuse color");
+                Color emission;
+                if (! valueColor(pnv3.second, emission))
+                  return errorMsg("Invalid nodes emission color");
+                material.emission = emission;
               }
               else if (name == "shininess") {
-                if (! valueNumber(pnv3.second, material.shininess))
-                  return errorMsg("Invalid material values shininess");
+                double shininess;
+                if (! valueNumber(pnv3.second, shininess))
+                  return errorMsg("Invalid material shininess value");
+                material.shininess = shininess;
               }
               else if (name == "specular") {
-                if (! valueColor(pnv3.second, material.specular))
+                Color specular;
+                if (! valueColor(pnv3.second, specular))
                   return errorMsg("Invalid nodes specular color");
+                material.specular = specular;
               }
               else if (name == "transparency") {
-                if (! valueNumber(pnv3.second, material.transparency))
-                  return errorMsg("Invalid material values transparency");
+                double transparency;
+                if (! valueNumber(pnv3.second, transparency))
+                  return errorMsg("Invalid material transparency value");
+                material.transparency = transparency;
               }
               else {
                 debugMsg(std::string("  material values ") + name +
@@ -1491,24 +1865,81 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv2.first == "occlusionTexture") {
             // TODO
+            TODO("Invalid material occlusionTexture");
           }
           else if (pnv2.first == "extensions") {
             // TODO
+            if (! pnv2.second->isObject())
+              return errorMsg("Invalid material extensions values");
+
+            auto *obj2 = pnv2.second->cast<CJson::Object>();
+
+            for (const auto &pnv3 : obj2->nameValueMap()) {
+              auto name = pnv3.first;
+
+              if (name == "KHR_materials_anisotropy") {
+                if (! pnv3.second->isObject())
+                  return errorMsg("Invalid material extensions KHR_materials_anisotropy values");
+
+                auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+                for (const auto &pnv4 : obj3->nameValueMap()) {
+                  auto name1 = pnv4.first;
+
+                  if      (name1 == "anisotropyStrength") {
+                    double anisotropyStrength;
+                    if (! valueNumber(pnv4.second, anisotropyStrength))
+                      return errorMsg("Invalid material anisotropyStrength value");
+                  }
+                  else if (name1 == "anisotropyRotation") {
+                    double anisotropyRotation;
+                    if (! valueNumber(pnv4.second, anisotropyRotation))
+                      return errorMsg("Invalid material anisotropyRotation value");
+                  }
+                  else if (name1 == "anisotropyTexture") {
+                    TODO("material extension KHR_materials_anisotropy anisotropyTexture");
+                  }
+                  else
+                    debugMsg(std::string("  material extension KHR_materials_anisotropy ") + name1 +
+                             " : " + pnv4.second->typeName());
+                }
+              }
+              else
+                debugMsg(std::string("  material extension ") + name +
+                           " : " + pnv3.second->typeName());
+            }
           }
           else if (pnv2.first == "alphaCutoff") {
             // TODO
+            TODO("Invalid material alphaCutoff");
           }
           else if (pnv2.first == "alphaMode") {
             // TODO
+            TODO("Invalid material alphaMode");
           }
           else if (pnv2.first == "doubleSided") {
             // TODO
+            TODO("Invalid material doubleSided");
           }
           else if (pnv2.first == "emissiveFactor") {
+            if (! pnv2.second->isArray())
+              return errorMsg("Invalid materials emissiveFactor array");
+
+            std::vector<float> rvalues;
+            if (! arrayNumbers(pnv2.second, rvalues))
+              return errorMsg("Invalid materials emissiveFactor array");
+
+            if (rvalues.size() != 3)
+              return errorMsg("Invalid materials emissiveFactor array size");
+
+            material.emissiveFactor = Vec3(rvalues[0], rvalues[1], rvalues[2]);
+          }
+          else if (pnv2.first == "emissiveTexture") {
             // TODO
+            TODO("Invalid material emissiveTexture");
           }
           else {
-            errorMsg("Invalid materials name " + pnv2.first);
+            warnMsg("Invalid materials name " + pnv2.first);
           }
         }
 
@@ -1594,6 +2025,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     }
                     else if (pnv4.first == "TANGENT") { // VEC4
                       // TODO
+                      TODO("Unhandled primitive TANGENT");
                     }
                     else if (pnv4.first == "TEXCOORD_0") { // VEC2
                       if (! valueIndName(pnv4.second, primitive.texCoord0))
@@ -1605,12 +2037,15 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     }
                     else if (pnv4.first == "COLOR_0") { // VEC3 or VEC4
                       // TODO
+                      TODO("Unhandled primitive COLOR_0");
                     }
                     else if (pnv4.first == "JOINTS_0") { // VEC4
                       // TODO
+                      TODO("Unhandled primitive JOINTS_0");
                     }
                     else if (pnv4.first == "WEIGHTS_0") { // VEC4
                       // TODO
+                      TODO("Unhandled primitive WEIGHTS_0");
                     }
                     else {
                       debugMsg("  " + pnv.first + "/" + pnv2.first + "/" + pnv3.first + "/" +
@@ -1690,7 +2125,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       auto readNode = [&](CJson::Object *jobj, Node &node) {
         for (const auto &pnv2 : jobj->nameValueMap()) {
           if      (pnv2.first == "mesh") {
-            if (! valueLong(pnv2.second, node.mesh))
+            if (! valueIndName(pnv2.second, node.mesh))
               return errorMsg("Invalid nodes mesh number");
           }
           else if (pnv2.first == "name") {
@@ -1701,17 +2136,9 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             if (! pnv2.second->isArray())
               return errorMsg("Invalid nodes matrix array");
 
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
             std::vector<float> rvalues;
-
-            for (const auto &pv3 : arr2->values()) {
-              double r;
-              if (! valueNumber(pv3, r))
-                return errorMsg("Invalid nodes matrix array number");
-
-              rvalues.push_back(float(r));
-            }
+            if (! arrayNumbers(pnv2.second, rvalues))
+              return errorMsg("Invalid nodes matrix array");
 
             if (rvalues.size() != 16)
               return errorMsg("Invalid nodes matrix array size");
@@ -1719,26 +2146,21 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             node.matrix = CGLMatrix3D(&rvalues[0], 16);
           }
           else if (pnv2.first == "children") {
-            // TODO
             if (! pnv2.second->isArray())
               return errorMsg("Invalid nodes children array");
 
             auto *arr2 = pnv2.second->cast<CJson::Array>();
 
             for (const auto &pv3 : arr2->values()) {
-              if (pv3->isString()) {
-                std::string str;
-                (void) valueString(pv3, str);
-              }
-              else {
-                double r;
-                if (! valueNumber(pv3, r))
-                  return errorMsg(std::string("Invalid nodes children type : ") + pv3->typeName());
-              }
+              IndName indName;
+
+              if (! valueIndName(pv3, indName))
+                return errorMsg("Invalid nodes child");
+
+              node.children.push_back(indName);
             }
           }
           else if (pnv2.first == "meshes") {
-            // TODO
             if (! pnv2.second->isArray())
               return errorMsg("Invalid nodes meshes array");
 
@@ -1754,15 +2176,50 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv2.first == "skin") {
             // TODO
+            TODO("Unhandled mesh skin");
           }
           else if (pnv2.first == "rotation") {
-            // TODO
+            if (! pnv2.second->isArray())
+              return errorMsg("Invalid nodes rotation array");
+
+            std::vector<float> rvalues;
+            if (! arrayNumbers(pnv2.second, rvalues))
+              return errorMsg("Invalid nodes rotation array");
+
+            if (rvalues.size() != 4)
+              return errorMsg("Invalid nodes rotation array size");
+
+            node.rotation = Vec4(rvalues[0], rvalues[1], rvalues[2], rvalues[3]);
           }
           else if (pnv2.first == "scale") {
-            // TODO
+            if (! pnv2.second->isArray())
+              return errorMsg("Invalid nodes scale array");
+
+            std::vector<float> rvalues;
+            if (! arrayNumbers(pnv2.second, rvalues))
+              return errorMsg("Invalid nodes scale array");
+
+            if (rvalues.size() != 3)
+              return errorMsg("Invalid nodes scale array size");
+
+            node.scale = Vec3(rvalues[0], rvalues[1], rvalues[2]);
           }
           else if (pnv2.first == "translation") {
-            // TODO
+            if (! pnv2.second->isArray())
+              return errorMsg("Invalid nodes translation array");
+
+            std::vector<float> rvalues;
+            if (! arrayNumbers(pnv2.second, rvalues))
+              return errorMsg("Invalid nodes translation array");
+
+            if (rvalues.size() != 3)
+              return errorMsg("Invalid nodes translation array size");
+
+            node.translation = Vec3(rvalues[0], rvalues[1], rvalues[2]);
+          }
+          else if (pnv2.first == "camera") {
+            // TODO : number
+            TODO("Unhandled node camera");
           }
           else {
             debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
@@ -1897,24 +2354,16 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             auto *arr2 = pnv2.second->cast<CJson::Array>();
 
             for (const auto &pv2 : arr2->values()) {
-              if (pv2->isString()) {
-                std::string nodeName;
-                if (! valueString(pv2, nodeName))
-                  return errorMsg("Invalid scene node name");
+              IndName indName;
+              if (! valueIndName(pv2, indName))
+                return errorMsg("Invalid scene node");
 
-                scene.nodeNames.push_back(nodeName);
-              }
-              else {
-                long nodeId;
-                if (! valueLong(pv2, nodeId))
-                  return errorMsg("Invalid scene node number");
-
-                scene.nodeIds.push_back(nodeId);
-              }
+              scene.nodes.push_back(indName);
             }
           }
           else if (pnv2.first == "extensions") {
             // TODO : object
+            TODO("Unhandled scene extensions");
           }
           else {
             debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
@@ -2045,6 +2494,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     }
     else if (pnv.first == "animations") {
       // TODO
+      TODO("Unhandled animations");
       if      (pnv.second->isObject()) {
       }
       else if (pnv.second->isArray()) {
@@ -2055,7 +2505,13 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     }
     else if (pnv.first == "cameras") {
       // TODO
-      if      (pnv.second->isObject()) {
+      TODO("Unhandled cameras");
+      if (pnv.second->isObject()) {
+        auto *obj1 = pnv.second->cast<CJson::Object>();
+
+        for (const auto &pnv1 : obj1->nameValueMap()) {
+          debugMsg(pnv1.first + " : " + pnv1.second->typeName());
+        }
       }
       else if (pnv.second->isArray()) {
       }
@@ -2064,23 +2520,48 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     }
     else if (pnv.first == "extensionsUsed") {
       // TODO
+      TODO("Unhandled extensionsUsed");
       if (! pnv.second->isArray())
         return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "programs") {
       // TODO
+      TODO("Unhandled programs");
     }
     else if (pnv.first == "shaders") {
       // TODO
+      TODO("Unhandled shaders");
     }
     else if (pnv.first == "skins") {
       // TODO
+      TODO("Unhandled skins");
     }
     else if (pnv.first == "techniques") {
+      TODO("Unhandled techniques");
       // TODO
+      if (pnv.second->isObject()) {
+        auto *obj1 = pnv.second->cast<CJson::Object>();
+
+        for (const auto &pnv1 : obj1->nameValueMap()) {
+          debugMsg(pnv1.first + " : " + pnv1.second->typeName());
+        }
+      }
+      else if (pnv.second->isArray()) {
+      }
+      else
+        return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "extensions") {
       // TODO
+      TODO("Unhandled extensions");
+    }
+    else if (pnv.first == "extensionsRequired") {
+      // TODO
+      TODO("Unhandled extensionsRequired");
+    }
+    else if (pnv.first == "extensionsUsed") {
+      // TODO
+      TODO("Unhandled extensionsUsed");
     }
     else {
       debugMsg(pnv.first + " : " + pnv.second->typeName());
@@ -2229,9 +2710,9 @@ printMeshData(const MeshData &meshData) const
     }
     std::cerr << "\n";
   }
-  else if (meshData.scalars.size() > 0) {
+  else if (meshData.iscalars.size() > 0) {
     std::cerr << "  SCALAR:";
-    for (const auto &s : meshData.scalars) {
+    for (const auto &s : meshData.iscalars) {
       std::cerr << " " << s;
     }
     std::cerr << "\n";
@@ -2242,24 +2723,44 @@ void
 CImportGLTF::
 printAccessor(const Accessor &accessor, const IndName &indName) const
 {
+  auto componentTypeToString = [](const long &t) {
+    switch (t) {
+      case TYPE_SIGNED_BYTE   : return std::string("SIGNED_BYTE");
+      case TYPE_UNSIGNED_BYTE : return std::string("UNSIGNED_BYTE");
+      case TYPE_SIGNED_SHORT  : return std::string("SIGNED_SHORT");
+      case TYPE_UNSIGNED_SHORT: return std::string("UNSIGNED_SHORT");
+  //  case TYPE_SIGNED_INT    : return std::string("SIGNED_INT");
+      case TYPE_UNSIGNED_INT  : return std::string("UNSIGNED_INT");
+      case TYPE_FLOAT         : return std::string("FLOAT");
+      default                 : return std::string("? (") + std::to_string(t) + std::string(")");
+    }
+  };
+
   std::cerr << " accessor[" << indName << "]\n";
 
   std::cerr << "  bufferView: " << accessor.bufferView << "\n";
-  std::cerr << "  byteOffset: " << accessor.byteOffset << "\n";
-  std::cerr << "  byteStride: " << accessor.byteStride << "\n";
-  std::cerr << "  type: " << accessor.type << "\n";
-  std::cerr << "  componentType: " << accessor.componentType << "\n";
+  if (accessor.byteOffset >= 0)
+    std::cerr << "  byteOffset: " << accessor.byteOffset << "\n";
+  if (accessor.byteStride >= 0)
+    std::cerr << "  byteStride: " << accessor.byteStride << "\n";
+  if (accessor.type != "")
+    std::cerr << "  type: " << accessor.type << "\n";
+  std::cerr << "  componentType: " << componentTypeToString(accessor.componentType) << "\n";
   std::cerr << "  count: " << accessor.count << "\n";
 
-  std::cerr << "  min:";
-  for (auto r : accessor.min)
-    std::cerr << " " << r;
-  std::cerr << "\n";
+  if (! accessor.min.empty()) {
+    std::cerr << "  min:";
+    for (auto r : accessor.min)
+      std::cerr << " " << r;
+    std::cerr << "\n";
+  }
 
-  std::cerr << "  max:";
-  for (auto r : accessor.max)
-    std::cerr << " " << r;
-  std::cerr << "\n";
+  if (! accessor.max.empty()) {
+    std::cerr << "  max:";
+    for (auto r : accessor.max)
+      std::cerr << " " << r;
+    std::cerr << "\n";
+  }
 }
 
 void
@@ -2283,9 +2784,7 @@ printScene(const Scene &scene, const IndName &indName) const
   std::cerr << "  name: " << scene.name << "\n";
 
   std::cerr << "  nodes:";
-  for (const auto &node : scene.nodeIds)
-    std::cerr << " " << node;
-  for (const auto &node : scene.nodeNames)
+  for (const auto &node : scene.nodes)
     std::cerr << " " << node;
   std::cerr << "\n";
 }
@@ -2298,11 +2797,16 @@ printTexture(const Texture &texture, const IndName &indName) const
 
   std::cerr << "  source: " << texture.source << "\n";
   std::cerr << "  sampler: " << texture.sampler << "\n";
-  std::cerr << "  format: " << texture.format << "\n";
-  std::cerr << "  internalFormat: " << texture.internalFormat << "\n";
-  std::cerr << "  target: " << texture.target << "\n";
-  std::cerr << "  type: " << texture.type << "\n";
-  std::cerr << "  name: " << texture.name << "\n";
+  if (texture.format >= 0)
+    std::cerr << "  format: " << texture.format << "\n";
+  if (texture.internalFormat >= 0)
+    std::cerr << "  internalFormat: " << texture.internalFormat << "\n";
+  if (texture.target >= 0)
+    std::cerr << "  target: " << texture.target << "\n";
+  if (texture.type >= 0)
+    std::cerr << "  type: " << texture.type << "\n";
+  if (texture.name != "")
+    std::cerr << "  name: " << texture.name << "\n";
 }
 
 void
@@ -2312,10 +2816,13 @@ printBufferView(const BufferView &bufferView, const IndName &indName) const
   std::cerr << " bufferView[" << indName << "]\n";
 
   std::cerr << "  buffer: " << bufferView.buffer << "\n";
-  std::cerr << "  byteOffset: " << bufferView.byteOffset << "\n";
+  if (bufferView.byteOffset >= 0)
+    std::cerr << "  byteOffset: " << bufferView.byteOffset << "\n";
   std::cerr << "  byteLength: " << bufferView.byteLength << "\n";
-  std::cerr << "  byteStride: " << bufferView.byteStride << "\n";
-  std::cerr << "  target: " << bufferView.target << "\n";
+  if (bufferView.byteStride >= 0)
+    std::cerr << "  byteStride: " << bufferView.byteStride << "\n";
+  if (bufferView.target >= 0)
+    std::cerr << "  target: " << bufferView.target << "\n";
 }
 
 void
@@ -2338,10 +2845,14 @@ printImage(const Image &image, const IndName &indName) const
   std::cerr << "  bufferView: " << image.bufferView << "\n";
   std::cerr << "  mimeType: " << image.mimeType << "\n";
   std::cerr << "  name: " << image.name << "\n";
-  std::cerr << "  url: " << image.url << "\n";
-  std::cerr << "  uri: " << image.uri << "\n";
-  std::cerr << "  width: " << image.width << "\n";
-  std::cerr << "  height: " << image.height << "\n";
+  if (image.url != "")
+    std::cerr << "  url: " << image.url << "\n";
+  if (image.uri != "")
+    std::cerr << "  uri: " << image.uri << "\n";
+  if (image.width >= 0)
+    std::cerr << "  width: " << image.width << "\n";
+  if (image.height >= 0)
+    std::cerr << "  height: " << image.height << "\n";
 }
 
 void
@@ -2354,18 +2865,28 @@ printMaterial(const Material &material, const IndName &indName) const
   std::cerr << "  metallicFactor: " << material.metallicFactor << "\n";
   std::cerr << "  roughnessFactor: " << material.roughnessFactor << "\n";
   std::cerr << "  normalTexture\n";
-  std::cerr << "   index: " << material.normalTexture.index << "\n";
-  std::cerr << "   texCoord: " << material.normalTexture.texCoord << "\n";
+  if (material.normalTexture.index >= 0)
+    std::cerr << "   index: " << material.normalTexture.index << "\n";
+  if (material.normalTexture.texCoord >= 0)
+    std::cerr << "   texCoord: " << material.normalTexture.texCoord << "\n";
   std::cerr << "  baseColorTexture\n";
-  std::cerr << "   index: " << material.baseColorTexture.index << "\n";
-  std::cerr << "   texCoord: " << material.baseColorTexture.texCoord << "\n";
+  if (material.baseColorTexture.index >= 0)
+    std::cerr << "   index: " << material.baseColorTexture.index << "\n";
+  if (material.baseColorTexture.texCoord >= 0)
+    std::cerr << "   texCoord: " << material.baseColorTexture.texCoord << "\n";
   std::cerr << "  technique: " << material.technique << "\n";
-  std::cerr << "  ambient: " << material.ambient << "\n";
-  std::cerr << "  diffuse: " << material.diffuse << "\n";
-  std::cerr << "  emission: " << material.emission << "\n";
-  std::cerr << "  specular: " << material.specular << "\n";
-  std::cerr << "  shininess: " << material.shininess << "\n";
-  std::cerr << "  transparency: " << material.transparency << "\n";
+  if (material.ambient)
+    std::cerr << "  ambient: " << material.ambient.value() << "\n";
+  if (material.diffuse)
+    std::cerr << "  diffuse: " << material.diffuse.value() << "\n";
+  if (material.emission)
+    std::cerr << "  emission: " << material.emission.value() << "\n";
+  if (material.specular)
+    std::cerr << "  specular: " << material.specular.value() << "\n";
+  if (material.shininess)
+    std::cerr << "  shininess: " << material.shininess.value() << "\n";
+  if (material.transparency)
+    std::cerr << "  transparency: " << material.transparency.value() << "\n";
 }
 
 void
@@ -2392,9 +2913,18 @@ printNode(const Node &node, const IndName &indName) const
 {
   std::cerr << " node[" << indName << "]\n";
 
-  std::cerr << "  mesh: " << node.mesh << "\n";
-  std::cerr << "  name: " << node.name << "\n";
-  std::cerr << "  matrix: " << node.matrix << "\n";
+  if (! node.mesh.isEmpty())
+    std::cerr << "  mesh: " << node.mesh << "\n";
+  if (node.name != "")
+    std::cerr << "  name: " << node.name << "\n";
+  if (node.matrix)
+    std::cerr << "  matrix: " << *node.matrix << "\n";
+  if (node.rotation)
+    std::cerr << "  rotation: " << *node.rotation << "\n";
+  if (node.scale)
+    std::cerr << "  scale: " << *node.scale << "\n";
+  if (node.translation)
+    std::cerr << "  translation: " << *node.translation << "\n";
 }
 
 void
@@ -2402,11 +2932,18 @@ CImportGLTF::
 printPrimitive(const Primitive &primitive, int ia) const
 {
   std::cerr << "   primitive[" << ia << "]\n";
-  std::cerr << "    mode: " << primitive.mode << "\n";
-  std::cerr << "    indices: " << primitive.indices << "\n";
-  std::cerr << "    NORMAL: " << primitive.normal << "\n";
-  std::cerr << "    POSITION: " << primitive.position << "\n";
-  std::cerr << "    TEXCOORD_0: " << primitive.texCoord0 << "\n";
-  std::cerr << "    TEXCOORD_1: " << primitive.texCoord1 << "\n";
-  std::cerr << "    material: " << primitive.material << "\n";
+  if (primitive.mode >= 0)
+    std::cerr << "    mode: " << primitive.mode << "\n";
+  if (! primitive.indices.isEmpty())
+    std::cerr << "    indices: " << primitive.indices << "\n";
+  if (! primitive.normal.isEmpty())
+    std::cerr << "    NORMAL: " << primitive.normal << "\n";
+  if (! primitive.position.isEmpty())
+    std::cerr << "    POSITION: " << primitive.position << "\n";
+  if (! primitive.texCoord0.isEmpty())
+    std::cerr << "    TEXCOORD_0: " << primitive.texCoord0 << "\n";
+  if (! primitive.texCoord1.isEmpty())
+    std::cerr << "    TEXCOORD_1: " << primitive.texCoord1 << "\n";
+  if (! primitive.material.isEmpty())
+    std::cerr << "    material: " << primitive.material << "\n";
 }

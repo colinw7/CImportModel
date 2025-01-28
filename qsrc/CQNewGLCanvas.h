@@ -29,6 +29,10 @@ class CQNewGLCanvas : public QGLWidget {
  public:
   CQNewGLCanvas(CQNewGLModel *app);
 
+  CGLCamera *camera() const { return camera_; }
+
+  CImportBase* importBase() const { return import_; }
+
   bool isFlipYZ() const { return flipYZ_; }
   void setFlipYZ(bool b) { flipYZ_ = b; }
 

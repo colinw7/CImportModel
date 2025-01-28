@@ -619,7 +619,8 @@ void
 CQNewGLCanvas::
 keyPressEvent(QKeyEvent *e)
 {
-  bool isShift = (e->modifiers() & Qt::ShiftModifier);
+  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
+  bool isControl = (e->modifiers() & Qt::ControlModifier);
 
   auto dt = 0.01f; /* camera_->deltaTime(); */
   auto da = M_PI/180.0;
@@ -644,14 +645,22 @@ keyPressEvent(QKeyEvent *e)
       lightPos_ -= CGLVector3D(0.0f, 0.1f, 0.0f);
   }
   else if (e->key() == Qt::Key_A) {
-    if      (type == CQNewGLModel::Type::CAMERA)
-      camera_->processKeyboard(CGLCamera::Movement::LEFT, dt);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      if (! isControl)
+        camera_->processKeyboard(CGLCamera::Movement::LEFT, dt);
+      else
+        camera_->processKeyboard(CGLCamera::Movement::UP, dt);
+    }
     else if (type == CQNewGLModel::Type::LIGHT)
       lightPos_ -= CGLVector3D(0.1f, 0.0f, 0.0f);
   }
   else if (e->key() == Qt::Key_D) {
-    if      (type == CQNewGLModel::Type::CAMERA)
-      camera_->processKeyboard(CGLCamera::Movement::RIGHT, dt);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      if (! isControl)
+        camera_->processKeyboard(CGLCamera::Movement::RIGHT, dt);
+      else
+        camera_->processKeyboard(CGLCamera::Movement::DOWN, dt);
+    }
     else if (type == CQNewGLModel::Type::LIGHT)
       lightPos_ += CGLVector3D(0.1f, 0.0f, 0.0f);
   }

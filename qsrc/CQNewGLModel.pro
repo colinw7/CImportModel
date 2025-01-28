@@ -26,6 +26,7 @@ $(INC_DIR)/CMaterial \
 $(INC_DIR)/CGLTexture \
 $(INC_DIR)/CQGLUtil \
 $(INC_DIR)/CQApp \
+$(INC_DIR)/CQUtil \
 $(INC_DIR)/CQSlider \
 $(INC_DIR)/CQColorEdit \
 $(INC_DIR)/CImageLib \

@@ -87,10 +87,35 @@ class CQGLBuffer {
 
   //---
 
-  void clearPoints() { data_.points.clear(); }
-  void clearNormals() { data_.normals.clear(); }
-  void clearColors() { data_.colors.clear(); }
-  void clearTexturePoints() { data_.texturePoints.clear(); }
+  void clearAll() {
+    data_.types = 0;
+
+    delete [] data_.data;
+    delete [] data_.indData;
+
+    data_.data    = nullptr;
+    data_.numData = 0;
+
+    data_.indData    = nullptr;
+    data_.numIndData = 0;
+
+    data_.span = 0;
+
+    data_.dataValid = false;
+
+    data_.points       .clear();
+    data_.normals      .clear();
+    data_.colors       .clear();
+    data_.texturePoints.clear();
+
+    data_.indices.clear();
+    data_.indicesSet = false;
+  }
+
+  void clearPoints() { data_.points.clear(); data_.dataValid = false; }
+  void clearNormals() { data_.normals.clear(); data_.dataValid = false; }
+  void clearColors() { data_.colors.clear(); data_.dataValid = false; }
+  void clearTexturePoints() { data_.texturePoints.clear(); data_.dataValid = false; }
 
   //---
 
@@ -105,6 +130,8 @@ class CQGLBuffer {
 
     data_.dataValid = false;
   }
+
+  uint numPoints() const { return data_.points.size(); }
 
   void addNormal(float x, float y, float z) {
     addNormal(Point(x, y, z));
@@ -172,7 +199,7 @@ class CQGLBuffer {
     int  vid  = 0;
     uint span = 0;
 
-    // store points in vertex array
+    // store points in vertex array (location 0)
     if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
@@ -180,7 +207,7 @@ class CQGLBuffer {
       span += 3;
     }
 
-    // store normals in vertex array
+    // store normals in vertex array (location 1)
     if (data_.types & static_cast<unsigned int>(Parts::NORMAL)) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
@@ -188,7 +215,7 @@ class CQGLBuffer {
       span += 3;
     }
 
-    // store colors in vertex array
+    // store colors in vertex array (location 2)
     if (data_.types & static_cast<unsigned int>(Parts::COLOR)) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
@@ -196,7 +223,7 @@ class CQGLBuffer {
       span += 3;
     }
 
-    // store texture points in vertex array
+    // store texture points in vertex array (location 3)
     if (data_.types & static_cast<unsigned int>(Parts::TEXTURE)) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        2, int(data_.span*sizeof(float)));
@@ -236,17 +263,17 @@ class CQGLBuffer {
 
  private:
   void term() {
+    data_.vertexBuffer->destroy();
+    data_.indBuffer   ->destroy();
+
+    data_.vObj->destroy();
+
     delete data_.vObj;
     delete data_.vertexBuffer;
     delete data_.indBuffer;
 
     delete [] data_.data;
     delete [] data_.indData;
-
-    data_.vertexBuffer->destroy();
-    data_.indBuffer   ->destroy();
-
-    data_.vObj->destroy();
 
     data_ = Data();
   }
@@ -288,6 +315,7 @@ class CQGLBuffer {
       //---
 
       data_.numData = 0;
+      data_.span    = 0;
 
       if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
         data_.numData += data_.points.size()*3;

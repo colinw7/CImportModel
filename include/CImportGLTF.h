@@ -9,9 +9,84 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 #include <iostream>
 
 class CImportGLTF : public CImportBase {
+ public:
+  struct Color {
+    double r { 0.0 };
+    double g { 0.0 };
+    double b { 0.0 };
+    double a { 1.0 };
+
+    std::string name;
+
+    Color() { }
+
+    Color(double r1, double g1, double b1, double a1) :
+     r(r1), g(g1), b(b1), a(a1) {
+    }
+
+    Color(const std::string &s) :
+     name(s) {
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const Color &c) {
+      os << c.r << "," << c.g << "," << c.b << "," << c.a;
+      return os;
+    }
+  };
+
+  struct Vec4 {
+    float x { 0.0f };
+    float y { 0.0f };
+    float z { 0.0f };
+    float w { 0.0f };
+
+    Vec4() { }
+
+    Vec4(float x1, float y1, float z1, float w1) :
+     x(x1), y(y1), z(z1), w(w1) {
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const Vec4 &v) {
+      os << v.x << "," << v.y << "," << v.z << "," << v.w;
+      return os;
+    }
+  };
+
+  using OptVec4 = std::optional<Vec4>;
+
+  struct Vec3 {
+    float x { 0.0f };
+    float y { 0.0f };
+    float z { 0.0f };
+
+    Vec3() { }
+
+    Vec3(float x1, float y1, float z1) :
+     x(x1), y(y1), z(z1) {
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const Vec3 &v) {
+      os << v.x << "," << v.y << "," << v.z;
+      return os;
+    }
+  };
+
+  using OptVec3 = std::optional<Vec3>;
+
+  struct Vec2 {
+    float x { 0.0f };
+    float y { 0.0f };
+
+    friend std::ostream &operator<<(std::ostream &os, const Vec2 &v) {
+      os << v.x << "," << v.y;
+      return os;
+    }
+  };
+
  public:
   CImportGLTF(CGeomScene3D *scene=nullptr, const std::string &name="gltf");
 
@@ -19,6 +94,9 @@ class CImportGLTF : public CImportBase {
 
   bool isDebug() const { return debug_; }
   void setDebug(bool b) { debug_ = b; }
+
+  bool isDebugData() const { return debugData_; }
+  void setDebugData(bool b) { debugData_ = b; }
 
   bool isSaveImage() const { return saveImage_; }
   void setSaveImage(bool b) { saveImage_ = b; }
@@ -47,6 +125,8 @@ class CImportGLTF : public CImportBase {
   bool readJson();
 
  private:
+  using OptReal = std::optional<double>;
+
   struct ChunkBuffer {
     std::vector<unsigned char> data;
   };
@@ -79,6 +159,12 @@ class CImportGLTF : public CImportBase {
     }
 
     bool isEmpty() const { return (ind < 0 && name == ""); }
+
+    std::string to_string() const {
+      if (ind  >= 0 ) return std::to_string(ind);
+      else if (name != "") return name;
+      return "";
+    }
   };
 
   struct IndData {
@@ -86,6 +172,7 @@ class CImportGLTF : public CImportBase {
   };
 
   struct Accessor : IndData {
+    std::string         name;
     IndName             bufferView;
     long                byteOffset    { -1 };
     long                byteStride    { -1 };
@@ -101,14 +188,16 @@ class CImportGLTF : public CImportBase {
     std::string generator;
     std::string versionId;
     long        versionNumber { -1 };
+    std::string copyright;
   };
 
   struct BufferView : IndData {
-    IndName buffer;
-    long    byteOffset { -1 };
-    long    byteLength { -1 };
-    long    byteStride { -1 };
-    long    target     { -1 };
+    std::string name;
+    IndName     buffer;
+    long        byteOffset { -1 };
+    long        byteLength { -1 };
+    long        byteStride { -1 };
+    long        target     { -1 };
   };
 
   struct Buffer : IndData {
@@ -125,31 +214,11 @@ class CImportGLTF : public CImportBase {
     std::string uri;
     long        width { -1 };
     long        height { -1 };
+
+    mutable CImagePtr image;
   };
 
-  struct Color {
-    double r { 0.0 };
-    double g { 0.0 };
-    double b { 0.0 };
-    double a { 1.0 };
-
-    std::string name;
-
-    Color() { }
-
-    Color(double r1, double g1, double b1, double a1) :
-     r(r1), g(g1), b(b1), a(a1) {
-    }
-
-    Color(const std::string &s) :
-     name(s) {
-    }
-
-    friend std::ostream &operator<<(std::ostream &os, const Color &c) {
-      os << c.r << "," << c.g << "," << c.b << "," << c.a;
-      return os;
-    }
-  };
+  using OptColor = std::optional<Color>;
 
   struct MaterialTexture {
     long index    { -1 };
@@ -163,12 +232,13 @@ class CImportGLTF : public CImportBase {
     MaterialTexture normalTexture;
     MaterialTexture baseColorTexture;
     std::string     technique;
-    Color           ambient;
-    Color           diffuse;
-    Color           emission;
-    Color           specular;
-    double          shininess { 0.0 };
-    double          transparency { 0.0 };
+    OptColor        ambient;
+    OptColor        diffuse;
+    OptColor        emission;
+    OptColor        specular;
+    OptReal         shininess;
+    OptReal         transparency;
+    OptVec3         emissiveFactor;
   };
 
   struct Primitive {
@@ -186,10 +256,16 @@ class CImportGLTF : public CImportBase {
     std::vector<Primitive> primitives;
   };
 
+  using OptMatrix = std::optional<CGLMatrix3D>;
+
   struct Node : IndData {
-    long        mesh { 0 };
-    std::string name;
-    CGLMatrix3D matrix;
+    IndName              mesh;
+    std::string          name;
+    OptMatrix            matrix;
+    OptVec3              translation;
+    OptVec3              scale;
+    OptVec4              rotation;
+    std::vector<IndName> children;
   };
 
   struct Sampler : IndData {
@@ -200,9 +276,8 @@ class CImportGLTF : public CImportBase {
   };
 
   struct Scene : IndData {
-    std::string              name;
-    std::vector<long>        nodeIds;
-    std::vector<std::string> nodeNames;
+    std::string          name;
+    std::vector<IndName> nodes;
   };
 
   struct Texture : IndData {
@@ -269,29 +344,12 @@ class CImportGLTF : public CImportBase {
     std::vector<Chunk>     chunks;
   };
 
-  struct Vec4 {
-    float x;
-    float y;
-    float z;
-    float w;
-  };
-
-  struct Vec3 {
-    float x;
-    float y;
-    float z;
-  };
-
-  struct Vec2 {
-    float x;
-    float y;
-  };
-
   struct MeshData : IndData {
-    std::vector<Vec4>   vec4;
-    std::vector<Vec3>   vec3;
-    std::vector<Vec2>   vec2;
-    std::vector<ushort> scalars;
+    std::vector<Vec4>  vec4;
+    std::vector<Vec3>  vec3;
+    std::vector<Vec2>  vec2;
+    std::vector<long>  iscalars;
+    std::vector<float> fscalars;
   };
 
  private:
@@ -299,11 +357,18 @@ class CImportGLTF : public CImportBase {
 
   bool processData();
 
+  bool processNode(const Node &node);
+  bool processMesh(const Mesh &mesh);
+
+  bool resolveImage(const Image &image);
   bool getImageData(const Image &image, const uchar* &data, long &len);
 
   bool getBufferView(const IndName &indName, BufferView &bufferView) const;
+  bool getBuffer    (const IndName &indName, Buffer &buffer) const;
   bool getMaterial  (const IndName &indName, Material &material) const;
   bool getTexture   (const IndName &indName, Texture &texture) const;
+  bool getNode      (const IndName &indName, Node &node) const;
+  bool getMesh      (const IndName &indName, Mesh &mesh) const;
 
   void printAccessor  (const Accessor   &accessor  , const IndName &indName) const;
   void printSampler   (const Sampler    &sampler   , const IndName &indName) const;
@@ -331,7 +396,10 @@ class CImportGLTF : public CImportBase {
   ObjectP        pobject_;
   CFile*         file_    { nullptr };
 
+  bool binary_ { false };
+
   bool debug_     { false };
+  bool debugData_ { false };
   bool saveImage_ { false };
 
   uint version_ { 0 };
@@ -339,6 +407,21 @@ class CImportGLTF : public CImportBase {
   JsonData jsonData_;
 
   IndNameMap<MeshData> meshDatas_;
+
+  struct UriData {
+    uchar *data { nullptr };
+    uint   len { 0 };
+
+    UriData() { }
+
+    UriData(uchar *d, uint l) :
+     data(d), len(l) {
+    }
+  };
+
+  using UriDataMap = std::map<std::string, UriData>;
+
+  mutable UriDataMap uriDataMap_;
 };
 
 #endif

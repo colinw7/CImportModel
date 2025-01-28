@@ -2,13 +2,21 @@
 #include <CQNewGLModel.h>
 #include <CQNewGLCanvas.h>
 
-#include <CQColorEdit.h>
-#include <CQSlider.h>
+#include <CImportBase.h>
+#include <CGeomScene3D.h>
+#include <CGLCamera.h>
 
+#include <CQColorEdit.h>
+#include <CQRealSpin.h>
+#include <CQSlider.h>
+#include <CQPoint3DEdit.h>
+
+#include <QTabWidget>
+#include <QListWidget>
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QButtonGroup>
-#include <QTabWidget>
+#include <QLabel>
 #include <QVBoxLayout>
 
 CQNewGLControl::
@@ -145,7 +153,7 @@ CQNewGLControl(CQNewGLModel *app) :
 
   lightControl_ = new CQNewGLLightControl(this);
 
-  tab_->addTab(lightControl_, "Light");
+  tab_->addTab(lightControl_, "Lights");
 
   objectsControl_ = new CQNewGLObjectsControl(this);
 
@@ -154,6 +162,13 @@ CQNewGLControl(CQNewGLModel *app) :
   //---
 
   layout->addStretch(1);
+}
+
+void
+CQNewGLControl::
+update()
+{
+  objectsControl_->update();
 }
 
 void
@@ -253,17 +268,230 @@ typeSlot(int i)
   app_->setType(static_cast<CQNewGLModel::Type>(i));
 }
 
+//---
+
 CQNewGLCameraControl::
-CQNewGLCameraControl(CQNewGLControl *)
+CQNewGLCameraControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
 {
+  auto *layout = new QGridLayout(this);
+
+  int row = 0;
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w) {
+    layout->addWidget(new QLabel(label), row, 0);
+    layout->addWidget(w, row, 1);
+    ++row;
+  };
+
+  //---
+
+  rotateCheck_ = new QCheckBox;
+  connect(rotateCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::rotateSlot);
+  addLabelEdit("Rotate", rotateCheck_);
+
+  zoomEdit_ = new CQRealSpin;
+  connect(zoomEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::zoomSlot);
+  addLabelEdit("Zoom", zoomEdit_);
+
+  nearEdit_ = new CQRealSpin;
+  connect(nearEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::nearSlot);
+  addLabelEdit("Near", nearEdit_);
+
+  farEdit_ = new CQRealSpin;
+  connect(farEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::farSlot);
+  addLabelEdit("Far", farEdit_);
+
+  yawEdit_ = new CQRealSpin;
+  connect(yawEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::yawSlot);
+  addLabelEdit("Yaw", yawEdit_);
+
+  pitchEdit_ = new CQRealSpin;
+  connect(pitchEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::pitchSlot);
+  addLabelEdit("Pitch", pitchEdit_);
+
+  rollEdit_ = new CQRealSpin;
+  connect(rollEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::rollSlot);
+  addLabelEdit("Roll", rollEdit_);
+
+  posEdit_ = new CQPoint3DEdit;
+  connect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLCameraControl::posSlot);
+  addLabelEdit("Position", posEdit_);
 }
+
+CGLCamera *
+CQNewGLCameraControl::
+camera() const
+{
+  return canvas()->camera();
+}
+
+void
+CQNewGLCameraControl::
+zoomSlot(double r)
+{
+  camera()->setZoom(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+nearSlot(double r)
+{
+  camera()->setNear(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+rotateSlot(int b)
+{
+  camera()->setRotate(b);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+farSlot(double r)
+{
+  camera()->setFar(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+yawSlot(double r)
+{
+  camera()->setYaw(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+pitchSlot(double r)
+{
+  camera()->setPitch(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+rollSlot(double r)
+{
+  camera()->setRoll(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+posSlot()
+{
+  auto p = posEdit_->getValue();
+
+  camera()->setPosition(CGLVector3D(p.x, p.y, p.z));
+  canvas()->update();
+}
+
+//---
 
 CQNewGLLightControl::
-CQNewGLLightControl(CQNewGLControl *)
+CQNewGLLightControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
 {
 }
 
+//---
+
 CQNewGLObjectsControl::
-CQNewGLObjectsControl(CQNewGLControl *)
+CQNewGLObjectsControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  objectsList_ = new QListWidget;
+
+  objectsList_->setSelectionMode(QListWidget::SingleSelection);
+
+  connect(objectsList_, &QListWidget::currentItemChanged,
+          this, &CQNewGLObjectsControl::objectSelectedSlot);
+
+  layout->addWidget(objectsList_);
+
+#if 0
+  objectTree_ = new CQPropertyViewTree(this);
+
+  layout->addWidget(objectTree_);
+#endif
+}
+
+void
+CQNewGLObjectsControl::
+update()
+{
+  disconnect(objectsList_, &QListWidget::currentItemChanged,
+             this, &CQNewGLObjectsControl::objectSelectedSlot);
+
+  //---
+
+  auto &scene = canvas()->importBase()->getScene();
+
+  objectsList_->clear();
+
+  for (auto *object : scene.getObjects()) {
+    auto objectName = QString::fromStdString(object->getName());
+
+    auto *item = new QListWidgetItem(objectName);
+
+    objectsList_->addItem(item);
+
+    item->setData(Qt::UserRole, objectName);
+  }
+
+  //---
+
+  connect(objectsList_, &QListWidget::currentItemChanged,
+          this, &CQNewGLObjectsControl::objectSelectedSlot);
+}
+
+
+void
+CQNewGLObjectsControl::
+objectSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+{
+  int ind = item->data(Qt::UserRole).toInt();
+
+  std::cerr << ind << "\n";
+
+#if 0
+  auto *indObj = canvas_->objectFromInd(ind);
+
+  for (auto *obj : canvas_->objects())
+    obj->setSelected(obj == indObj);
+
+  objectTree_->clear();
+
+  if (indObj) {
+    auto properties = CQUtil::getPropertyList(indObj);
+
+    for (auto &prop : properties) {
+      objectTree_->addProperty("", indObj, prop);
+    }
+  }
+#endif
+}
+
+//---
+
+CQNewGLControlFrame::
+CQNewGLControlFrame(CQNewGLControl *control) :
+ control_(control)
 {
 }
+
+CQNewGLCanvas *
+CQNewGLControlFrame::
+canvas() const
+{
+  return control_->app()->canvas();
+}
+

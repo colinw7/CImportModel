@@ -3,6 +3,7 @@
 
 #include <QFrame>
 
+class CQNewGLToolbar;
 class CQNewGLCanvas;
 class CQNewGLControl;
 
@@ -20,6 +21,7 @@ class CQNewGLModel : public QFrame {
   CQNewGLModel();
 
   CQNewGLCanvas *canvas() const { return canvas_; }
+  CQNewGLControl *control() const { return control_; }
 
   int windowWidth() const { return windowWidth_; }
   void setWindowWidth(int i) { windowWidth_ = i; }
@@ -43,11 +45,12 @@ class CQNewGLModel : public QFrame {
   void setType(const Type &t) { type_ = t; }
 
  private:
+  CQNewGLToolbar* toolbar_ { nullptr };
   CQNewGLCanvas*  canvas_  { nullptr };
   CQNewGLControl* control_ { nullptr };
 
-  int windowWidth_  { 1024 };
-  int windowHeight_ { 1024 };
+  int windowWidth_  { 2000 };
+  int windowHeight_ { 1500 };
 
   double ambient_   { 0.5 };
   double diffuse_   { 0.5 };
