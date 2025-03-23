@@ -1,7 +1,6 @@
 #ifndef CGEOM_IMPORT_PLG_H
 #define CGEOM_IMPORT_PLG_H
 
-#include <CAutoPtr.h>
 #include <CImportPLG.h>
 #include <CGeomObject3D.h>
 
@@ -36,10 +35,10 @@ class CGeomImportPLG : public CImportPLG {
                      CShadeType3D shade_type, const CRGBA &rgba) override;
 
  private:
-  CGeomScene3D            *scene_ { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_ { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
+  CGeomScene3D*  scene_ { nullptr };
+  SceneP         pscene_;
+  CGeomObject3D* object_ { nullptr };
+  ObjectP        pobject_;
 };
 
 #endif

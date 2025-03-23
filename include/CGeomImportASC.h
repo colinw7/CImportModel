@@ -3,7 +3,6 @@
 
 #include <CImportASC.h>
 #include <CGeomObject3D.h>
-#include <CAutoPtr.h>
 
 class CGeomImportASC : public CImportASC {
  public:
@@ -33,10 +32,10 @@ class CGeomImportASC : public CImportASC {
   void addITriangle(int i1, int i2, int i3, const CRGBA &rgba) override;
 
  private:
-  CGeomScene3D            *scene_ { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_ { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
+  CGeomScene3D*  scene_ { nullptr };
+  SceneP         pscene_;
+  CGeomObject3D* object_ { nullptr };
+  ObjectP        pobject_;
 };
 
 #endif

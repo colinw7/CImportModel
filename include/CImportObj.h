@@ -4,7 +4,6 @@
 #include <CImportBase.h>
 #include <CGeomObject3D.h>
 #include <CFile.h>
-#include <CAutoPtr.h>
 
 class CImportObj : public CImportBase {
  public:
@@ -63,8 +62,6 @@ class CImportObj : public CImportBase {
     MapImage    mapBump;
   };
 
-  using SceneP        = CAutoPtr<CGeomScene3D>;
-  using ObjectP       = CAutoPtr<CGeomObject3D>;
   using Materials     = std::map<std::string, Material *>;
   using TexturePoints = std::vector<CPoint3D>;
   using NormalPoints  = std::vector<CPoint3D>;

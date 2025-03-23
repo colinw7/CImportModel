@@ -31,7 +31,54 @@ CQNewGLControl(CQNewGLModel *app) :
 
   //---
 
-  auto *canvas = app_->canvas();
+  tab_ = new QTabWidget;
+
+  tab_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+  layout->addWidget(tab_);
+
+  //---
+
+  generalControl_ = new CQNewGLGeneralControl(this);
+
+  tab_->addTab(generalControl_, "General");
+
+  cameraControl_ = new CQNewGLCameraControl(this);
+
+  tab_->addTab(cameraControl_, "Camera");
+
+  lightControl_ = new CQNewGLLightControl(this);
+
+  tab_->addTab(lightControl_, "Lights");
+
+  objectsControl_ = new CQNewGLObjectsControl(this);
+
+  tab_->addTab(objectsControl_, "Objects");
+
+  //---
+
+  layout->addStretch(1);
+}
+
+void
+CQNewGLControl::
+update()
+{
+  objectsControl_->update();
+}
+
+//---
+
+CQNewGLGeneralControl::
+CQNewGLGeneralControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *app    = control->app();
+  auto *canvas = this->canvas();
+
+  //---
+
+  auto *layout = new QVBoxLayout(this);
 
   //---
 
@@ -103,13 +150,13 @@ CQNewGLControl(CQNewGLModel *app) :
     return slider;
   };
 
-  auto *ambientSlider   = createSlider("Ambient"  , 0.0,   1.0, app_->ambient  (),
+  auto *ambientSlider   = createSlider("Ambient"  , 0.0,   1.0, app->ambient  (),
                                        SLOT(ambientSlot(double)));
-  auto *diffuseSlider   = createSlider("Diffuse"  , 0.0,   1.0, app_->diffuse  (),
+  auto *diffuseSlider   = createSlider("Diffuse"  , 0.0,   1.0, app->diffuse  (),
                                        SLOT(diffuseSlot(double)));
-  auto *specularSlider  = createSlider("Specular" , 0.0,   1.0, app_->specular (),
+  auto *specularSlider  = createSlider("Specular" , 0.0,   1.0, app->specular (),
                                        SLOT(specularSlot(double)));
-  auto *shininessSlider = createSlider("Shininess", 0.0, 100.0, app_->shininess(),
+  auto *shininessSlider = createSlider("Shininess", 0.0, 100.0, app->shininess(),
                                        SLOT(shininessSlot(double)));
 
   layout->addWidget(ambientSlider);
@@ -141,131 +188,110 @@ CQNewGLControl(CQNewGLModel *app) :
   layout->addWidget(lightCheck);
   layout->addWidget(cameraCheck);
 
-  //---
-
-  tab_ = new QTabWidget;
-
-  layout->addWidget(tab_);
-
-  cameraControl_ = new CQNewGLCameraControl(this);
-
-  tab_->addTab(cameraControl_, "Camera");
-
-  lightControl_ = new CQNewGLLightControl(this);
-
-  tab_->addTab(lightControl_, "Lights");
-
-  objectsControl_ = new CQNewGLObjectsControl(this);
-
-  tab_->addTab(objectsControl_, "Objects");
-
-  //---
-
   layout->addStretch(1);
 }
 
 void
-CQNewGLControl::
-update()
-{
-  objectsControl_->update();
-}
-
-void
-CQNewGLControl::
+CQNewGLGeneralControl::
 bgColorSlot(const QColor &c)
 {
-  auto *canvas = app_->canvas();
+  auto *canvas = this->canvas();
 
   canvas->setBgColor(c);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 depthTestSlot(int state)
 {
-  auto *canvas = app_->canvas();
+  auto *canvas = this->canvas();
 
   canvas->setDepthTest(state);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 cullSlot(int state)
 {
-  auto *canvas = app_->canvas();
+  auto *canvas = this->canvas();
 
   canvas->setCullFace(state);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 frontFaceSlot(int state)
 {
-  auto *canvas = app_->canvas();
+  auto *canvas = this->canvas();
 
   canvas->setFrontFace(state);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 polygonLineSlot(int state)
 {
-  auto *canvas = app_->canvas();
+  auto *canvas = this->canvas();
 
   canvas->setPolygonLine(state);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 ambientSlot(double v)
 {
-  auto *canvas = app_->canvas();
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
 
-  app_  ->setAmbient(v);
+  app   ->setAmbient(v);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 diffuseSlot(double v)
 {
-  auto *canvas = app_->canvas();
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
 
-  app_  ->setDiffuse(v);
+  app   ->setDiffuse(v);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 specularSlot(double v)
 {
-  auto *canvas = app_->canvas();
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
 
-  app_  ->setSpecular(v);
+  app   ->setSpecular(v);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 shininessSlot(double v)
 {
-  auto *canvas = app_->canvas();
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
 
-  app_  ->setShininess(v);
+  app   ->setShininess(v);
   canvas->update();
 }
 
 void
-CQNewGLControl::
+CQNewGLGeneralControl::
 typeSlot(int i)
 {
-  app_->setType(static_cast<CQNewGLModel::Type>(i));
+  auto *app = control_->app();
+
+  app->setType(static_cast<CQNewGLModel::Type>(i));
 }
 
 //---
@@ -317,6 +343,10 @@ CQNewGLCameraControl(CQNewGLControl *control) :
   posEdit_ = new CQPoint3DEdit;
   connect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLCameraControl::posSlot);
   addLabelEdit("Position", posEdit_);
+
+  //---
+
+  layout->setRowStretch(row, 1);
 }
 
 CGLCamera *
@@ -422,6 +452,33 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
 
   layout->addWidget(objectTree_);
 #endif
+
+  //---
+
+  auto createEdit = [&](const QString &label, const char *slotName) {
+    auto *layout1 = new QHBoxLayout;
+
+    layout->addLayout(layout1);
+
+    auto *labelW = new QLabel(label);
+    auto *edit   = new CQPoint3DEdit;
+
+    layout1->addWidget(labelW);
+    layout1->addWidget(edit);
+
+    connect(edit, SIGNAL(editingFinished()), this, slotName);
+
+    return edit;
+  };
+
+  //---
+
+  centerEdit_ = createEdit("Center", SLOT(centerSlot()));
+  sizeEdit_   = createEdit("Size"  , SLOT(sizeSlot()));
+
+  //---
+
+  layout->addStretch(1);
 }
 
 void
@@ -431,11 +488,16 @@ update()
   disconnect(objectsList_, &QListWidget::currentItemChanged,
              this, &CQNewGLObjectsControl::objectSelectedSlot);
 
+  disconnect(centerEdit_, SIGNAL(editingFinished()), this, SLOT(centerSlot()));
+  disconnect(sizeEdit_  , SIGNAL(editingFinished()), this, SLOT(sizeSlot()));
+
   //---
 
   auto &scene = canvas()->importBase()->getScene();
 
   objectsList_->clear();
+
+  int ind = 0;
 
   for (auto *object : scene.getObjects()) {
     auto objectName = QString::fromStdString(object->getName());
@@ -444,15 +506,17 @@ update()
 
     objectsList_->addItem(item);
 
-    item->setData(Qt::UserRole, objectName);
+    item->setData(Qt::UserRole, ind++);
   }
 
   //---
 
   connect(objectsList_, &QListWidget::currentItemChanged,
           this, &CQNewGLObjectsControl::objectSelectedSlot);
-}
 
+  connect(centerEdit_, SIGNAL(editingFinished()), this, SLOT(centerSlot()));
+  connect(sizeEdit_  , SIGNAL(editingFinished()), this, SLOT(sizeSlot()));
+}
 
 void
 CQNewGLObjectsControl::
@@ -462,22 +526,29 @@ objectSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
 
   std::cerr << ind << "\n";
 
-#if 0
-  auto *indObj = canvas_->objectFromInd(ind);
+  const auto &scene = canvas()->importBase()->getScene();
 
-  for (auto *obj : canvas_->objects())
-    obj->setSelected(obj == indObj);
+  const auto &objects = scene.getObjects();
 
-  objectTree_->clear();
+  if (ind < 0 || ind >= int(objects.size()))
+    return;
 
-  if (indObj) {
-    auto properties = CQUtil::getPropertyList(indObj);
+  auto &object = objects[ind];
 
-    for (auto &prop : properties) {
-      objectTree_->addProperty("", indObj, prop);
-    }
-  }
-#endif
+  centerEdit_->setValue(object->getModelCenter());
+  sizeEdit_  ->setValue(object->getModelSize().point());
+}
+
+void
+CQNewGLObjectsControl::
+centerSlot()
+{
+}
+
+void
+CQNewGLObjectsControl::
+sizeSlot()
+{
 }
 
 //---
@@ -486,6 +557,7 @@ CQNewGLControlFrame::
 CQNewGLControlFrame(CQNewGLControl *control) :
  control_(control)
 {
+  setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 }
 
 CQNewGLCanvas *

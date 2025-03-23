@@ -16,11 +16,15 @@ auto warnMsg(const std::string &msg) -> void {
 }
 
 auto debugMsg(const std::string &msg) -> void {
-  std::cerr << "[31m" << msg << "[0m\n";
+  std::cerr << "[31mDBG:[0m" << msg << "\n";
 }
 
 auto TODO(const std::string &msg) -> void {
   std::cerr << "[34mTODO[0m: " << msg << "\n";
+}
+
+auto TODOValue(const std::string &msg, const CJson::ValueP &value) -> void {
+  std::cerr << "[34mTODO[0m: " << msg << " : " + std::string(value->typeName()) << "\n";
 }
 
 enum Constants {
@@ -31,6 +35,9 @@ enum Constants {
 //TYPE_SIGNED_INT     = 5124, // GL_SIGNED_INT
   TYPE_UNSIGNED_INT   = 5125, // GL_UNSIGNED_INT
   TYPE_FLOAT          = 5126, // GL_FLOAT
+
+  TARGET_ARRAY_BUFFER         = 0x8892,
+  TARGET_ELEMENT_ARRAY_BUFFER = 0x8893,
 
   MODE_POINTS         = 0,
   MODE_LINE           = 1,
@@ -63,7 +70,7 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
-    pscene_ = scene_;
+    pscene_ = SceneP(scene_);
   }
 
   auto name1 = name;
@@ -76,7 +83,7 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
   scene_->addObject(object_);
 
   if (! pobject_)
-    pobject_ = object_;
+    pobject_ = ObjectP(object_);
 }
 
 CImportGLTF::
@@ -271,7 +278,7 @@ readJson()
 {
   auto str = file_->toString();
 
-  if (! parseJson(str, jsonData_))
+  if (str != "" && ! parseJson(str, jsonData_))
     return false;
 
   //---
@@ -322,6 +329,11 @@ processData()
       byteOffset = 0;
 
     const uchar *data = nullptr;
+
+    auto byteStride = int(bufferView.byteStride);
+
+    if (byteStride < 0)
+      byteStride = 0;
 
     Chunk *chunk { nullptr };
 
@@ -431,49 +443,61 @@ processData()
     // 1 component
     if      (accessor.type == "SCALAR") {
       if      (accessor.componentType == Constants::TYPE_UNSIGNED_SHORT) {
-        if (bufferView.byteLength < accessor.count*2)
+        if (byteStride <= 0)
+          byteStride = 2;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid SCALAR count");
 
         int id1 = 0;
 
         for (long i = 0; i < accessor.count; ++i) {
-          auto s = readShort(id1); id1 += 2;
+          auto s = readShort(id1); id1 += byteStride;
 
           meshData.iscalars.push_back(s);
         }
       }
       else if (accessor.componentType == Constants::TYPE_UNSIGNED_INT) {
-        if (bufferView.byteLength < accessor.count*4)
+        if (byteStride <= 0)
+          byteStride = 4;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid SCALAR count");
 
         int id1 = 0;
 
         for (long i = 0; i < accessor.count; ++i) {
-          auto l = readInt(id1); id1 += 4;
+          auto l = readInt(id1); id1 += byteStride;
 
           meshData.iscalars.push_back(l);
         }
       }
       else if (accessor.componentType == Constants::TYPE_UNSIGNED_BYTE) {
-        if (bufferView.byteLength < accessor.count)
+        if (byteStride <= 0)
+          byteStride = 1;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid SCALAR count");
 
         int id1 = 0;
 
         for (long i = 0; i < accessor.count; ++i) {
-          auto l = readByte(id1); ++id1;
+          auto l = readByte(id1); id1 += byteStride;
 
           meshData.iscalars.push_back(l);
         }
       }
       else if (accessor.componentType == Constants::TYPE_FLOAT) {
-        if (bufferView.byteLength < accessor.count*4)
+        if (byteStride <= 0)
+          byteStride = 4;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid SCALAR count");
 
         int id1 = 0;
 
         for (long i = 0; i < accessor.count; ++i) {
-          auto f = readFloat(id1); id1 += 4;
+          auto f = readFloat(id1); id1 += byteStride;
 
           meshData.fscalars.push_back(f);
         }
@@ -489,7 +513,10 @@ processData()
     // 2 components
     else if (accessor.type == "VEC2") {
       if (accessor.componentType == Constants::TYPE_FLOAT) {
-        if (bufferView.byteLength < accessor.count*2*4)
+        if (byteStride <= 0)
+          byteStride = 2*4;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid VEC2 count");
 
         int id1 = 0;
@@ -497,8 +524,8 @@ processData()
         for (long i = 0; i < accessor.count; ++i) {
           Vec2 v;
 
-          v.x = readFloat(id1); id1 += 4;
-          v.y = readFloat(id1); id1 += 4;
+          v.x = readFloat(id1    );
+          v.y = readFloat(id1 + 4); id1 += byteStride;
 
           meshData.vec2.push_back(v);
         }
@@ -508,8 +535,11 @@ processData()
     }
     // 3 components
     else if (accessor.type == "VEC3") {
+        if (byteStride <= 0)
+          byteStride = 3*4;
+
       if (accessor.componentType == Constants::TYPE_FLOAT) {
-        if (bufferView.byteLength < accessor.count*3*4)
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid VEC3 count");
 
         int id1 = 0;
@@ -517,9 +547,9 @@ processData()
         for (long i = 0; i < accessor.count; ++i) {
           Vec3 v;
 
-          v.x = readFloat(id1); id1 += 4;
-          v.y = readFloat(id1); id1 += 4;
-          v.z = readFloat(id1); id1 += 4;
+          v.x = readFloat(id1    );
+          v.y = readFloat(id1 + 4);
+          v.z = readFloat(id1 + 8); id1 += byteStride;
 
           meshData.vec3.push_back(v);
         }
@@ -530,7 +560,10 @@ processData()
     // 4 components
     else if (accessor.type == "VEC4") {
       if      (accessor.componentType == Constants::TYPE_UNSIGNED_SHORT) {
-        if (bufferView.byteLength < accessor.count*2*4)
+        if (byteStride <= 0)
+          byteStride = 4*2;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid VEC4 count");
 
         int id1 = 0;
@@ -538,16 +571,19 @@ processData()
         for (long i = 0; i < accessor.count; ++i) {
           Vec4 v;
 
-          v.x = readShort(id1); id1 += 4;
-          v.y = readShort(id1); id1 += 4;
-          v.z = readShort(id1); id1 += 4;
-          v.w = readShort(id1); id1 += 4;
+          v.x = readShort(id1    );
+          v.y = readShort(id1 + 2);
+          v.z = readShort(id1 + 4);
+          v.w = readShort(id1 + 6); id1 += byteStride;
 
           meshData.vec4.push_back(v);
         }
       }
       else if (accessor.componentType == Constants::TYPE_FLOAT) {
-        if (bufferView.byteLength < accessor.count*4*4)
+        if (byteStride <= 0)
+          byteStride = 4*4;
+
+        if (bufferView.byteLength < accessor.count*byteStride)
           return errorMsg("Invalid VEC4 count");
 
         int id1 = 0;
@@ -555,10 +591,10 @@ processData()
         for (long i = 0; i < accessor.count; ++i) {
           Vec4 v;
 
-          v.x = readFloat(id1); id1 += 4;
-          v.y = readFloat(id1); id1 += 4;
-          v.z = readFloat(id1); id1 += 4;
-          v.w = readFloat(id1); id1 += 4;
+          v.x = readFloat(id1     );
+          v.y = readFloat(id1 +  4);
+          v.z = readFloat(id1 +  8);
+          v.w = readFloat(id1 + 12); id1 += byteStride;
 
           meshData.vec4.push_back(v);
         }
@@ -589,11 +625,11 @@ processData()
     }
 
     if (isDebugData()) {
-      printVector<CImportGLTF::Vec4 >("VEC4"  ,  meshData.vec4);
-      printVector<CImportGLTF::Vec3 >("VEC3"  ,  meshData.vec3);
-      printVector<CImportGLTF::Vec2 >("VEC2"  ,  meshData.vec2);
-      printVector<long              >("SCALAR",  meshData.iscalars);
-      printVector<float             >("SCALAR",  meshData.fscalars);
+      printVector<CImportGLTF::Vec4 >("VEC4"  , meshData.vec4);
+      printVector<CImportGLTF::Vec3 >("VEC3"  , meshData.vec3);
+      printVector<CImportGLTF::Vec2 >("VEC2"  , meshData.vec2);
+      printVector<long              >("SCALAR", meshData.iscalars);
+      printVector<float             >("SCALAR", meshData.fscalars);
     }
 
     meshDatas_.add(meshData, indName);
@@ -637,7 +673,7 @@ processData()
 
   //---
 
-  // process scenes
+  // process scenes (scene only ?)
   for (const auto &ps : jsonData_.scenes) {
     for (const auto &pn : ps.second.nodes) {
       Node node;
@@ -645,16 +681,12 @@ processData()
       if (! getNode(pn, node))
         continue;
 
-      if (! processNode(node))
+      auto mt = CMatrix3D::identity();
+
+      if (! processNode(node, mt))
         continue;
     }
   }
-
-#if 0
-  // process nodes
-  for (const auto &pn : jsonData_.nodes)
-    processNode(pn.second);
-#endif
 
 #if 0
   // process meshes
@@ -713,51 +745,56 @@ processData()
 
 bool
 CImportGLTF::
-processNode(const Node &node)
+processNode(const Node &node, const CMatrix3D &mt)
 {
-  auto name = node.name;
+  auto m1  = mt;
+  auto mt1 = mt;
 
-  if (name == "")
-    name = "node" + node.name;
+  if (node.scale || node.rotation || node.translation) {
+    auto ms2 = CMatrix3D::identity();
+    auto mr2 = CMatrix3D::identity();
+    auto mt2 = CMatrix3D::identity();
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+    if (node.scale)
+      ms2 = CMatrix3D::scale(node.scale->x, node.scale->y, node.scale->z);
 
-  scene_->addObject(object_);
+    if (node.rotation) {
+      auto v = CVector3D(node.rotation->x, node.rotation->y, node.rotation->z);
+
+      mr2.setRotation(node.rotation->w, v);
+    }
+
+    if (node.translation)
+      mt2 = CMatrix3D::translation(node.translation->x, node.translation->y, node.translation->z);
+
+    m1  = ms2*mr2*mt2*mt1;
+    mt1 = mt2*mt1;
+  }
 
   //---
 
-  Mesh mesh;
+  if (! node.mesh.isEmpty()) {
+    auto name = node.name;
 
-  auto meshIndName = node.mesh;
+    if (name == "")
+      name = "node" + node.name;
 
-  if (meshIndName.isEmpty())
-    meshIndName = IndName(0);
+    object_ = CGeometryInst->createObject3D(scene_, name);
 
-  if (! getMesh(meshIndName, mesh))
-    return false;
+    scene_->addObject(object_);
 
-  if (! processMesh(mesh))
-    return false;
+    //---
 
-  auto ms = CMatrix3D::identity();
-  auto mr = CMatrix3D::identity();
-  auto mt = CMatrix3D::identity();
+    Mesh mesh;
 
-  if (node.scale)
-    ms = CMatrix3D::scale(node.scale->x, node.scale->y, node.scale->z);
+    if (! getMesh(node.mesh, mesh))
+      return false;
 
-  if (node.rotation) {
-    auto v = CVector3D(node.rotation->x, node.rotation->y, node.rotation->z);
+    if (! processMesh(mesh))
+      return false;
 
-    mr.setRotation(node.rotation->w, v);
+    object_->transform(m1);
   }
-
-  if (node.translation)
-    mt = CMatrix3D::translation(node.translation->x, node.translation->y, node.translation->z);
-
-  auto m = ms*mr*mt;
-
-  object_->transform(m);
 
   //---
 
@@ -767,10 +804,8 @@ processNode(const Node &node)
     if (! getNode(pc, node1))
       continue;
 
-    if (! processNode(node1))
+    if (! processNode(node1, mt1))
       continue;
-
-    object_->transform(m);
   }
 
   return true;
@@ -883,18 +918,29 @@ processMesh(const Mesh &mesh)
     for (const auto &p : positions) {
       auto ind = object_->addVertex(CPoint3D(p.x, p.y, p.z));
 
+      if (isDebug())
+        debugMsg("add vertex: " + std::to_string(p.x) + " " + std::to_string(p.y) +
+                 " " + std::to_string(p.z));
+
       auto &v = object_->getVertex(ind);
 
       if (ind < nn) {
         const auto &n = normals[ind];
 
         v.setNormal(CVector3D(n.x, n.y, n.z));
+
+        if (isDebug())
+          debugMsg("set normal: " + std::to_string(n.x) + " " + std::to_string(n.y) +
+                   " " + std::to_string(n.z));
       }
 
       if (ind < nt) {
         const auto &t = textCoords0[ind];
 
         v.setTextureMap(CPoint2D(t.x, t.y));
+
+        if (isDebug())
+          debugMsg("set texture: " + std::to_string(t.x) + " " + std::to_string(t.y));
       }
     }
 
@@ -911,6 +957,10 @@ processMesh(const Mesh &mesh)
         continue;
 
       object_->addITriangle(uint(i1), uint(i2), uint(i3));
+
+      if (isDebug())
+        debugMsg("add triangle: " + std::to_string(i1) + " " + std::to_string(i2) +
+                 " " + std::to_string(i3));
     }
 
     //---
@@ -990,7 +1040,7 @@ bool
 CImportGLTF::
 resolveImage(const Image &image)
 {
-  if (image.image.isValid())
+  if (image.image)
     return true;
 
   const uchar* data;
@@ -1205,6 +1255,15 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     return true;
   };
 
+  auto valueBool = [](const CJson::ValueP &value, bool &b) {
+    if (! value->isBool())
+      return false;
+
+    b = value->toBool();
+
+    return true;
+  };
+
   auto valueIndName = [&](const CJson::ValueP &value, IndName &indName) {
     if (value->isString()) {
       if (! valueString(value, indName.name))
@@ -1348,7 +1407,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv1.first == "normalized") {
             // TODO
-            TODO("Unhandled accessor normalized");
+            TODOValue("Unhandled accessor normalized", pnv1.second);
           }
           else
             return errorMsg("Invalid accessors name " + pnv1.first);
@@ -1422,11 +1481,11 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         }
         else if (pnv1.first == "premultipliedAlpha") {
           // TODO : bool
-          TODO("Unhandled asset premultipliedAlpha");
+          TODOValue("Unhandled asset premultipliedAlpha", pnv1.second);
         }
         else if (pnv1.first == "profile") {
           // TODO : object
-          TODO("Unhandled asset profile");
+          TODOValue("Unhandled asset profile", pnv1.second);
         }
         else if (pnv1.first == "copyright") {
           if (! valueString(pnv1.second, jsonData.asset.copyright))
@@ -1745,11 +1804,11 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
               }
               else if (pnv3.first == "scale") {
                 // TODO
-                TODO("Unhandled materials scale");
+                TODOValue("Unhandled materials scale", pnv3.second);
               }
               else if (pnv3.first == "extensions") {
                 // TODO
-                TODO("Unhandled materials extensions");
+                TODOValue("Unhandled materials extensions", pnv3.second);
               }
               else {
                 warnMsg("Invalid normalTexture name " + pnv3.first);
@@ -1765,11 +1824,11 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             for (const auto &pnv3 : obj3->nameValueMap()) {
               if      (pnv3.first == "metallicFactor") {
                 if (! valueNumber(pnv3.second, material.metallicFactor))
-                  return errorMsg("Invalid material pbrMetallicRoughness metallicFactor number");
+                  return errorMsg("Invalid material pbrMetallicRoughness/metallicFactor number");
               }
               else if (pnv3.first == "roughnessFactor") {
                 if (! valueNumber(pnv3.second, material.roughnessFactor))
-                  return errorMsg("Invalid material pbrMetallicRoughness roughnessFactor number");
+                  return errorMsg("Invalid material pbrMetallicRoughness/roughnessFactor number");
               }
               else if (pnv3.first == "baseColorTexture") {
                 if (! pnv3.second->isObject())
@@ -1788,23 +1847,22 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                   }
                   else if (pnv4.first == "extensions") {
                     // TODO
-                    TODO("Unhandled material pbrMetallicRoughness extensions");
+                    TODOValue("Unhandled material pbrMetallicRoughness/extensions", pnv4.second);
                   }
                   else {
-                    warnMsg("Invalid material baseColorTexture name " + pnv4.first);
+                    warnMsg("Invalid material baseColorTexture/name " + pnv4.first);
                   }
                 }
               }
               else if (pnv3.first == "metallicRoughnessTexture") {
-                // TODO
-                TODO("Unhandled material metallicRoughnessTexture");
+                TODOValue("Unhandled material pbrMetallicRoughness/metallicRoughnessTexture",
+                          pnv3.second);
               }
               else if (pnv3.first == "baseColorFactor") {
-                // TODO
-                TODO("Unhandled material baseColorFactor");
+                TODOValue("Unhandled material pbrMetallicRoughness/baseColorFactor", pnv3.second);
               }
               else {
-                warnMsg("Invalid pbrMetallicRoughness name " + pnv3.first);
+                TODOValue("Invalid pbrMetallicRoughness name " + pnv3.first, pnv3.second);
               }
             }
           }
@@ -1865,7 +1923,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv2.first == "occlusionTexture") {
             // TODO
-            TODO("Invalid material occlusionTexture");
+            TODOValue("Invalid material occlusionTexture", pnv2.second);
           }
           else if (pnv2.first == "extensions") {
             // TODO
@@ -1904,6 +1962,18 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                              " : " + pnv4.second->typeName());
                 }
               }
+              else if (name == "KHR_materials_iridescence") {
+                TODOValue("Invalid material KHR_materials_iridescence", pnv3.second);
+              }
+              else if (name == "KHR_materials_transmission") {
+                TODOValue("Invalid material KHR_materials_transmission", pnv3.second);
+              }
+              else if (name == "KHR_materials_volume") {
+                TODOValue("Invalid material KHR_materials_volume", pnv3.second);
+              }
+              else if (name == "KHR_materials_ior") {
+                TODOValue("Invalid material KHR_materials_ior", pnv3.second);
+              }
               else
                 debugMsg(std::string("  material extension ") + name +
                            " : " + pnv3.second->typeName());
@@ -1911,15 +1981,15 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv2.first == "alphaCutoff") {
             // TODO
-            TODO("Invalid material alphaCutoff");
+            TODOValue("Invalid material alphaCutoff", pnv2.second);
           }
           else if (pnv2.first == "alphaMode") {
             // TODO
-            TODO("Invalid material alphaMode");
+            TODOValue("Invalid material alphaMode", pnv2.second);
           }
           else if (pnv2.first == "doubleSided") {
-            // TODO
-            TODO("Invalid material doubleSided");
+            if (! valueBool(pnv2.second, material.doubleSided))
+              return errorMsg("Invalid material doubleSided value");
           }
           else if (pnv2.first == "emissiveFactor") {
             if (! pnv2.second->isArray())
@@ -1936,7 +2006,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           }
           else if (pnv2.first == "emissiveTexture") {
             // TODO
-            TODO("Invalid material emissiveTexture");
+            TODOValue("Invalid material emissiveTexture", pnv2.second);
           }
           else {
             warnMsg("Invalid materials name " + pnv2.first);
@@ -2025,7 +2095,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     }
                     else if (pnv4.first == "TANGENT") { // VEC4
                       // TODO
-                      TODO("Unhandled primitive TANGENT");
+                      TODOValue("Unhandled primitive TANGENT", pnv4.second);
                     }
                     else if (pnv4.first == "TEXCOORD_0") { // VEC2
                       if (! valueIndName(pnv4.second, primitive.texCoord0))
@@ -2037,15 +2107,15 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     }
                     else if (pnv4.first == "COLOR_0") { // VEC3 or VEC4
                       // TODO
-                      TODO("Unhandled primitive COLOR_0");
+                      TODOValue("Unhandled primitive COLOR_0", pnv4.second);
                     }
                     else if (pnv4.first == "JOINTS_0") { // VEC4
                       // TODO
-                      TODO("Unhandled primitive JOINTS_0");
+                      TODOValue("Unhandled primitive JOINTS_0", pnv4.second);
                     }
                     else if (pnv4.first == "WEIGHTS_0") { // VEC4
                       // TODO
-                      TODO("Unhandled primitive WEIGHTS_0");
+                      TODOValue("Unhandled primitive WEIGHTS_0", pnv4.second);
                     }
                     else {
                       debugMsg("  " + pnv.first + "/" + pnv2.first + "/" + pnv3.first + "/" +
@@ -2175,8 +2245,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             }
           }
           else if (pnv2.first == "skin") {
-            // TODO
-            TODO("Unhandled mesh skin");
+            TODOValue("Unhandled mesh skin", pnv2.second);
           }
           else if (pnv2.first == "rotation") {
             if (! pnv2.second->isArray())
@@ -2218,8 +2287,11 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             node.translation = Vec3(rvalues[0], rvalues[1], rvalues[2]);
           }
           else if (pnv2.first == "camera") {
-            // TODO : number
-            TODO("Unhandled node camera");
+            if (! valueLong(pnv2.second, node.camera))
+              return errorMsg("Invalid camera number");
+          }
+          else if (pnv2.first == "extensions") {
+            TODOValue("Unhandled node extensions", pnv2.second);
           }
           else {
             debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
@@ -2362,8 +2434,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
             }
           }
           else if (pnv2.first == "extensions") {
-            // TODO : object
-            TODO("Unhandled scene extensions");
+            TODOValue("Unhandled scene extensions", pnv2.second);
           }
           else {
             debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
@@ -2504,41 +2575,101 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
     }
     else if (pnv.first == "cameras") {
-      // TODO
-      TODO("Unhandled cameras");
-      if (pnv.second->isObject()) {
-        auto *obj1 = pnv.second->cast<CJson::Object>();
+      if      (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
 
-        for (const auto &pnv1 : obj1->nameValueMap()) {
-          debugMsg(pnv1.first + " : " + pnv1.second->typeName());
+        int ind = 0;
+
+        for (const auto &pv1 : arr1->values()) {
+          if (! pv1->isObject())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
+
+          Camera camera;
+
+          auto *obj2 = pv1->cast<CJson::Object>();
+
+          for (const auto &pnv2 : obj2->nameValueMap()) {
+            auto name = pnv2.first;
+
+            if      (name == "name") {
+              if (! valueString(pnv2.second, camera.name))
+                return errorMsg("Invalid camera name");
+            }
+            else if (name == "type") {
+              if (! valueString(pnv2.second, camera.type))
+                return errorMsg("Invalid camera type");
+            }
+            else if (name == "perspective") {
+              if (! pnv2.second->isObject())
+                return errorMsg("Invalid camera perspective");
+
+              auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+              for (const auto &pnv3 : obj3->nameValueMap()) {
+                auto name1 = pnv3.first;
+
+                if      (name1 == "yfov") {
+                  if (! valueNumber(pnv3.second, camera.yfov))
+                    return errorMsg("Invalid camera yfov");
+                }
+                else if (name1 == "znear") {
+                  if (! valueNumber(pnv3.second, camera.znear))
+                    return errorMsg("Invalid camera znear");
+                }
+                else if (name1 == "zfar") {
+                  if (! valueNumber(pnv3.second, camera.zfar))
+                    return errorMsg("Invalid camera zfar");
+                }
+                else
+                  TODOValue("Unhandled camera perspective " + name1, pnv3.second);
+              }
+            }
+            else
+              TODOValue("Unhandled camera name " + name, pnv2.second);
+          }
+
+          jsonData.cameras.add(camera, IndName(ind++));
         }
       }
-      else if (pnv.second->isArray()) {
+      else if (pnv.second->isObject()) {
+        return errorMsg("Invalid JSON " + pnv.first + " array data");
+      }
+      else
+        return errorMsg("Invalid JSON " + pnv.first + " data");
+    }
+    else if (pnv.first == "extensionsUsed") {
+      if (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
+
+        for (const auto &pv1 : arr1->values()) {
+          if (! pv1->isString())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
+
+          std::string name;
+          if (! valueString(pv1, name))
+            return errorMsg("Invalid extensionsUsed name");
+
+          jsonData.extensionsUsed.push_back(name);
+        }
       }
       else
         return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
-    else if (pnv.first == "extensionsUsed") {
-      // TODO
-      TODO("Unhandled extensionsUsed");
-      if (! pnv.second->isArray())
-        return errorMsg("Invalid JSON " + pnv.first + " array data");
-    }
     else if (pnv.first == "programs") {
       // TODO
-      TODO("Unhandled programs");
+      TODOValue("Unhandled programs", pnv.second);
     }
     else if (pnv.first == "shaders") {
       // TODO
-      TODO("Unhandled shaders");
+      TODOValue("Unhandled shaders", pnv.second);
     }
     else if (pnv.first == "skins") {
       // TODO
-      TODO("Unhandled skins");
+      TODOValue("Unhandled skins", pnv.second);
     }
     else if (pnv.first == "techniques") {
-      TODO("Unhandled techniques");
       // TODO
+      TODO("Unhandled techniques");
       if (pnv.second->isObject()) {
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
@@ -2552,16 +2683,13 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "extensions") {
-      // TODO
-      TODO("Unhandled extensions");
+      TODOValue("Unhandled extensions", pnv.second);
     }
     else if (pnv.first == "extensionsRequired") {
-      // TODO
-      TODO("Unhandled extensionsRequired");
+      TODOValue("Unhandled extensionsRequired", pnv.second);
     }
     else if (pnv.first == "extensionsUsed") {
-      // TODO
-      TODO("Unhandled extensionsUsed");
+      TODOValue("Unhandled extensionsUsed", pnv.second);
     }
     else {
       debugMsg(pnv.first + " : " + pnv.second->typeName());
@@ -2781,7 +2909,8 @@ printScene(const Scene &scene, const IndName &indName) const
 {
   std::cerr << " scene[" << indName << "]\n";
 
-  std::cerr << "  name: " << scene.name << "\n";
+  if (scene.name != "")
+    std::cerr << "  name: " << scene.name << "\n";
 
   std::cerr << "  nodes:";
   for (const auto &node : scene.nodes)

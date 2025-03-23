@@ -6,7 +6,6 @@
 #include <CImportBase.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
-#include <CAutoPtr.h>
 
 struct CImport3DSMaterial {
   CImport3DSMaterial() { }
@@ -92,14 +91,14 @@ class CImport3DS : public CImportBase {
   typedef std::map<uint, FaceList>          VertexFaceList;
   typedef std::map<uint, FaceList>          SmoothGroupFaceList;
 
-  CFile                  *file_     { nullptr };
-  CGeomScene3D           *scene_    { nullptr };
-  CAutoPtr<CGeomScene3D>  pscene_;
-  CGeomObject3D          *object_   { nullptr };
-  CImport3DSMaterial     *material_ { nullptr };
-  MaterialList            materials_;
-  VertexFaceList          vertexFaceList_;
-  SmoothGroupFaceList     smoothGroupFaceList_;
+  CFile*              file_     { nullptr };
+  CGeomScene3D*       scene_    { nullptr };
+  SceneP              pscene_;
+  CGeomObject3D*      object_   { nullptr };
+  CImport3DSMaterial* material_ { nullptr };
+  MaterialList        materials_;
+  VertexFaceList      vertexFaceList_;
+  SmoothGroupFaceList smoothGroupFaceList_;
 };
 
 #endif

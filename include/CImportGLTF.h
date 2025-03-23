@@ -5,7 +5,6 @@
 #include <CGeomObject3D.h>
 #include <CGLMatrix3D.h>
 #include <CFile.h>
-#include <CAutoPtr.h>
 
 #include <string>
 #include <vector>
@@ -239,6 +238,7 @@ class CImportGLTF : public CImportBase {
     OptReal         shininess;
     OptReal         transparency;
     OptVec3         emissiveFactor;
+    bool            doubleSided { false };
   };
 
   struct Primitive {
@@ -261,6 +261,7 @@ class CImportGLTF : public CImportBase {
   struct Node : IndData {
     IndName              mesh;
     std::string          name;
+    long                 camera { -1 };
     OptMatrix            matrix;
     OptVec3              translation;
     OptVec3              scale;
@@ -288,6 +289,14 @@ class CImportGLTF : public CImportBase {
     long        target { -1 };
     long        type { -1 };
     std::string name;
+  };
+
+  struct Camera : IndData {
+    std::string name;
+    std::string type;
+    double      yfov  { -1.0 };
+    double      znear { -1.0 };
+    double      zfar  { -1.0 };
   };
 
 #if 0
@@ -329,19 +338,21 @@ class CImportGLTF : public CImportBase {
   };
 
   struct JsonData {
-    IndNameMap<Accessor>   accessors;
-    Asset                  asset;
-    IndNameMap<BufferView> bufferViews;
-    IndNameMap<Buffer>     buffers;
-    IndNameMap<Image>      images;
-    IndNameMap<Material>   materials;
-    IndNameMap<Mesh>       meshes;
-    IndNameMap<Node>       nodes;
-    IndNameMap<Sampler>    samplers;
-    IndName                scene;
-    IndNameMap<Scene>      scenes;
-    IndNameMap<Texture>    textures;
-    std::vector<Chunk>     chunks;
+    IndNameMap<Accessor>     accessors;
+    Asset                    asset;
+    IndNameMap<BufferView>   bufferViews;
+    IndNameMap<Buffer>       buffers;
+    IndNameMap<Image>        images;
+    IndNameMap<Material>     materials;
+    IndNameMap<Mesh>         meshes;
+    IndNameMap<Node>         nodes;
+    IndNameMap<Sampler>      samplers;
+    IndName                  scene;
+    IndNameMap<Scene>        scenes;
+    IndNameMap<Texture>      textures;
+    IndNameMap<Camera>       cameras;
+    std::vector<Chunk>       chunks;
+    std::vector<std::string> extensionsUsed;
   };
 
   struct MeshData : IndData {
@@ -357,7 +368,7 @@ class CImportGLTF : public CImportBase {
 
   bool processData();
 
-  bool processNode(const Node &node);
+  bool processNode(const Node &node, const CMatrix3D &m);
   bool processMesh(const Mesh &mesh);
 
   bool resolveImage(const Image &image);
@@ -387,9 +398,6 @@ class CImportGLTF : public CImportBase {
   bool writeFile(const std::string &filename, const unsigned char *data, long len) const;
 
  private:
-  using SceneP  = CAutoPtr<CGeomScene3D>;
-  using ObjectP = CAutoPtr<CGeomObject3D>;
-
   CGeomScene3D*  scene_   { nullptr };
   SceneP         pscene_;
   CGeomObject3D* object_  { nullptr };

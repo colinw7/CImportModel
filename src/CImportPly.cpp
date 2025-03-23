@@ -33,7 +33,7 @@ CImportPly(CGeomScene3D *scene, const std::string &name) :
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
-    pscene_ = scene_;
+    pscene_ = SceneP(scene_);
   }
 
   object_ = CGeometryInst->createObject3D(scene_, name);
@@ -41,7 +41,7 @@ CImportPly(CGeomScene3D *scene, const std::string &name) :
   scene_->addObject(object_);
 
   if (! pobject_)
-    pobject_ = object_;
+    pobject_ = ObjectP(object_);
 }
 
 CImportPly::

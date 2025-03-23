@@ -5,7 +5,6 @@
 #include <CGeomObject3D.h>
 #include <CFile.h>
 #include <CRGBA.h>
-#include <CAutoPtr.h>
 
 class CImportV3D : public CImportBase {
  public:
@@ -36,11 +35,11 @@ class CImportV3D : public CImportBase {
   void getColorRGBA(long color, CRGBA *rgba);
 
  private:
-  CGeomScene3D            *scene_      { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_     { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
-  bool                     both_sides_ { false };
+  CGeomScene3D*  scene_      { nullptr };
+  SceneP         pscene_;
+  CGeomObject3D* object_     { nullptr };
+  ObjectP        pobject_;
+  bool           both_sides_ { false };
 };
 
 #endif

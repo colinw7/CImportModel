@@ -22,9 +22,9 @@ main(int argc, char **argv)
     if (argv[i][0] == '-') {
       auto arg = QString(&argv[i][1]);
 
-      if      (arg == "3ds"  || arg == "3drw" || arg == "asc" || arg == "cob"   || arg == "dxf" ||
-               arg == "gltf" || arg == "obj"  || arg == "plg" || arg == "scene" || arg == "v3d" ||
-               arg == "x3d") {
+      if      (arg == "3ds" || arg == "3drw" || arg == "asc" || arg == "cob" || arg == "dxf"   ||
+               arg == "fbx" || arg == "gltf" || arg == "obj" || arg == "plg" || arg == "scene" ||
+               arg == "stl" || arg == "v3d"  || arg == "x3d") {
         ++i;
 
         if (i < argc) {
@@ -37,7 +37,8 @@ main(int argc, char **argv)
       else if (arg == "flip_yz")
         flipYZ = true;
       else if (arg == "h" || arg == "help") {
-        std::cout << "CGLNewModel [-flip_yz] [[-3ds|-obj|-scene|-v3d|-x3d] <filename>]\n";
+        std::cout << "CGLNewModel [-flip_yz] [[-3ds|-3drw|-asc|-cob|-dxf|-fbx|"
+                     "-gltf|-obj|-plg|-scene|-stl|-v3d|-x3d] <filename>]\n";
         return 0;
       }
       else {

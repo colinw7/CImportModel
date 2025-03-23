@@ -6,7 +6,6 @@
 
 #include <CFile.h>
 #include <CRGBA.h>
-#include <CAutoPtr.h>
 
 class CImport3DRW : public CImportBase {
  public:
@@ -38,10 +37,10 @@ class CImport3DRW : public CImportBase {
   void swapShort(short *word);
 
  private:
-  CGeomScene3D            *scene_ { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_ { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
+  CGeomScene3D*  scene_ { nullptr };
+  SceneP         pscene_;
+  CGeomObject3D* object_ { nullptr };
+  ObjectP        pobject_;
 };
 
 #endif

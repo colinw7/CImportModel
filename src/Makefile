@@ -22,6 +22,7 @@ CImport3DS.cpp \
 CImportASC.cpp \
 CImportCOB.cpp \
 CImportDXF.cpp \
+CImportFBX.cpp \
 CImportGLTF.cpp \
 CImportObj.cpp \
 CImportPLG.cpp \
@@ -31,6 +32,7 @@ CImportSTL.cpp \
 CImportV3D.cpp \
 CImportX3D.cpp \
 CImportBase.cpp \
+CDeflate.cpp \
 
 CPP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
 

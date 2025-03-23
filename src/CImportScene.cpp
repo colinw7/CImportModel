@@ -168,7 +168,7 @@ CImportScene(CGeomScene3D *scene, const std::string &) :
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
-    pscene_ = scene_;
+    pscene_ = SceneP(scene_);
   }
 }
 

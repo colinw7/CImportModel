@@ -1,7 +1,6 @@
 #ifndef CGEOM_IMPORT_COB_H
 #define CGEOM_IMPORT_COB_H
 
-#include <CAutoPtr.h>
 #include <CImportCOB.h>
 #include <CGeomObject3D.h>
 
@@ -50,11 +49,11 @@ class CGeomImportCOB : public CImportCOB {
   FaceList &getMaterialFaces(int num);
 
  private:
-  CGeomScene3D            *scene_ { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_ { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
-  MaterialFaceList         material_face_list_;
+  CGeomScene3D*    scene_ { nullptr };
+  SceneP           pscene_;
+  CGeomObject3D*   object_ { nullptr };
+  ObjectP          pobject_;
+  MaterialFaceList material_face_list_;
 };
 
 #endif

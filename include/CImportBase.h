@@ -3,8 +3,10 @@
 
 #include <CGeom3DType.h>
 #include <string>
+#include <memory>
 
 class CGeomScene3D;
+class CGeomObject3D;
 class CFile;
 
 class CImportBase {
@@ -30,6 +32,7 @@ class CImportBase {
     else if (suffix == "asc"  ) return CGEOM_3D_TYPE_ASC;
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;
     else if (suffix == "dxf"  ) return CGEOM_3D_TYPE_DXF;
+    else if (suffix == "fbx"  ) return CGEOM_3D_TYPE_FBX;
     else if (suffix == "gltf" ) return CGEOM_3D_TYPE_GLTF;
     else if (suffix == "obj"  ) return CGEOM_3D_TYPE_OBJ;
     else if (suffix == "plg"  ) return CGEOM_3D_TYPE_PLG;
@@ -44,6 +47,9 @@ class CImportBase {
   static CImportBase *createModel(CGeom3DType type);
 
  protected:
+  using SceneP  = std::unique_ptr<CGeomScene3D>;
+  using ObjectP = std::unique_ptr<CGeomObject3D>;
+
   bool debug_ { false };
 };
 

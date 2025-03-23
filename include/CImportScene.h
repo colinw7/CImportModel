@@ -5,7 +5,6 @@
 #include <CFile.h>
 #include <CMatrix3D.h>
 #include <CRGBA.h>
-#include <CAutoPtr.h>
 #include <map>
 
 class CGeomScene3D;
@@ -53,14 +52,14 @@ class CImportScene : public CImportBase {
   using NameObjMap = std::map<std::string, CGeomObject3D *>;
   using Names      = std::vector<std::string>;
 
-  CGeomScene3D*          scene_ { nullptr };
-  CAutoPtr<CGeomScene3D> pscene_;
-  CFile*                 file_  { nullptr };
-  NameObjMap             objects_;
-  NameObjMap             primitives_;
-  Names                  colors_;
-  Names                  textures_;
-  int                    orientation_ { 1 };
+  CGeomScene3D* scene_ { nullptr };
+  SceneP        pscene_;
+  CFile*        file_  { nullptr };
+  NameObjMap    objects_;
+  NameObjMap    primitives_;
+  Names         colors_;
+  Names         textures_;
+  int           orientation_ { 1 };
 };
 
 #endif

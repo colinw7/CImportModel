@@ -18,7 +18,7 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
 {
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
-    pscene_ = scene_;
+    pscene_ = SceneP(scene_);
   }
 
   object_ = CGeometryInst->createObject3D(scene_, name);
@@ -26,7 +26,7 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
   scene_->addObject(object_);
 
   if (! pobject_)
-    pobject_ = object_;
+    pobject_ = ObjectP(object_);
 }
 
 CImportObj::
@@ -55,6 +55,7 @@ read(CFile &file)
 
     s_line1 = line1;
 
+    // vertex
     if      (len > 2 && line1[0] == 'v' && line1[1] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -63,6 +64,7 @@ read(CFile &file)
 
       ++vnum_;
     }
+    // vertex texture coord
     else if (len > 2 && line1[0] == 'v' && line1[1] == 't') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -71,6 +73,7 @@ read(CFile &file)
 
       ++vtnum_;
     }
+    // vertex normal coord
     else if (len > 2 && line1[0] == 'v' && line1[1] == 'n') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -79,12 +82,14 @@ read(CFile &file)
 
       ++vnnum_;
     }
+    // parameter space vertex
     else if (len > 2 && line1[0] == 'v' && line1[1] == 'p') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
       if (! readParameterVertex(line1))
         error("Invalid parameter vertex line");
     }
+    // group
     else if (len > 2 && line1[0] == 'g' && line1[1] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -95,6 +100,7 @@ read(CFile &file)
       if (! readGroupName(""))
         error("Invalid group name line");
     }
+    // face
     else if (len > 2 && line1[0] == 'f' && line1[1] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
@@ -106,6 +112,9 @@ read(CFile &file)
     }
     else if (len > 2 && line1[0] == 's' && line1[1] == ' ') {
       // skip smoothing group
+    }
+    else if (len > 2 && line1[0] == 'l' && line1[1] == ' ') {
+      // skip line
     }
     else if (len > 6 && line1.substr(0, 6) == "mtllib" && line1[6] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(6));
@@ -449,6 +458,10 @@ readMaterialFile(const std::string &filename)
     return true;
   };
 
+  auto fixFilename = [](const std::string &fname) {
+    return CStrUtil::replaceChar(CStrUtil::stripSpaces(fname), '\\', '/');
+  };
+
   auto *material = new Material;
 
   material->name = "default";
@@ -562,7 +575,7 @@ readMaterialFile(const std::string &filename)
     }
     // ambient
     else if (len > 6 && line1.substr(0, 6) == "map_Ka" && line1[6] == ' ') {
-      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+      auto imageFilename = fixFilename(line1.substr(6));
 
       CFile imageFile(imageFilename);
 
@@ -581,7 +594,7 @@ readMaterialFile(const std::string &filename)
     }
     // diffuse
     else if (len > 6 && line1.substr(0, 6) == "map_Kd" && line1[6] == ' ') {
-      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+      auto imageFilename = fixFilename(line1.substr(6));
 
       CFile imageFile(imageFilename);
 
@@ -600,7 +613,7 @@ readMaterialFile(const std::string &filename)
     }
     // specular
     else if (len > 6 && line1.substr(0, 6) == "map_Ks" && line1[6] == ' ') {
-      auto imageFilename = CStrUtil::stripSpaces(line1.substr(6));
+      auto imageFilename = fixFilename(line1.substr(6));
 
       CFile imageFile(imageFilename);
 
@@ -620,7 +633,7 @@ readMaterialFile(const std::string &filename)
     // bump map
     else if (len > 8 && (line1.substr(0, 8) == "map_Bump" ||
                          line1.substr(0, 8) == "map_bump") && line1[8] == ' ') {
-      auto imageFilename = CStrUtil::stripSpaces(line1.substr(8));
+      auto imageFilename = fixFilename(line1.substr(8));
 
       CFile imageFile(imageFilename);
 

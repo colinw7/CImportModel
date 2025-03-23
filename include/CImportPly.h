@@ -4,7 +4,6 @@
 #include <CImportBase.h>
 #include <CGeomObject3D.h>
 #include <CFile.h>
-#include <CAutoPtr.h>
 
 #include <set>
 
@@ -71,11 +70,11 @@ class CImportPly : public CImportBase {
   using Vertices = std::vector<Vertex>;
   using Faces    = std::vector<Face>;
 
-  CGeomScene3D            *scene_   { nullptr };
-  CAutoPtr<CGeomScene3D>   pscene_;
-  CGeomObject3D           *object_  { nullptr };
-  CAutoPtr<CGeomObject3D>  pobject_;
-  CFile                   *file_    { nullptr };
+  CGeomScene3D*  scene_   { nullptr };
+  SceneP         pscene_;
+  CGeomObject3D* object_  { nullptr };
+  ObjectP        pobject_;
+  CFile*         file_    { nullptr };
 
   Vertices vertices_;
   Faces    faces_;

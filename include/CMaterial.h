@@ -5,24 +5,37 @@
 
 class CMaterial {
  public:
-  CMaterial(const CRGBA &ambient=CRGBA(1,1,1,1), const CRGBA &diffuse=CRGBA(1,1,1,1),
-            const CRGBA &specular=CRGBA(0,0,0,1), const CRGBA &emission=CRGBA(0,0,0,1),
-            double shininess=1.0, bool mirror=false) :
-   ambient_(ambient), diffuse_(diffuse), specular_(specular),
-   emission_(emission), shininess_(shininess), mirror_(mirror) {
+  CMaterial() { }
+
+  CMaterial(const CRGBA &ambient, const CRGBA &diffuse, const CRGBA &specular=CRGBA(0,0,0,1),
+            const CRGBA &emission=CRGBA(0,0,0,1), double shininess=1.0, bool mirror=false) :
+   ambient_(ambient), diffuse_(diffuse), specular_(specular), emission_(emission),
+   shininess_(shininess), mirror_(mirror) {
   }
 
   explicit
   CMaterial(const CRGBA &color, const CRGBA &specular=CRGBA(0,0,0,1),
             const CRGBA &emission=CRGBA(0,0,0,1), double shininess=1.0, bool mirror=false) :
-   ambient_(color), diffuse_(color), specular_(specular),
-   emission_(emission), shininess_(shininess), mirror_(mirror) {
+   ambient_(color), diffuse_(color), specular_(specular), emission_(emission),
+   shininess_(shininess), mirror_(mirror) {
   }
 
-  CMaterial(const CMaterial &material) :
-   ambient_(material.ambient_), diffuse_(material.diffuse_),
-   specular_(material.specular_), emission_(material.emission_),
-   shininess_(material.shininess_), mirror_(material.mirror_) {
+  CMaterial(const CMaterial &m) :
+   ambient_(m.ambient_), diffuse_(m.diffuse_), specular_(m.specular_), emission_(m.emission_),
+   shininess_(m.shininess_), mirror_(m.mirror_) {
+  }
+
+  CMaterial &operator=(const CMaterial &material) {
+    if (this != &material) {
+      ambient_   = material.ambient_;
+      diffuse_   = material.diffuse_;
+      specular_  = material.specular_;
+      emission_  = material.emission_;
+      shininess_ = material.shininess_;
+      mirror_    = material.mirror_;
+    }
+
+    return *this;
   }
 
   void setColor(const CRGBA &color, const CRGBA &specular=CRGBA(0,0,0,1),
@@ -72,12 +85,12 @@ class CMaterial {
   }
 
  private:
-  CRGBA  ambient_;
-  CRGBA  diffuse_;
-  CRGBA  specular_;
-  CRGBA  emission_;
-  double shininess_;
-  bool   mirror_;
+  CRGBA  ambient_   { 1.0, 1.0, 1.0, 1.0 };
+  CRGBA  diffuse_   { 1.0, 1.0, 1.0, 1.0 };
+  CRGBA  specular_  { 0.0, 0.0, 0.0, 1.0 };
+  CRGBA  emission_  { 0.0, 0.0, 0.0, 1.0 };
+  double shininess_ { 1.0 };
+  bool   mirror_    { false };
 };
 
 #endif

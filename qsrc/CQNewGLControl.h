@@ -4,6 +4,7 @@
 #include <QFrame>
 
 class CQNewGLModel;
+class CQNewGLGeneralControl;
 class CQNewGLCameraControl;
 class CQNewGLLightControl;
 class CQNewGLObjectsControl;
@@ -29,6 +30,35 @@ class CQNewGLControl : public QFrame {
 
   void update();
 
+ private:
+  CQNewGLModel* app_ { nullptr };
+
+  QTabWidget* tab_ { nullptr };
+
+  CQNewGLGeneralControl* generalControl_ { nullptr };
+  CQNewGLCameraControl*  cameraControl_  { nullptr };
+  CQNewGLLightControl*   lightControl_   { nullptr };
+  CQNewGLObjectsControl* objectsControl_ { nullptr };
+};
+
+class CQNewGLControlFrame : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLControlFrame(CQNewGLControl *control);
+
+  CQNewGLCanvas *canvas() const;
+
+ protected:
+  CQNewGLControl* control_ { nullptr };
+};
+
+class CQNewGLGeneralControl : public CQNewGLControlFrame {
+   Q_OBJECT
+
+ public:
+  CQNewGLGeneralControl(CQNewGLControl *control);
+
  private Q_SLOTS:
   void bgColorSlot(const QColor &c);
 
@@ -45,32 +75,12 @@ class CQNewGLControl : public QFrame {
   void typeSlot(int type);
 
  private:
-  CQNewGLModel* app_ { nullptr };
-
   CQColorEdit* colorEdit_ { nullptr };
 
   QCheckBox* depthTestCheck_   { nullptr };
   QCheckBox* cullCheck_        { nullptr };
   QCheckBox* frontFaceCheck_   { nullptr };
   QCheckBox* polygonLineCheck_ { nullptr };
-
-  QTabWidget* tab_ { nullptr };
-
-  CQNewGLCameraControl*  cameraControl_   { nullptr };
-  CQNewGLLightControl*   lightControl_   { nullptr };
-  CQNewGLObjectsControl* objectsControl_ { nullptr };
-};
-
-class CQNewGLControlFrame : public QFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLControlFrame(CQNewGLControl *control);
-
-  CQNewGLCanvas *canvas() const;
-
- protected:
-  CQNewGLControl* control_ { nullptr };
 };
 
 class CQNewGLCameraControl : public CQNewGLControlFrame {
@@ -120,8 +130,13 @@ class CQNewGLObjectsControl : public CQNewGLControlFrame {
  private Q_SLOTS:
   void objectSelectedSlot(QListWidgetItem *, QListWidgetItem *);
 
+  void centerSlot();
+  void sizeSlot();
+
  private:
-  QListWidget* objectsList_ { nullptr };
+  QListWidget*   objectsList_ { nullptr };
+  CQPoint3DEdit* centerEdit_  { nullptr };
+  CQPoint3DEdit* sizeEdit_    { nullptr };
 };
 
 #endif

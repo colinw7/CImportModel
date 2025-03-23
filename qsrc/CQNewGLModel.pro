@@ -1,54 +1,89 @@
-APPNAME = CQNewGLModel
+TEMPLATE = app
 
-BUILD_DIR = $$PWD
+TARGET = CQNewGLModel
 
-include($$(MAKE_DIR)/qt_app.mk)
+QT += widgets svg xml opengl
+
+DEPENDPATH += .
 
 QMAKE_CXXFLAGS += \
--DBUILD_DIR=\"$$BUILD_DIR\"
+-std=c++17 \
 
-QT += opengl
+MOC_DIR = .moc
+
+CONFIG += c++17
+CONFIG += silent
 
 SOURCES += \
+CQNewGLModelMain.cpp \
 CQNewGLModel.cpp \
 CQNewGLCanvas.cpp \
 CQNewGLControl.cpp \
+CQNewGLToolbar.cpp \
+\
+CQGLUtil.cpp \
+CQPoint3DEdit.cpp \
+CQRotatedText.cpp \
+\
+CGLCamera.cpp \
+CGLTexture.cpp \
 
 HEADERS += \
 CQNewGLModel.h \
 CQNewGLCanvas.h \
 CQNewGLControl.h \
+CQNewGLToolbar.h \
+\
+CQGLUtil.h \
+CQPoint3DEdit.h \
+CQRotatedText.h \
+\
+CGLCamera.h \
+CGLTexture.h \
 
 INCLUDEPATH += \
-$(INC_DIR)/CImportModel \
-$(INC_DIR)/CGeometry3D \
-$(INC_DIR)/CMaterial \
-$(INC_DIR)/CGLTexture \
-$(INC_DIR)/CQGLUtil \
-$(INC_DIR)/CQApp \
-$(INC_DIR)/CQUtil \
-$(INC_DIR)/CQSlider \
-$(INC_DIR)/CQColorEdit \
-$(INC_DIR)/CImageLib \
-$(INC_DIR)/CFont \
-$(INC_DIR)/CFile \
-$(INC_DIR)/CFileType \
-$(INC_DIR)/CMath \
-$(INC_DIR)/CStrUtil \
-$(INC_DIR)/CUtil \
-$(INC_DIR)/COS \
+../../CImportModel/include \
+../../CGeometry3D/include \
+../../CMaterial/include \
+../../CGLTexture/includ e\
+../../CQGLUtil/include \
+../../CQApp/include \
+../../CQUtil/include \
+../../CQSlider/include\
+../../CQColorEdit/include \
+../../CImageLib/include \
+../../CFont/include \
+../../CFile/include \
+../../CFileType/include \
+../../CMath/include \
+../../CStrUtil/include \
+../../CUtil/include \
+../../COS/include \
 
 PRE_TARGETDEPS = \
 $(LIB_DIR)/libCImportModel.a \
 $(LIB_DIR)/libCGeometry3D.a \
-$(LIB_DIR)/libCQSlider.a \
+$(LIB_DIR)/libCQUtil.a \
 
 unix:LIBS += \
--L$(LIB_DIR) \
-$$QT_APP_LIBS \
--lCGLUtil -lCImportModel -lCGeometry3D -lCGLTexture -lCQGLUtil \
--lCQSlider -lCQColorEdit -lCQRotatedText -lCQWidgetMenu \
--lCImageLib -lCJson -lCFile -lCFileParse -lCFileUtil -lCTempFile \
--lCMath -lCStrParse -lCStrUtil -lCPrintF -lCRegExp -lCRGBUtil -lCUtil -lCOS \
+-L../lib \
+-L../../CImportModel/lib \
+-L../../CGeometry3D/lib \
+-L../../CQUtil/lib \
+-L../../CConfig/lib \
+-L../../CImageLib/lib \
+-L../../CFont/lib \
+-L../../CJson/lib \
+-L../../CFileUtil/lib \
+-L../../CFile/lib \
+-L../../CUtil/lib \
+-L../../CMath/lib \
+-L../../CRGBName/lib \
+-L../../CStrUtil/lib \
+-L../../CRegExp/lib \
+-L../../COS/lib \
+-lCImportModel -lCGeometry3D -lCQUtil -lCConfig \
+-lCImageLib -lCFont -lCJson -lCFileUtil -lCFile -lCUtil \
+-lCMath -lCRGBName -lCStrUtil -lCRegExp -lCOS \
 -lglut -lGLU \
--ljpeg -lpng -ltre
+-ljpeg -lpng -ltre -lz
