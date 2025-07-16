@@ -1,5 +1,6 @@
 #include <CQGLUtil.h>
 #include <CGLMatrix3D.h>
+#include <CMatrix3D.h>
 
 #include <GL/glut.h>
 
@@ -17,6 +18,20 @@ toQMatrix(const CGLMatrix3D &m)
   std::swap(values[ 6], values[ 9]);
   std::swap(values[ 7], values[13]);
   std::swap(values[11], values[14]);
+
+  return QMatrix4x4(values);
+}
+
+QMatrix4x4
+CQGLUtil::
+toQMatrix(const CMatrix3D &m)
+{
+  auto *data = m.getData();
+
+  float values[16];
+
+  for (int i = 0; i < 16; ++i)
+    values[i] = data[i];
 
   return QMatrix4x4(values);
 }

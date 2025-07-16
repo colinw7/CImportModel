@@ -160,7 +160,8 @@ init(CImagePtr image, bool flip)
 
 #if 0
 void
-CGLTexture::bindTo(GLenum num) const
+CGLTexture::
+bindTo(GLenum num) const
 {
   glActiveTexture(num);
 
@@ -169,7 +170,8 @@ CGLTexture::bindTo(GLenum num) const
 #endif
 
 void
-CGLTexture::bind() const
+CGLTexture::
+bind() const
 {
   glBindTexture(GL_TEXTURE_2D, id_);
 }

@@ -63,10 +63,18 @@ void
 CGLCamera::
 processKeyboard(Movement direction, float deltaTime)
 {
-  if      (direction == Movement::FORWARD)
-    moveIn(deltaTime);
-  else if (direction == Movement::BACKWARD)
-    moveOut(deltaTime);
+  if      (direction == Movement::FORWARD) {
+    if (isRotate())
+      rotateForward(1);
+    else
+      moveIn(deltaTime);
+  }
+  else if (direction == Movement::BACKWARD) {
+    if (isRotate())
+      rotateBack(1);
+    else
+      moveOut(deltaTime);
+  }
   else if (direction == Movement::LEFT) {
     if (isRotate())
       rotateLeft(1);
@@ -171,6 +179,24 @@ rotateDown(float deltaAngle)
   pitch_ -= deltaAngle;
 
   updateCameraVectors(/*rotate*/true);
+}
+
+void
+CGLCamera::
+rotateForward(float deltaAngle)
+{
+  roll_ += deltaAngle;
+
+  updateRoll();
+}
+
+void
+CGLCamera::
+rotateBack(float deltaAngle)
+{
+  roll_ -= deltaAngle;
+
+  updateRoll();
 }
 
 void
@@ -285,8 +311,17 @@ void
 CGLCamera::
 setRoll(float a)
 {
-  worldUp_ = CGLVector3D(std::cos(CMathGen::DegToRad(a)),
-                         std::sin(CMathGen::DegToRad(a)),
+  roll_ = a;
+
+  updateRoll();
+}
+
+void
+CGLCamera::
+updateRoll()
+{
+  worldUp_ = CGLVector3D(std::cos(CMathGen::DegToRad(roll_)),
+                         std::sin(CMathGen::DegToRad(roll_)),
                          0.0);
 
   updateCameraVectors();
@@ -323,4 +358,6 @@ updateViewMatrix(bool rotate)
   }
 
   viewMatrix_ = CGLMatrix3D::lookAt(position_, position_ + front_, up_);
+
+  viewChanged();
 }

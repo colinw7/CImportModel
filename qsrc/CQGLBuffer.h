@@ -45,17 +45,46 @@ class CQGLBuffer {
     }
   };
 
+  struct Vector {
+    float x { 0.0 };
+    float y { 0.0 };
+    float z { 0.0 };
+    float w { 0.0 };
+
+    Vector() { }
+
+    Vector(float x, float y, float z, float w) :
+     x(x), y(y), z(z), w(w) {
+    }
+  };
+
+  struct IVector {
+    int x { 0 };
+    int y { 0 };
+    int z { 0 };
+    int w { 0 };
+
+    IVector() { }
+
+    IVector(int x, int y, int z, int w) :
+     x(x), y(y), z(z), w(w) {
+    }
+  };
+
   using Points        = std::vector<Point>;
   using Colors        = std::vector<Color>;
   using TexturePoints = std::vector<TexturePoint>;
   using Indices       = std::vector<int>;
+  using BoneIds       = std::vector<IVector>;
+  using BoneWeights   = std::vector<Vector>;
 
  public:
   enum Parts {
     POINT   = (1<<0),
     NORMAL  = (1<<1),
     COLOR   = (1<<2),
-    TEXTURE = (1<<3)
+    TEXTURE = (1<<3),
+    BONE    = (1<<4)
   };
 
  public:
@@ -87,6 +116,10 @@ class CQGLBuffer {
 
   //---
 
+  bool hasBonesPart() const { return (data_.types & static_cast<unsigned int>(Parts::BONE)); }
+
+  //---
+
   void clearAll() {
     data_.types = 0;
 
@@ -107,15 +140,24 @@ class CQGLBuffer {
     data_.normals      .clear();
     data_.colors       .clear();
     data_.texturePoints.clear();
+    data_.boneIds      .clear();
+    data_.boneWeights  .clear();
 
     data_.indices.clear();
     data_.indicesSet = false;
   }
 
-  void clearPoints() { data_.points.clear(); data_.dataValid = false; }
-  void clearNormals() { data_.normals.clear(); data_.dataValid = false; }
-  void clearColors() { data_.colors.clear(); data_.dataValid = false; }
+  void clearPoints       () { data_.points       .clear(); data_.dataValid = false; }
+  void clearNormals      () { data_.normals      .clear(); data_.dataValid = false; }
+  void clearColors       () { data_.colors       .clear(); data_.dataValid = false; }
   void clearTexturePoints() { data_.texturePoints.clear(); data_.dataValid = false; }
+  void clearBoneIds      () { data_.boneIds      .clear(); data_.dataValid = false; }
+  void clearBoneWeights  () { data_.boneWeights  .clear(); data_.dataValid = false; }
+
+  void clearBuffers() {
+    clearPoints(); clearNormals(); clearColors(); clearTexturePoints();
+    clearBoneIds(); clearBoneWeights();
+  }
 
   //---
 
@@ -165,6 +207,22 @@ class CQGLBuffer {
     data_.types |= static_cast<unsigned int>(Parts::TEXTURE);
 
     data_.texturePoints.push_back(p);
+
+    data_.dataValid = false;
+  }
+
+  void addBoneIds(int i1, int i2, int i3, int i4) {
+    data_.types |= static_cast<unsigned int>(Parts::BONE);
+
+    data_.boneIds.push_back(IVector(i1, i2, i3, i4));
+
+    data_.dataValid = false;
+  }
+
+  void addBoneWeights(double w1, double w2, double w3, double w4) {
+    data_.types |= static_cast<unsigned int>(Parts::BONE);
+
+    data_.boneWeights.push_back(Vector(w1, w2, w3, w4));
 
     data_.dataValid = false;
   }
@@ -231,6 +289,19 @@ class CQGLBuffer {
       span += 2;
     }
 
+    // store bone ids and weights in vertex arrays (location 4 and 5)
+    if (hasBonesPart()) {
+      data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
+                                       4, int(data_.span*sizeof(float)));
+      data_.program->enableAttributeArray(vid++);
+      span += 4;
+
+      data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
+                                       4, int(data_.span*sizeof(float)));
+      data_.program->enableAttributeArray(vid++);
+      span += 4;
+    }
+
     // note that this is allowed, the call to setAttributeBuffer registered VBO as the
     // vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     data_.vertexBuffer->release();
@@ -251,14 +322,20 @@ class CQGLBuffer {
     // seeing as we only have a single VAO there's no need to bind it every time,
     // but we'll do so to keep things a bit more organized
     data_.vObj->bind();
+
+    if (data_.indicesSet)
+      data_.indBuffer->bind();
   }
 
   void unbind() {
+    if (data_.indicesSet)
+      data_.indBuffer->release();
+
     data_.vObj->release();
   }
 
   void drawTriangles() {
-    glDrawArrays(GL_TRIANGLES, 0, int(data_.points.size()));
+    glDrawArrays(GL_TRIANGLES, 0, int(numPoints()));
   }
 
  private:
@@ -328,21 +405,31 @@ class CQGLBuffer {
       }
 
       if (data_.types & static_cast<unsigned int>(Parts::COLOR)) {
-        assert(data_.colors.size() == data_.points.size());
+        assert(data_.colors.size() == numPoints());
         data_.numData += data_.colors.size()*3;
         data_.span += 3;
       }
 
       if (data_.types & static_cast<unsigned int>(Parts::TEXTURE)) {
-        assert(data_.texturePoints.size() == data_.points.size());
+        assert(data_.texturePoints.size() == numPoints());
         data_.numData += data_.texturePoints.size()*2;
         data_.span += 2;
+      }
+
+      if (hasBonesPart()) {
+        assert(data_.boneIds.size() == numPoints());
+        data_.numData += data_.boneIds.size()*4;
+        data_.span += 4;
+
+        assert(data_.boneWeights.size() == numPoints());
+        data_.numData += data_.boneWeights.size()*4;
+        data_.span += 4;
       }
 
       data_.data = new float [data_.numData];
 
       int  i  = 0;
-      auto np = data_.points.size();
+      auto np = numPoints();
 
       for (size_t ip = 0; ip < np; ++ip) {
         if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
@@ -374,6 +461,22 @@ class CQGLBuffer {
 
           data_.data[i++] = p.x;
           data_.data[i++] = p.y;
+        }
+
+        if (hasBonesPart()) {
+          const auto &p = data_.boneIds[ip];
+
+          data_.data[i++] = p.x;
+          data_.data[i++] = p.y;
+          data_.data[i++] = p.z;
+          data_.data[i++] = p.w;
+
+          const auto &w = data_.boneWeights[ip];
+
+          data_.data[i++] = w.x;
+          data_.data[i++] = w.y;
+          data_.data[i++] = w.z;
+          data_.data[i++] = w.w;
         }
       }
 
@@ -413,6 +516,8 @@ class CQGLBuffer {
     Points        normals;
     Colors        colors;
     TexturePoints texturePoints;
+    BoneIds       boneIds;
+    BoneWeights   boneWeights;
     Indices       indices;
     bool          indicesSet { false };
   };

@@ -51,6 +51,10 @@ class CImportSTL : public CImportBase {
   }
 
  private:
+  bool readBinary();
+  bool readAscii();
+
+ private:
   CGeomScene3D*  scene_   { nullptr };
   SceneP         pscene_;
   CGeomObject3D* object_  { nullptr };

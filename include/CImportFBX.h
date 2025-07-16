@@ -6,6 +6,8 @@
 #include <CFile.h>
 #include <CDeflate.h>
 
+class CStrParse;
+
 enum class DataType {
   NONE   = 0,
   BYTE   = 1,
@@ -185,10 +187,26 @@ class CImportFBX : public CImportBase {
     Children      children;
   };
 
+  struct TextBlock;
+
+  struct NameValue {
+    std::string name;
+    std::string value;
+    TextBlock*  block { nullptr };
+  };
+
+  struct TextBlock {
+    TextBlock*              parent { nullptr };
+    int                     indent { 0 };
+    NameValue               nameValue;
+    std::vector<NameValue>  nameValues;
+    std::vector<TextBlock*> children;
+  };
+
   struct FileData {
     std::vector<uchar> fileBytes;
-    uint               filePos { 0 };
-    uint               fileSize { 0 };
+    ulong              filePos { 0 };
+    ulong              fileSize { 0 };
 
     std::vector<uchar> buffer;
 
@@ -253,6 +271,22 @@ class CImportFBX : public CImportBase {
            ((buffer[1] & 0xFF) <<  8) |
            ((buffer[2] & 0xFF) << 16) |
            ((buffer[3] & 0xFF) << 24);
+
+      return true;
+    }
+
+    bool readUInt(ulong *i) {
+      if (! readBytes(8))
+        return false;
+
+      *i = (ulong(buffer[0] & 0xFF)      ) |
+           (ulong(buffer[1] & 0xFF) <<  8) |
+           (ulong(buffer[2] & 0xFF) << 16) |
+           (ulong(buffer[3] & 0xFF) << 24) |
+           (ulong(buffer[0] & 0xFF) << 32) |
+           (ulong(buffer[1] & 0xFF) << 40) |
+           (ulong(buffer[2] & 0xFF) << 48) |
+           (ulong(buffer[3] & 0xFF) << 56);
 
       return true;
     }
@@ -328,7 +362,7 @@ class CImportFBX : public CImportBase {
         fileData1.fileBytes.resize(fileData1.fileSize);
 
         if (! CDeflate::deflate_bytes(buffer, compressedLen,
-                                      fileData1.fileBytes, fileData1.fileSize))
+                                      fileData1.fileBytes, uint(fileData1.fileSize)))
           return errorMsg("Failed to uncompress data");
 
         std::string vstr;
@@ -401,7 +435,31 @@ class CImportFBX : public CImportBase {
   bool isDump() const { return dump_; }
   void setDump(bool b) { dump_ = b; }
 
+  bool isHierName() const { return hierName_; }
+  void setHierName(bool b) { hierName_ = b; }
+
  private:
+  struct GeometryData {
+    CGeomObject3D*      object { nullptr };
+    std::vector<int>    polygonVertexIndex;
+    std::vector<double> vertices;
+    std::vector<int>    edges;
+    std::vector<int>    normalsIndex;
+    std::vector<double> normals;
+    std::vector<int>    colorIndex;
+    std::vector<double> colors;
+    std::vector<int>    uvIndex;
+    std::vector<double> uv;
+    std::vector<int>    materials;
+  };
+
+  bool readBinary();
+  bool readAscii();
+
+  bool readTextBlock(CStrParse &parse, TextBlock *block);
+  void printTextBlock(TextBlock *block);
+  void processTextBlock(TextBlock *block);
+
   bool readFileData(FileData &fileData);
 
   bool readScope(FileData &fileData, const std::string &scopeName,
@@ -413,22 +471,32 @@ class CImportFBX : public CImportBase {
   void dumpTree(PropDataTree *tree, int depth=0);
 
   void addGeometry(PropDataTree *tree);
+  void addSubGeometry(PropDataTree *tree, GeometryData &geometryData);
+  void addGeometryObject(GeometryData &geometryData);
+
+  std::string hierName(PropDataTree *tree) const;
+
+  std::string getObjectName();
 
   void infoMsg(const std::string &msg) const;
   bool errorMsg(const std::string &msg) const;
 
  private:
-  CGeomScene3D*  scene_  { nullptr };
+  CGeomScene3D*  scene_   { nullptr };
   SceneP         pscene_;
-  CGeomObject3D* object_ { nullptr };
+  CGeomObject3D* object_  { nullptr };
   ObjectP        pobject_;
-  CFile*         file_   { nullptr };
-  int            depth_  { 0 };
+  CFile*         file_    { nullptr };
+  bool           longInt_ { false };
+  int            depth_   { 0 };
 
   PropDataTree *propDataTree_ { nullptr };
 
-  bool debug_ { false };
-  bool dump_  { false };
+  uint objectInd_ { 0 };
+
+  bool debug_    { false };
+  bool dump_     { false };
+  bool hierName_ { false };
 };
 
 #endif

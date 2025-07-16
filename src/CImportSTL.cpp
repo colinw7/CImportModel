@@ -38,15 +38,35 @@ read(CFile &file)
 
   header[80] = '\0';
 
-  std::cerr << "Header: " << header << "\n";
   //if (header[80]) return false;
+
+  if (strncmp(reinterpret_cast<char *>(&header[0]), "solid ", 6) == 0)
+    return readAscii();
+  else
+    return readBinary();
+}
+
+bool
+CImportSTL::
+readBinary()
+{
+  file_->rewind();
+
+  uchar header[81];
+
+  if (! file_->read(header, 80))
+    return false;
+
+  header[80] = '\0';
+
+  std::cerr << "Header: " << header << "\n";
 
   //---
 
   auto readShort = [&](ushort *integer) {
     uchar buffer[2];
 
-    if (! file.read(buffer, 2))
+    if (! file_->read(buffer, 2))
       return false;
 
     *integer = ((buffer[0] & 0xFF)     ) |
@@ -61,7 +81,7 @@ read(CFile &file)
   auto readInteger = [&](uint *integer) {
     uchar buffer[4];
 
-    if (! file.read(buffer, 4))
+    if (! file_->read(buffer, 4))
       return false;
 
     *integer = ((buffer[0] & 0xFF)      ) |
@@ -81,7 +101,7 @@ read(CFile &file)
 #if 0
     uchar buffer[4];
 
-    if (! file.read(buffer, 4))
+    if (! file_->read(buffer, 4))
       return false;
 
     *real = ((buffer[0] & 0xFF)      ) |
@@ -98,7 +118,7 @@ read(CFile &file)
 #else
     float f;
 
-    if (! file.read(reinterpret_cast<uchar *>(&f), 4))
+    if (! file_->read(reinterpret_cast<uchar *>(&f), 4))
       return false;
 
     *real = f;
@@ -207,4 +227,13 @@ read(CFile &file)
   }
 
   return true;
+}
+
+bool
+CImportSTL::
+readAscii()
+{
+  std::cerr << "Ascii STL not handled\n";
+
+  return false;
 }

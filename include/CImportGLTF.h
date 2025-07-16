@@ -49,6 +49,18 @@ class CImportGLTF : public CImportBase {
      x(x1), y(y1), z(z1), w(w1) {
     }
 
+    friend Vec4 operator+(const Vec4 &lhs, const Vec4 &rhs) {
+      return Vec4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+    }
+
+    friend Vec4 operator-(const Vec4 &lhs, const Vec4 &rhs) {
+      return Vec4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+    }
+
+    friend Vec4 operator*(float lhs, const Vec4 &rhs) {
+      return Vec4(lhs*rhs.x, lhs*rhs.y, lhs*rhs.z, lhs*rhs.w);
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Vec4 &v) {
       os << v.x << "," << v.y << "," << v.z << "," << v.w;
       return os;
@@ -68,6 +80,18 @@ class CImportGLTF : public CImportBase {
      x(x1), y(y1), z(z1) {
     }
 
+    friend Vec3 operator+(const Vec3 &lhs, const Vec3 &rhs) {
+      return Vec3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
+    }
+
+    friend Vec3 operator-(const Vec3 &lhs, const Vec3 &rhs) {
+      return Vec3(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+    }
+
+    friend Vec3 operator*(float lhs, const Vec3 &rhs) {
+      return Vec3(lhs*rhs.x, lhs*rhs.y, lhs*rhs.z);
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Vec3 &v) {
       os << v.x << "," << v.y << "," << v.z;
       return os;
@@ -85,6 +109,35 @@ class CImportGLTF : public CImportBase {
       return os;
     }
   };
+
+  struct Mat4 {
+    float       v[16];
+    CGLMatrix3D m;
+
+    Mat4() { m.setIdentity(); }
+
+    Mat4(const float v1[16]) {
+      for (int i = 0; i < 16; ++i)
+        v[i] = v1[i];
+
+      calcMatrix();
+    }
+
+    void calcMatrix() {
+      m = CGLMatrix3D(&v[0], 16);
+    }
+
+    const CGLMatrix3D &matrix() const { return m; }
+
+    friend std::ostream &operator<<(std::ostream &os, const Mat4 &v) {
+      for (int i = 0; i < 16; ++i)
+        os << " " << v.v[i];
+      return os;
+    }
+
+  };
+
+  using OptMat4 = std::optional<Mat4>;
 
  public:
   CImportGLTF(CGeomScene3D *scene=nullptr, const std::string &name="gltf");
@@ -180,6 +233,12 @@ class CImportGLTF : public CImportBase {
     long                count         { -1 };
     std::vector<double> min;
     std::vector<double> max;
+
+    bool sparse                     { false };
+    long sparseCount                { -1 };
+    long sparseIndicesBufferView    { -1 };
+    long sparseIndicesComponentType { -1 };
+    long sparseValuesBufferView     { -1 };
   };
 
   struct Asset {
@@ -229,7 +288,10 @@ class CImportGLTF : public CImportBase {
     double          metallicFactor { 0 };
     double          roughnessFactor { 0 };
     MaterialTexture normalTexture;
+    MaterialTexture emissiveTexture;
+    MaterialTexture occlusionTexture;
     MaterialTexture baseColorTexture;
+    MaterialTexture metallicRoughnessTexture;
     std::string     technique;
     OptColor        ambient;
     OptColor        diffuse;
@@ -249,6 +311,8 @@ class CImportGLTF : public CImportBase {
     IndName texCoord0;
     IndName texCoord1;
     IndName material;
+    IndName joints0;
+    IndName weights0;
   };
 
   struct Mesh : IndData {
@@ -256,17 +320,37 @@ class CImportGLTF : public CImportBase {
     std::vector<Primitive> primitives;
   };
 
-  using OptMatrix = std::optional<CGLMatrix3D>;
+  using OptGLMatrix = std::optional<CGLMatrix3D>;
+  using OptMatrix   = std::optional<CMatrix3D>;
 
   struct Node : IndData {
-    IndName              mesh;
-    std::string          name;
-    long                 camera { -1 };
-    OptMatrix            matrix;
-    OptVec3              translation;
-    OptVec3              scale;
-    OptVec4              rotation;
-    std::vector<IndName> children;
+    // values from "nodes"
+    std::string          name;          // "name"
+    IndName              mesh;          // "mesh"
+    OptGLMatrix          matrix;        // "matrix"
+    IndName              skin;          // "skin"
+    OptVec4              rotation;      // "rotation"
+    OptVec3              scale;         // "scale"
+    OptVec3              translation;   // "translation"
+    long                 camera { -1 }; // "camera"
+    std::vector<IndName> children;      // "children"
+
+    // inverseBindMatrix from skins
+    OptMat4 inverseBindMatrix;
+
+    // combined translation, rotation, scale matrix
+    CMatrix3D transform     { CMatrix3D::identity() };
+    CMatrix3D ttransform    { CMatrix3D::identity() };
+    CMatrix3D rtransform    { CMatrix3D::identity() };
+    CMatrix3D stransform    { CMatrix3D::identity() };
+    CMatrix3D hierTranslate { CMatrix3D::identity() };
+    CMatrix3D hierTransform { CMatrix3D::identity() };
+
+    Node* parent { nullptr };
+    int   depth  { -1 };
+
+    bool added   { false };
+    bool skinned { false };
   };
 
   struct Sampler : IndData {
@@ -299,6 +383,54 @@ class CImportGLTF : public CImportBase {
     double      zfar  { -1.0 };
   };
 
+  template<typename T>
+  struct IndNameMap : public std::map<IndName, T> {
+    int lastInd { 0 };
+
+    bool isEmpty() const { return (*this).empty(); }
+
+    void add(T &d, const IndName &indName) {
+      d.indName = indName;
+
+      if (indName.name == "")
+        d.indName.ind = lastInd++;
+
+      (*this)[d.indName] = d;
+    }
+  };
+
+  struct AnimationChannel : IndData {
+    IndName     node;
+    std::string path;
+    long        sampler { -1 };
+  };
+
+  using AnimationInterpolation = CGeomObject3D::AnimationInterpolation;
+
+  struct AnimationSampler : IndData {
+    long                   input { -1 };
+    long                   output { -1 };
+    std::string            interpolation;
+    AnimationInterpolation interpType;
+  };
+
+  struct Animation : IndData {
+    using Channels      = std::vector<AnimationChannel>;
+    using ChannelsArray = std::vector<Channels>;
+
+    std::string                  name;
+    IndNameMap<AnimationSampler> samplers;
+    ChannelsArray                channelsArray;
+  };
+
+  using Animations = std::vector<Animation>;
+
+  struct Skin : IndData {
+    long              inverseBindMatrices { -1 };
+    std::vector<long> joints;
+    std::string       name;
+  };
+
 #if 0
   template<typename T>
   struct ArrayMap {
@@ -321,22 +453,6 @@ class CImportGLTF : public CImportBase {
   };
 #endif
 
-  template<typename T>
-  struct IndNameMap : public std::map<IndName, T> {
-    int lastInd { 0 };
-
-    bool isEmpty() const { return (*this).empty(); }
-
-    void add(T &d, const IndName &indName) {
-      d.indName = indName;
-
-      if (indName.name == "")
-        d.indName.ind = lastInd++;
-
-      (*this)[d.indName] = d;
-    }
-  };
-
   struct JsonData {
     IndNameMap<Accessor>     accessors;
     Asset                    asset;
@@ -353,14 +469,28 @@ class CImportGLTF : public CImportBase {
     IndNameMap<Camera>       cameras;
     std::vector<Chunk>       chunks;
     std::vector<std::string> extensionsUsed;
+    Animations               animations;
+    IndNameMap<Skin>         skins;
+  };
+
+  struct AccessorData {
+    const uchar *data       { nullptr };
+    int          byteStride { 0 };
+    long         byteLength { 0 };
   };
 
   struct MeshData : IndData {
-    std::vector<Vec4>  vec4;
-    std::vector<Vec3>  vec3;
-    std::vector<Vec2>  vec2;
-    std::vector<long>  iscalars;
-    std::vector<float> fscalars;
+    std::string         type;
+    long                componentType { -1 };
+    long                count { 0 };
+    std::vector<double> min;
+    std::vector<double> max;
+    std::vector<Vec4>   vec4;
+    std::vector<Vec3>   vec3;
+    std::vector<Vec2>   vec2;
+    std::vector<long>   iscalars;
+    std::vector<float>  fscalars;
+    std::vector<Mat4>   mat4;
   };
 
  private:
@@ -368,8 +498,40 @@ class CImportGLTF : public CImportBase {
 
   bool processData();
 
-  bool processNode(const Node &node, const CMatrix3D &m);
-  bool processMesh(const Mesh &mesh);
+  bool processSparseAccessor(const IndName &indName, const Accessor &accessor);
+  bool processAccessor(const IndName &indName, const Accessor &accessor);
+
+  bool readMeshData(const AccessorData &accessorData, MeshData &meshData) const;
+
+  const uchar *getAccessorBufferData(const IndName &accessorBufferView, long accessorByteOffset,
+                                     long &byteLength, int &byteStride);
+
+  float  readFloat(const uchar *data, long i) const;
+  ushort readShort(const uchar *data, long i) const;
+  uint   readInt  (const uchar *data, long i) const;
+  uchar  readByte (const uchar *data, long i) const;
+
+  bool getChunk(long ind, Chunk* &chunk) const;
+
+  void processSkins();
+
+  bool getSkin(const IndName &indName, Skin &skin) const;
+
+  bool processAnim();
+  bool updateAnim(const std::string &name, double t);
+
+  bool processNodeTransform(Node *node, int depth);
+  void processNodeHierTransform(Node *node);
+
+  bool processNodeMesh(Node *node);
+
+  bool createNodeObject(Node *node, const CMatrix3D &m1);
+
+  CMatrix3D calcNodeTransform(Node *node) const;
+
+  CMatrix3D calcNodeGlobalTransform(Node *node) const;
+
+  bool processMesh(CGeomObject3D *object, const Mesh &mesh);
 
   bool resolveImage(const Image &image);
   bool getImageData(const Image &image, const uchar* &data, long &len);
@@ -378,8 +540,11 @@ class CImportGLTF : public CImportBase {
   bool getBuffer    (const IndName &indName, Buffer &buffer) const;
   bool getMaterial  (const IndName &indName, Material &material) const;
   bool getTexture   (const IndName &indName, Texture &texture) const;
-  bool getNode      (const IndName &indName, Node &node) const;
+  bool getNode      (const IndName &indName, Node* &node) const;
+  bool getAccessor  (const IndName &indName, Accessor &accessor) const;
   bool getMesh      (const IndName &indName, Mesh &mesh) const;
+
+  const MeshData *getMeshData(const IndName &indName) const;
 
   void printAccessor  (const Accessor   &accessor  , const IndName &indName) const;
   void printSampler   (const Sampler    &sampler   , const IndName &indName) const;
@@ -403,6 +568,8 @@ class CImportGLTF : public CImportBase {
   CGeomObject3D* object_  { nullptr };
   ObjectP        pobject_;
   CFile*         file_    { nullptr };
+
+  CGeomObject3D *rootObject_ { nullptr };
 
   bool binary_ { false };
 
@@ -430,6 +597,22 @@ class CImportGLTF : public CImportBase {
   using UriDataMap = std::map<std::string, UriData>;
 
   mutable UriDataMap uriDataMap_;
+
+  struct JointNode {
+    int     ind    { 0 };
+    float   weight { 0.0f };
+    OptMat4 inverseBindMatrix;
+  };
+
+  struct JointData {
+    JointNode   nodes[4];
+    CGLMatrix3D skinMatrix;
+    Vec4        w;
+  };
+
+  using ObjectJoints = std::map<int, JointData>;
+
+  ObjectJoints objectJoints_;
 };
 
 #endif

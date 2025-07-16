@@ -1,3 +1,5 @@
+BUILD_DIR = $$PWD
+
 TEMPLATE = app
 
 TARGET = CQNewGLModel
@@ -8,6 +10,7 @@ DEPENDPATH += .
 
 QMAKE_CXXFLAGS += \
 -std=c++17 \
+-DBUILD_DIR=\"$$BUILD_DIR\"
 
 MOC_DIR = .moc
 
@@ -20,10 +23,14 @@ CQNewGLModel.cpp \
 CQNewGLCanvas.cpp \
 CQNewGLControl.cpp \
 CQNewGLToolbar.cpp \
+CQNewGLUVMap.cpp \
+CQNewGLShaderProgram.cpp \
+CQNewGLFont.cpp \
 \
 CQGLUtil.cpp \
 CQPoint3DEdit.cpp \
 CQRotatedText.cpp \
+CQMatrix3D.cpp \
 \
 CGLCamera.cpp \
 CGLTexture.cpp \
@@ -33,10 +40,14 @@ CQNewGLModel.h \
 CQNewGLCanvas.h \
 CQNewGLControl.h \
 CQNewGLToolbar.h \
+CQNewGLUVMap.h \
+CQNewGLShaderProgram.h \
+CQNewGLFont.h \
 \
 CQGLUtil.h \
 CQPoint3DEdit.h \
 CQRotatedText.h \
+CQMatrix3D.h \
 \
 CGLCamera.h \
 CGLTexture.h \

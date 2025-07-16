@@ -48,18 +48,20 @@ class CImportObj : public CImportBase {
 
   struct Material {
     std::string name;
-    CRGBA       ka    { 0.1, 0.1, 0.1, 1.0 };
-    CRGBA       kd    { 0.9, 0.9, 0.9, 1.0 };
-    CRGBA       ke    { 0.0, 0.0, 0.0, 1.0 };
-    CRGBA       ks    { 0.0, 0.0, 0.0, 1.0 };
-    int         illum { 0 };
-    double      ns    { 0.0 };
-    double      ni    { 0.0 };
-    double      tr    { 0.0 };
-    MapImage    mapKa;
-    MapImage    mapKd;
-    MapImage    mapKs;
-    MapImage    mapBump;
+    CRGBA       ambientColor            { 0.1, 0.1, 0.1, 1.0 }; // Ka
+    CRGBA       diffuseColor            { 0.9, 0.9, 0.9, 1.0 }; // Kd
+    CRGBA       emissionColor           { 0.0, 0.0, 0.0, 1.0 }; // Ke
+    CRGBA       specularColor           { 0.0, 0.0, 0.0, 1.0 }; // Ks
+    int         illuminationModel       { 0 };                  // illum
+    double      specularExponent        { 0.0 };                // Ns
+    double      refractionIndex         { 0.0 };                // Ni
+    double      transparency            { 0.0 };                // Tr
+    CRGBA       transmissionFilterColor { 0.0, 0.0, 0.0, 1.0 }; // Tf
+    MapImage    ambientMap;                                     // map_Ka
+    MapImage    diffuseMap;                                     // map_Kd
+    MapImage    specularMap;                                    // map_Ks
+    MapImage    emissiveMap;                                    // map_Ke
+    MapImage    bumpMap;                                        // map_Bump
   };
 
   using Materials     = std::map<std::string, Material *>;

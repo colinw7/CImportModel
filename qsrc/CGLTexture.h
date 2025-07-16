@@ -23,16 +23,23 @@ class CGLTexture {
   bool useAlpha() const { return useAlpha_; }
   void setUseAlpha(bool b) { useAlpha_ = b; }
 
+  bool isFlipped() const { return flipped_; }
+  void setFlipped(bool b) { flipped_ = b; }
+
   bool load(const std::string &fileName, bool flip=false);
 
   bool load(CImagePtr image, bool flip=false);
 
+  const CImagePtr &getImage() const { return image_; }
   void setImage(const CImagePtr &image);
 
 //void bindTo(GLenum num) const;
   void bind() const;
 
   uint getId() const { return id_; }
+
+  const std::string &getName() const { return name_; }
+  void setName(const std::string &s) { name_ = s; }
 
   void draw();
   void draw(double x1, double y1, double x2, double y2);
@@ -47,11 +54,13 @@ class CGLTexture {
   bool init(CImagePtr image, bool flip);
 
  private:
-  CImagePtr image_;
-  uint      id_       { 0 };
-  bool      valid_    { false };
-  WrapType  wrapType_ { WrapType::REPEAT };
-  bool      useAlpha_ { true };
+  CImagePtr   image_;
+  uint        id_       { 0 };
+  std::string name_;
+  bool        valid_    { false };
+  WrapType    wrapType_ { WrapType::REPEAT };
+  bool        useAlpha_ { true };
+  bool        flipped_  { false };
 };
 
 //---

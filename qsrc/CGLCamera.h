@@ -37,6 +37,8 @@ class CGLCamera {
   CGLCamera(float posX, float posY, float posZ, float upX, float upY, float upZ,
             float yaw, float pitch);
 
+  virtual ~CGLCamera() { }
+
   //---
 
   bool isRotate() const { return rotate_; }
@@ -77,10 +79,12 @@ class CGLCamera {
   void moveIn   (float deltaTime=0.1);
   void moveOut  (float deltaTime=0.1);
 
-  void rotateLeft (float deltaAngle=0.1);
-  void rotateRight(float deltaAngle=0.1);
-  void rotateUp   (float deltaAngle=0.1);
-  void rotateDown (float deltaAngle=0.1);
+  void rotateLeft   (float deltaAngle=0.1);
+  void rotateRight  (float deltaAngle=0.1);
+  void rotateUp     (float deltaAngle=0.1);
+  void rotateDown   (float deltaAngle=0.1);
+  void rotateBack   (float deltaAngle=0.1);
+  void rotateForward(float deltaAngle=0.1);
 
   // processes input received from a mouse input system. Expects the offset value in
   // both the x and y direction.
@@ -101,6 +105,9 @@ class CGLCamera {
 
   float deltaTime() const;
 
+  const CGLVector3D &up() const { return up_; }
+  const CGLVector3D &right() const { return right_; }
+
   float yaw() const { return yaw_; }
   void setYaw(float a);
 
@@ -110,7 +117,14 @@ class CGLCamera {
   float roll() const { return roll_; }
   void setRoll(float r);
 
- private:
+  void updateRoll();
+
+  //---
+
+ protected:
+  virtual void viewChanged() { }
+
+ protected:
   void init(const CGLVector3D &position, const CGLVector3D &up, float yaw, float pitch);
   void init();
 
