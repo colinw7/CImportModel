@@ -110,37 +110,46 @@ class CQNewGLGeneralControl : public CQNewGLControlFrame {
 
  private Q_SLOTS:
   void bgColorSlot(const QColor &c);
-  void ambientSlot(const QColor &c);
 
   void depthTestSlot(int);
   void cullSlot(int);
   void frontFaceSlot(int);
   void polygonLineSlot(int);
+  void showNormalsSlot(int);
   void flipYZSlot(int);
   void axisSlot(int);
   void invertDepthSlot(int);
   void orthoSlot(int);
   void uvMapSlot(int);
 
+  void ambientSlot(const QColor &c);
+  void diffuseSlot(const QColor &c);
+  void emissionSlot(const QColor &c);
+
   void ambientFactorSlot  (double v);
   void diffuseFactorSlot  (double v);
   void specularFactorSlot (double v);
   void shininessFactorSlot(double v);
+  void emissiveFactorSlot (double v);
 
   void typeSlot(int type);
 
  private:
-  CQColorEdit* colorEdit_   { nullptr };
-  CQColorEdit* ambientEdit_ { nullptr };
+  CQColorEdit* colorEdit_ { nullptr };
 
   QCheckBox* depthTestCheck_   { nullptr };
   QCheckBox* cullCheck_        { nullptr };
   QCheckBox* frontFaceCheck_   { nullptr };
   QCheckBox* polygonLineCheck_ { nullptr };
+  QCheckBox* showNormalsCheck_ { nullptr };
   QCheckBox* flipYZCheck_      { nullptr };
-  QCheckBox* orthoCheck_       { nullptr };
   QCheckBox* axisCheck_        { nullptr };
   QCheckBox* invertDepthCheck_ { nullptr };
+  QCheckBox* orthoCheck_       { nullptr };
+
+  CQColorEdit* ambientEdit_  { nullptr };
+  CQColorEdit* diffuseEdit_  { nullptr };
+  CQColorEdit* emissionEdit_ { nullptr };
 };
 
 //---
@@ -188,17 +197,20 @@ class CQNewGLLightControl : public CQNewGLControlFrame {
  public:
   CQNewGLLightControl(CQNewGLControl *control);
 
-  void updateWidgets();
+  void updateWidgets(bool reload=true);
 
   void connectSlots(bool b);
 
  private Q_SLOTS:
+  void lightSelectedSlot(QListWidgetItem *, QListWidgetItem *);
   void posSlot();
   void colorSlot(const QColor &c);
+  void addSlot();
 
  private:
-  CQPoint3DEdit* posEdit_   { nullptr };
-  CQColorEdit*   colorEdit_ { nullptr };
+  QListWidget*   lightsList_ { nullptr };
+  CQPoint3DEdit* posEdit_    { nullptr };
+  CQColorEdit*   colorEdit_  { nullptr };
 };
 
 //---

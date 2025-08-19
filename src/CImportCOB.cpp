@@ -1,4 +1,5 @@
 #include <CImportCOB.h>
+#include <CGeomScene3D.h>
 #include <CStrUtil.h>
 #include <CRegExp.h>
 #include <CStrParse.h>
@@ -434,7 +435,7 @@ readMaterial(int num)
 
   CRGBA ambient, diffuse, specular, emission;
 
-  emission.setRGB(0,0,0);
+  emission.setRGB(0, 0, 0);
 
   found = false;
 
@@ -600,4 +601,12 @@ readNextLine()
   }
 
   return true;
+}
+
+CGeomScene3D &
+CImportCOB::
+getScene()
+{
+  static CGeomScene3D scene;
+  return scene;
 }

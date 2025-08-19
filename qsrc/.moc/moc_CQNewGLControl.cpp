@@ -185,8 +185,8 @@ int CQNewGLControlFrame::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     return _id;
 }
 struct qt_meta_stringdata_CQNewGLGeneralControl_t {
-    QByteArrayData data[21];
-    char stringdata0[249];
+    QByteArrayData data[25];
+    char stringdata0[309];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -199,32 +199,38 @@ QT_MOC_LITERAL(0, 0, 21), // "CQNewGLGeneralControl"
 QT_MOC_LITERAL(1, 22, 11), // "bgColorSlot"
 QT_MOC_LITERAL(2, 34, 0), // ""
 QT_MOC_LITERAL(3, 35, 1), // "c"
-QT_MOC_LITERAL(4, 37, 11), // "ambientSlot"
-QT_MOC_LITERAL(5, 49, 13), // "depthTestSlot"
-QT_MOC_LITERAL(6, 63, 8), // "cullSlot"
-QT_MOC_LITERAL(7, 72, 13), // "frontFaceSlot"
-QT_MOC_LITERAL(8, 86, 15), // "polygonLineSlot"
-QT_MOC_LITERAL(9, 102, 10), // "flipYZSlot"
-QT_MOC_LITERAL(10, 113, 8), // "axisSlot"
-QT_MOC_LITERAL(11, 122, 15), // "invertDepthSlot"
-QT_MOC_LITERAL(12, 138, 9), // "orthoSlot"
-QT_MOC_LITERAL(13, 148, 9), // "uvMapSlot"
-QT_MOC_LITERAL(14, 158, 17), // "ambientFactorSlot"
-QT_MOC_LITERAL(15, 176, 1), // "v"
-QT_MOC_LITERAL(16, 178, 17), // "diffuseFactorSlot"
-QT_MOC_LITERAL(17, 196, 18), // "specularFactorSlot"
-QT_MOC_LITERAL(18, 215, 19), // "shininessFactorSlot"
-QT_MOC_LITERAL(19, 235, 8), // "typeSlot"
-QT_MOC_LITERAL(20, 244, 4) // "type"
+QT_MOC_LITERAL(4, 37, 13), // "depthTestSlot"
+QT_MOC_LITERAL(5, 51, 8), // "cullSlot"
+QT_MOC_LITERAL(6, 60, 13), // "frontFaceSlot"
+QT_MOC_LITERAL(7, 74, 15), // "polygonLineSlot"
+QT_MOC_LITERAL(8, 90, 15), // "showNormalsSlot"
+QT_MOC_LITERAL(9, 106, 10), // "flipYZSlot"
+QT_MOC_LITERAL(10, 117, 8), // "axisSlot"
+QT_MOC_LITERAL(11, 126, 15), // "invertDepthSlot"
+QT_MOC_LITERAL(12, 142, 9), // "orthoSlot"
+QT_MOC_LITERAL(13, 152, 9), // "uvMapSlot"
+QT_MOC_LITERAL(14, 162, 11), // "ambientSlot"
+QT_MOC_LITERAL(15, 174, 11), // "diffuseSlot"
+QT_MOC_LITERAL(16, 186, 12), // "emissionSlot"
+QT_MOC_LITERAL(17, 199, 17), // "ambientFactorSlot"
+QT_MOC_LITERAL(18, 217, 1), // "v"
+QT_MOC_LITERAL(19, 219, 17), // "diffuseFactorSlot"
+QT_MOC_LITERAL(20, 237, 18), // "specularFactorSlot"
+QT_MOC_LITERAL(21, 256, 19), // "shininessFactorSlot"
+QT_MOC_LITERAL(22, 276, 18), // "emissiveFactorSlot"
+QT_MOC_LITERAL(23, 295, 8), // "typeSlot"
+QT_MOC_LITERAL(24, 304, 4) // "type"
 
     },
     "CQNewGLGeneralControl\0bgColorSlot\0\0c\0"
-    "ambientSlot\0depthTestSlot\0cullSlot\0"
-    "frontFaceSlot\0polygonLineSlot\0flipYZSlot\0"
-    "axisSlot\0invertDepthSlot\0orthoSlot\0"
-    "uvMapSlot\0ambientFactorSlot\0v\0"
-    "diffuseFactorSlot\0specularFactorSlot\0"
-    "shininessFactorSlot\0typeSlot\0type"
+    "depthTestSlot\0cullSlot\0frontFaceSlot\0"
+    "polygonLineSlot\0showNormalsSlot\0"
+    "flipYZSlot\0axisSlot\0invertDepthSlot\0"
+    "orthoSlot\0uvMapSlot\0ambientSlot\0"
+    "diffuseSlot\0emissionSlot\0ambientFactorSlot\0"
+    "v\0diffuseFactorSlot\0specularFactorSlot\0"
+    "shininessFactorSlot\0emissiveFactorSlot\0"
+    "typeSlot\0type"
 };
 #undef QT_MOC_LITERAL
 
@@ -234,7 +240,7 @@ static const uint qt_meta_data_CQNewGLGeneralControl[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      20,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -242,40 +248,48 @@ static const uint qt_meta_data_CQNewGLGeneralControl[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    1,   94,    2, 0x08 /* Private */,
-       4,    1,   97,    2, 0x08 /* Private */,
-       5,    1,  100,    2, 0x08 /* Private */,
-       6,    1,  103,    2, 0x08 /* Private */,
-       7,    1,  106,    2, 0x08 /* Private */,
-       8,    1,  109,    2, 0x08 /* Private */,
-       9,    1,  112,    2, 0x08 /* Private */,
-      10,    1,  115,    2, 0x08 /* Private */,
-      11,    1,  118,    2, 0x08 /* Private */,
-      12,    1,  121,    2, 0x08 /* Private */,
-      13,    1,  124,    2, 0x08 /* Private */,
-      14,    1,  127,    2, 0x08 /* Private */,
-      16,    1,  130,    2, 0x08 /* Private */,
-      17,    1,  133,    2, 0x08 /* Private */,
-      18,    1,  136,    2, 0x08 /* Private */,
-      19,    1,  139,    2, 0x08 /* Private */,
+       1,    1,  114,    2, 0x08 /* Private */,
+       4,    1,  117,    2, 0x08 /* Private */,
+       5,    1,  120,    2, 0x08 /* Private */,
+       6,    1,  123,    2, 0x08 /* Private */,
+       7,    1,  126,    2, 0x08 /* Private */,
+       8,    1,  129,    2, 0x08 /* Private */,
+       9,    1,  132,    2, 0x08 /* Private */,
+      10,    1,  135,    2, 0x08 /* Private */,
+      11,    1,  138,    2, 0x08 /* Private */,
+      12,    1,  141,    2, 0x08 /* Private */,
+      13,    1,  144,    2, 0x08 /* Private */,
+      14,    1,  147,    2, 0x08 /* Private */,
+      15,    1,  150,    2, 0x08 /* Private */,
+      16,    1,  153,    2, 0x08 /* Private */,
+      17,    1,  156,    2, 0x08 /* Private */,
+      19,    1,  159,    2, 0x08 /* Private */,
+      20,    1,  162,    2, 0x08 /* Private */,
+      21,    1,  165,    2, 0x08 /* Private */,
+      22,    1,  168,    2, 0x08 /* Private */,
+      23,    1,  171,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void, QMetaType::QColor,    3,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,    2,
     QMetaType::Void, QMetaType::QColor,    3,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Double,   15,
-    QMetaType::Void, QMetaType::Double,   15,
-    QMetaType::Void, QMetaType::Double,   15,
-    QMetaType::Void, QMetaType::Double,   15,
-    QMetaType::Void, QMetaType::Int,   20,
+    QMetaType::Void, QMetaType::QColor,    3,
+    QMetaType::Void, QMetaType::QColor,    3,
+    QMetaType::Void, QMetaType::Double,   18,
+    QMetaType::Void, QMetaType::Double,   18,
+    QMetaType::Void, QMetaType::Double,   18,
+    QMetaType::Void, QMetaType::Double,   18,
+    QMetaType::Void, QMetaType::Double,   18,
+    QMetaType::Void, QMetaType::Int,   24,
 
        0        // eod
 };
@@ -287,21 +301,25 @@ void CQNewGLGeneralControl::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         (void)_t;
         switch (_id) {
         case 0: _t->bgColorSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 1: _t->ambientSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 2: _t->depthTestSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 3: _t->cullSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 4: _t->frontFaceSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 5: _t->polygonLineSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 1: _t->depthTestSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 2: _t->cullSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 3: _t->frontFaceSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 4: _t->polygonLineSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 5: _t->showNormalsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 6: _t->flipYZSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 7: _t->axisSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 8: _t->invertDepthSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 9: _t->orthoSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 10: _t->uvMapSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 11: _t->ambientFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 12: _t->diffuseFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 13: _t->specularFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 14: _t->shininessFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 15: _t->typeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 11: _t->ambientSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 12: _t->diffuseSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 13: _t->emissionSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 14: _t->ambientFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 15: _t->diffuseFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 16: _t->specularFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 17: _t->shininessFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 18: _t->emissiveFactorSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 19: _t->typeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -336,13 +354,13 @@ int CQNewGLGeneralControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 20)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 20;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 20)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 16;
+        _id -= 20;
     }
     return _id;
 }
@@ -476,8 +494,8 @@ int CQNewGLCameraControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     return _id;
 }
 struct qt_meta_stringdata_CQNewGLLightControl_t {
-    QByteArrayData data[5];
-    char stringdata0[41];
+    QByteArrayData data[8];
+    char stringdata0[84];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -487,14 +505,18 @@ struct qt_meta_stringdata_CQNewGLLightControl_t {
 static const qt_meta_stringdata_CQNewGLLightControl_t qt_meta_stringdata_CQNewGLLightControl = {
     {
 QT_MOC_LITERAL(0, 0, 19), // "CQNewGLLightControl"
-QT_MOC_LITERAL(1, 20, 7), // "posSlot"
-QT_MOC_LITERAL(2, 28, 0), // ""
-QT_MOC_LITERAL(3, 29, 9), // "colorSlot"
-QT_MOC_LITERAL(4, 39, 1) // "c"
+QT_MOC_LITERAL(1, 20, 17), // "lightSelectedSlot"
+QT_MOC_LITERAL(2, 38, 0), // ""
+QT_MOC_LITERAL(3, 39, 16), // "QListWidgetItem*"
+QT_MOC_LITERAL(4, 56, 7), // "posSlot"
+QT_MOC_LITERAL(5, 64, 9), // "colorSlot"
+QT_MOC_LITERAL(6, 74, 1), // "c"
+QT_MOC_LITERAL(7, 76, 7) // "addSlot"
 
     },
-    "CQNewGLLightControl\0posSlot\0\0colorSlot\0"
-    "c"
+    "CQNewGLLightControl\0lightSelectedSlot\0"
+    "\0QListWidgetItem*\0posSlot\0colorSlot\0"
+    "c\0addSlot"
 };
 #undef QT_MOC_LITERAL
 
@@ -504,7 +526,7 @@ static const uint qt_meta_data_CQNewGLLightControl[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       2,   14, // methods
+       4,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -512,12 +534,16 @@ static const uint qt_meta_data_CQNewGLLightControl[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   24,    2, 0x08 /* Private */,
-       3,    1,   25,    2, 0x08 /* Private */,
+       1,    2,   34,    2, 0x08 /* Private */,
+       4,    0,   39,    2, 0x08 /* Private */,
+       5,    1,   40,    2, 0x08 /* Private */,
+       7,    0,   43,    2, 0x08 /* Private */,
 
  // slots: parameters
+    QMetaType::Void, 0x80000000 | 3, 0x80000000 | 3,    2,    2,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QColor,    4,
+    QMetaType::Void, QMetaType::QColor,    6,
+    QMetaType::Void,
 
        0        // eod
 };
@@ -528,8 +554,10 @@ void CQNewGLLightControl::qt_static_metacall(QObject *_o, QMetaObject::Call _c, 
         auto *_t = static_cast<CQNewGLLightControl *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->posSlot(); break;
-        case 1: _t->colorSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 0: _t->lightSelectedSlot((*reinterpret_cast< QListWidgetItem*(*)>(_a[1])),(*reinterpret_cast< QListWidgetItem*(*)>(_a[2]))); break;
+        case 1: _t->posSlot(); break;
+        case 2: _t->colorSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 3: _t->addSlot(); break;
         default: ;
         }
     }
@@ -564,13 +592,13 @@ int CQNewGLLightControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 4)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 4;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 4)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 2;
+        _id -= 4;
     }
     return _id;
 }

@@ -15,8 +15,21 @@ class CImportBase {
 
   virtual ~CImportBase() { }
 
+  //---
+
   bool isDebug() const { return debug_; }
   void setDebug(bool b=true) { debug_ = b; }
+
+  bool isInvertX() const { return invertX_; }
+  void setInvertX(bool b) { invertX_ = b; }
+
+  bool isInvertY() const { return invertY_; }
+  void setInvertY(bool b) { invertY_ = b; }
+
+  bool isInvertZ() const { return invertZ_; }
+  void setInvertZ(bool b) { invertZ_ = b; }
+
+  //---
 
   virtual bool read(CFile &file) = 0;
 
@@ -33,6 +46,7 @@ class CImportBase {
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;
     else if (suffix == "dxf"  ) return CGEOM_3D_TYPE_DXF;
     else if (suffix == "fbx"  ) return CGEOM_3D_TYPE_FBX;
+    else if (suffix == "glb"  ) return CGEOM_3D_TYPE_GLTF;
     else if (suffix == "gltf" ) return CGEOM_3D_TYPE_GLTF;
     else if (suffix == "obj"  ) return CGEOM_3D_TYPE_OBJ;
     else if (suffix == "plg"  ) return CGEOM_3D_TYPE_PLG;
@@ -51,6 +65,10 @@ class CImportBase {
   using ObjectP = std::unique_ptr<CGeomObject3D>;
 
   bool debug_ { false };
+
+  bool invertX_ { false };
+  bool invertY_ { false };
+  bool invertZ_ { false };
 };
 
 #endif

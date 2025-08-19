@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQNewGLCanvas_t {
-    QByteArrayData data[8];
-    char stringdata0[83];
+    QByteArrayData data[9];
+    char stringdata0[95];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -39,12 +39,13 @@ QT_MOC_LITERAL(3, 34, 7), // "bgColor"
 QT_MOC_LITERAL(4, 42, 9), // "depthTest"
 QT_MOC_LITERAL(5, 52, 8), // "cullFace"
 QT_MOC_LITERAL(6, 61, 9), // "frontFace"
-QT_MOC_LITERAL(7, 71, 11) // "polygonLine"
+QT_MOC_LITERAL(7, 71, 11), // "polygonLine"
+QT_MOC_LITERAL(8, 83, 11) // "showNormals"
 
     },
     "CQNewGLCanvas\0modelMatrixChanged\0\0"
     "bgColor\0depthTest\0cullFace\0frontFace\0"
-    "polygonLine"
+    "polygonLine\0showNormals"
 };
 #undef QT_MOC_LITERAL
 
@@ -55,7 +56,7 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
        0,       // classname
        0,    0, // classinfo
        1,   14, // methods
-       5,   20, // properties
+       6,   20, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
@@ -73,6 +74,7 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
        5, QMetaType::Bool, 0x00095103,
        6, QMetaType::Bool, 0x00095103,
        7, QMetaType::Bool, 0x00095103,
+       8, QMetaType::Bool, 0x00095103,
 
        0        // eod
 };
@@ -107,6 +109,7 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 2: *reinterpret_cast< bool*>(_v) = _t->isCullFace(); break;
         case 3: *reinterpret_cast< bool*>(_v) = _t->isFrontFace(); break;
         case 4: *reinterpret_cast< bool*>(_v) = _t->isPolygonLine(); break;
+        case 5: *reinterpret_cast< bool*>(_v) = _t->isShowNormals(); break;
         default: break;
         }
     } else if (_c == QMetaObject::WriteProperty) {
@@ -119,6 +122,7 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 2: _t->setCullFace(*reinterpret_cast< bool*>(_v)); break;
         case 3: _t->setFrontFace(*reinterpret_cast< bool*>(_v)); break;
         case 4: _t->setPolygonLine(*reinterpret_cast< bool*>(_v)); break;
+        case 5: _t->setShowNormals(*reinterpret_cast< bool*>(_v)); break;
         default: break;
         }
     } else if (_c == QMetaObject::ResetProperty) {
@@ -147,6 +151,8 @@ void *CQNewGLCanvas::qt_metacast(const char *_clname)
     if (!_clname) return nullptr;
     if (!strcmp(_clname, qt_meta_stringdata_CQNewGLCanvas.stringdata0))
         return static_cast<void*>(this);
+    if (!strcmp(_clname, "QOpenGLFunctions_3_3_Core"))
+        return static_cast< QOpenGLFunctions_3_3_Core*>(this);
     return QGLWidget::qt_metacast(_clname);
 }
 
@@ -168,17 +174,17 @@ int CQNewGLCanvas::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     else if (_c == QMetaObject::ReadProperty || _c == QMetaObject::WriteProperty
             || _c == QMetaObject::ResetProperty || _c == QMetaObject::RegisterPropertyMetaType) {
         qt_static_metacall(this, _c, _id, _a);
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::QueryPropertyDesignable) {
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::QueryPropertyScriptable) {
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::QueryPropertyStored) {
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::QueryPropertyEditable) {
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::QueryPropertyUser) {
-        _id -= 5;
+        _id -= 6;
     }
 #endif // QT_NO_PROPERTIES
     return _id;

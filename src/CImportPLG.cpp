@@ -1,4 +1,5 @@
 #include <CImportPLG.h>
+#include <CGeomScene3D.h>
 #include <CStrUtil.h>
 #include <CStrParse.h>
 
@@ -257,4 +258,12 @@ paletteLoad()
     return false;
 
   return true;
+}
+
+CGeomScene3D &
+CImportPLG::
+getScene()
+{
+  static CGeomScene3D scene;
+  return scene;
 }

@@ -2,7 +2,7 @@
 #include <CGeometry3D.h>
 #include <CStrParse.h>
 
-#include <array>
+#include <set>
 
 //---
 
@@ -25,6 +25,27 @@ std::string hexStr(ulong i) {
 std::string concatStrs(const std::string &lhs, const std::string &rhs) {
   if (lhs == "") return rhs;
   return lhs + "/" + rhs;
+}
+
+bool unhandledTree(const std::string &path) {
+  std::cerr << "Unhandled tree " << path << "\n";
+  return false;
+}
+
+bool unhandledProperty(const std::string &path, const std::string &name) {
+  std::cerr << "Unhandled property " << path << " " << name << "\n";
+  return false;
+}
+
+#if 0
+bool errorMsg(const std::string &msg) {
+  std::cerr << "Error: " << msg << "\n";
+  return false;
+}
+#endif
+
+void debugMsg(const std::string &msg) {
+  std::cerr << msg << "\n";
 }
 
 }
@@ -59,9 +80,10 @@ read(CFile &file)
 {
   file_ = &file;
 
-  auto rc = readBinary();
+  bool isBin = false;
+  auto rc = readBinary(isBin);
 
-  if (! rc)
+  if (! rc && ! isBin)
     rc = readAscii();
 
   if (! rc)
@@ -72,7 +94,7 @@ read(CFile &file)
 
 bool
 CImportFBX::
-readBinary()
+readBinary(bool &isBin)
 {
   const uint headerLen = 27;
 
@@ -81,9 +103,11 @@ readBinary()
   uchar buffer[headerLen];
 
   if (file_->read(buffer, headerLen)) {
-    if (strcmp(reinterpret_cast<char *>(buffer), "Kaydara FBX Binary  ") != 0)
+    if (strncmp(reinterpret_cast<char *>(buffer), "Kaydara FBX Binary  ", 20) != 0)
       return false;
   }
+
+  isBin = true;
 
   int version = *reinterpret_cast<int *>(&buffer[23]);
   infoMsg("Version: " + std::to_string(version));
@@ -107,8 +131,10 @@ readBinary()
 
   file_->setPos(0);
 
-  if (! readFileBytes(fileData.fileSize, fileData.fileBytes))
+  if (! readFileBytes(fileData.fileSize, fileData.fileMem))
     return errorMsg("Failed to read file");
+
+  fileData.fileBytes = &fileData.fileMem[0];
 
   if (! readFileData(fileData))
     return false;
@@ -133,11 +159,69 @@ readAscii()
   auto *block = new TextBlock;
 
   if (! readTextBlock(parse, block))
-    std::cerr << "readAscii failed\n";
+    errorMsg("readAscii failed");
 
-//printTextBlock(block);
+  if (isDump())
+    printTextBlock(block);
 
   processTextBlock(block);
+
+  for (const auto &pc : connectionMap_) {
+    const auto &name  = pc.first;
+    const auto &value = pc.second;
+
+    if (value.substr(0, 7) != "Model::")
+      continue;
+
+    auto modelName = value.substr(7);
+
+    auto *obj = scene_->getObjectP(modelName);
+
+    if (! obj) {
+    //std::cerr << "No object for " << modelName << "\n";
+      continue;
+    }
+
+    if      (name.substr(0, 10) == "Material::") {
+      auto materialName = name.substr(10);
+
+      auto pm = materialDataMap_.find(materialName);
+
+      if (pm == materialDataMap_.end()) {
+        errorMsg("No material for " + materialName);
+        continue;
+      }
+    }
+    else if (name.substr(0, 9) == "Texture::") {
+      auto textureName = name.substr(9);
+
+      auto pt = textureDataMap_.find(textureName);
+
+      if (pt == textureDataMap_.end()) {
+        errorMsg("No texture for " + textureName);
+        continue;
+      }
+
+      auto *textureData = (*pt).second;
+
+      if (! textureData->texture) {
+        if (textureData->fileName != "") {
+          if (CFile::exists(textureData->fileName)) {
+            CImageFileSrc src(textureData->fileName);
+
+            auto image = CImageMgrInst->createImage(src);
+
+            textureData->texture = CGeometryInst->createTexture(image);
+
+            textureData->texture->setName(textureData->fileName);
+          }
+        }
+      }
+
+      if (textureData->texture)
+        obj->setDiffuseTexture(textureData->texture);
+    }
+  }
 
   return true;
 }
@@ -146,6 +230,9 @@ bool
 CImportFBX::
 readTextBlock(CStrParse &parse, TextBlock *block)
 {
+  if (isDebug())
+    std::cerr << "readTextBlock " << hierName(block) << "\n";
+
   auto readLine = [&]() {
     std::string line;
 
@@ -214,32 +301,59 @@ readTextBlock(CStrParse &parse, TextBlock *block)
       parse1.skipSpace();
 
       if (! parse1.eof()) {
-        std::cerr << "readTextBlock failed - bad {\n";
+        errorMsg("readTextBlock failed - bad {");
         return false;
       }
 
       std::string lines;
+      int         depth = 0;
 
       while (! parse.eof()) {
         auto line2 = readLine();
 
         CStrParse parse2(line2);
 
-        auto indent2 = parse2.skipSpace();
+        //---
 
-        if (parse2.isChar('}') && indent2 <= indent1) {
-          parse2.skipChar();
+        bool blockStart = false;
+        bool blockEnd   = false;
 
-          parse2.skipSpace();
+        /* auto indent2 = */ parse2.skipSpace();
 
-          if (! parse2.eof()) {
-            std::cerr << "readTextBlock failed - bad }\n";
-            return false;
+        if (parse2.isChar('}'))
+          blockEnd = true;
+
+        auto len2 = parse2.getLen();
+        auto pos2 = int(len2) - 1;
+
+        if (pos2 >= 0 && std::isspace(parse2.getCharAt(pos2)))
+          --pos2;
+
+        if (pos2 >= 0 && parse2.getCharAt(pos2) == '{')
+          blockStart = true;
+
+        //---
+
+        if (blockEnd) {
+          if (depth == 0) {
+            parse2.skipChar();
+
+            parse2.skipSpace();
+
+            if (! parse2.eof()) {
+              errorMsg("readTextBlock failed - bad }");
+              return false;
+            }
+
+            break;
           }
-
-          break;
+          else
+            --depth;
         }
         else {
+          if (blockStart)
+            ++depth;
+
           if (! lines.empty())
             lines += "\n";
 
@@ -278,13 +392,7 @@ printTextBlock(TextBlock *block)
 
   printIndent();
 
-  std::cerr << block->nameValue.name << ":" << block->nameValue.value << "\n";
-
-  for (const auto &nv : block->nameValues) {
-    printIndent();
-
-    std::cerr << " " << nv.name << ":" << nv.value << "\n";
-  }
+  printNameValues(block);
 
   for (auto *child : block->children)
     printTextBlock(child);
@@ -292,9 +400,100 @@ printTextBlock(TextBlock *block)
 
 void
 CImportFBX::
+printNameValues(TextBlock *block)
+{
+  auto printIndent = [&]() {
+    for (int i = 0; i < block->indent; ++i)
+      std::cerr << " ";
+  };
+
+  auto name = (isHierName() ? hierName(block) : block->nameValue.name);
+
+  std::cerr << name << ":" << block->nameValue.value << "\n";
+
+  for (const auto &nv : block->nameValues) {
+    printIndent();
+
+    std::cerr << " " << nv.name << ":" << nv.value << "\n";
+  }
+}
+
+bool
+CImportFBX::
 processTextBlock(TextBlock *block)
 {
-  auto readReals = [](const std::string &value) {
+  bool rc { true };
+
+  auto name = hierName(block);
+
+  if      (name == "") {
+    for (auto *child : block->children) {
+      if (! processTextBlock(child))
+        rc = false;
+    }
+  }
+  else if (name == "FBXHeaderExtension") {
+    // TODO
+  }
+  else if (name == "Definitions") {
+    // TODO
+  }
+  else if (name == "GlobalSettings") {
+    // TODO
+  }
+  else if (name == "Documents") {
+    // TODO
+  }
+  else if (name == "References") {
+    // TODO
+  }
+  else if (name == "Objects") {
+    for (auto *child : block->children) {
+      if (! processObjectsTextBlock(child))
+        rc = false;
+    }
+  }
+  else if (name == "Connections") {
+    //std::cerr << "Connections\n";
+
+    for (const auto &nv : block->nameValues) {
+      //printBlockNameValues(block);
+
+      if (nv.name == "Connect") {
+        auto values = readValues(nv.value);
+
+        if (values.size() != 3) {
+          errorMsg("Invalid Connections:Connect line '" + nv.value + "'");
+          rc = false;
+          continue;
+        }
+
+        connectionMap_[values[1]] = values[2];
+      }
+    }
+  }
+  else if (name == "Relations") {
+    // TODO
+  }
+  else if (name == "Takes") {
+    // TODO
+  }
+  else if (name == "Version5") {
+    // TODO
+  }
+  else {
+    errorMsg("Unhandled block : " + name);
+    rc = true;
+  }
+
+  return rc;
+}
+
+bool
+CImportFBX::
+processObjectsTextBlock(TextBlock *block)
+{
+  auto readReals = [&](const std::string &value) {
     std::vector<double> reals;
 
     CStrParse parse(value);
@@ -304,7 +503,7 @@ processTextBlock(TextBlock *block)
 
       double r;
       if (! parse.readReal(&r)) {
-        std::cerr << "Invalid real\n";
+        errorMsg("Invalid real");
         break;
       }
 
@@ -324,7 +523,7 @@ processTextBlock(TextBlock *block)
 
   //---
 
-  auto readIntegers = [](const std::string &value) {
+  auto readIntegers = [&](const std::string &value) {
     std::vector<int> integers;
 
     CStrParse parse(value);
@@ -334,7 +533,7 @@ processTextBlock(TextBlock *block)
 
       int i;
       if (! parse.readInteger(&i)) {
-        std::cerr << "Invalid integer\n";
+        errorMsg("Invalid integer");
         break;
       }
 
@@ -354,7 +553,18 @@ processTextBlock(TextBlock *block)
 
   //---
 
-#if 0
+  auto printBlockNameValues = [&](TextBlock *tb) {
+    for (const auto &nv : tb->nameValues) {
+      std::cerr << nv.name << ":";
+
+      auto values = readValues(nv.value);
+
+      for (const auto &v : values)
+        std::cerr << v << " ";
+      std::cerr << "\n";
+    }
+  };
+
   auto printReals = [](const std::string &name, const std::vector<double> &reals) {
     if (! reals.empty()) {
       std::cerr << name << ":";
@@ -372,55 +582,716 @@ processTextBlock(TextBlock *block)
       std::cerr << "\n";
     }
   };
-#endif
 
   //---
 
-  if (block->nameValue.name == "Model") {
-    GeometryData geometryData;
+  auto valuesColor = [](const std::vector<std::string> &values, OptColor &c) {
+    if (values.size() < 6)
+      return false;
 
-    for (const auto &nv : block->nameValues) {
-      if      (nv.name == "PolygonVertexIndex")
-        geometryData.polygonVertexIndex = readIntegers(nv.value);
-      else if (nv.name == "Vertices")
-        geometryData.vertices = readReals(nv.value);
-      else if (nv.name == "Edges")
-        geometryData.edges = readIntegers(nv.value);
-      else if (nv.name == "NormalsIndex")
-        geometryData.normalsIndex = readIntegers(nv.value);
-      else if (nv.name == "Normals")
-        geometryData.normals = readReals(nv.value);
-      else if (nv.name == "ColorIndex")
-        geometryData.colorIndex = readIntegers(nv.value);
-      else if (nv.name == "Colors")
-        geometryData.colors = readReals(nv.value);
-      else if (nv.name == "UVIndex")
-        geometryData.uvIndex = readIntegers(nv.value);
-      else if (nv.name == "UV")
-        geometryData.uv = readReals(nv.value);
-      else if (nv.name == "Materials")
-        geometryData.materials = readIntegers(nv.value);
+    // values[0,1,2] = name, type ("Color"), ?
+    // values[3,4,5] = r,g,b
+    c = CRGBA(std::stod(values[3]), std::stod(values[4]), std::stod(values[4]));
+
+    return true;
+  };
+
+  auto valuesPoint3 = [](const std::vector<std::string> &values, OptPoint3 &p) {
+    if (values.size() < 6)
+      return false;
+
+    // values[0,1,2] = name, type, ?
+    // values[3,4,5] = x,y,z
+    p = CPoint3D(std::stod(values[3]), std::stod(values[4]), std::stod(values[4]));
+
+    return true;
+  };
+
+  //---
+
+  auto name = hierName(block);
+
+  if      (name == "Objects/Model") {
+    auto *geometryData = new GeometryData;
+
+    //---
+
+    auto values = readValues(block->nameValue.value);
+
+    // get model name
+    if (values.size() > 0) {
+      if (values[0].substr(0, 7) == "Model::") {
+        geometryData->name = values[0].substr(7);
+
+        if (isDebug())
+          debugMsg("Model: " + geometryData->name);
+      }
     }
 
-#if 0
-    printIntegers("PolygonVertexIndex", geometryData.polygonVertexIndex);
-    printReals   ("Vertices"          , geometryData.vertices);
-    printIntegers("Edges"             , geometryData.edges);
-    printIntegers("NormalsIndex"      , geometryData.normalsIndex);
-    printReals   ("Normals"           , geometryData.normals);
-    printIntegers("ColorIndex"        , geometryData.colorIndex);
-    printReals   ("Colors"            , geometryData.colors);
-    printIntegers("UVIndex"           , geometryData.uvIndex);
-    printReals   ("UV"                , geometryData.uv);
-    printIntegers("Materials"         , geometryData.materials);
-#endif
+    // get model type
+    enum class ModelType {
+      NONE,
+      CAMERA_SWITCHER,
+      CAMERA,
+      LIMB,
+      LIGHT,
+      MESH,
+      STEREO_CAMERA
+    };
+
+    ModelType modelType { ModelType::NONE };
+
+    if (values.size() > 1) {
+      if      (values[1] == "CameraSwitcher")
+        modelType = ModelType::CAMERA_SWITCHER;
+      else if (values[1] == "Camera")
+        modelType = ModelType::CAMERA;
+      else if (values[1] == "Limb")
+        modelType = ModelType::LIMB;
+      else if (values[1] == "Light")
+        modelType = ModelType::LIGHT;
+      else if (values[1] == "Mesh")
+        modelType = ModelType::MESH;
+      else if (values[1] == "Model::stereoCamera")
+        modelType = ModelType::STEREO_CAMERA;
+      else
+        errorMsg("Invalid Model Type : " + values[1]);
+    }
+
+    if (modelType != ModelType::MESH)
+      return true;
+
+    //---
+
+    for (const auto &nv : block->nameValues) {
+      if      (nv.name == "Version") {
+      }
+      else if (nv.name == "PolygonVertexIndex") {
+        geometryData->polygonVertexIndex = readIntegers(nv.value);
+      }
+      else if (nv.name == "Vertices") {
+        geometryData->vertices = readReals(nv.value);
+      }
+      else if (nv.name == "Edges") {
+        geometryData->edges = readIntegers(nv.value);
+      }
+      else if (nv.name == "NormalsIndex") {
+        geometryData->normalsIndex = readIntegers(nv.value);
+      }
+      else if (nv.name == "Normals") {
+        geometryData->normals = readReals(nv.value);
+      }
+      else if (nv.name == "ColorIndex") {
+        geometryData->colorIndex = readIntegers(nv.value);
+      }
+      else if (nv.name == "Colors") {
+        geometryData->colors = readReals(nv.value);
+      }
+      else if (nv.name == "UVIndex") {
+        geometryData->uvIndex = readIntegers(nv.value);
+      }
+      else if (nv.name == "UV") {
+        geometryData->uv = readReals(nv.value);
+      }
+      else if (nv.name == "Materials") {
+        geometryData->materials = readIntegers(nv.value);
+      }
+      else if (nv.name == "MultiLayer") {
+      }
+      else if (nv.name == "MultiTake") {
+      }
+      else if (nv.name == "Shading") {
+      }
+      else if (nv.name == "Culling") {
+      }
+      else if (nv.name == "Hidden") {
+      }
+      else if (nv.name == "Name") {
+      }
+      else if (nv.name == "TypeFlags") {
+      }
+      else if (nv.name == "GeometryVersion") {
+      }
+      else if (nv.name == "CameraId") {
+      }
+      else if (nv.name == "CameraName") {
+      }
+      else if (nv.name == "CameraIndexName") {
+      }
+      else if (nv.name == "Position") {
+      }
+      else if (nv.name == "Up") {
+      }
+      else if (nv.name == "LookAt") {
+      }
+      else if (nv.name == "ShowInfoOnMoving") {
+      }
+      else if (nv.name == "ShowAudio") {
+      }
+      else if (nv.name == "AudioColor") {
+      }
+      else if (nv.name == "CameraOrthoZoom") {
+      }
+      else {
+        errorMsg("Unhandled name " + nv.name);
+      }
+    }
+
+    for (auto *child : block->children) {
+      if     (child->nameValue.name == "Properties60") {
+        for (const auto &nv : child->nameValues) {
+          if      (nv.name == "Property") {
+            auto values1 = readValues(nv.value);
+
+            if (values1.size() < 2) {
+              errorMsg("Invalid " + name + "/" + child->nameValue.name +
+                       "/Property values for " + values1[0]);
+              continue;
+            }
+
+            if      (values1[0] == "QuaternionInterpolate") {
+            }
+            else if (values1[0] == "Visibility") {
+            }
+            else if (values1[0] == "Lcl Translation") {
+              if (! valuesPoint3(values1, geometryData->translation))
+                continue; // error
+            }
+            else if (values1[0] == "Lcl Rotation") {
+              if (! valuesPoint3(values1, geometryData->rotation))
+                continue; // error
+            }
+            else if (values1[0] == "Lcl Scaling") {
+              if (! valuesPoint3(values1, geometryData->scale))
+                continue; // error
+            }
+            else if (values1[0] == "RotationOffset") {
+            }
+            else if (values1[0] == "RotationPivot") {
+            }
+            else if (values1[0] == "ScalingOffset") {
+            }
+            else if (values1[0] == "ScalingPivot") {
+            }
+            else if (values1[0] == "TranslationActive") {
+            }
+            else if (values1[0] == "TranslationMin") {
+            }
+            else if (values1[0] == "TranslationMax") {
+            }
+            else if (values1[0] == "TranslationMinX") {
+            }
+            else if (values1[0] == "TranslationMinY") {
+            }
+            else if (values1[0] == "TranslationMinZ") {
+            }
+            else if (values1[0] == "TranslationMaxX") {
+            }
+            else if (values1[0] == "TranslationMaxY") {
+            }
+            else if (values1[0] == "TranslationMaxZ") {
+            }
+            else if (values1[0] == "RotationOrder") {
+            }
+            else if (values1[0] == "RotationSpaceForLimitOnly") {
+            }
+            else if (values1[0] == "AxisLen") {
+            }
+            else if (values1[0] == "PreRotation") {
+            }
+            else if (values1[0] == "PostRotation") {
+            }
+            else if (values1[0] == "RotationActive") {
+            }
+            else if (values1[0] == "RotationMin") {
+            }
+            else if (values1[0] == "RotationMax") {
+            }
+            else if (values1[0] == "RotationMinX") {
+            }
+            else if (values1[0] == "RotationMinY") {
+            }
+            else if (values1[0] == "RotationMinZ") {
+            }
+            else if (values1[0] == "RotationMaxX") {
+            }
+            else if (values1[0] == "RotationMaxY") {
+            }
+            else if (values1[0] == "RotationMaxZ") {
+            }
+            else if (values1[0] == "RotationStiffnessX") {
+            }
+            else if (values1[0] == "RotationStiffnessY") {
+            }
+            else if (values1[0] == "RotationStiffnessZ") {
+            }
+            else if (values1[0] == "MinDampRangeX") {
+            }
+            else if (values1[0] == "MinDampRangeY") {
+            }
+            else if (values1[0] == "MinDampRangeZ") {
+            }
+            else if (values1[0] == "MaxDampRangeX") {
+            }
+            else if (values1[0] == "MaxDampRangeY") {
+            }
+            else if (values1[0] == "MaxDampRangeZ") {
+            }
+            else if (values1[0] == "MinDampStrengthX") {
+            }
+            else if (values1[0] == "MinDampStrengthY") {
+            }
+            else if (values1[0] == "MinDampStrengthZ") {
+            }
+            else if (values1[0] == "MaxDampStrengthX") {
+            }
+            else if (values1[0] == "MaxDampStrengthY") {
+            }
+            else if (values1[0] == "MaxDampStrengthZ") {
+            }
+            else if (values1[0] == "PreferedAngleX") {
+            }
+            else if (values1[0] == "PreferedAngleY") {
+            }
+            else if (values1[0] == "PreferedAngleZ") {
+            }
+            else if (values1[0] == "InheritType") {
+            }
+            else if (values1[0] == "ScalingActive") {
+            }
+            else if (values1[0] == "ScalingMin") {
+            }
+            else if (values1[0] == "ScalingMax") {
+            }
+            else if (values1[0] == "ScalingMinX") {
+            }
+            else if (values1[0] == "ScalingMinY") {
+            }
+            else if (values1[0] == "ScalingMinZ") {
+            }
+            else if (values1[0] == "ScalingMaxX") {
+            }
+            else if (values1[0] == "ScalingMaxY") {
+            }
+            else if (values1[0] == "ScalingMaxZ") {
+            }
+            else if (values1[0] == "GeometricTranslation") {
+            }
+            else if (values1[0] == "GeometricRotation") {
+            }
+            else if (values1[0] == "GeometricScaling") {
+            }
+            else if (values1[0] == "Show") {
+            }
+            else if (values1[0] == "NegativePercentShapeSupport") {
+            }
+            else if (values1[0] == "DefaultAttributeIndex") {
+            }
+            else if (values1[0] == "Color") {
+            }
+            else if (values1[0] == "Size") {
+            }
+            else if (values1[0] == "Look") {
+            }
+            else if (values1[0] == "LookAtProperty") {
+            }
+            else if (values1[0] == "UpVectorProperty") {
+            }
+            else
+              unhandledProperty(name, values1[0]);
+          }
+          else {
+            errorMsg("Invalid property " + name + " " + nv.name);
+          }
+        }
+      }
+      else if (child->nameValue.name == "LayerElementNormal") {
+        for (const auto &nv1 : child->nameValues) {
+          if      (nv1.name == "Version") {
+          }
+          else if (nv1.name == "Name") {
+          }
+          else if (nv1.name == "MappingInformationType") {
+          }
+          else if (nv1.name == "ReferenceInformationType") {
+          }
+          else if (nv1.name == "Normals") {
+            geometryData->normals = readReals(nv1.value);
+          }
+          else if (nv1.name == "NormalsW") {
+          }
+          else
+            errorMsg("Invalid LayerElementNormal Name " + nv1.name);
+        }
+      }
+      else if (child->nameValue.name == "LayerElementSmoothing") {
+        // Smoothing
+        //geometryData->normals = readIntegers(nv.value);
+      }
+      else if (child->nameValue.name == "LayerElementUV") {
+        for (const auto &nv1 : child->nameValues) {
+          if      (nv1.name == "Version") {
+          }
+          else if (nv1.name == "Name") {
+          }
+          else if (nv1.name == "MappingInformationType") {
+          }
+          else if (nv1.name == "ReferenceInformationType") {
+          }
+          else if (nv1.name == "UV") {
+            geometryData->uv = readReals(nv1.value);
+          }
+          else if (nv1.name == "UVIndex") {
+            geometryData->uvIndex = readIntegers(nv1.value);
+          }
+          else
+            errorMsg("Invalid LayerElementUV Name " + nv1.name);
+        }
+      }
+      else if (child->nameValue.name == "LayerElementTexture") {
+        for (const auto &nv1 : child->nameValues) {
+          if      (nv1.name == "Version") {
+          }
+          else if (nv1.name == "Name") {
+          }
+          else if (nv1.name == "MappingInformationType") {
+          }
+          else if (nv1.name == "ReferenceInformationType") {
+          }
+          else if (nv1.name == "BlendMode") {
+          }
+          else if (nv1.name == "TextureAlpha") {
+          }
+          else if (nv1.name == "TextureId") {
+            geometryData->textures = readIntegers(nv1.value);
+          }
+          else
+            errorMsg("Invalid LayerElementTexture Name " + nv1.name);
+        }
+      }
+      else if (child->nameValue.name == "LayerElementMaterial") {
+        for (const auto &nv1 : child->nameValues) {
+          if      (nv1.name == "Version") {
+          }
+          else if (nv1.name == "Name") {
+          }
+          else if (nv1.name == "MappingInformationType") {
+          }
+          else if (nv1.name == "ReferenceInformationType") {
+          }
+          else if (nv1.name == "Materials") {
+            geometryData->materials = readIntegers(nv1.value);
+          }
+          else
+            errorMsg("Invalid LayerElementTexture Name " + nv1.name);
+        }
+      }
+      else if (child->nameValue.name == "Layer") {
+      }
+      else {
+        errorMsg("Invalid Objects/Model(Mesh) Child " + child->nameValue.name);
+      }
+    }
+
+    if (isDebug()) {
+      printIntegers("PolygonVertexIndex", geometryData->polygonVertexIndex);
+      printReals   ("Vertices"          , geometryData->vertices);
+      printIntegers("Edges"             , geometryData->edges);
+      printIntegers("NormalsIndex"      , geometryData->normalsIndex);
+      printReals   ("Normals"           , geometryData->normals);
+      printIntegers("ColorIndex"        , geometryData->colorIndex);
+      printReals   ("Colors"            , geometryData->colors);
+      printIntegers("UVIndex"           , geometryData->uvIndex);
+      printReals   ("UV"                , geometryData->uv);
+      printIntegers("Materials"         , geometryData->materials);
+    }
 
     addGeometryObject(geometryData);
   }
+  else if (name == "Objects/Material") {
+    //printBlockNameValues(block);
 
-  for (auto *child : block->children)
-    processTextBlock(child);
+    auto values = readValues(block->nameValue.value);
+
+    auto *materialData = new MaterialData;
+
+    materialData->name = values[0];
+
+    for (auto *child : block->children) {
+      if (child->nameValue.name == "Properties60") {
+        for (const auto &nv : child->nameValues) {
+          if (nv.name == "Property") {
+            auto values1 = readValues(nv.value);
+
+            if (values1.size() < 3) {
+              errorMsg("Invalid " + name + "/" + child->nameValue.name + "/Property values");
+              continue;
+            }
+
+            if      (values1[0] == "Shininess" || values1[0] == "ShininessExponent") {
+              materialData->shininess = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Ambient" || values1[0] == "AmbientColor") {
+              if (! valuesColor(values1, materialData->ambientColor))
+                continue; // error
+            }
+            else if (values1[0] == "AmbientFactor") {
+              materialData->ambientFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Diffuse" || values1[0] == "DiffuseColor") {
+              if (! valuesColor(values1, materialData->diffuseColor))
+                continue; // error
+            }
+            else if (values1[0] == "DiffuseFactor") {
+              materialData->diffuseFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Emissive" || values1[0] == "EmissiveColor") {
+              if (! valuesColor(values1, materialData->emissionColor))
+                continue; // error
+            }
+            else if (values1[0] == "EmissiveFactor") {
+              materialData->emissionFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Specular" || values1[0] == "SpecularColor") {
+              if (! valuesColor(values1, materialData->specularColor))
+                continue; // error
+            }
+            else if (values1[0] == "SpecularFactor") {
+              materialData->specularFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "ShadingModel") {
+            }
+            else if (values1[0] == "MultiLayer") {
+            }
+            else if (values1[0] == "Bump") {
+            }
+            else if (values1[0] == "TransparentColor") {
+            }
+            else if (values1[0] == "TransparencyFactor") {
+            }
+            else if (values1[0] == "ReflectionColor") {
+            }
+            else if (values1[0] == "ReflectionFactor") {
+            }
+            else if (values1[0] == "Opacity") {
+            }
+            else if (values1[0] == "Reflectivity") {
+            }
+            else {
+              unhandledProperty(name + "/" + child->nameValue.name + "/" + nv.name, values1[0]);
+              continue;
+            }
+          }
+          else {
+            errorMsg("Invalid " + name + "/" + child->nameValue.name + " Property " + nv.name);
+          }
+        }
+      }
+      else {
+        errorMsg("Invalid " + name + " Child " + child->nameValue.name);
+      }
+    }
+
+    if (materialData->name != "") {
+      auto materialName = materialData->name;
+
+      if (materialName.substr(0, 10) == "Material::")
+        materialName = materialName.substr(10);
+
+      materialDataMap_[materialName] = materialData;
+
+      if (isDebug()) {
+        std::cerr << "Material: " << materialName;
+        if (materialData->ambientColor)
+          std::cerr << " AmbientColor: " << materialData->ambientColor.value();
+        if (materialData->ambientFactor)
+          std::cerr << " AmbientFactor: " << materialData->ambientFactor.value();
+        if (materialData->diffuseColor)
+          std::cerr << " DiffuseColor: " << materialData->diffuseColor.value();
+        if (materialData->diffuseFactor)
+          std::cerr << " DiffuseFactor: " << materialData->diffuseFactor.value();
+        if (materialData->emissionColor)
+          std::cerr << " EmissionColor: " << materialData->emissionColor.value();
+        if (materialData->emissionFactor)
+          std::cerr << " EmissionFactor: " << materialData->emissionFactor.value();
+        if (materialData->specularColor)
+          std::cerr << " SpecularColor: " << materialData->specularColor.value();
+        if (materialData->specularFactor)
+          std::cerr << " SpecularFactor: " << materialData->specularFactor.value();
+        if (materialData->shininess)
+          std::cerr << " Shininess: " << materialData->shininess.value();
+        std::cerr << "\n";
+      }
+    }
+  }
+  else if (name == "Objects/Texture") {
+    //printBlockNameValues(block);
+
+    auto values = readValues(block->nameValue.value);
+
+    auto *textureData = new TextureData;
+
+    textureData->name = values[0];
+
+    for (const auto &nv : block->nameValues) {
+      auto values1 = readValues(nv.value);
+
+      if      (nv.name == "TextureName") {
+        textureData->name = values1[0];
+      }
+      else if (nv.name == "FileName") {
+        textureData->fileName = values1[0];
+      }
+    }
+
+    for (auto *child : block->children) {
+      //printBlockNameValues(child);
+
+      if (child->nameValue.name == "Properties60") {
+        for (const auto &nv : child->nameValues) {
+          if (nv.name == "Property") {
+            auto values1 = readValues(nv.value);
+
+            if (values1.size() < 3) {
+              errorMsg("Invalid " + name + "/" + child->nameValue.name + "/Property values");
+              continue;
+            }
+
+            if      (values1[0] == "Translation") {
+            }
+            else if (values1[0] == "Rotation") {
+            }
+            else if (values1[0] == "Scaling") {
+            }
+            else if (values1[0] == "Texture alpha") {
+            }
+            else if (values1[0] == "TextureTypeUse") {
+            }
+            else if (values1[0] == "CurrentTextureBlendMode") {
+            }
+            else if (values1[0] == "UseMaterial") {
+            }
+            else if (values1[0] == "UseMipMap") {
+            }
+            else if (values1[0] == "CurrentMappingType") {
+            }
+            else if (values1[0] == "UVSwap") {
+            }
+            else if (values1[0] == "WrapModeU") {
+            }
+            else if (values1[0] == "WrapModeV") {
+            }
+            else if (values1[0] == "TextureRotationPivot") {
+            }
+            else if (values1[0] == "TextureScalingPivot") {
+            }
+            else if (values1[0] == "VideoProperty") {
+            }
+            else
+              unhandledProperty(name + "/" + child->nameValue.name + "/" + nv.name, values1[0]);
+          }
+          else {
+            errorMsg("Invalid " + name + "/" + child->nameValue.name + "/" + nv.name);
+          }
+        }
+      }
+      else {
+        errorMsg("Invalid " + name + " Child " + child->nameValue.name);
+      }
+    }
+
+    if (textureData->name != "") {
+      auto textureName = textureData->name;
+
+      if (textureName.substr(0, 9) == "Texture::")
+        textureName = textureName.substr(9);
+
+      textureDataMap_[textureName] = textureData;
+
+      if (isDebug()) {
+        debugMsg("Texture: " + textureName + " " + textureData->fileName);
+      }
+    }
+  }
+  else if (name == "Objects/GlobalSettings") {
+    if (isDebug())
+      printBlockNameValues(block);
+  }
+  else if (name == "Objects/Video") {
+    // TODO
+  }
+  else if (name == "Objects/Deformer") {
+    // TODO
+  }
+  else if (name == "Objects/Pose") {
+    // TODO
+  }
+  else if (name == "Objects/NodeAttribute") {
+    // TODO
+  }
+  else if (name == "Objects/AnimationStack") {
+    // TODO
+  }
+  else if (name == "Objects/AnimationLayer") {
+    // TODO
+  }
+  else if (name == "Objects/AnimationCurveNode") {
+    // TODO
+  }
+  else if (name == "Objects/Geometry") {
+    // TODO
+  }
+  else
+    errorMsg("Unhandled block : " + name);
+
+  //---
+
+  return true;
 }
+
+std::vector<std::string>
+CImportFBX::
+readValues(const std::string &value) const
+{
+  std::vector<std::string> values;
+
+  CStrParse parse(value);
+
+  while (! parse.eof()) {
+    parse.skipSpace();
+
+    if (parse.isChar('"')) {
+      parse.skipChar();
+
+      std::string str;
+      while (! parse.eof() && ! parse.isChar('"'))
+        str += parse.readChar();
+
+      parse.skipChar();
+
+      values.push_back(str);
+    }
+    else {
+      double r;
+      if (! parse.readReal(&r)) {
+        errorMsg("Invalid real");
+        break;
+      }
+
+      values.push_back(std::to_string(r));
+    }
+
+    parse.skipSpace();
+
+    if (! parse.eof() && parse.isChar(',')) {
+      parse.skipChar();
+
+      parse.skipSpace();
+    }
+  }
+
+  return values;
+};
 
 bool
 CImportFBX::
@@ -446,9 +1317,116 @@ readFileData(FileData &fileData)
 
   //---
 
-  addGeometry(propDataTree_);
+  processDataTree(propDataTree_);
 
   //---
+
+  for (const auto &pg : idGeometryData_) {
+    auto *geometryData = pg.second;
+
+    addGeometryObject(geometryData);
+
+    //---
+
+    // set name and transform
+    auto *modelData = geometryData->modelData;
+
+    if (modelData) {
+      geometryData->object->setName(modelData->name);
+
+#if 0
+      auto name = calcModelDataHierName(modelData);
+      std::cerr << "calcModelDataHierTransform " << name << "\n";
+#endif
+
+      auto hierTransform = calcModelDataHierTransform(modelData);
+
+      geometryData->object->transform(hierTransform);
+
+      //---
+
+      // set texture
+      auto *textureData = modelData->textureData;
+
+      if (! textureData && modelData->materialData)
+        textureData = modelData->materialData->textureData;
+
+      if (textureData) {
+        if (textureData->type == "NormalMap")
+          geometryData->object->setNormalTexture(textureData->texture);
+        else
+          geometryData->object->setDiffuseTexture(textureData->texture);
+      }
+    }
+  }
+
+  //---
+
+  for (const auto &pm : idModelData_) {
+    auto *modelData = pm.second;
+
+    if (modelData->geometryData)
+      addGeometryObject(modelData->geometryData);
+  }
+
+  //---
+
+#if 0
+  for (const auto &pt : idTextureData_) {
+    auto *textureData = pt.second;
+    if (! textureData->texture) continue;
+
+    for (auto *geometryData : textureData->modelData->geometryDataList) {
+      // set texture
+      if (textureData->type == "NormalMap")
+        geometryData->object->setNormalTexture(textureData->texture);
+      else
+        geometryData->object->setDiffuseTexture(textureData->texture);
+    }
+  }
+#endif
+
+  //---
+
+  if (! animationStackData_.empty()) {
+    std::cerr << "Animation Stacks\n";
+    for (const auto &pas : animationStackData_) {
+      auto *animationStack = pas.second;
+
+      std::cerr << " Anim: " << animationStack->name << "\n";
+
+      for (auto *animationLayer : animationStack->animationLayers) {
+        std::cerr << "  Layer: " << animationLayer->name << "\n";
+
+#if 0
+        for (auto *animationCurveNode : animationLayer->animationCurveNodes) {
+          std::cerr << "   Curve:" << animationCurveNode->type << " " <<
+                       animationCurveNode->p << "\n";
+        }
+#endif
+      }
+    }
+  }
+
+  //---
+
+#if 0
+  if (! animationDeformerData_.empty()) {
+    std::cerr << "Animation Deformers\n";
+    for (const auto &pad : animationDeformerData_) {
+      auto *animationDeformer = pad.second;
+
+      std::cerr << " Deformer: " << animationDeformer->name << "\n";
+
+      if (! animationDeformer->children.empty()) {
+        std::cerr << " ";
+        for (const auto &animationDeformer1 : animationDeformer->children)
+          std::cerr << " " << animationDeformer1->name;
+        std::cerr << "\n";
+      }
+    }
+  }
+#endif
 
   return true;
 }
@@ -457,16 +1435,25 @@ void
 CImportFBX::
 dumpTree(PropDataTree *tree, int depth)
 {
+  dumpDataMap(tree, depth);
+
+  for (auto *tree1 : tree->children)
+    dumpTree(tree1, depth + 2);
+}
+
+void
+CImportFBX::
+dumpDataMap(PropDataTree *tree, int depth)
+{
   std::string prefix;
 
   if (depth > 0) {
     for (int i = 0; i < depth; ++i)
       prefix += " ";
 
-    if (isHierName())
-      std::cerr << prefix << hierName(tree) << "\n";
-    else
-      std::cerr << prefix << tree->name << "\n";
+    auto name = (isHierName() ? hierName(tree) : tree->name);
+
+    std::cerr << prefix << name << "\n";
 
     prefix += " ";
   }
@@ -477,17 +1464,16 @@ dumpTree(PropDataTree *tree, int depth)
     std::cerr << prefix << name << ":\n";
 
     for (const auto &pa : pd.second) {
-      const auto &ind  = pa.first;
-      auto       *data = pa.second;
+      for (const auto &pa1 : pa.second) {
+        const auto &ind  = pa1.first;
+        auto       *data = pa1.second;
 
-      std::cerr << prefix << " [" << ind << "] ";
-      std::cerr << *data;
-      std::cerr << "\n";
+        std::cerr << prefix << " [" << ind << "] ";
+        std::cerr << *data;
+        std::cerr << "\n";
+      }
     }
   }
-
-  for (auto *tree1 : tree->children)
-    dumpTree(tree1, depth + 2);
 }
 
 std::string
@@ -500,32 +1486,2341 @@ hierName(PropDataTree *tree) const
   return hierName(tree->parent) + "/" + tree->name;
 }
 
-void
+std::string
 CImportFBX::
-addGeometry(PropDataTree *tree)
+hierName(TextBlock *block) const
 {
-  GeometryData geometryData;
+  if (! block->parent || block->parent->nameValue.name == "")
+    return block->nameValue.name;
 
-  addSubGeometry(tree, geometryData);
-
-  addGeometryObject(geometryData);
+  return hierName(block->parent) + "/" + block->nameValue.name;
 }
 
 void
 CImportFBX::
-addGeometryObject(GeometryData &geometryData)
+processDataTree(PropDataTree *tree)
 {
-  if (geometryData.polygonVertexIndex.empty() ||
-      geometryData.vertices.empty())
+  auto getPropertyName = [](const PropIndDataArray &pa, int ind=0, const std::string &def="") {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toString();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return def;
+  };
+
+#if 0
+  auto getPropertyInt = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toLong();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return 0L;
+  };
+#endif
+
+  auto getPropertyReal = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toReal();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return 0.0;
+  };
+
+  auto getPropertyIntArray = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toIntArray();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return std::vector<int>();
+  };
+
+   auto getPropertyLongArray = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toLongArray();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return std::vector<long>();
+  };
+
+  auto getPropertyFloatArray = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toFloatArray();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return std::vector<float>();
+  };
+
+  auto getPropertyDoubleArray = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        if (ind1 == ind) {
+          auto *data = pa2.second;
+
+          return data->toDoubleArray();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return std::vector<double>();
+  };
+
+  auto getPropertyArrayName = [](const PropDataArray &pa, int ind=0, const std::string &def="") {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      if (ind1 == ind) {
+        auto *data = pa1.second;
+
+        return data->toString();
+      }
+
+      ++ind1;
+    }
+
+    return def;
+  };
+
+  auto getPropertyArrayReal = [&](const PropDataArray &pa, int ind=0) {
+    try {
+      return std::stod(getPropertyArrayName(pa, ind, "0"));
+    }
+    catch (...) {
+      return 0.0;
+    }
+  };
+
+  auto getPropertyArrayInt = [&](const PropDataArray &pa, int ind=0) {
+    try {
+      return std::stol(getPropertyArrayName(pa, ind, "0"));
+    }
+    catch (...) {
+      return 0L;
+    }
+  };
+
+  auto getPropertyArrayIndName = [&](const PropDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    for (const auto &pa1 : pa) {
+      if (ind1 == ind) {
+        auto *data = pa1.second;
+
+        if      (data->type() == DataType::LONG)
+          return IndName(data->toLong());
+        else if (data->type() == DataType::STRING)
+          return IndName(data->toString());
+        else {
+          std::cerr << "Invalid ind name type: " << *data << "\n";
+          return IndName();
+        }
+      }
+
+      ++ind1;
+    }
+
+    return IndName();
+  };
+
+  auto getPropertyInts = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    std::vector<int> i;
+
+    for (const auto &pa1 : pa) {
+      if (ind1 == ind) {
+        for (const auto &pa2 : pa1.second) {
+          auto *data = pa2.second;
+
+          i.push_back(int(data->toLong()));
+        }
+
+        break;
+      }
+    }
+
+    return i;
+  };
+
+  auto getPropertyDoubles = [&](const PropIndDataArray &pa, int ind=0) {
+    int ind1 = 0;
+
+    std::vector<double> r;
+
+    for (const auto &pa1 : pa) {
+      if (ind1 == ind) {
+        for (const auto &pa2 : pa1.second) {
+          auto *data = pa2.second;
+
+          r.push_back(data->toReal());
+        }
+
+        break;
+      }
+    }
+
+    return r;
+  };
+
+#if 0
+  auto printPropertyNames = [&](PropDataTree *t) {
+    auto treeName = hierName(t);
+
+    std::cerr << treeName;
+
+    for (const auto &pd : t->dataMap) {
+      auto propName = getPropertyName(pd.second);
+
+      std::cerr << " " << pd.first << " : " << propName << "\n";
+    }
+  };
+#endif
+
+#if 0
+  auto printPropertyNameData = [&](PropDataTree *t) {
+    auto treeName = hierName(t);
+
+    std::cerr << treeName;
+
+    for (const auto &pd : t->dataMap) {
+      std::cerr << " " << pd.first << " [";
+
+      int ind = 0;
+
+      for (const auto &pa1 : pd.second) {
+        auto *data = pa1.second;
+
+        if (ind > 0)
+          std::cerr << ", ";
+
+        std::cerr << data->toString();
+
+        ++ind;
+      }
+
+      std::cerr << "]";
+    }
+
+    std::cerr << "\n";
+  };
+#endif
+
+  auto printParentDataMap = [&](PropDataTree *t) {
+    auto treeName = hierName(t);
+
+    std::cerr << treeName << " ";
+
+    for (const auto &pa1 : t->parentDataMap) {
+      auto *data1 = pa1.second;
+
+      std::cerr << " " << data1->toString();
+    }
+
+    std::cerr << "\n";
+  };
+
+  auto unhandledDataName = [&](const std::string &path, const std::string &name) {
+    std::cerr << "Unhandled data name " << path << "/" << name << "\n";
+  };
+
+  //---
+
+  struct BlockData {
+    IndName     id;
+    std::string name;
+    std::string type;
+  };
+
+  auto readBlockDetails = [&](PropDataTree *t, BlockData &blockData, const std::string &id) {
+    int ind = 0;
+
+    for (const auto &pd : t->parentDataMap) {
+      auto *data = pd.second;
+
+      if      (ind == 0) {
+        if      (data->type() == DataType::LONG)
+          blockData.id = IndName(data->toLong());
+        else if (data->type() == DataType::STRING)
+          blockData.id = IndName(data->toString());
+        else
+          std::cerr << "Invalid block id: " << *data << "\n";
+      }
+      else if (ind == 1)
+        blockData.name = data->toString();
+      else if (ind == 2)
+        blockData.type = data->toString();
+
+      //std::cerr << " '" << data->toString() << "'\n";
+
+      ++ind;
+    }
+
+    idType_[blockData.id] = id;
+
+    return true;
+  };
+
+#if 0
+  auto readParentData = [&](PropDataTree *t, int ind=0, const std::string &def="") {
+    int ind1 = 0;
+
+    for (const auto &pd : t->parentDataMap) {
+      if (ind1 == ind) {
+        auto *data = pd.second;
+
+        return data->toString();
+      }
+
+      ++ind1;
+    }
+
+    return def;
+  };
+
+  auto readParentInt = [&](PropDataTree *t, int ind=0) {
+    return std::stol(readParentData(t, ind, "0"));
+  };
+#endif
+
+  //---
+
+  std::string propertyTemplate;
+
+  //---
+
+  for (auto *tree1 : tree->children) {
+    auto treeName1 = hierName(tree1);
+
+    if      (treeName1 == "FBXHeaderExtension") {
+    }
+    else if (treeName1 == "GlobalSettings") {
+      //printPropertyNames(tree1);
+
+      for (auto *tree2 : tree1->children) {
+        auto treeName2 = hierName(tree2);
+
+        if (treeName2 == "GlobalSettings/Properties70") {
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "P") {
+              for (const auto &pa2 : pd2.second) {
+                auto propName2 = getPropertyArrayName(pa2.second);
+
+                if      (propName2 == "AmbientColor") {
+                }
+                else if (propName2 == "CoordAxis") {
+                  globalData_.coordAxis = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.coordAxis << "\n";
+                }
+                else if (propName2 == "CoordAxisSign") {
+                  globalData_.coordAxisSign = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.coordAxisSign << "\n";
+                }
+                else if (propName2 == "CustomFrameRate") {
+                }
+                else if (propName2 == "CurrentTimeMarker") {
+                }
+                else if (propName2 == "DefaultCamera") {
+                }
+                else if (propName2 == "FrontAxis") {
+                  globalData_.frontAxis = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.frontAxis << "\n";
+                }
+                else if (propName2 == "FrontAxisSign") {
+                  globalData_.frontAxisSign = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.frontAxisSign << "\n";
+                }
+                else if (propName2 == "OriginalUnitScaleFactor") {
+                }
+                else if (propName2 == "OriginalUpAxis") {
+                }
+                else if (propName2 == "OriginalUpAxisSign") {
+                }
+                else if (propName2 == "SnapOnFrameMode") {
+                }
+                else if (propName2 == "TimeMarker") {
+                }
+                else if (propName2 == "TimeMode") {
+                }
+                else if (propName2 == "TimeProtocol") {
+                }
+                else if (propName2 == "TimeSpanStart") {
+                }
+                else if (propName2 == "TimeSpanStop") {
+                }
+                else if (propName2 == "UnitScaleFactor") {
+                  globalData_.unitScaleFactor = getPropertyArrayReal(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.unitScaleFactor << "\n";
+                }
+                else if (propName2 == "UpAxis") {
+                  globalData_.upAxis = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.upAxis << "\n";
+                }
+                else if (propName2 == "UpAxisSign") {
+                  globalData_.upAxisSign = getPropertyArrayInt(pa2.second, 4);
+                  //std::cerr << propName2 << " " << globalData_.upAxisSign << "\n";
+                }
+                else
+                  unhandledProperty(treeName2, propName2);
+              }
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+        }
+        else
+          unhandledTree(treeName2);
+      }
+    }
+    else if (treeName1 == "Documents") {
+    }
+    else if (treeName1 == "References") {
+    }
+    else if (treeName1 == "Definitions") {
+      //printPropertyNames(tree1);
+
+      for (auto *tree2 : tree1->children) {
+        for (const auto &pd1 : tree1->dataMap) {
+          if      (pd1.first == "Count") {
+          }
+          else if (pd1.first == "ObjectType") {
+          }
+          else if (pd1.first == "Version") {
+          }
+          else
+            unhandledDataName(treeName1, pd1.first);
+        }
+
+        auto treeName2 = hierName(tree2);
+
+        if (treeName2 == "Definitions/ObjectType") {
+          propertyTemplate = "";
+
+          for (auto *tree3 : tree2->children) {
+            for (const auto &pd2 : tree2->dataMap) {
+              if      (pd2.first == "Count") {
+              }
+              else if (pd2.first == "PropertyTemplate") {
+                for (const auto &pa2 : pd2.second) {
+                  for (const auto &pa3 : pa2.second) {
+                    auto *data2 = pa3.second;
+
+                    propertyTemplate = data2->toString();
+
+                    break;
+                  }
+                }
+              }
+              else
+                unhandledDataName(treeName2, pd2.first);
+            }
+
+            auto treeName3 = hierName(tree3);
+
+            if (treeName3 == "Definitions/ObjectType/PropertyTemplate") {
+              for (const auto &pd3 : tree3->dataMap) {
+                unhandledDataName(treeName3, pd3.first);
+              }
+
+              for (auto *tree4 : tree3->children) {
+                auto treeName4 = hierName(tree4);
+
+                if (treeName4 == "Definitions/ObjectType/PropertyTemplate/Properties70") {
+                  //std::cerr << "PropertyTemplate: " << propertyTemplate << "\n";
+
+                  // printPropertyNameData(tree4);
+                  for (const auto &pd4 : tree4->dataMap) {
+                    if      (pd4.first == "P") {
+                      for (const auto &pa4 : pd4.second) {
+                        auto propName = getPropertyArrayName(pa4.second);
+
+#if 0
+                        for (const auto &pa5 : pa4.second) {
+                          auto *data4 = pa5.second;
+
+                          unhandledDataName(treeName4, data4->toString());
+
+                          break;
+                        }
+#endif
+
+                        if      (propertyTemplate == "FbxMesh" ||
+                                 propertyTemplate == "KFbxMesh") {
+                          if      (propName == "Color") {
+                          }
+                          else if (propName == "BBoxMin") {
+                          }
+                          else if (propName == "BBoxMax") {
+                          }
+                          else if (propName == "Primary Visibility") {
+                          }
+                          else if (propName == "Casts Shadows") {
+                          }
+                          else if (propName == "Receive Shadows") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxNode" ||
+                                 propertyTemplate == "KFbxNode") {
+                          if      (propName == "QuaternionInterpolate") {
+                          }
+                          else if (propName == "RotationOffset") {
+                          }
+                          else if (propName == "RotationPivot") {
+                          }
+                          else if (propName == "ScalingOffset") {
+                          }
+                          else if (propName == "ScalingPivot") {
+                          }
+                          else if (propName == "ScalingPivot") {
+                          }
+                          else if (propName == "TranslationActive") {
+                          }
+                          else if (propName == "TranslationMin") {
+                          }
+                          else if (propName == "TranslationMax") {
+                          }
+                          else if (propName == "TranslationMinX") {
+                          }
+                          else if (propName == "TranslationMinX") {
+                          }
+                          else if (propName == "TranslationMinY") {
+                          }
+                          else if (propName == "TranslationMinZ") {
+                          }
+                          else if (propName == "TranslationMaxX") {
+                          }
+                          else if (propName == "TranslationMaxY") {
+                          }
+                          else if (propName == "TranslationMaxZ") {
+                          }
+                          else if (propName == "RotationOrder") {
+                          }
+                          else if (propName == "RotationSpaceForLimitOnly") {
+                          }
+                          else if (propName == "AxisLen") {
+                          }
+                          else if (propName == "PreRotation") {
+                          }
+                          else if (propName == "PostRotation") {
+                          }
+                          else if (propName == "RotationActive") {
+                          }
+                          else if (propName == "RotationMin") {
+                          }
+                          else if (propName == "RotationMax") {
+                          }
+                          else if (propName == "RotationMinX") {
+                          }
+                          else if (propName == "RotationMinY") {
+                          }
+                          else if (propName == "RotationMinZ") {
+                          }
+                          else if (propName == "RotationMaxX") {
+                          }
+                          else if (propName == "RotationMaxY") {
+                          }
+                          else if (propName == "RotationMaxZ") {
+                          }
+                          else if (propName == "RotationStiffnessX") {
+                          }
+                          else if (propName == "RotationStiffnessY") {
+                          }
+                          else if (propName == "RotationStiffnessZ") {
+                          }
+                          else if (propName == "MinDampRangeX") {
+                          }
+                          else if (propName == "MinDampRangeY") {
+                          }
+                          else if (propName == "MinDampRangeZ") {
+                          }
+                          else if (propName == "MaxDampRangeX") {
+                          }
+                          else if (propName == "MaxDampRangeY") {
+                          }
+                          else if (propName == "MaxDampRangeZ") {
+                          }
+                          else if (propName == "MinDampStrengthX") {
+                          }
+                          else if (propName == "MinDampStrengthY") {
+                          }
+                          else if (propName == "MinDampStrengthZ") {
+                          }
+                          else if (propName == "MaxDampStrengthX") {
+                          }
+                          else if (propName == "MaxDampStrengthY") {
+                          }
+                          else if (propName == "MaxDampStrengthZ") {
+                          }
+                          else if (propName == "PreferedAngleX") {
+                          }
+                          else if (propName == "PreferedAngleY") {
+                          }
+                          else if (propName == "PreferedAngleZ") {
+                          }
+                          else if (propName == "InheritType") {
+                          }
+                          else if (propName == "ScalingActive") {
+                          }
+                          else if (propName == "ScalingMin") {
+                          }
+                          else if (propName == "ScalingMax") {
+                          }
+                          else if (propName == "ScalingMinX") {
+                          }
+                          else if (propName == "ScalingMinY") {
+                          }
+                          else if (propName == "ScalingMinZ") {
+                          }
+                          else if (propName == "ScalingMaxX") {
+                          }
+                          else if (propName == "ScalingMaxY") {
+                          }
+                          else if (propName == "ScalingMaxZ") {
+                          }
+                          else if (propName == "GeometricTranslation") {
+                          }
+                          else if (propName == "GeometricRotation") {
+                          }
+                          else if (propName == "GeometricScaling") {
+                          }
+                          else if (propName == "Show") {
+                          }
+                          else if (propName == "NegativePercentShapeSupport") {
+                          }
+                          else if (propName == "DefaultAttributeIndex") {
+                          }
+                          else if (propName == "Color") {
+                          }
+                          else if (propName == "Size") {
+                          }
+                          else if (propName == "Look") {
+                          }
+                          else if (propName == "LookAtProperty") {
+                          }
+                          else if (propName == "UpVectorProperty") {
+                          }
+                          else if (propName == "Freeze") {
+                          }
+                          else if (propName == "LODBox") {
+                          }
+                          else if (propName == "Lcl Translation") {
+                            auto x = getPropertyArrayReal(pa4.second, 4);
+                            auto y = getPropertyArrayReal(pa4.second, 5);
+                            auto z = getPropertyArrayReal(pa4.second, 6);
+
+                            auto localTranslation = CPoint3D(x, y, z);
+
+                            if (isDebug())
+                              std::cerr << "localTranslation: " << localTranslation << "\n";
+                          }
+                          else if (propName == "Lcl Rotation") {
+                            auto x = getPropertyArrayReal(pa4.second, 4);
+                            auto y = getPropertyArrayReal(pa4.second, 5);
+                            auto z = getPropertyArrayReal(pa4.second, 6);
+
+                            auto localRotation = CPoint3D(x, y, z);
+
+                            if (isDebug())
+                              std::cerr << "localRotation: " << localRotation << "\n";
+                          }
+                          else if (propName == "Lcl Scaling") {
+                            auto x = getPropertyArrayReal(pa4.second, 4);
+                            auto y = getPropertyArrayReal(pa4.second, 5);
+                            auto z = getPropertyArrayReal(pa4.second, 6);
+
+                            auto localScaling = CPoint3D(x, y, z);
+
+                            if (isDebug())
+                              std::cerr << "localScaling: " << localScaling << "\n";
+                          }
+                          else if (propName == "Visibility") {
+                          }
+                          else if (propName == "Visibility Inheritance") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxTexture" ||
+                                 propertyTemplate == "KFbxTexture") {
+                           if      (propName == "CurrentMappingType") {
+                           }
+                           else if (propName == "CurrentTextureBlendMode") {
+                           }
+                           else if (propName == "Rotation") {
+                           }
+                           else if (propName == "Scaling") {
+                           }
+                           else if (propName == "TextureTypeUse") {
+                           }
+                           else if (propName == "Texture alpha") {
+                           }
+                           else if (propName == "Translation") {
+                           }
+                           else if (propName == "TextureRotationPivot") {
+                           }
+                           else if (propName == "TextureScalingPivot") {
+                           }
+                           else if (propName == "UseMaterial") {
+                           }
+                           else if (propName == "UseMipMap") {
+                           }
+                           else if (propName == "UVSet") {
+                           }
+                           else if (propName == "UVSwap") {
+                           }
+                           else if (propName == "WrapModeU") {
+                           }
+                           else if (propName == "WrapModeV") {
+                           }
+                           else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxSurfacePhong" ||
+                                 propertyTemplate == "KFbxSurfacePhong") {
+                          if      (propName == "ShadingModel") {
+                          }
+                          else if (propName == "MultiLayer") {
+                          }
+                          else if (propName == "EmissiveColor") {
+                          }
+                          else if (propName == "EmissiveFactor") {
+                          }
+                          else if (propName == "AmbientColor") {
+                          }
+                          else if (propName == "AmbientFactor") {
+                          }
+                          else if (propName == "DiffuseColor") {
+                          }
+                          else if (propName == "DiffuseFactor") {
+                          }
+                          else if (propName == "TransparentColor") {
+                          }
+                          else if (propName == "TransparencyFactor") {
+                          }
+                          else if (propName == "Opacity") {
+                          }
+                          else if (propName == "NormalMap") {
+                          }
+                          else if (propName == "Bump") {
+                          }
+                          else if (propName == "BumpFactor") {
+                          }
+                          else if (propName == "DisplacementColor") {
+                          }
+                          else if (propName == "DisplacementFactor") {
+                          }
+                          else if (propName == "VectorDisplacementColor") {
+                          }
+                          else if (propName == "VectorDisplacementFactor") {
+                          }
+                          else if (propName == "SpecularColor") {
+                          }
+                          else if (propName == "SpecularFactor") {
+                          }
+                          else if (propName == "Shininess") {
+                          }
+                          else if (propName == "ShininessExponent") {
+                          }
+                          else if (propName == "ReflectionColor") {
+                          }
+                          else if (propName == "ReflectionFactor") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxFileTexture") {
+                          if      (propName == "TextureTypeUse") {
+                          }
+                          else if (propName == "AlphaSource") {
+                          }
+                          else if (propName == "Texture alpha") {
+                          }
+                          else if (propName == "PremultiplyAlpha") {
+                          }
+                          else if (propName == "CurrentTextureBlendMode") {
+                          }
+                          else if (propName == "CurrentMappingType") {
+                          }
+                          else if (propName == "UVSet") {
+                          }
+                          else if (propName == "WrapModeU") {
+                          }
+                          else if (propName == "WrapModeV") {
+                          }
+                          else if (propName == "UVSwap") {
+                          }
+                          else if (propName == "Translation") {
+                          }
+                          else if (propName == "Rotation") {
+                          }
+                          else if (propName == "Scaling") {
+                          }
+                          else if (propName == "TextureRotationPivot") {
+                          }
+                          else if (propName == "TextureScalingPivot") {
+                          }
+                          else if (propName == "UseMaterial") {
+                          }
+                          else if (propName == "UseMipMap") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxVideo" ||
+                                 propertyTemplate == "KFbxVideo") {
+                          if      (propName == "Width") {
+                          }
+                          else if (propName == "Height") {
+                          }
+                          else if (propName == "Path") {
+                          }
+                          else if (propName == "AccessMode") {
+                          }
+                          else if (propName == "StartFrame") {
+                          }
+                          else if (propName == "StopFrame") {
+                          }
+                          else if (propName == "Offset") {
+                          }
+                          else if (propName == "PlaySpeed") {
+                          }
+                          else if (propName == "FreeRunning") {
+                          }
+                          else if (propName == "Loop") {
+                          }
+                          else if (propName == "InterlaceMode") {
+                          }
+                          else if (propName == "ImageSequence") {
+                          }
+                          else if (propName == "ImageSequenceOffset") {
+                          }
+                          else if (propName == "FrameRate") {
+                          }
+                          else if (propName == "LastFrame") {
+                          }
+                          else if (propName == "Color") {
+                          }
+                          else if (propName == "ClipIn") {
+                          }
+                          else if (propName == "ClipOut") {
+                          }
+                          else if (propName == "Mute") {
+                          }
+                          else if (propName == "RelPath") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxAnimStack" ||
+                                 propertyTemplate == "KFbxAnimStack") {
+                          if      (propName == "Description") {
+                          }
+                          else if (propName == "LocalStart") {
+                          }
+                          else if (propName == "LocalStop") {
+                          }
+                          else if (propName == "ReferenceStart") {
+                          }
+                          else if (propName == "ReferenceStop") {
+                          }
+                          else if (propName == "Description") {
+                          }
+                          else if (propName == "LocalStart") {
+                          }
+                          else if (propName == "LocalStop") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxAnimLayer" ||
+                                 propertyTemplate == "KFbxAnimLayer") {
+                          if      (propName == "Weight") {
+                          }
+                          else if (propName == "Mute") {
+                          }
+                          else if (propName == "Solo") {
+                          }
+                          else if (propName == "Lock") {
+                          }
+                          else if (propName == "BlendMode") {
+                          }
+                          else if (propName == "RotationAccumulationMode") {
+                          }
+                          else if (propName == "ScaleAccumulationMode") {
+                          }
+                          else if (propName == "BlendModeBypass") {
+                          }
+                        }
+                        else if (propertyTemplate == "FbxAnimCurveNode") {
+                          if (propName == "d") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
+                        else if (propertyTemplate == "FbxCluster" ||
+                                 propertyTemplate == "KFbxCluster") {
+                          // ???
+                        }
+                        else if (propertyTemplate == "FbxSkeleton" ||
+                                 propertyTemplate == "KFbxSkeleton") {
+                          // ???
+                        }
+                        else if (propertyTemplate == "FbxNull" ||
+                                 propertyTemplate == "KFbxNull") {
+                          // ???
+                        }
+                        else if (propertyTemplate == "FbxCamera") {
+                          // ???
+                        }
+                        else
+                          unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                      }
+                    }
+                    else
+                      unhandledDataName(treeName4, pd4.first);
+                  }
+
+                  for (auto *tree5 : tree4->children) {
+                    auto treeName5 = hierName(tree5);
+
+                    unhandledTree(treeName5);
+                  }
+                }
+                else
+                  unhandledTree(treeName4);
+              }
+            }
+            else
+              unhandledTree(treeName3);
+          }
+        }
+        else {
+          unhandledTree(treeName2);
+        }
+      }
+    }
+    else if (treeName1 == "Connections") {
+      //printPropertyNames(tree1);
+
+      using IdMap      = IndNameMap<IndName>;
+      using IdArraySet = IndNameMap<std::set<IndName>>;
+
+      IdMap      modelGeometry, materialTexture;
+      IdArraySet materialModel;
+
+      for (const auto &pdm1 : tree1->dataMap) {
+        if      (pdm1.first == "C" || pdm1.first == "Connect") {
+          for (const auto &pa1 : pdm1.second) {
+            auto id1 = getPropertyArrayIndName(pa1.second, 1);
+            auto id2 = getPropertyArrayIndName(pa1.second, 2);
+            if (id1.isEmpty() || id2.isEmpty()) continue;
+
+            if (id1.to_long() == 0 || id2.to_long() == 0) continue;
+
+            auto getIdType = [&](const IndName &id) {
+              auto pi = idType_.find(id);
+              if (pi == idType_.end()) return std::string("???");
+
+              return (*pi).second;
+            };
+
+            auto idType1 = getIdType(id1);
+            auto idType2 = getIdType(id2);
+
+            auto connectType = getPropertyArrayName(pa1.second, 3);
+
+            auto connectInfo = [&]() {
+              std::cerr << "Info: Connect " << idType1 << " (" << id1 << ") -> " <<
+                           idType2 << " (" << id2 << ")\n";
+            };
+
+            auto connectError = [&](const std::string &name) {
+              std::cerr << "Error: Connect " << name << " -> " << idType2 << " " <<
+                           id1 << " " << id2 << "\n";
+            };
+
+            //---
+
+            if (isDebug()) {
+              connectInfo();
+            }
+
+            //---
+
+            // geometry
+            auto pg = idGeometryData_.find(id1);
+            if (pg != idGeometryData_.end()) {
+              auto *geometryData = (*pg).second;
+
+              // geometry -> model
+              auto pm1 = idModelData_.find(id2);
+              if (pm1 != idModelData_.end()) {
+                auto *modelData1 = (*pm1).second;
+
+                //connectInfo();
+                //std::cerr << " " << geometryData->name << " -> " << modelData1->name << "\n";
+
+                assert(! geometryData->modelData);
+                geometryData->modelData = modelData1;
+
+                modelData1->geometryDataList.push_back(geometryData);
+
+#if 0
+                if (geometryData->object) {
+                  geometryData->object->setName(modelData1->name);
+
+                  auto hierTransform = calcModelDataHierTransform(modelData1);
+
+                  geometryData->object->transform(hierTransform);
+                }
+#endif
+
+                modelGeometry[id2] = id1;
+
+                continue;
+              }
+
+              // geometry -> animation deformer
+              auto pad1 = animationDeformerData_.find(id2);
+              if (pad1 != animationDeformerData_.end()) {
+                auto *deformerData = (*pad1).second;
+
+                assert(! geometryData->deformerData);
+                geometryData->deformerData = deformerData;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Geometry");
+              continue;
+            }
+
+            // model
+            auto pm = idModelData_.find(id1);
+            if (pm != idModelData_.end()) {
+              auto *modelData = (*pm).second; // child
+
+              // model -> model
+              auto pm1 = idModelData_.find(id2);
+              if (pm1 != idModelData_.end()) {
+                auto *modelData1 = (*pm1).second; // parent
+
+                if (connectType == "LookAtProperty")
+                  continue;
+
+                //std::cerr << "Child: " << modelData->name << "(" << id1 << ") -> "
+                //             "Parent: " << modelData1->name << "(" << id2 << ")\n";
+
+                if (! modelData->parent) {
+                  modelData->parent = modelData1;
+                  modelData1->children.push_back(modelData);
+                }
+                else
+                  std::cerr << "Warning: multiple model parents: " << id1 << " -> " << id2 << "\n";
+
+                //connectInfo();
+
+                continue;
+              }
+
+              // model -> animation deformer
+              auto pad1 = animationDeformerData_.find(id2);
+              if (pad1 != animationDeformerData_.end()) {
+                auto *deformerData = (*pad1).second;
+
+                modelData->deformerData.push_back(deformerData);
+
+                //connectInfo();
+
+                continue;
+              }
+
+              if (id2.to_string() == "Scene") {
+                continue;
+              }
+
+              connectError("Model");
+              continue;
+            }
+
+            // material
+            auto pmt = idMaterialData_.find(id1);
+            if (pmt != idMaterialData_.end()) {
+              auto *materialData = (*pmt).second;
+
+              // material -> model
+              auto pm1 = idModelData_.find(id2);
+              if (pm1 != idModelData_.end()) {
+                auto *modelData1 = (*pm1).second;
+
+                materialData->modelData.push_back(modelData1);
+
+                assert(! modelData1->materialData);
+                modelData1->materialData = materialData;
+
+                //connectInfo();
+
+                materialModel[id1].insert(id2);
+
+                auto po1 = modelGeometry.find(id2);
+
+                if (po1 != modelGeometry.end()) {
+                  //std::cerr << "Connect Material -> Object " << id1 <<
+                  //             " " << (*po1).second << "\n";
+                }
+
+                continue;
+              }
+
+              connectError("Material");
+              continue;
+            }
+
+            // texture
+            auto pt = idTextureData_.find(id1);
+            if (pt != idTextureData_.end()) {
+              auto *textureData = (*pt).second;
+
+              // texture -> model
+              auto pn1 = idModelData_.find(id2);
+              if (pn1 != idModelData_.end()) {
+                auto *modelData1 = (*pn1).second;
+
+                assert(! textureData->modelData);
+                textureData->modelData = modelData1;
+
+                assert(! modelData1->textureData);
+                modelData1->textureData = textureData;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              // texture -> material
+              auto pm1 = idMaterialData_.find(id2);
+              if (pm1 != idMaterialData_.end()) {
+                auto *materialData = (*pm1).second;
+
+                assert(! textureData->materialData);
+                textureData->materialData = materialData;
+
+                assert(! materialData->textureData);
+                materialData->textureData = textureData;
+
+                //connectInfo();
+
+                textureData->type = connectType;
+
+                materialTexture[id2] = id1;
+
+                auto pm2 = materialModel.find(id2);
+
+                if (pm2 != materialModel.end()) {
+                  const auto &idSet = (*pm2).second;
+
+                  for (const auto &id : idSet) {
+                    auto po1 = modelGeometry.find(id);
+
+                    if (po1 != modelGeometry.end()) {
+                      //std::cerr << "Connect Texture -> Object " << id1 << " " <<
+                      //             (*po1).second << "\n";
+
+                      if (! textureData->texture) {
+                        auto fileName = textureData->fileName;
+
+                        if (fileName != "") {
+                          if (! CFile::exists(fileName) && textureData->media != "") {
+                            fileName = textureData->media;
+
+                            if (! CFile::exists(fileName)) {
+                              errorMsg("Invalid texture file name '" + fileName + "'");
+                              fileName = "";
+                            }
+                          }
+                        }
+
+                        if (fileName != "") {
+                          CImageFileSrc src(fileName);
+
+                          auto image = CImageMgrInst->createImage(src);
+
+                          image->flipH();
+
+                          textureData->texture = CGeometryInst->createTexture(image);
+
+                          textureData->texture->setName(fileName);
+                        }
+                      }
+
+#if 0
+                      auto pg2 = idGeometryData_.find((*po1).second);
+                      assert(pg2 != idGeometryData_.end());
+
+                      auto *geometryData = (*pg2).second;
+
+                      if (textureData->texture && geometryData->object) {
+                        if (textureData->type == "NormalMap")
+                          geometryData->object->setNormalTexture(textureData->texture);
+                        else
+                          geometryData->object->setDiffuseTexture(textureData->texture);
+                      }
+#endif
+                    }
+                  }
+                }
+
+                continue;
+              }
+
+              connectError("Texture");
+              continue;
+            }
+
+            // animation curve node
+            auto pcn = animationCurveNodeData_.find(id1);
+            if (pcn != animationCurveNodeData_.end()) {
+              auto *animationCurveNode = (*pcn).second;
+
+              // animation curve node -> animation layer
+              auto pl1 = animationLayerData_.find(id2);
+              if  (pl1 != animationLayerData_.end()) {
+                auto *animationLayerData = (*pl1).second;
+
+                assert(! animationCurveNode->animationLayerData);
+                animationCurveNode->animationLayerData = animationLayerData;
+
+                animationLayerData->animationCurveNodes.push_back(animationCurveNode);
+
+                //connectInfo();
+
+                animationLayerData->points.push_back(animationCurveNode->p);
+
+                continue;
+              }
+
+              // animation curve node -> model
+              auto pn1 = idModelData_.find(id2);
+              if (pn1 != idModelData_.end()) {
+                auto *modelData1 = (*pn1).second;
+
+                assert(! animationCurveNode->modelData);
+                animationCurveNode->modelData = modelData1;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Animation Curve Node");
+              continue;
+            }
+
+            //---
+
+            // animation curve
+            auto pac = animationCurveData_.find(id1);
+            if (pac != animationCurveData_.end()) {
+              auto *animationCurve = (*pac).second;
+
+              // animation curve -> animation curve node
+              auto pcn1 = animationCurveNodeData_.find(id2);
+              if (pcn1 != animationCurveNodeData_.end()) {
+                auto *animationCurveNode = (*pcn1).second;
+
+                assert(! animationCurve->animationCurveNode);
+                animationCurve->animationCurveNode = animationCurveNode;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Animation Curve");
+              continue;
+            }
+
+            //---
+
+            // animation layer
+            auto pl = animationLayerData_.find(id1);
+            if (pl != animationLayerData_.end()) {
+              auto *animationLayer = (*pl).second;
+
+              // animation layer -> animation stack
+              auto pas1 = animationStackData_.find(id2);
+              if (pas1 != animationStackData_.end()) {
+                auto *animationStack = (*pas1).second;
+
+                assert(! animationLayer->animationStack);
+                animationLayer->animationStack = animationStack;
+
+                animationStack->animationLayers.push_back(animationLayer);
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Animation Layer");
+              continue;
+            }
+
+            //---
+
+            // animation deformer
+            auto pad = animationDeformerData_.find(id1);
+            if (pad != animationDeformerData_.end()) {
+              auto *animationDeformer = (*pad).second; // child
+
+              // animation deformer -> model
+              auto pn1 = idModelData_.find(id2);
+              if (pn1 != idModelData_.end()) {
+                auto *modelData1 = (*pn1).second;
+
+                assert(! animationDeformer->modelData);
+                animationDeformer->modelData = modelData1;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              // animation deformer -> geometry
+              auto pg1 = idGeometryData_.find(id2);
+              if (pg1 != idGeometryData_.end()) {
+                auto *geometryData1 = (*pg1).second;
+
+                assert(! animationDeformer->geometryData);
+                animationDeformer->geometryData = geometryData1;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              // animation deformer -> animation deformer
+              auto pad1 = animationDeformerData_.find(id2);
+              if (pad1 != animationDeformerData_.end()) {
+                auto *animationDeformer1 = (*pad1).second; // parent
+
+                assert(! animationDeformer->parent);
+                animationDeformer->parent = animationDeformer1;
+
+                animationDeformer1->children.push_back(animationDeformer);
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Animation Deformer");
+              continue;
+            }
+
+            //---
+
+            // animation stack
+            auto pas = animationStackData_.find(id1);
+            if (pas != animationStackData_.end()) {
+              //auto *animationStack = (*pas).second;
+              connectError("Animation Stack");
+              continue;
+            }
+
+            //---
+
+            // node attribute data
+            auto pna = idNodeAttributeData_.find(id1);
+            if (pna != idNodeAttributeData_.end()) {
+              auto *nodeAttribute = (*pna).second;
+
+              // node attribute -> model data
+              auto pm1 = idModelData_.find(id2);
+              if (pm1 != idModelData_.end()) {
+                auto *modelData1 = (*pm1).second;
+
+                assert(! nodeAttribute->modelData);
+                nodeAttribute->modelData = modelData1;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Node Attribute Data");
+              continue;
+            }
+
+            //---
+
+            // video data
+            auto pv = videoData_.find(id1);
+            if (pv != videoData_.end()) {
+              auto *videoData = (*pv).second;
+
+              // video -> texture
+              auto pt1 = idTextureData_.find(id2);
+              if (pt1 != idTextureData_.end()) {
+                auto *textureData1 = (*pt1).second;
+
+                assert(! videoData->textureData);
+                videoData->textureData = textureData1;
+
+                //connectInfo();
+
+                continue;
+              }
+
+              connectError("Video Data");
+              continue;
+            }
+
+            //---
+
+            // constraint data
+            auto pc = constraintData_.find(id1);
+            if (pc != constraintData_.end()) {
+              //auto *constraintData = (*pc).second;
+              //connectInfo();
+
+              continue;
+            }
+
+            //---
+
+            connectError(idType1);
+          }
+        }
+        else
+          unhandledDataName(treeName1, pdm1.first);
+      }
+
+      for (auto *tree2 : tree1->children) {
+        auto treeName2 = hierName(tree2);
+
+        unhandledTree(treeName2);
+      }
+    }
+    else if (treeName1 == "Takes") {
+    }
+    else if (treeName1 == "Objects") {
+      //printPropertyNames(tree1);
+      //printPropertyNameData(tree1);
+
+      for (const auto &pd1 : tree1->dataMap) {
+        if      (pd1.first == "AnimationCurve") {
+        }
+        else if (pd1.first == "AnimationCurveNode") {
+        }
+        else if (pd1.first == "AnimationLayer") {
+        }
+        else if (pd1.first == "AnimationStack") {
+        }
+        else if (pd1.first == "Deformer") {
+        }
+        else if (pd1.first == "Geometry") {
+        }
+        else if (pd1.first == "Material") {
+        }
+        else if (pd1.first == "Model") {
+          if (isDebug()) {
+            auto name = getPropertyName(pd1.second, 1);
+
+            debugMsg("Model " + name);
+          }
+        }
+        else if (pd1.first == "NodeAttribute") {
+        }
+        else if (pd1.first == "Pose") {
+        }
+        else if (pd1.first == "Texture") {
+          if (isDebug()) {
+            auto name = getPropertyName(pd1.second, 1);
+
+            debugMsg("Texture " + name);
+          }
+        }
+        else if (pd1.first == "Video") {
+        }
+        else if (pd1.first == "Constraint") {
+        }
+        else if (pd1.first == "Device") {
+        }
+        else if (pd1.first == "Folder") {
+        }
+        else if (pd1.first == "GlobalShading") {
+        }
+        else
+          unhandledDataName(treeName1, pd1.first);
+      }
+
+      for (auto *tree2 : tree1->children) {
+        auto treeName2 = hierName(tree2);
+
+        if      (treeName2 == "Objects/AnimationCurve") {
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *animationCurveData = new AnimationCurveData;
+          animationCurveData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "Default") {
+              animationCurveData->def = getPropertyReal(pd2.second);
+            }
+            else if (pd2.first == "KeyAttrDataFloat") {
+            }
+            else if (pd2.first == "KeyAttrFlags") {
+            }
+            else if (pd2.first == "KeyAttrRefCount") {
+            }
+            else if (pd2.first == "KeyTime") {
+              animationCurveData->keyTime = getPropertyLongArray(pd2.second);
+            }
+            else if (pd2.first == "KeyValueFloat") {
+              animationCurveData->keyValueFloat = getPropertyFloatArray(pd2.second);
+            }
+            else if (pd2.first == "KeyVer") {
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+
+          animationCurveData_[blockData.id] = animationCurveData;
+
+          // default: real ?
+        }
+        else if (treeName2 == "Objects/AnimationCurveNode") {
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *animationCurveNodeData = new AnimationCurveNodeData;
+          animationCurveNodeData->type = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            unhandledProperty(treeName2, pd2.first);
+          }
+
+          // point (x, y, z)
+          CPoint3D p;
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if (treeName3 == "Objects/AnimationCurveNode/Properties70") {
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "P") {
+                  for (const auto &pa3 : pd3.second) {
+                    auto propName3 = getPropertyArrayName(pa3.second);
+
+                    if      (propName3 == "d|X") {
+                      p.x = getPropertyArrayReal(pa3.second, 4);
+                    }
+                    else if (propName3 == "d|Y") {
+                      p.y = getPropertyArrayReal(pa3.second, 4);
+                    }
+                    else if (propName3 == "d|Z") {
+                      p.z = getPropertyArrayReal(pa3.second, 4);
+                    }
+                    else if (propName3 == "d") {
+                    }
+                    else if (propName3 == "d|MaxHandle") {
+                    }
+                    else {
+                      if (propName3.size() < 3 || ! std::islower(propName3[2]))
+                        unhandledProperty(treeName3, propName3);
+                    }
+                  }
+                }
+                else
+                  unhandledProperty(treeName3, pd3.first);
+              }
+            }
+            else
+              unhandledTree(treeName3);
+          }
+
+          //std::cerr << blockData.id << " " << p << "\n";
+
+          animationCurveNodeData_[blockData.id] = animationCurveNodeData;
+        }
+        else if (treeName2 == "Objects/AnimationLayer") {
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *animationLayerData = new AnimationLayerData;
+          animationLayerData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            unhandledProperty(treeName2, pd2.first);
+          }
+
+          animationLayerData_[blockData.id] = animationLayerData;
+        }
+        else if (treeName2 == "Objects/AnimationStack") {
+          // LocalStop, ReferenceStop
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *animationStackData = new AnimationStackData;
+          animationStackData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            unhandledProperty(treeName2, pd2.first);
+          }
+
+          animationStackData_[blockData.id] = animationStackData;
+        }
+        else if (treeName2 == "Objects/Deformer") {
+          // ???
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *animationDeformerData = new AnimationDeformerData;
+          animationDeformerData->name = blockData.name;
+          animationDeformerData->type = blockData.type;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "DeformPercent") {
+            }
+            else if (pd2.first == "FullWeights") {
+            }
+            else if (pd2.first == "Indexes") {
+              animationDeformerData->indexes = getPropertyIntArray(pd2.second);
+            }
+            else if (pd2.first == "Link_DeformAcuracy") {
+            }
+            else if (pd2.first == "Mode") {
+            }
+            else if (pd2.first == "SkinningType") {
+            }
+            else if (pd2.first == "Transform") {
+            }
+            else if (pd2.first == "TransformAssociateModel") {
+            }
+            else if (pd2.first == "TransformLink") {
+            }
+            else if (pd2.first == "UserData") {
+            }
+            else if (pd2.first == "Version") {
+            }
+            else if (pd2.first == "Weights") {
+              animationDeformerData->weights = getPropertyDoubleArray(pd2.second);
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+
+          animationDeformerData_[blockData.id] = animationDeformerData;
+        }
+        else if (treeName2 == "Objects/Geometry") {
+          if (isDebug())
+            printParentDataMap(tree2);
+          //printPropertyNames(tree2);
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *geometryData = new GeometryData;
+          geometryData->name = blockData.name;
+
+          //---
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if      (treeName3 == "Objects/Geometry/Properties70") {
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "P") {
+                  for (const auto &pa3 : pd3.second) {
+                    auto propName3 = getPropertyArrayName(pa3.second);
+
+                    //unhandledProperty(treeName3, propName3);
+                  }
+                }
+                else
+                  unhandledProperty(treeName3, pd3.first);
+              }
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementBinormal") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementColor") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementNormal") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementSmoothing") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementTangent") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementUV") {
+            }
+            else if (treeName3 == "Objects/Geometry/LayerElementMaterial") {
+            }
+            else if (treeName3 == "Objects/Geometry/Layer") {
+            }
+            else
+              unhandledTree(treeName3);
+          }
+
+          //---
+
+          processGeometryDataTree(tree2, geometryData);
+
+          //addGeometryObject(geometryData);
+
+          idGeometryData_[blockData.id] = geometryData;
+        }
+        else if (treeName2 == "Objects/Material") {
+          if (isDebug())
+            printParentDataMap(tree2);
+          //printPropertyNames(tree2);
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *materialData = new MaterialData;
+          materialData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "MultiLayer") {
+            }
+            else if (pd2.first == "ShadingModel") {
+            }
+            else if (pd2.first == "Version") {
+            }
+            else
+              unhandledDataName(treeName2, pd2.first);
+          }
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if      (treeName3 == "Objects/Material/Properties60") {
+            }
+            else if (treeName3 == "Objects/Material/Properties70") {
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "P") {
+                  for (const auto &pa3 : pd3.second) {
+                    auto propName3 = getPropertyArrayName(pa3.second);
+
+                    if      (propName3 == "Ambient") {
+                    }
+                    else if (propName3 == "AmbientColor") {
+                    }
+                    else if (propName3 == "AmbientFactor") {
+                    }
+                    else if (propName3 == "BumpFactor") {
+                    }
+                    else if (propName3 == "Diffuse") {
+                    }
+                    else if (propName3 == "DiffuseColor") {
+                    }
+                    else if (propName3 == "Emissive") {
+                    }
+                    else if (propName3 == "EmissiveColor") {
+                    }
+                    else if (propName3 == "EmissiveFactor") {
+                    }
+                    else if (propName3 == "Opacity") {
+                    }
+                    else if (propName3 == "Reflectivity") {
+                    }
+                    else if (propName3 == "ReflectionColor") {
+                    }
+                    else if (propName3 == "ReflectionFactor") {
+                    }
+                    else if (propName3 == "ShadingModel") {
+                    }
+                    else if (propName3 == "Shininess") {
+                    }
+                    else if (propName3 == "ShininessExponent") {
+                    }
+                    else if (propName3 == "Specular") {
+                    }
+                    else if (propName3 == "SpecularColor") {
+                    }
+                    else if (propName3 == "SpecularFactor") {
+                    }
+                    else if (propName3 == "TransparencyFactor") {
+                    }
+                    else if (propName3 == "TransparentColor") {
+                    }
+                    else if (propName3 == "UseMaterial") {
+                    }
+                    else
+                      unhandledProperty(treeName3, propName3);
+                  }
+                }
+                else
+                  unhandledProperty(treeName3, pd3.first);
+              }
+
+              for (auto *tree4 : tree3->children) {
+                auto treeName4 = hierName(tree4);
+
+                unhandledTree(treeName4);
+              }
+            }
+            else
+              unhandledTree(treeName3);
+          }
+
+          idMaterialData_[blockData.id] = materialData;
+        }
+        else if (treeName2 == "Objects/Model") {
+          if (isDebug())
+            printParentDataMap(tree2);
+          //printPropertyNames(tree2);
+          //printPropertyNameData(tree2);
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *modelData = new ModelData;
+          modelData->name = blockData.name;
+          modelData->type = blockData.type;
+
+          //std::cerr << "modelId: " << blockData.id << "\n";
+          //std::cerr << "modelName: " << modelData->name << "\n";
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "CameraId") {
+            }
+            else if (pd2.first == "CameraIndexName") {
+            }
+            else if (pd2.first == "CameraName") {
+            }
+            else if (pd2.first == "CameraOrthoZoom") {
+            }
+            else if (pd2.first == "Culling") {
+            }
+            else if (pd2.first == "DisplayMode") {
+            }
+            else if (pd2.first == "GeometryVersion") {
+            }
+            else if (pd2.first == "Layer") {
+            }
+            else if (pd2.first == "LayerElementMaterial") {
+            }
+            else if (pd2.first == "LayerElementNormal") {
+            }
+            else if (pd2.first == "LookAt") {
+            }
+            else if (pd2.first == "LookAtModel") {
+            }
+            else if (pd2.first == "MultiLayer") {
+            }
+            else if (pd2.first == "MultiTake") {
+            }
+            else if (pd2.first == "Name") {
+            }
+            else if (pd2.first == "Position") {
+            }
+            else if (pd2.first == "Shading") {
+            }
+            else if (pd2.first == "Shape") {
+            }
+            else if (pd2.first == "ShowInfoOnMoving") {
+            }
+            else if (pd2.first == "TypeFlags") {
+            }
+            else if (pd2.first == "Up") {
+            }
+            else if (pd2.first == "Version") {
+            }
+            else if (pd2.first == "PolygonVertexIndex") {
+              if (! modelData->geometryData)
+                modelData->geometryData = new GeometryData;
+
+              modelData->geometryData->polygonVertexIndex = getPropertyInts(pd2.second);
+            }
+            else if (pd2.first == "Vertices") {
+              if (! modelData->geometryData)
+                modelData->geometryData = new GeometryData;
+
+              modelData->geometryData->vertices = getPropertyDoubles(pd2.second);
+            }
+            else
+              unhandledDataName(treeName2, pd2.first);
+          }
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if      (treeName3 == "Objects/Model/Properties60") {
+            }
+            else if (treeName3 == "Objects/Model/Properties70") {
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "P") {
+                  for (const auto &pa3 : pd3.second) {
+                    auto propName3 = getPropertyArrayName(pa3.second);
+
+                    if      (propName3 == "InheritType") {
+                    }
+                    else if (propName3 == "Lcl Translation") {
+                      auto x = getPropertyArrayReal(pa3.second, 4);
+                      auto y = getPropertyArrayReal(pa3.second, 5);
+                      auto z = getPropertyArrayReal(pa3.second, 6);
+
+                      modelData->localTranslation = CPoint3D(x, y, z);
+
+                      if (isDebug())
+                        std::cerr << "localTranslation: " <<
+                          modelData->localTranslation.value() << "\n";
+                    }
+                    else if (propName3 == "Lcl Rotation") {
+                      auto x = getPropertyArrayReal(pa3.second, 4);
+                      auto y = getPropertyArrayReal(pa3.second, 5);
+                      auto z = getPropertyArrayReal(pa3.second, 6);
+
+                      modelData->localRotation = CPoint3D(x, y, z);
+
+                      if (isDebug())
+                        std::cerr << "localRotation: " <<
+                          modelData->localRotation.value() << "\n";
+                    }
+                    else if (propName3 == "Lcl Scaling") {
+                      auto x = getPropertyArrayReal(pa3.second, 4);
+                      auto y = getPropertyArrayReal(pa3.second, 5);
+                      auto z = getPropertyArrayReal(pa3.second, 6);
+
+                      modelData->localScaling = CPoint3D(x, y, z);
+
+                      if (isDebug())
+                        std::cerr << "localScaling: " <<
+                          modelData->localScaling.value() << "\n";
+                    }
+                    else if (propName3 == "AspectW") {
+                    }
+                    else if (propName3 == "AspectH") {
+                    }
+                    else if (propName3 == "BackgroundMode") {
+                    }
+                    else if (propName3 == "DefaultAttributeIndex") {
+                    }
+                    else if (propName3 == "ForegroundTransparent") {
+                    }
+                    else if (propName3 == "MaxHandle") {
+                    }
+                    else if (propName3 == "PreferedAngleX") {
+                    }
+                    else if (propName3 == "PreferedAngleY") {
+                    }
+                    else if (propName3 == "PreferedAngleZ") {
+                    }
+                    else if (propName3 == "PreRotation") {
+                    }
+                    else if (propName3 == "ResolutionMode") {
+                    }
+                    else if (propName3 == "RotationActive") {
+                    }
+                    else if (propName3 == "RotationOffset") {
+                    }
+                    else if (propName3 == "RotationPivot") {
+                    }
+                    else if (propName3 == "ScalingMax") {
+                    }
+                    else if (propName3 == "ScalingMin") {
+                    }
+                    else if (propName3 == "ScalingOffset") {
+                    }
+                    else if (propName3 == "ViewFrustum") {
+                    }
+                    else if (propName3 == "Visibility") {
+                    }
+#if 0
+                    else if (propName3 == "orig_loc") {
+                    }
+                    else if (propName3 == "orig_quat") {
+                    }
+                    else if (propName3 == "post_quat") {
+                    }
+#endif
+                    else {
+                      if (! std::islower(propName3[0]))
+                        unhandledProperty(treeName3, propName3);
+                    }
+                  }
+                }
+                else
+                  unhandledProperty(treeName3, pd3.first);
+              }
+
+              for (auto *tree4 : tree3->children) {
+                auto treeName4 = hierName(tree4);
+
+                unhandledTree(treeName4);
+              }
+            }
+            else if (treeName3 == "Objects/Model/Limits") {
+            }
+            else if (treeName3 == "Objects/Model/Shape") {
+            }
+            else if (treeName3 == "Objects/Model/LayerElementNormal") {
+            }
+            else if (treeName3 == "Objects/Model/LayerElementMaterial") {
+            }
+            else if (treeName3 == "Objects/Model/Layer") {
+            }
+            else
+              unhandledTree(treeName3);
+          }
+
+          idModelData_[blockData.id] = modelData;
+        }
+        else if (treeName2 == "Objects/NodeAttribute") {
+          // Size
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *nodeAttributeData = new NodeAttributeData;
+          nodeAttributeData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "TypeFlags") {
+            }
+            else if (pd2.first == "GeometryVersion") {
+            }
+            else if (pd2.first == "AudioColor") {
+            }
+            else if (pd2.first == "CameraOrthoZoom") {
+            }
+            else if (pd2.first == "LookAt") {
+            }
+            else if (pd2.first == "Position") {
+            }
+            else if (pd2.first == "ShowAudio") {
+            }
+            else if (pd2.first == "ShowInfoOnMoving") {
+            }
+            else if (pd2.first == "Up") {
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+
+          idNodeAttributeData_[blockData.id] = nodeAttributeData;
+        }
+        else if (treeName2 == "Objects/Pose") {
+          //BlockData blockData;
+          //readBlockDetails(tree2, blockData, treeName2);
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "NbPoseNodes") {
+            }
+            else if (pd2.first == "Type") {
+            }
+            else if (pd2.first == "Version") {
+            }
+            else
+              unhandledDataName(treeName2, pd2.first);
+          }
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if (treeName3 == "Objects/Pose/PoseNode") {
+#if 0
+              long node = 0;
+
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "Node") {
+                  node = getPropertyInt(pd3.second);
+                }
+                else if (pd3.first == "Matrix") {
+                }
+                else
+                  unhandledDataName(treeName2, pd3.first);
+              }
+
+              std::cerr << node << "\n";
+#endif
+            }
+            else
+              unhandledTree(treeName3);
+          }
+        }
+        else if (treeName2 == "Objects/Texture") {
+          if (isDebug())
+            printParentDataMap(tree2);
+          //printPropertyNames(tree2);
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *textureData = new TextureData;
+          textureData->name = blockData.name;
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "Cropping") {
+            }
+            else if (pd2.first == "FileName") {
+              textureData->fileName = getPropertyName(pd2.second);
+            }
+            else if (pd2.first == "Media") {
+              textureData->media = getPropertyName(pd2.second);
+            }
+            else if (pd2.first == "ModelUVScaling") {
+            }
+            else if (pd2.first == "ModelUVTranslation") {
+            }
+            else if (pd2.first == "RelativeFilename") {
+            }
+            else if (pd2.first == "TextureName") {
+              textureData->name = getPropertyName(pd2.second);
+            }
+            else if (pd2.first == "Texture_Alpha_Source") {
+            }
+            else if (pd2.first == "Type") {
+            }
+            else if (pd2.first == "Version") {
+            }
+            else
+              unhandledDataName(treeName2, pd2.first);
+          }
+
+          for (auto *tree3 : tree2->children) {
+            auto treeName3 = hierName(tree3);
+
+            if (treeName3 == "Objects/Texture/Properties70") {
+              for (const auto &pd3 : tree3->dataMap) {
+                if      (pd3.first == "P") {
+                  for (const auto &pa3 : pd3.second) {
+                    auto propName3 = getPropertyArrayName(pa3.second);
+
+                    if      (propName3 == "CurrentTextureBlendMode") {
+                    }
+                    else if (propName3 == "UseMipMap") {
+                    }
+                    else if (propName3 == "UseMaterial") {
+                    }
+                    else if (propName3 == "UVSet") {
+                    }
+                    else
+                      unhandledProperty(treeName3, propName3);
+                  }
+                }
+                else
+                  unhandledProperty(treeName3, pd3.first);
+              }
+
+              for (auto *tree4 : tree3->children) {
+                auto treeName4 = hierName(tree4);
+
+                unhandledTree(treeName4);
+              }
+            }
+            else
+              unhandledTree(treeName3);
+          }
+
+          idTextureData_[blockData.id] = textureData;
+        }
+        else if (treeName2 == "Objects/Video") {
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if      (pd2.first == "Filename") {
+            }
+            else if (pd2.first == "RelativeFilename") {
+            }
+            else if (pd2.first == "Type") {
+            }
+            else if (pd2.first == "UseMipMap") {
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+
+          auto *videoData = new VideoData;
+          videoData->name = blockData.name;
+
+          videoData_[blockData.id] = videoData;
+        }
+        else if (treeName2 == "Objects/GlobalShading") {
+        }
+        else if (treeName2 == "Objects/Device") {
+        }
+        else if (treeName2 == "Objects/Constraint") {
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          for (const auto &pd2 : tree2->dataMap) {
+            if (pd2.first == "MultiLayer") {
+            }
+            else
+              unhandledProperty(treeName2, pd2.first);
+          }
+
+          auto *constraintData = new ConstraintData;
+          constraintData->name = blockData.name;
+
+          constraintData_[blockData.id] = constraintData;
+        }
+        else if (treeName2 == "Objects/Folder") {
+        }
+        else
+          unhandledTree(treeName2);
+      }
+    }
+    else if (treeName1 == "Relations") {
+    }
+    else if (treeName1 == "ObjectData") {
+    }
+    else if (treeName1 == "Version5") {
+    }
+    else if (treeName1 == "HierarchyView") {
+    }
+    else
+      unhandledTree(treeName1);
+  }
+}
+
+CMatrix3D
+CImportFBX::
+calcModelDataLocalTransform(ModelData *m) const
+{
+  auto t = CMatrix3D::identity();
+  auto s = CMatrix3D::identity();
+  auto r = CMatrix3D::identity();
+
+  if (m->localTranslation) {
+    auto p = m->localTranslation.value();
+    t = CMatrix3D::translation(p.x, p.y, p.z);
+  }
+
+  if (m->localRotation) {
+    auto p = m->localRotation.value();
+    r = CMatrix3D::rotation(CMathGen::DegToRad(p.x),
+                            CMathGen::DegToRad(p.y),
+                            CMathGen::DegToRad(p.z));
+  }
+
+  if (m->localScaling) {
+    auto p = m->localScaling.value();
+    s = CMatrix3D::translation(p.x, p.y, p.z);
+  }
+
+//geometryData->localTransform = t*r*s;
+  return s*r*t;
+}
+
+CMatrix3D
+CImportFBX::
+calcModelDataHierTransform(ModelData *m) const
+{
+  auto t = calcModelDataLocalTransform(m);
+
+#if 0
+  if (m->parent)
+    t = calcModelDataHierTransform(m->parent)*t;
+#endif
+
+  return t;
+}
+
+std::string
+CImportFBX::
+calcModelDataHierName(ModelData *m) const
+{
+  auto n = m->name + "(" + m->type + ")";
+
+  if (m->parent)
+    n = calcModelDataHierName(m->parent) + "/" + n;
+
+  return n;
+}
+
+void
+CImportFBX::
+addGeometryObject(GeometryData *geometryData)
+{
+  if (geometryData->polygonVertexIndex.empty() ||
+      geometryData->vertices.empty())
     return;
 
   //---
 
-  assert(! geometryData.object);
+  assert(! geometryData->object);
 
-  geometryData.object = CGeometryInst->createObject3D(scene_, getObjectName());
+  auto name = geometryData->name;
 
-  scene_->addObject(geometryData.object);
+  if (name == "")
+    name = getObjectName();
+
+  geometryData->object = CGeometryInst->createObject3D(scene_, name);
+
+  scene_->addObject(geometryData->object);
 
   //---
 
@@ -542,43 +3837,45 @@ addGeometryObject(GeometryData &geometryData)
   Polygons polygons;
   Polygon  polygon;
 
-#if 0
-  auto ne = uint(edges.size());
+  auto ni  = uint(geometryData->polygonVertexIndex.size());
+  auto nv  = uint(geometryData->vertices          .size());
+  auto nv1 = nv/3;
 
-  for (uint i = 0; i < ne; ++i) {
-    auto ie = edges[i];
-    auto i1 = polygonVertexIndex[ie];
+  auto nni  = uint(geometryData->normalsIndex.size());
+  auto nnv  = uint(geometryData->normals     .size());
+  auto nnv1 = nnv/3;
 
-    bool flush = (i1 < 0);
+  auto hasNormalIndex   = (nni == ni && nnv > 0);
+  auto hasNormalVert    = (nni == 0 && nnv1 == nv1);
+  auto hasNormalVertInd = (nni == 0 && nnv1 == ni);
 
-    if (flush)
-      i1 = ~i1;
+  if (! hasNormalIndex && ! hasNormalVert && ! hasNormalVertInd && nnv > 0)
+    std::cerr << "Ignored texture data\n";
 
-    polygon.push_back(i1);
+  auto nci  = uint(geometryData->colorIndex.size());
+  auto ncv  = uint(geometryData->colors    .size());
+  auto ncv1 = ncv/3;
 
-    if (flush) {
-      polygons.push_back(polygon);
+  auto hasColorIndex = (nci == ni && ncv > 0);
+  auto hasColorVert  = (nci == 0 && ncv1 == nv1);
 
-      polygon = Polygon();
-    }
-  }
-#else
-  auto ni = uint(geometryData.polygonVertexIndex.size());
+  if (! hasColorIndex && ! hasColorVert && ncv > 0)
+    std::cerr << "Ignored texture data\n";
 
-  auto nn = uint(geometryData.normalsIndex.size());
-  auto hasNormal = (nn == ni);
+  auto nti  = uint(geometryData->uvIndex.size());
+  auto ntv  = uint(geometryData->uv     .size());
+  auto ntv1 = ntv/2;
 
-  auto nci = uint(geometryData.colorIndex.size());
-  auto ncv = uint(geometryData.colors    .size());
-  auto hasColor = (nci == ni && ncv > 0);
+  auto hasTextureIndex = (nti == ni && ntv > 0);
+  auto hasTextureVert  = (nti == 0 && ntv1 == nv1);
 
-  auto nt = uint(geometryData.uvIndex.size());
-  auto hasTexture = (nt == ni);
+  if (! hasTextureIndex && ! hasTextureVert && ntv > 0)
+    std::cerr << "Ignored texture data\n";
 
-  for (uint i = 0; i < ni; ++i) {
+  auto addPolyPoint = [&](int i) {
     PolyPoint polyPoint;
 
-    polyPoint.pointInd = geometryData.polygonVertexIndex[i];
+    polyPoint.pointInd = geometryData->polygonVertexIndex[i];
 
     bool flush = (polyPoint.pointInd < 0);
 
@@ -587,14 +3884,22 @@ addGeometryObject(GeometryData &geometryData)
 
     //---
 
-    if (hasNormal)
-      polyPoint.normalInd = geometryData.normalsIndex[i];
+    if      (hasNormalIndex)
+      polyPoint.normalInd = geometryData->normalsIndex[i];
+    else if (hasNormalVert)
+      polyPoint.normalInd = polyPoint.pointInd;
+    else if (hasNormalVertInd)
+      polyPoint.normalInd = i;
 
-    if (hasColor)
-      polyPoint.colorInd = geometryData.colorIndex[i];
+    if      (hasColorIndex)
+      polyPoint.colorInd = geometryData->colorIndex[i];
+    else if (hasColorVert)
+      polyPoint.colorInd = polyPoint.pointInd;
 
-    if (hasTexture)
-      polyPoint.textureInd = geometryData.uvIndex[i];
+    if      (hasTextureIndex)
+      polyPoint.textureInd = geometryData->uvIndex[i];
+    else if (hasTextureVert)
+      polyPoint.textureInd = polyPoint.pointInd;
 
     //---
 
@@ -605,33 +3910,64 @@ addGeometryObject(GeometryData &geometryData)
 
       polygon = Polygon();
     }
+  };
+
+#if 0
+  auto ne = uint(geometryData->edges.size());
+
+  if (ne > 0) {
+    for (uint i = 0; i < ne; ++i)
+      addPolyPoint(geometryData->edges[i]);
   }
+  else {
+    for (uint i = 0; i < ni; ++i)
+      addPolyPoint(i);
+  }
+#else
+  for (uint i = 0; i < ni; ++i)
+    addPolyPoint(i);
 #endif
 
   if (! polygon.empty())
     polygons.push_back(polygon);
 
   auto getPoint = [&](int v) {
-    return CPoint3D(geometryData.vertices[v*3    ],
-                    geometryData.vertices[v*3 + 1],
-                    geometryData.vertices[v*3 + 2]);
+    auto x = geometryData->vertices[v*3    ];
+    auto y = geometryData->vertices[v*3 + 1];
+    auto z = geometryData->vertices[v*3 + 2];
+
+    if (isInvertX()) x = -x;
+    if (isInvertY()) y = -y;
+    if (isInvertZ()) z = -z;
+
+    return CPoint3D(x, y, z);
   };
 
   auto getNormal = [&](int v) {
-    return CVector3D(geometryData.normals[v*3    ],
-                     geometryData.normals[v*3 + 1],
-                     geometryData.normals[v*3 + 2]);
+    auto x = geometryData->normals[v*3    ];
+    auto y = geometryData->normals[v*3 + 1];
+    auto z = geometryData->normals[v*3 + 2];
+
+    if (isInvertX()) x = -x;
+    if (isInvertY()) y = -y;
+    if (isInvertZ()) z = -z;
+
+    return CVector3D(x, y, z);
   };
 
   auto getColor = [&](int v) {
-    return CRGBA(geometryData.colors[v*3    ],
-                 geometryData.colors[v*3 + 1],
-                 geometryData.colors[v*3 + 2]);
+    auto r = geometryData->colors[v*3    ];
+    auto g = geometryData->colors[v*3 + 1];
+    auto b = geometryData->colors[v*3 + 2];
+
+    return CRGBA(r, g, b);
   };
 
   auto getTexturePoint = [&](int v) {
-    return CPoint2D(geometryData.uv[v*2    ],
-                    geometryData.uv[v*2 + 1]);
+    auto u1 = geometryData->uv[v*2    ];
+    auto v1 = geometryData->uv[v*2 + 1];
+
+    return CPoint2D(u1, v1);
   };
 
   auto np = polygons.size();
@@ -649,23 +3985,23 @@ addGeometryObject(GeometryData &geometryData)
     for (uint j = 0; j < n1; ++j) {
       const auto &polygon2 = polygon1[j];
 
-      auto ind = geometryData.object->addVertex(getPoint(polygon2.pointInd));
+      auto ind = geometryData->object->addVertex(getPoint(polygon2.pointInd));
 
-      auto &vertex = geometryData.object->getVertex(ind);
+      auto &vertex = geometryData->object->getVertex(ind);
 
-      if (hasNormal) {
+      if (hasNormalIndex || hasNormalVert || hasNormalVertInd) {
         auto n = getNormal(polygon2.normalInd);
 
         vertex.setNormal(n);
       }
 
-      if (hasColor) {
+      if (hasColorIndex || hasColorVert) {
         auto c = getColor(polygon2.colorInd);
 
         vertex.setColor(c);
       }
 
-      if (hasTexture) {
+      if (hasTextureIndex || hasTextureVert) {
         auto p = getTexturePoint(polygon2.textureInd);
 
         vertex.setTextureMap(p);
@@ -676,9 +4012,9 @@ addGeometryObject(GeometryData &geometryData)
       inds.push_back(ind);
     }
 
-    auto faceInd = geometryData.object->addIPolygon(&inds[0], uint(inds.size()));
+    auto faceInd = geometryData->object->addIPolygon(&inds[0], uint(inds.size()));
 
-    auto &face = geometryData.object->getFace(faceInd);
+    auto &face = geometryData->object->getFace(faceInd);
 
     if (! tpoints.empty())
       face.setTexturePoints(tpoints);
@@ -687,122 +4023,260 @@ addGeometryObject(GeometryData &geometryData)
 
 void
 CImportFBX::
-addSubGeometry(PropDataTree *tree, GeometryData &geometryData)
+processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
 {
-  for (const auto &pd : tree->dataMap) {
-    const auto &name = pd.first;
+  auto getPropertyName = [](const PropIndDataArray &pa) {
+    for (const auto &pa1 : pa) {
+      for (const auto &pa2 : pa1.second) {
+        auto *data = pa2.second;
 
-    if      (name == "PolygonVertexIndex") {
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.polygonVertexIndex = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for PolygonVertexIndex\n";
+        return data;
       }
     }
-    else if (name == "Vertices") { // vertices
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
 
-        if (data->type() == DataType::DOUBLE_ARRAY)
-          geometryData.vertices = data->getArrayData<double>();
-        else
-          std::cerr << "Unexpected type for Vertices\n";
+    return static_cast<CImportFBX::PropData *>(nullptr);
+  };
+
+  auto unhandledDataName = [&](const std::string &path, const std::string &name) {
+    std::cerr << "Unhandled data name " << path << "/" << name << "\n";
+  };
+
+  //---
+
+  auto treeName = hierName(tree);
+
+//std::cerr << "processGeometryDataTree " << treeName << "\n";
+
+  if      (treeName == "Objects/Geometry") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
+
+      if      (name == "PolygonVertexIndex") {
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->polygonVertexIndex = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
       }
-    }
-    else if (name == "Edges") { // edges
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
+      else if (name == "Vertices") { // vertices
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
 
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.edges = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for Edges\n";
+            if (data->type() == DataType::DOUBLE_ARRAY)
+              geometryData->vertices = data->getArrayData<double>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
       }
-    }
-    else if (name == "NormalsIndex") {
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
+      else if (name == "Edges") { // edges
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
 
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.normalsIndex = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for NormalsIndex\n";
-      }
-    }
-    else if (name == "Normals") { // normals
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::DOUBLE_ARRAY)
-          geometryData.normals = data->getArrayData<double>();
-        else
-          std::cerr << "Unexpected type for Normals\n";
-      }
-    }
-    else if (name == "ColorIndex") {
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.colorIndex = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for ColorIndex\n";
-      }
-    }
-    else if (name == "Colors") { // colors
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::DOUBLE_ARRAY)
-          geometryData.colors = data->getArrayData<double>();
-        else
-          std::cerr << "Unexpected type for Colors\n";
-      }
-    }
-    else if (name == "UVIndex") {
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.uvIndex = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for UVIndex\n";
-      }
-    }
-    else if (name == "UV") { // texture coords
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::DOUBLE_ARRAY)
-          geometryData.uv = data->getArrayData<double>();
-        else
-          std::cerr << "Unexpected type for UV\n";
-      }
-    }
-    else if (name == "Materials") {
-      for (const auto &pa : pd.second) {
-        auto *data = pa.second;
-
-        if (data->type() == DataType::INT_ARRAY)
-          geometryData.materials = data->getArrayData<int>();
-        else
-          std::cerr << "Unexpected type for UV\n";
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->edges = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
       }
     }
   }
+  else if (treeName == "Objects/Geometry/LayerElementNormal") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
 
-  for (auto *tree1 : tree->children) {
-    if (tree1->name == "LayerElementColor" ||
-        tree1->name == "LayerElementMaterial" ||
-        tree1->name == "LayerElementNormal" ||
-        tree1->name == "LayerElementUV")
-      addSubGeometry(tree1, geometryData);
-    else
-      addGeometry(tree1);
+      if      (name == "NormalsIndex") {
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->normalsIndex = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Normals") { // normals
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::DOUBLE_ARRAY)
+              geometryData->normals = data->getArrayData<double>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Name") {
+      }
+      else if (name == "Version") {
+      }
+      else if (name == "MappingInformationType") {
+      }
+      else if (name == "ReferenceInformationType") {
+      }
+      else if (name == "NormalsW") {
+      }
+      else {
+        unhandledDataName(treeName, name);
+      }
+    }
   }
+  else if (treeName == "Objects/Geometry/LayerElementColor") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
+
+      if      (name == "ColorIndex") {
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->colorIndex = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Colors") { // colors
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::DOUBLE_ARRAY)
+              geometryData->colors = data->getArrayData<double>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Name") {
+      }
+      else if (name == "MappingInformationType") {
+      }
+      else if (name == "ReferenceInformationType") {
+      }
+      else if (name == "Version") {
+      }
+      else {
+        unhandledDataName(treeName, name);
+      }
+    }
+  }
+  else if (treeName == "Objects/Geometry/LayerElementUV") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
+
+      if      (name == "UVIndex") {
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->uvIndex = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "UV") { // texture coords
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::DOUBLE_ARRAY)
+              geometryData->uv = data->getArrayData<double>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Name") {
+      }
+      else if (name == "Version") {
+      }
+      else if (name == "ReferenceInformationType") {
+      }
+      else if (name == "MappingInformationType") {
+      }
+      else {
+        unhandledDataName(treeName, name);
+      }
+    }
+  }
+  else if (treeName == "Objects/Geometry/LayerElementMaterial") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
+
+      if      (name == "Materials") {
+        for (const auto &pa : pd.second) {
+          for (const auto &pa1 : pa.second) {
+            auto *data = pa1.second;
+
+            if (data->type() == DataType::INT_ARRAY)
+              geometryData->materials = data->getArrayData<int>();
+            else
+              errorMsg("Unexpected type for " + name);
+          }
+        }
+      }
+      else if (name == "Name") {
+      }
+      else if (name == "Version") {
+      }
+      else if (name == "MappingInformationType") {
+      }
+      else if (name == "ReferenceInformationType") {
+      }
+      else {
+        unhandledDataName(treeName, name);
+      }
+    }
+  }
+  else if (treeName == "Objects/Geometry/LayerElementNormal") {
+  }
+  else if (treeName == "Objects/Geometry/LayerElementSmoothing") {
+  }
+  else if (treeName == "Objects/Geometry/LayerElementTangent") {
+  }
+  else if (treeName == "Objects/Geometry/LayerElementBinormal") {
+  }
+  else if (treeName == "Objects/Geometry/Layer") {
+  }
+  else if (treeName == "Objects/Geometry/Layer/LayerElement") {
+  }
+  else if (treeName == "Objects/Geometry/Properties70") {
+    if (isDebug()) {
+      for (const auto &pd1 : tree->dataMap) {
+        auto *data = getPropertyName(pd1.second);
+
+        if (data)
+          std::cerr << treeName << " " << *data << "\n";
+      }
+    }
+
+    for (auto *tree1 : tree->children) {
+      auto treeName1 = hierName(tree1);
+
+      unhandledTree(treeName1);
+    }
+  }
+  else {
+    errorMsg("Unhandled tree name " + treeName);
+  }
+
+  for (auto *tree1 : tree->children)
+    processGeometryDataTree(tree1, geometryData);
 }
 
 bool
@@ -873,9 +4347,10 @@ readScope(FileData &fileData, const std::string &scopeName, PropDataTree *propDa
     return errorMsg("Failed to read property name");
 
 #if 0
-  std::cerr << name << " startOffset=" << startOffset << " endOffset=" << endOffset <<
-                       " numProperties=" << numProperties <<
-                       " propertyListLen=" << propertyListLen << "\n";
+  debugMsg(name + " startOffset=" + std::to_string(startOffset) +
+                  " endOffset=" + std::to_string(endOffset) +
+                  " numProperties=" + std::to_string(numProperties) +
+                  " propertyListLen=" + std::to_string(propertyListLen));
 #endif
 
   if (name != "")
@@ -883,8 +4358,17 @@ readScope(FileData &fileData, const std::string &scopeName, PropDataTree *propDa
 
   //---
 
+  uint ni = 0;
+
+  auto pn = propDataTree->nameCount.find(name);
+
+  if (pn != propDataTree->nameCount.end())
+    ni = (*pn).second + 1;
+
+  propDataTree->nameCount[name] = ni;
+
   for (uint pi = 0; pi < numProperties; ++pi) {
-    if (! readScopeData(name, pi, fileData, propDataTree))
+    if (! readScopeData(name, ni, pi, fileData, scopeName, propDataTree))
       break;
   }
 
@@ -940,8 +4424,8 @@ readScope(FileData &fileData, const std::string &scopeName, PropDataTree *propDa
   fileData1.filePos   = fileData.filePos;
   fileData1.fileSize  = endOffset + 1;
 
-  if (fileData1.fileSize > fileData.fileBytes.size())
-    fileData1.fileSize = int(fileData.fileBytes.size());
+  if (fileData1.fileSize > fileData.fileMem.size())
+    fileData1.fileSize = int(fileData.fileMem.size());
 
   auto isNullRecord = testNullRecord();
 
@@ -957,6 +4441,24 @@ readScope(FileData &fileData, const std::string &scopeName, PropDataTree *propDa
     propDataTree1->name   = name;
     propDataTree1->parent = propDataTree;
 
+    if (scopeName == "Objects") {
+      if (name == "AnimationCurve" || name == "AnimationCurveNode" || name == "AnimationLayer" ||
+          name == "AnimationStack" || name == "Deformer" || name == "Geometry" ||
+          name == "Material" || name == "Model" || name == "NodeAttribute" ||
+          name == "Texture" || name == "Video") {
+        auto pd = propDataTree->dataMap.find(name);
+
+        if (pd != propDataTree->dataMap.end()) {
+          const auto &parentDataMap = (*pd).second;
+
+          auto pd1 = parentDataMap.find(ni);
+
+          if (pd1 != parentDataMap.end())
+            propDataTree1->parentDataMap = (*pd1).second; // copy
+        }
+      }
+    }
+
     propDataTree->children.push_back(propDataTree1);
 
     while (fileData1.filePos < fileData1.fileSize - 1) {
@@ -968,7 +4470,8 @@ readScope(FileData &fileData, const std::string &scopeName, PropDataTree *propDa
     }
   }
   else {
-    std::cerr << " No nullRecord\n";
+    if (isDebug())
+      debugMsg(" No nullRecord");
 
     //fileData1.filePos = fileData1.filePos - 1;
 
@@ -1010,8 +4513,8 @@ getObjectName()
 
 bool
 CImportFBX::
-readScopeData(const std::string &name, uint ind, FileData &fileData,
-              PropDataTree *propDataTree)
+readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
+              const std::string & /*scopeName*/, PropDataTree *propDataTree)
 {
   auto ucharStr = [](uchar c) {
     std::string s;
@@ -1111,6 +4614,8 @@ readScopeData(const std::string &name, uint ind, FileData &fileData,
       return false;
 
     propData->setData(data);
+
+    infoMsg(" f " + propData->toString());
   }
   else if (t == 'd') {
     std::vector<double> data;
@@ -1118,6 +4623,8 @@ readScopeData(const std::string &name, uint ind, FileData &fileData,
       return false;
 
     propData->setData(data);
+
+    infoMsg(" d " + propData->toString());
   }
   else if (t == 'l') {
     std::vector<long> data;
@@ -1125,6 +4632,8 @@ readScopeData(const std::string &name, uint ind, FileData &fileData,
       return false;
 
     propData->setData(data);
+
+    infoMsg(" l " + propData->toString());
   }
   else if (t == 'i') {
     std::vector<int> data;
@@ -1132,6 +4641,8 @@ readScopeData(const std::string &name, uint ind, FileData &fileData,
       return false;
 
     propData->setData(data);
+
+    infoMsg(" i " + propData->toString());
   }
   else if (t == 'b') {
     std::vector<uchar> data;
@@ -1139,13 +4650,26 @@ readScopeData(const std::string &name, uint ind, FileData &fileData,
       return false;
 
     propData->setData(data);
+
+    infoMsg(" b " + propData->toString());
   }
   else {
     std::cerr << "Invalid Code: "; printUChar(t); std::cerr << "\n";
     return false;
   }
 
-  propDataTree->dataMap[name][ind] = propData;
+  propDataTree->dataMap[name][ni][ind] = propData;
+
+#if 0
+  if (isDebug()) {
+    auto hname = hierName(propDataTree);
+
+    if (ind == 0)
+      std::cerr << hname << ":" << scopeName << "\n";
+
+    std::cerr << " " << name << "=" << propData->toString() << "\n";
+  }
+#endif
 
   return true;
 }

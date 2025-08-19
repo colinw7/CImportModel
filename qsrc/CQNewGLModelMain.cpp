@@ -15,7 +15,7 @@ main(int argc, char **argv)
 
   //---
 
-  QString     modelName = "/home/colinw/dev/models/v3d/Lightplane.V3D";
+  QString     modelName;
   CGeom3DType format    = CGEOM_3D_TYPE_V3D;
 
   using InitTextureData = CQNewGLCanvas::InitTextureData;
@@ -29,6 +29,9 @@ main(int argc, char **argv)
 
   bool flipYZ      = false;
   bool invertDepth = false;
+  bool invertX     = false;
+  bool invertY     = false;
+  bool invertZ     = false;
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
@@ -46,10 +49,21 @@ main(int argc, char **argv)
         else
           std::cerr << "Missing filename for " << argv[i] << "\n";
       }
-      else if (arg == "flip_yz")
+      else if (arg == "flip_yz") {
         flipYZ = true;
-      else if (arg == "invert_depth")
+      }
+      else if (arg == "invert_depth") {
         invertDepth = true;
+      }
+      else if (arg == "invert_x") {
+        invertX = true;
+      }
+      else if (arg == "invert_y") {
+        invertY = true;
+      }
+      else if (arg == "invert_z") {
+        invertZ = true;
+      }
       else if (arg == "time") {
         ++i;
 
@@ -115,21 +129,24 @@ main(int argc, char **argv)
     };
 
     auto strs = QStringList() <<
-      "3ds" << "3drw" << "asc" << "cob" << "dxf" << "fbx" << "gltf" <<
+      "3ds" << "3drw" << "asc" << "cob" << "dxf" << "fbx" << "glb" << "gltf" <<
       "obj" << "plg" << "ply"<< "scene"<< "stl"<< "v3d" << "x3d";
 
     for (const auto &str : strs)
       isSuffix(str);
   }
 
-  if (modelName == "") {
-    std::cerr << "Missing model name\n";
-    exit(1);
-  }
-
   //---
 
   auto *modelApp = new CQNewGLModel;
+
+  if (modelName == "") {
+    modelName = modelApp->buildDir() + "/models/v3d/Lightplane.V3D";
+    //std::cerr << "Missing model name\n";
+    //exit(1);
+  }
+
+  //---
 
   auto *canvas = modelApp->canvas();
 
@@ -138,7 +155,13 @@ main(int argc, char **argv)
   canvas->setTime       (time);
   canvas->setAnimName   (animName);
 
-  if (! canvas->loadModel(modelName, format))
+  CQNewGLCanvas::LoadData loadData;
+
+  loadData.invertX = invertX;
+  loadData.invertY = invertY;
+  loadData.invertZ = invertZ;
+
+  if (! canvas->loadModel(modelName, format, loadData))
     exit(1);
 
   modelApp->resize(modelApp->windowWidth(), modelApp->windowHeight());

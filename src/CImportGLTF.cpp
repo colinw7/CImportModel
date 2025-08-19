@@ -17,7 +17,11 @@ auto warnMsg(const std::string &msg) -> void {
 }
 
 auto debugMsg(const std::string &msg) -> void {
-  std::cerr << "[31mDBG:[0m" << msg << "\n";
+  std::cerr << "[31mDBG[0m: " << msg << "\n";
+}
+
+auto debugValueMsg(const std::string &msg, const CJson::ValueP &value) -> void {
+  std::cerr << "[31mDBG[0m: " << msg << " : " + std::string(value->typeName()) << "\n";
 }
 
 auto TODO(const std::string &msg) -> void {
@@ -50,6 +54,10 @@ enum Constants {
 
 CRGBA colorRGBA(const CImportGLTF::Color &c) {
   return CRGBA(c.r, c.g, c.b, c.a);
+}
+
+CRGBA vectorRGBA(const CImportGLTF::Vec3 &c) {
+  return CRGBA(c.x, c.y, c.z);
 }
 
 template<typename T>
@@ -301,10 +309,15 @@ processData()
   for (const auto &pa : jsonData_.accessors) {
     const auto &accessor = pa.second;
 
+    bool rc;
+
     if (accessor.sparse)
-      processSparseAccessor(pa.first, accessor);
+      rc = processSparseAccessor(pa.first, accessor);
     else
-      processAccessor(pa.first, accessor);
+      rc = processAccessor(pa.first, accessor);
+
+    if (! rc)
+      std::cerr << "process Accessor failed\n";
   }
 
   //---
@@ -513,7 +526,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 2;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid SCALAR count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -528,7 +541,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid SCALAR count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -543,7 +556,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 1;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid SCALAR count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -558,7 +571,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid SCALAR count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -573,7 +586,8 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       //std::cerr << " " << meshData.componentType;
       //std::cerr << "\n";
 
-      return errorMsg("Invalid SCALAR component type " + std::to_string(meshData.componentType));
+      return errorMsg("Invalid " + meshData.type + " component type " +
+                      std::to_string(meshData.componentType));
     }
   }
   // 2 components
@@ -583,7 +597,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 2*4;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid VEC2 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -597,7 +611,8 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       }
     }
     else
-      return errorMsg("Invalid VEC2 component type " + std::to_string(meshData.componentType));
+      return errorMsg("Invalid " + meshData.type + " component type " +
+                      std::to_string(meshData.componentType));
   }
   // 3 components
   else if (meshData.type == "VEC3") {
@@ -606,7 +621,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
 
     if (meshData.componentType == Constants::TYPE_FLOAT) {
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid VEC3 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -621,7 +636,8 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       }
     }
     else
-      return errorMsg("Invalid VEC3 component type " + std::to_string(meshData.componentType));
+      return errorMsg("Invalid " + meshData.type + " component type " +
+                      std::to_string(meshData.componentType));
   }
   // 4 components
   else if (meshData.type == "VEC4") {
@@ -630,7 +646,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4*2;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid VEC4 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -650,7 +666,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4*4;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid VEC4 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -670,7 +686,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4*1;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid VEC4 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -686,17 +702,18 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       }
     }
     else
-      return errorMsg("Invalid VEC4 component type " + std::to_string(meshData.componentType));
+      return errorMsg("Invalid " + meshData.type + " component type " +
+                      std::to_string(meshData.componentType));
   }
   // 4 componenents
   else if (meshData.type == "MAT2") {
     // TODO: 4 values
-    TODO("Unhandled MAT2 meshData type");
+    TODO("Unhandled " + meshData.type + " meshData type");
   }
   // 9 componenents
   else if (meshData.type == "MAT3") {
     // TODO:  9 values
-    TODO("Unhandled MAT3 meshData type");
+    TODO("Unhandled " + meshData.type + " meshData type");
   }
   // 16 componenents
   else if (meshData.type == "MAT4") {
@@ -705,7 +722,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         byteStride = 4*16;
 
       if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid MAT4 count");
+        return errorMsg("Invalid " + meshData.type + " count");
 
       int id1 = 0;
 
@@ -723,7 +740,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       }
     }
     else
-      TODO("Unhandled MAT4 meshData type");
+      TODO("Unhandled " + meshData.type + " meshData type");
   }
   else {
     //std::cerr << "  byteOffset: " << bufferView.byteOffset << "\n";
@@ -969,18 +986,18 @@ processAnim()
 {
   for (const auto &animation : jsonData_.animations) {
     if (isDebug())
-      std::cerr << "Animation: " << animation.name << "\n";
+      debugMsg("Animation: " + animation.name);
 
     for (const auto &channels : animation.channelsArray) {
       if (isDebug())
-        std::cerr << " Channels\n";
+        debugMsg(" Channels");
 
       for (const auto &channel : channels) {
         CGeomObject3D::AnimationData animationData;
 
         if (isDebug())
-          std::cerr << "  Channel: " << channel.sampler << " " << channel.node << " " <<
-                       channel.path << "\n";
+          debugMsg("  Channel: " + std::to_string(channel.sampler) + " " +
+                   channel.node.to_string() + " " + channel.path);
 
         //---
 
@@ -988,46 +1005,46 @@ processAnim()
 
         if (! channel.node.isEmpty()) {
           if (! getNode(channel.node, node)) {
-            std::cerr << "   Node: <invalid>\n"; continue;
+            errorMsg("   Node: <invalid>"); continue;
           }
         }
         else {
-          std::cerr << "   No node in channel\n";
+          errorMsg("   No node in channel");
           continue;
         }
 
         auto ps = animation.samplers.find(channel.sampler);
         if (ps == animation.samplers.end()) {
-          std::cerr << "   Sampler: <invalid>\n"; continue;
+          errorMsg("   Sampler: <invalid>"); continue;
         }
 
         const auto &sampler = (*ps).second;
 
         Accessor iaccessor;
         if (! getAccessor(sampler.input, iaccessor)) {
-          std::cerr << "    Input Accessor: <invalid>\n"; continue;
+          errorMsg("    Input Accessor: <invalid>"); continue;
         }
 
         auto *imeshData = getMeshData(sampler.input);
         if (! imeshData) {
-          std::cerr << "Invalid Mesh Data for sampler.input\n"; continue;
+          errorMsg("Invalid Mesh Data for sampler.input"); continue;
         }
 
         Accessor oaccessor;
         if (! getAccessor(sampler.output, oaccessor)) {
-          std::cerr << "    Output Accessor: <invalid>\n"; continue;
+          errorMsg("    Output Accessor: <invalid>"); continue;
         }
 
         auto *omeshData = getMeshData(sampler.output);
         if (! omeshData) {
-          std::cerr << "Invalid Mesh Data for sampler.output\n"; continue;
+          errorMsg("Invalid Mesh Data for sampler.output"); continue;
         }
 
         //---
 
         if (isDebug()) {
-          std::cerr << "   Sampler: " << sampler.input << " " << sampler.output << " " <<
-                       sampler.interpolation << "\n";
+          debugMsg("   Sampler: " + std::to_string(sampler.input) + " " +
+                   std::to_string(sampler.output) + " " + sampler.interpolation);
 
           std::cerr << "    Input Accessor: ";
           printMeshData(*imeshData);
@@ -1038,8 +1055,8 @@ processAnim()
 
         if (imeshData->type != "SCALAR" || imeshData->componentType != Constants::TYPE_FLOAT ||
             imeshData->min.size() != 1 || imeshData->max.size() != 1) {
-          std::cerr << "Invalid Type for sampler.input (" << imeshData->type << " " <<
-                       imeshData->componentType << ")\n"; continue;
+          errorMsg("Invalid Type for sampler.input (" + imeshData->type + " " +
+                   std::to_string(imeshData->componentType) + ")"); continue;
         }
 
         auto ni = imeshData->fscalars.size();
@@ -1061,11 +1078,17 @@ processAnim()
 
         if      (channel.path == "rotation") {
           if (omeshData->type != "VEC4") {
-            std::cerr << "Invalid Type for sampler.output rotation\n"; continue;
+            errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " rotation");
+            continue;
           }
 
           if (ni != omeshData->vec4.size()) {
-            std::cerr << "Invalid Size for sampler.output rotation\n"; continue;
+            errorMsg("Invalid Size for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " rotation " +
+                     "(Expected " + std::to_string(ni) +
+                     " Actual " + std::to_string(omeshData->vec4.size()) + ")");
+            continue;
           }
 
           for (const auto &v : omeshData->vec4)
@@ -1076,11 +1099,17 @@ processAnim()
         }
         else if (channel.path == "translation") {
           if (omeshData->type != "VEC3") {
-            std::cerr << "Invalid Type for sampler.output translation\n"; continue;
+            errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " translation");
+            continue;
           }
 
           if (ni != omeshData->vec3.size()) {
-            std::cerr << "Invalid Size for sampler.output translation\n"; continue;
+            errorMsg("Invalid Size for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " translation " +
+                     "(Expected " + std::to_string(ni) +
+                     " Actual " + std::to_string(omeshData->vec3.size()) + ")");
+            continue;
           }
 
           for (const auto &v : omeshData->vec3)
@@ -1089,14 +1118,19 @@ processAnim()
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::TRANSLATION, animationData);
         }
-
         else if (channel.path == "scale") {
           if (omeshData->type != "VEC3") {
-            std::cerr << "Invalid Type for sampler.output scale\n"; continue;
+            errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " scale");
+            continue;
           }
 
           if (ni != omeshData->vec3.size()) {
-            std::cerr << "Invalid Size for sampler.output scale\n"; continue;
+            errorMsg("Invalid Size for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " scale " +
+                     "(Expected " + std::to_string(ni) +
+                     " Actual " + std::to_string(omeshData->vec3.size()) + ")");
+            continue;
           }
 
           for (const auto &v : omeshData->vec3)
@@ -1109,7 +1143,7 @@ processAnim()
           TODO("channel.path weights");
         }
         else {
-          std::cerr << "Invalid channel.path : " << channel.path << "\n";
+          errorMsg("Invalid channel.path : " + channel.path);
         }
 
         //node->anim_data[animation.name] = animationData;
@@ -1432,7 +1466,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
     std::vector<long> indices;
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
-    std::vector<Vec2> textCoords0;
+    std::vector<Vec2> texCoords0;
     std::vector<Vec4> joints0;
     std::vector<Vec4> weights0;
 
@@ -1443,7 +1477,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " indices\n";
+        debugMsg(" indices");
         printMeshData(*indMeshData);
       }
 #endif
@@ -1458,7 +1492,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " POSITION\n";
+        debugMsg(" POSITION");
         printMeshData(*positionMeshData);
       }
 #endif
@@ -1473,7 +1507,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " NORMAL\n";
+        debugMsg(" NORMAL");
         printMeshData(*normalMeshData);
       }
 #endif
@@ -1488,12 +1522,12 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " TEXCOORD_0\n";
+        debugMsg(" TEXCOORD_0");
         printMeshData(*texCoord0MeshData);
       }
 #endif
 
-      textCoords0 = texCoord0MeshData->vec2;
+      texCoords0 = texCoord0MeshData->vec2;
     }
 
     if (! primitive.joints0.isEmpty()) {
@@ -1503,7 +1537,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " JOINTS_0\n";
+        debugMsg(" JOINTS_0");
         printMeshData(*joints0MeshData);
       }
 #endif
@@ -1518,7 +1552,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
 #if 0
       if (isDebug()) {
-        std::cerr << " WEIGHTS0\n";
+        debugMsg(" WEIGHTS0");
         printMeshData(*weights0MeshData);
       }
 #endif
@@ -1526,18 +1560,17 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
       weights0 = weights0MeshData->vec4;
     }
 
-    auto ni = indices    .size();
-    auto np = positions  .size();
-    auto nn = normals    .size();
-    auto nt = textCoords0.size();
-    auto nj = joints0    .size();
-    auto nw = weights0   .size();
+    auto ni = indices   .size();
+    auto np = positions .size();
+    auto nn = normals   .size();
+    auto nt = texCoords0.size();
+    auto nj = joints0   .size();
+    auto nw = weights0  .size();
 
     CIMinMax indMinMax;
     for (int i = 0; i < int(ni); ++i)
       indMinMax.add(int(indices[i]));
 
-#if 0
     auto setDefaultIndices = [&]() {
       indices.resize(np);
 
@@ -1551,7 +1584,9 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
       ni = np;
     };
-#endif
+
+    if (ni == 0)
+      setDefaultIndices();
 
     if (np == 0)
       return errorMsg("No mesh positions");
@@ -1563,7 +1598,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
       warnMsg("Invalid mesh normals size");
 
     if (nt > 0 && np != nt)
-      warnMsg("Invalid mesh textCoords0 size");
+      warnMsg("Invalid mesh texCoords0 size");
 
     if (nj > 0 && np != nj)
       warnMsg("Invalid mesh joints0 size");
@@ -1593,7 +1628,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
       }
 
       if (ind < nt) {
-        const auto &t = textCoords0[ind];
+        const auto &t = texCoords0[ind];
 
         v.setTextureMap(CPoint2D(t.x, t.y));
 
@@ -1606,10 +1641,14 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
       if (nj > 0) {
         JointData jointData;
 
-        const auto &j = joints0[ind];
+        Vec4 j;
+
+        if (ind < nj)
+          j = joints0[ind];
 
         if (nw > 0) {
-          jointData.w = weights0[ind];
+          if (ind < nw)
+            jointData.w = weights0[ind];
 
           jointData.nodes[0].ind = int(j.x); jointData.nodes[0].weight = jointData.w.x;
           jointData.nodes[1].ind = int(j.y); jointData.nodes[1].weight = jointData.w.y;
@@ -1674,13 +1713,12 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
       //---
 
-      if (material.diffuse) {
+      // diffuse
+      if (material.diffuse)
         object->setFaceDiffuse(colorRGBA(material.diffuse.value()));
-      }
 
-      if (material.specular) {
-        object->setFaceSpecular(colorRGBA(material.specular.value()));
-      }
+      if (material.baseColorFactor)
+        object->setFaceDiffuse(colorRGBA(material.baseColorFactor.value()));
 
       if (material.baseColorTexture.index >= 0) {
         Texture texture;
@@ -1712,6 +1750,7 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
         }
       }
 
+      // normal
       if (material.normalTexture.index >= 0) {
         Texture texture;
 
@@ -1742,6 +1781,42 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
         }
       }
 
+      // specular
+      if (material.specular) {
+        object->setFaceSpecular(colorRGBA(material.specular.value()));
+      }
+
+      if (material.specularTexture.index >= 0) {
+        Texture texture;
+
+        auto textureName = IndName(material.specularTexture.index);
+
+        if (! getTexture(IndName(material.specularTexture.index), texture))
+          return errorMsg("Invalid specular texture");
+
+        if (! texture.source.isEmpty()) {
+          auto pi = jsonData_.images.find(texture.source);
+
+          if (pi == jsonData_.images.end())
+            return errorMsg("Invalid specular texture source");
+
+          const auto &image = (*pi).second;
+
+          if (! resolveImage(image))
+            return false;
+
+          auto *texture1 = CGeometryInst->createTexture(image.image);
+
+          texture1->setName(textureName.to_string());
+
+          object->setSpecularTexture(texture1);
+        }
+        else {
+          warnMsg("Unhandled specular texture " + material.specularTexture.index);
+        }
+      }
+
+      // emissive
       if (material.emissiveTexture.index >= 0) {
         Texture texture;
 
@@ -1770,6 +1845,10 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
         else {
           warnMsg("Unhandled emissive texture " + material.emissiveTexture.index);
         }
+      }
+
+      if (material.emissiveFactor) {
+        object->setFaceEmission(vectorRGBA(material.emissiveFactor.value()));
       }
     }
   }
@@ -2008,6 +2087,14 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     return true;
   };
 
+  auto valueOptNumber = [&](const CJson::ValueP &value, OptReal &optNumber) {
+    double number;
+    if (! valueNumber(value, number))
+      return false;
+    optNumber = number;
+    return true;
+  };
+
   auto valueLong = [](const CJson::ValueP &value, long &number) {
      if (! value->isNumber())
       return false;
@@ -2016,6 +2103,14 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
     number = long(jnumber->value());
 
+    return true;
+  };
+
+  auto valueOptLong = [&](const CJson::ValueP &value, OptLong &optNumber) {
+    long number;
+    if (! valueLong(value, number))
+      return false;
+    optNumber = number;
     return true;
   };
 
@@ -2066,10 +2161,12 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         rvalues.push_back(float(r));
       }
 
-      if (rvalues.size() != 4)
+      if      (rvalues.size() == 3)
+        color = Color(rvalues[0], rvalues[1], rvalues[2], 1.0);
+      else if (rvalues.size() == 4)
+        color = Color(rvalues[0], rvalues[1], rvalues[2], rvalues[3]);
+      else
         return false;
-
-      color = Color(rvalues[0], rvalues[1], rvalues[2], rvalues[3]);
     }
     else if (value->isString()) {
       std::string str;
@@ -2081,6 +2178,14 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     else
       return false;
 
+    return true;
+  };
+
+  auto valueOptColor = [&](const CJson::ValueP &value, OptColor &optColor) {
+    Color color;
+    if (! valueColor(value, color))
+      return false;
+    optColor = color;
     return true;
   };
 
@@ -2118,137 +2223,1767 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
   if (! value->isObject())
     return errorMsg("Invalid JSON data");
 
+  //---
+
+  auto readSparseAccessor = [&](CJson::Object *sparseObj, Accessor &accessor,
+                                const std::string &id) {
+    accessor.sparse = true;
+
+    for (const auto &pnv2 : sparseObj->nameValueMap()) {
+      if      (pnv2.first == "count") {
+        if (! valueLong(pnv2.second, accessor.sparseCount))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "indices") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " data");
+
+        auto *sparseIndicesObj = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : sparseIndicesObj->nameValueMap()) {
+          if      (pnv3.first == "bufferView") {
+            if (! valueIndName(pnv3.second, accessor.sparseIndicesBufferView))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else if (pnv3.first == "byteOffset") {
+            if (! valueLong(pnv3.second, accessor.sparseIndicesByteOffset))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else if (pnv3.first == "componentType") {
+            if (! valueLong(pnv3.second, accessor.sparseIndicesComponentType))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else
+            return errorMsg("Unhandled " + id + "/" + pnv2.first  + " name '" +
+                            pnv3.first + "'");
+        }
+      }
+      else if (pnv2.first == "values") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " data");
+
+        auto *sparseValuesObj = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : sparseValuesObj->nameValueMap()) {
+          if      (pnv3.first == "bufferView") {
+            if (! valueIndName(pnv3.second, accessor.sparseValuesBufferView))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else if (pnv3.first == "byteOffset") {
+            if (! valueLong(pnv3.second, accessor.sparseValuesByteOffset))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else
+            return errorMsg("Unhandled " + id + "/" + pnv2.first + " name '" +
+                            pnv3.first + "'");
+        }
+      }
+      else {
+        return errorMsg("Invalid " + id + " name '" + pnv2.first + "'");
+      }
+    }
+
+    return true;
+  };
+
+  auto readAccessor = [&](CJson::Object *jobj, Accessor &accessor, const std::string &id) {
+    for (const auto &pnv1 : jobj->nameValueMap()) {
+      if      (pnv1.first == "bufferView") {
+        if (! valueIndName(pnv1.second, accessor.bufferView))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " ind/name");
+      }
+      else if (pnv1.first == "byteOffset") {
+        if (! valueLong(pnv1.second, accessor.byteOffset))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+      }
+      else if (pnv1.first == "byteStride") {
+        if (! valueLong(pnv1.second, accessor.byteStride))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+      }
+      else if (pnv1.first == "type") {
+        if (! valueString(pnv1.second, accessor.type))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " string");
+      }
+      else if (pnv1.first == "componentType") {
+        if (! valueLong(pnv1.second, accessor.componentType))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+      }
+      else if (pnv1.first == "count") {
+        if (! valueLong(pnv1.second, accessor.count))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+      }
+      else if (pnv1.first == "min") {
+        if (! pnv1.second->isArray())
+          return errorMsg("Invalid JSON " + id + "/" + pnv1.first + " data");
+
+        auto *maxArr = pnv1.second->cast<CJson::Array>();
+
+        for (const auto &pv2 : maxArr->values()) {
+          double r;
+          if (! valueNumber(pv2, r))
+            return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+
+          accessor.min.push_back(r);
+        }
+      }
+      else if (pnv1.first == "max") {
+        if (! pnv1.second->isArray())
+          return errorMsg("Invalid JSON " + id + "/" + pnv1.first + " data");
+
+        auto *maxArr = pnv1.second->cast<CJson::Array>();
+
+        for (const auto &pv2 : maxArr->values()) {
+          double r;
+          if (! valueNumber(pv2, r))
+            return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+
+          accessor.max.push_back(r);
+        }
+      }
+      else if (pnv1.first == "name") {
+        if (! valueString(pnv1.second, accessor.name))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " string");
+      }
+      else if (pnv1.first == "normalized") {
+        if (! valueBool(pnv1.second, accessor.normalized))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " bool");
+      }
+      else if (pnv1.first == "sparse") {
+        if (! pnv1.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv1.first + " data");
+
+        auto *sparseObj = pnv1.second->cast<CJson::Object>();
+
+        readSparseAccessor(sparseObj, accessor, id + "/" + pnv1.first);
+      }
+      else
+        return errorMsg("Invalid " + id + " name '" + pnv1.first + "'");
+    }
+
+    return true;
+  };
+
+  auto readMaterialTexture = [&](CJson::Object *obj, MaterialTexture &texture,
+                                 const std::string &id) {
+    for (const auto &pnv : obj->nameValueMap()) {
+      if      (pnv.first == "index") {
+        if (! valueLong(pnv.second, texture.index))
+          return errorMsg("Invalid " + id + "/" + pnv.first + " number");
+      }
+      else if (pnv.first == "texCoord") {
+        if (! valueOptLong(pnv.second, texture.texCoord))
+          return errorMsg("Invalid " + id + "/" + pnv.first + " number");
+      }
+      else if (pnv.first == "scale") {
+        if (! valueOptNumber(pnv.second, texture.scale))
+          return errorMsg("Invalid " + id + "/" + pnv.first + " number");
+
+        //TODOValue("Unhandled " + pnv.first + " " + id + " scale", pnv.second);
+      }
+      else if (pnv.first == "strength") {
+        if (! valueOptNumber(pnv.second, texture.strength))
+          return errorMsg("Invalid " + id + "/" + pnv.first + " number");
+
+        //TODOValue("Unhandled " + id + "/" + pnv.first, pnv.second);
+      }
+      else if (pnv.first == "extensions") {
+        if (! pnv.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv.first + " data");
+
+        auto *obj1 = pnv.second->cast<CJson::Object>();
+
+        for (const auto &pnv1 : obj1->nameValueMap()) {
+          if (pnv1.first == "KHR_texture_transform") {
+            if (! pnv1.second->isObject())
+              return errorMsg("Invalid JSON " + id + "/" + pnv.first + "/" + pnv1.first + " data");
+
+            auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+            for (const auto &pnv2 : obj2->nameValueMap()) {
+              if      (pnv2.first == "rotation") {
+                if (! valueOptNumber(pnv2.second, texture.rotation))
+                  return errorMsg("Invalid " + id + "/" + pnv.first + "/" + pnv1.first +
+                                  "/" + pnv2.first + " number");
+              }
+              else if (pnv2.first == "scale") {
+                std::vector<float> values;
+                if (! arrayNumbers(pnv2.second, values) || values.size() != 2)
+                  return errorMsg("Invalid " + id + "/" + pnv.first + "/" + pnv1.first +
+                                  "/" + pnv2.first + " values");
+
+                texture.scaleVector = CVector2D(values[0], values[1]);
+              }
+              else if (pnv2.first == "offset") {
+                std::vector<float> values;
+                if (! arrayNumbers(pnv2.second, values) || values.size() != 2)
+                  return errorMsg("Invalid " + id + "/" + pnv.first + "/" + pnv1.first +
+                                  "/" + pnv2.first + " values");
+
+                texture.offsetVector = CVector2D(values[0], values[1]);
+              }
+              else if (pnv2.first == "texCoord") {
+                if (! valueOptLong(pnv2.second, texture.texCoord))
+                  return errorMsg("Invalid " + id + "/" + pnv.first + "/" + pnv1.first +
+                                  "/" + pnv2.first + " number");
+
+                //TODOValue("Unhandled " + id + "/" + pnv.first + "/" + pnv1.first +
+                //          "/" + pnv2.first, pnv2.second);
+              }
+              else
+                TODOValue("Unhandled " + id + "/" + pnv.first + "/" + pnv1.first +
+                          "/" + pnv2.first, pnv2.second);
+            }
+          }
+          else
+            TODOValue("Unhandled " + id + "/" + pnv.first + "/" + pnv1.first, pnv1.second);
+        }
+      }
+      else {
+        warnMsg("Invalid " + id + " name " + pnv.first);
+      }
+    }
+
+    return true;
+  };
+
+  auto readBuffer = [&](CJson::Object *jobj, Buffer &buffer, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "byteLength") {
+        if (! valueLong(pnv2.second, buffer.byteLength))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "type") {
+        if (! valueString(pnv2.second, buffer.type))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else if (pnv2.first == "uri") {
+        if (! valueString(pnv2.second, buffer.uri))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else if (pnv2.first == "name") {
+        if (! valueString(pnv2.second, buffer.name))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else
+        debugValueMsg("  " + id + "/" + pnv2.first, pnv2.second);
+    }
+
+    return true;
+  };
+
+  auto readBufferView = [&](CJson::Object *jobj, BufferView &bufferView, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "buffer") {
+        if (! valueIndName(pnv2.second, bufferView.buffer))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " ind/name");
+      }
+      else if (pnv2.first == "byteOffset") {
+        if (! valueLong(pnv2.second, bufferView.byteOffset))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "byteLength") {
+        if (! valueLong(pnv2.second, bufferView.byteLength))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "byteStride") {
+        if (! valueLong(pnv2.second, bufferView.byteStride))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "target") {
+        if (! valueLong(pnv2.second, bufferView.target))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "name") {
+        if (! valueString(pnv2.second, bufferView.name))
+          return errorMsg("Unhandled " + id + "/" + pnv2.first);
+      }
+      else {
+        return errorMsg("Invalid buffer name " + pnv2.first);
+      }
+    }
+
+    return true;
+  };
+
+  auto readMesh = [&](CJson::Object *jobj, Mesh &mesh, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "name") {
+        if (! valueString(pnv2.second, mesh.name))
+          return errorMsg("Invalid name string");
+      }
+      else if (pnv2.first == "primitives") {
+        if (! pnv2.second->isArray())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first);
+
+        auto *arr2 = pnv2.second->cast<CJson::Array>();
+
+        Primitive primitive;
+
+        for (const auto &pv2 : arr2->values()) {
+          if (! pv2->isObject())
+            return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " data");
+
+          auto *obj3 = pv2->cast<CJson::Object>();
+
+          for (const auto &pnv3 : obj3->nameValueMap()) {
+            if      (pnv3.first == "attributes") {
+              if (! pnv3.second->isObject())
+                return errorMsg("Invalid JSON " + id + " attributes");
+
+              auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+              for (const auto &pnv4 : obj4->nameValueMap()) {
+                if      (pnv4.first == "POSITION") { // VEC3
+                  if (! valueIndName(pnv4.second, primitive.position))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "NORMAL") { // VEC3
+                  if (! valueIndName(pnv4.second, primitive.normal))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "TANGENT") { // VEC4
+                //TODOValue("Unhandled primitive " + pnv4.first, pnv4.second);
+                  if (! valueIndName(pnv4.second, primitive.tangent))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "TEXCOORD_0") { // VEC2
+                  if (! valueIndName(pnv4.second, primitive.texCoord0))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "TEXCOORD_1") { // VEC2
+                  if (! valueIndName(pnv4.second, primitive.texCoord1))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "TEXCOORD_2") { // VEC2
+                  if (! valueIndName(pnv4.second, primitive.texCoord2))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "COLOR_0") { // VEC3 or VEC4
+                //TODOValue("Unhandled primitive " + pnv4.first, pnv4.second);
+
+                  if (! valueIndName(pnv4.second, primitive.color0))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "JOINTS_0") { // VEC4
+                  if (! valueIndName(pnv4.second, primitive.joints0))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else if (pnv4.first == "WEIGHTS_0") { // VEC4
+                  if (! valueIndName(pnv4.second, primitive.weights0))
+                    return errorMsg("Invalid " + pnv4.first + " ind/name");
+                }
+                else {
+                  debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                pnv4.first, pnv4.second);
+                }
+              }
+            }
+            else if (pnv3.first == "indices") {
+              if (! valueIndName(pnv3.second, primitive.indices))
+                return errorMsg("Invalid " + pnv3.first + " ind/name");
+            }
+            else if (pnv3.first == "material") {
+              if (! valueIndName(pnv3.second, primitive.material))
+                return errorMsg("Invalid " + pnv3.first + " ind/name");
+            }
+            else if (pnv3.first == "mode") {
+              if (! valueLong(pnv3.second, primitive.mode))
+                return errorMsg("Invalid " + pnv3.first + " value");
+            }
+            else if (pnv3.first == "targets") {
+              if (! pnv3.second->isArray())
+                return errorMsg("Invalid JSON " + id + "/" + pnv3.first);
+
+              auto *arr3 = pnv3.second->cast<CJson::Array>();
+
+              for (const auto &pv3 : arr3->values()) {
+                if (! pv3->isObject())
+                  return errorMsg("Invalid JSON " + id + "/" + pnv3.first + " data");
+
+                auto *obj4 = pv3->cast<CJson::Object>();
+
+                for (const auto &pnv4 : obj4->nameValueMap()) {
+                  if      (pnv4.first == "POSITION") {
+                    IndName position;
+                    if (! valueIndName(pnv4.second, position))
+                      return errorMsg("Invalid " + id + "/" + pnv4.first + " ind/name");
+                  }
+                  else if (pnv4.first == "NORMAL") {
+                    IndName normal;
+                    if (! valueIndName(pnv4.second, normal))
+                      return errorMsg("Invalid " + id + "/" + pnv4.first + " ind/name");
+                  }
+                  else if (pnv4.first == "TANGENT") {
+                    IndName tangent;
+                    if (! valueIndName(pnv4.second, tangent))
+                      return errorMsg("Invalid " + id + "/" + pnv4.first + " ind/name");
+                  }
+                  else {
+                    return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                    "/" + pnv3.first + "/" + pnv4.first);
+                  }
+                }
+              }
+            }
+            else if (pnv3.first == "extensions") {
+              if (! pnv3.second->isObject())
+                return errorMsg("Invalid JSON " + id + "/" + pnv2.first + "/" +
+                                pnv3.first);
+
+              auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+              for (const auto &pnv4 : obj4->nameValueMap()) {
+                if (pnv4.first == "KHR_materials_variants") {
+                  if (! pnv4.second->isObject())
+                    return errorMsg("Invalid JSON " + id + "/" + pnv2.first + "/" +
+                                    pnv3.first + "/" + pnv4.first + " data type");
+
+                  auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                  for (const auto &pnv5 : obj5->nameValueMap()) {
+                    if (pnv5.first == "mappings") {
+                      if (! pnv5.second->isArray())
+                        return errorMsg("Invalid JSON " + id + "/" + pnv2.first + "/" +
+                                        pnv3.first + "/" + pnv4.first + "/" + pnv5.first +
+                                        " value type");
+
+                      auto *arr6 = pnv5.second->cast<CJson::Array>();
+
+                      for (const auto &pv6 : arr6->values()) {
+                        if (! pv6->isObject())
+                          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + "/" +
+                                          pnv3.first + "/" + pnv4.first + "/" + pnv5.first +
+                                          " data type");
+
+                        auto *obj7 = pv6->cast<CJson::Object>();
+
+                        for (const auto &pnv7 : obj7->nameValueMap()) {
+                          if      (pnv7.first == "material") {
+                            OptReal material;
+                            if (! valueOptNumber(pnv7.second, material))
+                              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                              pnv3.first + "/" + pnv4.first + "/" +
+                                              pnv5.first + "/" + pnv7.first + " number");
+                          }
+                          else if (pnv7.first == "variants") {
+                            if (! pnv7.second->isArray())
+                              return errorMsg("Invalid JSON " + id + "/" + pnv2.first +
+                                              "/" + pnv3.first + "/" + pnv4.first + "/" +
+                                              pnv5.first + "/" + pnv7.first + " value type");
+
+                             auto *arr8 = pnv7.second->cast<CJson::Array>();
+
+                             for (const auto &pv8 : arr8->values()) {
+                                OptReal variant;
+                                if (! valueOptNumber(pv8, variant))
+                                  return errorMsg("Invalid " + id + "/" + pnv2.first +
+                                                  "/" + pnv3.first + "/" + pnv4.first + "/" +
+                                                  pnv5.first + "/" + pnv7.first + " number");
+                             }
+                          }
+                          else
+                            return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                            "/" + pnv3.first + "/" + pnv4.first + "/" +
+                                            pnv5.first + "/" + pnv7.first);
+                        }
+                      }
+                    }
+                    else {
+                      return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                      "/" + pnv3.first + "/" + pnv4.first + "/" + pnv5.first);
+                    }
+                  }
+                }
+                else {
+                  TODOValue("Unhandled " + id + "/" + pnv2.first + "/" +
+                            pnv3.first + "/" + pnv4.first, pnv4.second);
+                }
+              }
+            }
+            else {
+              debugValueMsg("  " + id + "/" + pnv3.first, pnv3.second);
+            }
+          }
+
+          mesh.primitives.push_back(primitive);
+        }
+      }
+      else if (pnv2.first == "weights") {
+        if (! pnv2.second->isArray())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first);
+
+        auto *arr2 = pnv2.second->cast<CJson::Array>();
+
+        for (const auto &pv2 : arr2->values()) {
+          double r;
+          if (! valueNumber(pv2, r))
+            return errorMsg("Invalid " + id + "/" + pnv2.first + " value");
+        }
+      }
+      else if (pnv2.first == "extras") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " data");
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          if (pnv3.first == "targetNames") {
+            auto *arr3 = pnv3.second->cast<CJson::Array>();
+
+            for (const auto &pv3 : arr3->values()) {
+              std::string name;
+              if (! valueString(pv3, name))
+                return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first + " value");
+            }
+          }
+          else
+            debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first, pnv3.second);
+        }
+      }
+      else if (pnv2.first == "extensions") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " data");
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first, pnv3.second);
+        }
+      }
+      else {
+        debugValueMsg("  " + id + "/" + pnv2.first, pnv2.second);
+      }
+    }
+
+    return true;
+  };
+
+  auto readNode = [&](CJson::Object *jobj, Node &node, const std::string &id) {
+    for      (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "name") {
+        if (! valueString(pnv2.second, node.name))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else if (pnv2.first == "mesh") {
+        if (! valueIndName(pnv2.second, node.mesh))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "matrix") {
+        std::vector<float> rvalues;
+        if (! arrayNumbers(pnv2.second, rvalues))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        if (rvalues.size() != 16)
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array size");
+
+        CGLMatrix3D m;
+        m.setData(&rvalues[0]);
+
+        node.matrix = m;
+      }
+      else if (pnv2.first == "children") {
+        if (! pnv2.second->isArray())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        auto *arr2 = pnv2.second->cast<CJson::Array>();
+
+        for (const auto &pv3 : arr2->values()) {
+          IndName indName;
+          if (! valueIndName(pv3, indName))
+            return errorMsg("Invalid " + id + "/" + pnv2.first + " child");
+
+          node.children.push_back(indName);
+        }
+      }
+      else if (pnv2.first == "meshes") {
+        if (! pnv2.second->isArray())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        auto *arr2 = pnv2.second->cast<CJson::Array>();
+
+        for (const auto &pv3 : arr2->values()) {
+          if (! pv3->isString())
+            return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+
+          std::string str;
+          (void) valueString(pv3, str);
+        }
+
+        TODO("Unhandled " + id + " " + pnv2.first);
+      }
+      else if (pnv2.first == "skin") {
+        if (! valueIndName(pnv2.second, node.skin))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "rotation") {
+        std::vector<float> rvalues;
+        if (! arrayNumbers(pnv2.second, rvalues))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        if (rvalues.size() != 4)
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array size");
+
+        node.rotation = Vec4(rvalues[0], rvalues[1], rvalues[2], rvalues[3]);
+      }
+      else if (pnv2.first == "scale") {
+        std::vector<float> rvalues;
+        if (! arrayNumbers(pnv2.second, rvalues))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        if (rvalues.size() != 3)
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array size");
+
+        node.scale = Vec3(rvalues[0], rvalues[1], rvalues[2]);
+      }
+      else if (pnv2.first == "translation") {
+        std::vector<float> rvalues;
+        if (! arrayNumbers(pnv2.second, rvalues))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        if (rvalues.size() != 3)
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array size");
+
+        node.translation = Vec3(rvalues[0], rvalues[1], rvalues[2]);
+      }
+      else if (pnv2.first == "camera") {
+        if (! valueLong(pnv2.second, node.camera))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "extensions") {
+        //TODOValue("Unhandled " + id + "/" + pnv2.first, pnv2.second);
+
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " type");
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          if      (pnv3.first == "KHR_lights_punctual") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+
+            auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj4->nameValueMap()) {
+              if (pnv4.first == "light") {
+                IndName ind;
+                if (! valueIndName(pnv4.second, ind))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                  "/" + pnv4.first + " name");
+              }
+              else {
+                debugValueMsg("Invalid name " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + "/" + pnv4.first, pnv4.second);
+              }
+            }
+          }
+          else if (pnv3.first == "EXT_mesh_gpu_instancing") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+
+            auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj4->nameValueMap()) {
+              if (pnv4.first == "attributes") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                  "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                for (const auto &pnv5 : obj5->nameValueMap()) {
+                  if      (pnv5.first == "TRANSLATION") {
+                    long ind;
+                    if (! valueLong(pnv5.second, ind))
+                      return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                      "/" + pnv4.first + "/" + pnv5.first + " value");
+                  }
+                  else if (pnv5.first == "ROTATION") {
+                    long ind;
+                    if (! valueLong(pnv5.second, ind))
+                      return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                      "/" + pnv4.first + "/" + pnv5.first + " value");
+                  }
+                  else if (pnv5.first == "SCALE") {
+                    long ind;
+                    if (! valueLong(pnv5.second, ind))
+                      return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                      "/" + pnv4.first + "/" + pnv5.first + " value");
+                  }
+                  else
+                    debugValueMsg("Invalid name " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                  "/" + pnv4.first + "/" + pnv5.first, pnv5.second);
+                }
+              }
+              else {
+                debugValueMsg("Invalid name " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + "/" + pnv4.first, pnv4.second);
+              }
+            }
+          }
+          else {
+            debugValueMsg("Invalid name " + id + "/" + pnv2.first + "/" +
+                          pnv3.first, pnv3.second);
+          }
+        }
+      }
+      else if (pnv2.first == "extras") {
+        //TODOValue("Unhandled " + id + "/" + pnv2.first, pnv2.second);
+
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          if (pnv3.first == "name") {
+            std::string name;
+            if (! valueString(pnv3.second, name))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first + " string");
+          }
+          else {
+            debugValueMsg("Invalid name " + id + "/" + pnv2.first + "/" + pnv3.first, pnv3.second);
+          }
+        }
+      }
+      else {
+        debugValueMsg("  " + id + "/" + pnv2.first, pnv2.second);
+      }
+    }
+
+    return true;
+  };
+
+  auto readImage = [&](CJson::Object *jobj, Image &image, const std::string &id) {
+    auto processNameValue1 = [&](const std::string &name, const CJson::ValueP &nvalue) {
+      if      (name == "bufferView") {
+        if (! valueIndName(nvalue, image.bufferView))
+          return errorMsg("Invalid " + id + "/" + name + " ind/name");
+      }
+      else if (name == "mimeType") {
+        if (! valueString(nvalue, image.mimeType))
+          return errorMsg("Invalid " + id + "/" + name + " string");
+      }
+      else if (name == "name") {
+        if (! valueString(nvalue, image.name))
+          return errorMsg("Invalid " + id + "/" + name + " string");
+      }
+      else if (name == "url") {
+        if (! valueString(nvalue, image.url))
+          return errorMsg("Invalid " + id + "/" + name + " string");
+      }
+      else if (name == "uri") {
+        if (! valueString(nvalue, image.uri))
+          return errorMsg("Invalid " + id + "/" + name + " string");
+      }
+      else if (name == "width") {
+        if (! valueLong(nvalue, image.width))
+          return errorMsg("Invalid " + id + "/" + name + " value");
+      }
+      else if (name == "height") {
+        if (! valueLong(nvalue, image.height))
+          return errorMsg("Invalid " + id + "/" + name + " value");
+      }
+      else {
+        debugMsg("  " + id + "/" + name + " : " + nvalue->typeName());
+        return false;
+      }
+
+      return true;
+    };
+
+    auto processNameValue = [&](const std::string &name, const CJson::ValueP &nvalue) {
+      if      (name == "bufferView") {
+        if (! valueIndName(nvalue, image.bufferView))
+          return errorMsg("Invalid images/" + name + " ind/name");
+      }
+      else if (name == "mimeType") {
+        if (! valueString(nvalue, image.mimeType))
+          return errorMsg("Invalid images/" + name + " string");
+      }
+      else if (name == "name") {
+        if (! valueString(nvalue, image.name))
+          return errorMsg("Invalid images/" + name + " string");
+      }
+      else if (name == "url") {
+        if (! valueString(nvalue, image.url))
+          return errorMsg("Invalid images/" + name + " string");
+      }
+      else if (name == "uri") {
+        if (! valueString(nvalue, image.uri))
+          return errorMsg("Invalid images/" + name + " string");
+      }
+      else if (name == "width") {
+        if (! valueLong(nvalue, image.width))
+          return errorMsg("Invalid images/" + name + " number");
+      }
+      else if (name == "height") {
+        if (! valueLong(nvalue, image.height))
+          return errorMsg("Invalid images/" + name + " number");
+      }
+      else if (name == "extensions") {
+        if (! nvalue->isObject())
+          return errorMsg("Invalid images/" + name);
+
+        auto *obj2 = nvalue->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj2->nameValueMap()) {
+          if (pnv3.first == "KHR_binary_glTF") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid image " + name + "/" + pnv3.first);
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if (! processNameValue1(pnv4.first, pnv4.second))
+                return false;
+            }
+          }
+          else {
+            debugMsg("  " + id + "/" + name + "/" + pnv3.first);
+          }
+        }
+      }
+      else {
+        debugMsg("  " + id + "/" + name + " : " + nvalue->typeName());
+        return false;
+      }
+
+      return true;
+    };
+
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if (! processNameValue(pnv2.first, pnv2.second))
+        return false;
+    }
+
+    return true;
+  };
+
+  auto readMaterial = [&](CJson::Object *jobj, Material &material, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "name") {
+        if (! valueString(pnv2.second, material.name))
+          return errorMsg("Invalid " + id + " name string");
+      }
+      else if (pnv2.first == "normalTexture") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        readMaterialTexture(obj3, material.normalTexture, id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "pbrMetallicRoughness") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          if      (pnv3.first == "metallicFactor") {
+            if (! valueOptNumber(pnv3.second, material.metallicFactor))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " number");
+          }
+          else if (pnv3.first == "roughnessFactor") {
+            if (! valueOptNumber(pnv3.second, material.roughnessFactor))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " number");
+          }
+          else if (pnv3.first == "metallicRoughnessTexture") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv3.first);
+
+            auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+            readMaterialTexture(obj4, material.metallicRoughnessTexture,
+                                id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else if (pnv3.first == "baseColorFactor") {
+            if (! valueOptColor(pnv3.second, material.baseColorFactor))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " color");
+          }
+          else if (pnv3.first == "baseColorTexture") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + " baseColorTexture");
+
+            auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+            readMaterialTexture(obj4, material.baseColorTexture,
+                                id + "/" + pnv2.first + "/" + pnv3.first);
+          }
+          else {
+            TODOValue("Invalid " + id + "/" + pnv2.first + " name '" +
+                      pnv3.first + "'", pnv3.second);
+          }
+        }
+      }
+      else if (pnv2.first == "technique") {
+        if (! valueString(pnv2.second, material.technique))
+          return errorMsg("Invalid " + id + "/technique number");
+      }
+      else if (pnv2.first == "values") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/values");
+
+        auto *obj2 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj2->nameValueMap()) {
+          if      (pnv3.first == "ambient") {
+            if (! valueOptColor(pnv3.second, material.ambient))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " color");
+          }
+          else if (pnv3.first == "diffuse") {
+            if (! valueOptColor(pnv3.second, material.diffuse))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " color");
+          }
+          else if (pnv3.first == "emission") {
+            if (! valueOptColor(pnv3.second, material.emission))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " color");
+          }
+          else if (pnv3.first == "shininess") {
+            if (! valueOptNumber(pnv3.second, material.shininess))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + "/ value");
+          }
+          else if (pnv3.first == "specular") {
+            if (! valueOptColor(pnv3.second, material.specular))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " color");
+          }
+          else if (pnv3.first == "transparency") {
+            if (! valueOptNumber(pnv3.second, material.transparency))
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " value");
+          }
+          else {
+            debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first, pnv3.second);
+          }
+        }
+      }
+      else if (pnv2.first == "occlusionTexture") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        readMaterialTexture(obj3, material.occlusionTexture, id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "alphaCutoff") {
+        // TODO
+        if (! valueOptNumber(pnv2.second, material.alphaCutoff))
+          return errorMsg("Invalid " + id + "/doubleSided value");
+
+        //TODOValue("Invalid " + id + "/alphaCutoff", pnv2.second);
+      }
+      else if (pnv2.first == "alphaMode") {
+        // TODO
+        if (! valueString(pnv2.second, material.alphaMode))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+
+        //TODOValue("Invalid " + id + "/alphaMode", pnv2.second);
+      }
+      else if (pnv2.first == "doubleSided") {
+        if (! valueBool(pnv2.second, material.doubleSided))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " value");
+      }
+      else if (pnv2.first == "emissiveFactor") {
+        std::vector<float> rvalues;
+        if (! arrayNumbers(pnv2.second, rvalues))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array");
+
+        if (rvalues.size() != 3)
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " array size");
+
+        material.emissiveFactor = Vec3(rvalues[0], rvalues[1], rvalues[2]);
+      }
+      else if (pnv2.first == "emissiveTexture") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        readMaterialTexture(obj3, material.emissiveTexture, id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "extensions") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " values");
+
+        auto *obj2 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj2->nameValueMap()) {
+          if      (pnv3.first == "KHR_materials_anisotropy") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "anisotropyStrength") {
+                if (! valueOptNumber(pnv4.second, material.anisotropyStrength))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "anisotropyRotation") {
+                if (! valueOptNumber(pnv4.second, material.anisotropyRotation))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "anisotropyTexture") {
+                auto *obj4 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj4, material.anisotropyTexture,
+                                    id + "/" + pnv2.first + "/" +
+                                    pnv3.first + "/" + pnv4.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_clearcoat") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "clearcoatFactor") {
+                if (! valueOptNumber(pnv4.second, material.clearcoatFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "clearcoatRoughnessFactor") {
+                if (! valueOptNumber(pnv4.second, material.clearcoatRoughnessFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "clearcoatTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv3.first);
+
+                auto *obj4 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj4, material.clearcoatTexture,
+                                    id + "/" + pnv2.first + "/" +
+                                    pnv3.first + "/" + pnv4.first);
+              }
+              else if (pnv4.first == "clearcoatNormalTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv3.first);
+
+                auto *obj4 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj4, material.clearcoatNormalTexture,
+                                    id + "/" + pnv2.first + "/" +
+                                    pnv3.first + "/" + pnv4.first);
+              }
+              else if (pnv4.first == "clearcoatRoughnessTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv3.first);
+
+                auto *obj4 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj4, material.clearcoatRoughnessTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_dispersion") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if (pnv4.first == "dispersion") {
+                if (! valueOptNumber(pnv4.second, material.dispersion))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_ior") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if (pnv4.first == "ior") {
+                if (! valueOptNumber(pnv4.second, material.ior))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_iridescence") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "iridescenceFactor") {
+                if (! valueOptNumber(pnv4.second, material.iridescenceFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "iridescenceIor") {
+                if (! valueOptNumber(pnv4.second, material.iridescenceIor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "iridescenceTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.iridescenceTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "iridescenceThicknessTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.iridescenceThicknessTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "iridescenceThicknessMinimum") {
+                if (! valueOptNumber(pnv4.second, material.iridescenceThicknessMinimum))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else if (pnv4.first == "iridescenceThicknessMaximum") {
+                if (! valueOptNumber(pnv4.second, material.iridescenceThicknessMaximum))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " value");
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_transmission") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "transmissionFactor") {
+                if (! valueOptNumber(pnv4.second, material.transmissionFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "transmissionTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.transmissionTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_diffuse_transmission") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "diffuseTransmissionFactor") {
+                if (! valueOptNumber(pnv4.second, material.diffuseTransmissionFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "diffuseTransmissionTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.diffuseTransmissionTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "diffuseTransmissionColorFactor") {
+                if (! valueOptColor(pnv4.second, material.diffuseTransmissionColorFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " color");
+
+              }
+              else if (pnv4.first == "diffuseTransmissionColorTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.diffuseTransmissionColorTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_volume") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "attenuationColor") {
+                if (! valueOptColor(pnv4.second, material.attenuationColor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "attenuationDistance") {
+                if (! valueOptNumber(pnv4.second, material.attenuationDistance))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "thicknessFactor") {
+                if (! valueOptNumber(pnv4.second, material.thicknessFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "thicknessTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.thicknessTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_ior") {
+            TODOValue("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first,
+                      pnv3.second);
+          }
+          else if (pnv3.first == "KHR_materials_emissive_strength") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "emissiveStrength") {
+                if (! valueOptNumber(pnv4.second, material.emissiveStrength))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_sheen") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "sheenColorFactor") {
+                if (! valueOptColor(pnv4.second, material.sheenColorFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " color");
+              }
+              else if (pnv4.first == "sheenRoughnessFactor") {
+                if (! valueOptNumber(pnv4.second, material.sheenRoughnessFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else if (pnv4.first == "sheenColorTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.sheenColorTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "sheenRoughnessTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.sheenRoughnessTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_specular") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "specularTexture" ||
+                       pnv4.first == "specularColorTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.specularTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "specularColorFactor") {
+                if (! valueOptColor(pnv4.second, material.specularColorFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " color");
+              }
+              else if (pnv4.first == "specularFactor") {
+                if (! valueOptNumber(pnv4.second, material.specularFactor))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first + " number");
+              }
+              else
+                debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                              pnv4.first, pnv4.second);
+            }
+          }
+          else if (pnv3.first == "KHR_materials_pbrSpecularGlossiness") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              if      (pnv4.first == "diffuseTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.diffuseTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+              else if (pnv4.first == "specularGlossinessTexture") {
+                if (! pnv4.second->isObject())
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                                  pnv3.first + "/" + pnv4.first);
+
+                auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+                readMaterialTexture(obj5, material.specularGlossinessTexture,
+                                    id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                                    pnv4.first);
+              }
+            }
+          }
+          else if (pnv3.first == "KHR_materials_unlit") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" +
+                              pnv3.first + " values");
+
+            auto *obj3 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj3->nameValueMap()) {
+              debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first + "/" +
+                            pnv4.first, pnv4.second);
+            }
+          }
+          else
+            debugValueMsg("  " + id + "/" + pnv2.first + "/" + pnv3.first, pnv3.second);
+        }
+      }
+      else {
+        warnMsg("Invalid " + id + " pnv3.first " + pnv2.first);
+      }
+    }
+
+    return true;
+  };
+
+  // GL_LINEAR               =  0x2601 (9729)
+  // GL_LINEAR_MIPMAP_LINEAR =  0x2703 (9987)
+  auto readSampler = [&](CJson::Object *jobj, Sampler &sampler, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "name") {
+        if (! valueString(pnv2.second, sampler.name))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else if (pnv2.first == "magFilter") {
+        if (! valueLong(pnv2.second, sampler.magFilter))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "minFilter") {
+        if (! valueLong(pnv2.second, sampler.minFilter))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "wrapS") {
+        if (! valueLong(pnv2.second, sampler.wrapS))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else if (pnv2.first == "wrapT") {
+        if (! valueLong(pnv2.second, sampler.wrapT))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " number");
+      }
+      else {
+        debugValueMsg("  " + id + "/" + pnv2.first, pnv2.second);
+      }
+    }
+
+    return true;
+  };
+
+  auto readScene = [&](CJson::Object *jobj, Scene &scene, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "name") {
+        if (! valueString(pnv2.second, scene.name))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " string");
+      }
+      else if (pnv2.first == "nodes") {
+        if (! pnv2.second->isArray())
+          return errorMsg("Invalid JSON " + id + "/" + pnv2.first + " value");
+
+        auto *arr2 = pnv2.second->cast<CJson::Array>();
+
+        for (const auto &pv2 : arr2->values()) {
+          IndName indName;
+          if (! valueIndName(pv2, indName))
+            return errorMsg("Invalid " + id + "/" + pnv2.first);
+
+          scene.nodes.push_back(indName);
+        }
+      }
+      else if (pnv2.first == "extensions") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " type");
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          debugValueMsg("Invalid " + id + "/" + pnv2.first + " name " +
+                        pnv3.first, pnv3.second);
+        }
+      }
+      else {
+        debugValueMsg("  " + id + "/" + pnv2.first, pnv2.second);
+      }
+    }
+
+    return true;
+  };
+
+  auto readTexture = [&](CJson::Object *jobj, Texture &texture, const std::string &id) {
+    for (const auto &pnv2 : jobj->nameValueMap()) {
+      if      (pnv2.first == "source") {
+        if (! valueIndName(pnv2.second, texture.source))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " ind/name");
+      }
+      else if (pnv2.first == "sampler") {
+        if (! valueIndName(pnv2.second, texture.sampler))
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " ind/name");
+      }
+      else if (pnv2.first == "format") {
+        if (! valueLong(pnv2.second, texture.format))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "internalFormat") {
+        if (! valueLong(pnv2.second, texture.internalFormat))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "target") {
+        if (! valueLong(pnv2.second, texture.target))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "type") {
+        if (! valueLong(pnv2.second, texture.type))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "name") {
+        if (! valueString(pnv2.second, texture.name))
+          return errorMsg("Invalid " + id + "/" + pnv2.first);
+      }
+      else if (pnv2.first == "extensions") {
+        if (! pnv2.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv2.first + " type");
+
+        auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+        for (const auto &pnv3 : obj3->nameValueMap()) {
+          if (pnv3.first == "EXT_texture_webp") {
+            if (! pnv3.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first);
+
+            auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+            for (const auto &pnv4 : obj4->nameValueMap()) {
+              if (pnv4.first == "source") {
+                if (! valueIndName(pnv4.second, texture.source))
+                  return errorMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                                  "/" + pnv4.first + " ind/name");
+              }
+              else {
+                debugValueMsg("Invalid " + id + "/" + pnv2.first + "/" + pnv3.first +
+                              " name " + pnv4.first, pnv4.second);
+              }
+            }
+          }
+          else {
+            debugValueMsg("Invalid " + id + "/" + pnv2.first + " name " +
+                          pnv3.first, pnv3.second);
+          }
+        }
+
+        //debugValueMsg("Invalid " + id + "/" + pnv2.first, pnv2.second);
+      }
+      else {
+        debugValueMsg("Invalid " + id + " name " + pnv2.first, pnv2.second);
+      }
+    }
+
+    return true;
+  };
+
+  auto readAnimationChannel = [&](CJson::Object *jobj, AnimationChannel &channel,
+                                  const std::string &id) {
+    for (const auto &pnv3 : jobj->nameValueMap()) {
+      if      (pnv3.first == "target") {
+        auto id1 = id + "/" + pnv3.first;
+
+        if (! pnv3.second->isObject())
+          return errorMsg("Invalid JSON " + id1 + " data");
+
+        auto *obj4 = pnv3.second->cast<CJson::Object>();
+
+        for (const auto &pnv4 : obj4->nameValueMap()) {
+          if      (pnv4.first == "node") {
+            if (! valueIndName(pnv4.second, channel.node))
+              return errorMsg("Invalid " + id1 + "/" + pnv4.first + " value");
+          }
+          else if (pnv4.first == "path") {
+            if (! valueString(pnv4.second, channel.path))
+              return errorMsg("Invalid " + id1 + "/" + pnv4.first + " value");
+          }
+          else if (pnv4.first == "extensions") {
+            if (! pnv4.second->isObject())
+              return errorMsg("Invalid JSON " + id1 + "/" + pnv4.first + " data");
+
+            auto *obj5 = pnv4.second->cast<CJson::Object>();
+
+            for (const auto &pnv5 : obj5->nameValueMap()) {
+              auto id2 = id1 + "/" + pnv4.first;
+
+              if (pnv5.first == "KHR_animation_pointer") {
+                if (! pnv5.second->isObject())
+                  return errorMsg("Invalid JSON " + id2 + " data");
+
+                auto *obj6 = pnv5.second->cast<CJson::Object>();
+
+                for (const auto &pnv6 : obj6->nameValueMap()) {
+                  auto id3 = id2 + "/" + pnv5.first;
+
+                  if (pnv6.first == "pointer") {
+                    TODOValue("Unhandled " + id3 + "/" + pnv6.first, pnv6.second);
+                  }
+                  else
+                    TODOValue("Unhandled " + id3 + "/" + pnv6.first, pnv6.second);
+                }
+              }
+              else
+                TODOValue("Unhandled " + id2 + "/" + pnv5.first, pnv5.second);
+            }
+          }
+          else
+            TODOValue("Unhandled " + id + " target name " + pnv4.first, pnv4.second);
+        }
+      }
+      else if (pnv3.first == "sampler") {
+        if (! valueLong(pnv3.second, channel.sampler))
+          return errorMsg("Invalid " + id + "/" + pnv3.first + " value");
+      }
+      else
+        TODOValue("Unhandled " + id + "/" + pnv3.first, pnv3.second);
+    }
+
+    return true;
+  };
+
+  auto readAsset = [&](CJson::Object *obj1, const std::string &id) {
+    jsonData.asset.set = true;
+
+    for (const auto &pnv1 : obj1->nameValueMap()) {
+      if      (pnv1.first == "generator") {
+        if (! valueString(pnv1.second, jsonData.asset.generator))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " string");
+      }
+      else if (pnv1.first == "minVersion") {
+        std::string minVersion;
+        if (! valueString(pnv1.second, minVersion))
+          return errorMsg("Invalid " + id + "/" + pnv1.first + " string");
+      }
+      else if (pnv1.first == "version") {
+        if (pnv1.second->isString()) {
+          if (! valueString(pnv1.second, jsonData.asset.versionId))
+            return errorMsg("Invalid " + id + "/" + pnv1.first + " string");
+        }
+        else {
+          if (! valueLong(pnv1.second, jsonData.asset.versionNumber))
+            return errorMsg("Invalid " + id + "/" + pnv1.first + " number");
+        }
+      }
+      else if (pnv1.first == "premultipliedAlpha") {
+        // TODO : bool
+        TODOValue("Unhandled " + id + "/" + pnv1.first, pnv1.second);
+      }
+      else if (pnv1.first == "profile") {
+        // TODO : object
+        TODOValue("Unhandled " + id + "/" + pnv1.first, pnv1.second);
+      }
+      else if (pnv1.first == "copyright") {
+        if (! valueString(pnv1.second, jsonData.asset.copyright))
+          return errorMsg("Invalid " + id + "/" + pnv1.first);
+      }
+      else if (pnv1.first == "extras") {
+        //TODOValue("Unhandled " + id + "/" + pnv1.first, pnv1.second);
+
+        if (! pnv1.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv1.first);
+
+        auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+        for (const auto &pnv2 : obj2->nameValueMap()) {
+          if      (pnv2.first == "title") {
+            std::string title;
+            if (! valueString(pnv2.second, title))
+              return errorMsg("Invalid " + id + "/" + pnv1.first + "/" +
+                              pnv2.first + " string");
+          }
+          else if (pnv2.first == "author") {
+            std::string author;
+            if (! valueString(pnv2.second, author))
+              return errorMsg("Invalid " + id + "/" + pnv1.first + "/" +
+                              pnv2.first + " string");
+          }
+          else if (pnv2.first == "license") {
+            std::string license;
+            if (! valueString(pnv2.second, license))
+              return errorMsg("Invalid " + id + "/" + pnv1.first + "/" +
+                              pnv2.first + " string");
+          }
+          else if (pnv2.first == "source") {
+            std::string source;
+            if (! valueString(pnv2.second, source))
+              return errorMsg("Invalid " + id + "/" + pnv1.first + "/" +
+                              pnv2.first + " string");
+          }
+          else {
+            debugValueMsg("Invalid name " + id + "/" + pnv1.first + "/" +
+                          pnv2.first, pnv2.second);
+          }
+        }
+      }
+      else if (pnv1.first == "extensions") {
+        if (! pnv1.second->isObject())
+          return errorMsg("Invalid " + id + "/" + pnv1.first);
+
+        auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+        for (const auto &pnv2 : obj2->nameValueMap()) {
+          if (pnv2.first == "KHR_xmp") {
+            if (! pnv2.second->isObject())
+              return errorMsg("Invalid " + id + "/" + pnv1.first + "/" +
+                              pnv2.first + " type");
+
+            auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+            for (const auto &pnv3 : obj3->nameValueMap()) {
+              if (pnv3.first == "packet") {
+                long packet;
+                if (! valueLong(pnv3.second, packet))
+                  return errorMsg("Invalid " + id + "/" + pnv1.first + "/" + pnv2.first +
+                                  pnv3.first + " value");
+              }
+              else
+                debugValueMsg(id + "/" + pnv1.first + "/" + pnv2.first + "/" +
+                              pnv3.first, pnv3.second);
+            }
+          }
+        }
+      }
+      else {
+        debugValueMsg("  " + id + "/" + pnv1.first, pnv1.second);
+      }
+    }
+
+    return true;
+  };
+
+  //---
+
   auto *obj = value->cast<CJson::Object>();
 
   for (const auto &pnv : obj->nameValueMap()) {
     if      (pnv.first == "accessors") {
-      auto readAccessor = [&](CJson::Object *jobj, Accessor &accessor) {
-        for (const auto &pnv1 : jobj->nameValueMap()) {
-          if      (pnv1.first == "bufferView") {
-            if (! valueIndName(pnv1.second, accessor.bufferView))
-              return errorMsg("Invalid accessors bufferView ind/name");
-          }
-          else if (pnv1.first == "byteOffset") {
-            if (! valueLong(pnv1.second, accessor.byteOffset))
-              return errorMsg("Invalid accessors byteOffset number");
-          }
-          else if (pnv1.first == "byteStride") {
-            if (! valueLong(pnv1.second, accessor.byteStride))
-              return errorMsg("Invalid accessors byteStride number");
-          }
-          else if (pnv1.first == "type") {
-            if (! valueString(pnv1.second, accessor.type))
-              return errorMsg("Invalid accessors type string");
-          }
-          else if (pnv1.first == "componentType") {
-            if (! valueLong(pnv1.second, accessor.componentType))
-              return errorMsg("Invalid accessors componentType number");
-          }
-          else if (pnv1.first == "count") {
-            if (! valueLong(pnv1.second, accessor.count))
-              return errorMsg("Invalid accessors count number");
-          }
-          else if (pnv1.first == "min") {
-            if (! pnv1.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " max data");
-
-            auto *maxArr = pnv1.second->cast<CJson::Array>();
-
-            for (const auto &pv2 : maxArr->values()) {
-              double r;
-              if (! valueNumber(pv2, r))
-                return errorMsg("Invalid min number");
-
-              accessor.min.push_back(r);
-            }
-          }
-          else if (pnv1.first == "max") {
-            if (! pnv1.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " max data");
-
-            auto *maxArr = pnv1.second->cast<CJson::Array>();
-
-            for (const auto &pv2 : maxArr->values()) {
-              double r;
-              if (! valueNumber(pv2, r))
-                return errorMsg("Invalid max number");
-
-              accessor.max.push_back(r);
-            }
-          }
-          else if (pnv1.first == "name") {
-            if (! valueString(pnv1.second, accessor.name))
-              return errorMsg("Invalid accessor name");
-          }
-          else if (pnv1.first == "normalized") {
-            // TODO
-            TODOValue("Unhandled accessor normalized", pnv1.second);
-          }
-          else if (pnv1.first == "sparse") {
-            accessor.sparse = true;
-
-            if (! pnv1.second->isObject())
-              return errorMsg("Invalid JSON " + pnv.first + " sparse data");
-
-            auto *sparseObj = pnv1.second->cast<CJson::Object>();
-
-            for (const auto &pnv2 : sparseObj->nameValueMap()) {
-              auto name = pnv2.first;
-
-              if      (name == "count") {
-                if (! valueLong(pnv2.second, accessor.sparseCount))
-                  return errorMsg("Invalid accessor sparse count");
-              }
-              else if (name == "indices") {
-                if (! pnv2.second->isObject())
-                  return errorMsg("Invalid JSON " + pnv.first + " indices data");
-
-                auto *sparseIndicesObj = pnv2.second->cast<CJson::Object>();
-
-                for (const auto &pnv3 : sparseIndicesObj->nameValueMap()) {
-                  auto name1 = pnv3.first;
-
-                  if      (name1 == "bufferView") {
-                    if (! valueLong(pnv3.second, accessor.sparseIndicesBufferView))
-                      return errorMsg("Invalid accessor sparse indices bufferView");
-                  }
-                  else if (name1 == "componentType") {
-                    if (! valueLong(pnv3.second, accessor.sparseIndicesComponentType))
-                      return errorMsg("Invalid accessor sparse indices componentType");
-                  }
-                  else
-                    return errorMsg("Unhandled accessor sparse indices name " + name1);
-                }
-              }
-              else if (name == "values") {
-                if (! pnv2.second->isObject())
-                  return errorMsg("Invalid JSON " + pnv.first + " values data");
-
-                auto *sparseValuesObj = pnv2.second->cast<CJson::Object>();
-
-                for (const auto &pnv3 : sparseValuesObj->nameValueMap()) {
-                  auto name1 = pnv3.first;
-
-                  if (name1 == "bufferView") {
-                    if (! valueLong(pnv3.second, accessor.sparseValuesBufferView))
-                      return errorMsg("Invalid accessor sparse values bufferView");
-                  }
-                  else
-                    return errorMsg("Unhandled accessor sparse values name " + name1);
-                }
-              }
-              else {
-                return errorMsg("Invalid sparse name " + name);
-              }
-            }
-          }
-          else
-            return errorMsg("Invalid accessors name " + pnv1.first);
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -2260,7 +3995,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Accessor accessor;
 
-          if (! readAccessor(obj1, accessor))
+          if (! readAccessor(obj1, accessor, pnv.first))
             return false;
 
           jsonData.accessors.add(accessor, IndName(-1));
@@ -2270,8 +4005,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " data");
 
@@ -2279,10 +4012,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Accessor accessor;
 
-          if (! readAccessor(obj2, accessor))
+          if (! readAccessor(obj2, accessor, pnv.first))
             return false;
 
-          jsonData.accessors.add(accessor, IndName(name));
+          jsonData.accessors.add(accessor, IndName(pnv1.first));
         }
       }
       else {
@@ -2293,77 +4026,11 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       if (! pnv.second->isObject())
         return errorMsg("Invalid JSON " + pnv.first + " data");
 
-      jsonData.asset.set = true;
-
       auto *obj1 = pnv.second->cast<CJson::Object>();
 
-      for (const auto &pnv1 : obj1->nameValueMap()) {
-        if      (pnv1.first == "generator") {
-          if (! valueString(pnv1.second, jsonData.asset.generator))
-            return errorMsg("Invalid generator string");
-        }
-        else if (pnv1.first == "version") {
-          if (pnv1.second->isString()) {
-            if (! valueString(pnv1.second, jsonData.asset.versionId))
-              return errorMsg("Invalid version string");
-          }
-          else {
-            if (! valueLong(pnv1.second, jsonData.asset.versionNumber))
-              return errorMsg("Invalid version number");
-          }
-        }
-        else if (pnv1.first == "premultipliedAlpha") {
-          // TODO : bool
-          TODOValue("Unhandled asset premultipliedAlpha", pnv1.second);
-        }
-        else if (pnv1.first == "profile") {
-          // TODO : object
-          TODOValue("Unhandled asset profile", pnv1.second);
-        }
-        else if (pnv1.first == "copyright") {
-          if (! valueString(pnv1.second, jsonData.asset.copyright))
-            return errorMsg("Invalid asset copyright");
-        }
-        else {
-          debugMsg("  " + pnv.first + "/" + pnv1.first + " : " + pnv1.second->typeName());
-        }
-      }
+      readAsset(obj1, pnv.first);
     }
     else if (pnv.first == "bufferViews") {
-      auto readBufferView = [&](CJson::Object *jobj, BufferView &bufferView) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "buffer") {
-            if (! valueIndName(pnv2.second, bufferView.buffer))
-              return errorMsg("Invalid bufferViews buffer ind/name");
-          }
-          else if (pnv2.first == "byteOffset") {
-            if (! valueLong(pnv2.second, bufferView.byteOffset))
-              return errorMsg("Invalid bufferViews byteOffset number");
-          }
-          else if (pnv2.first == "byteLength") {
-            if (! valueLong(pnv2.second, bufferView.byteLength))
-              return errorMsg("Invalid bufferViews byteLength number");
-          }
-          else if (pnv2.first == "byteStride") {
-            if (! valueLong(pnv2.second, bufferView.byteStride))
-              return errorMsg("Invalid bufferViews byteStride number");
-          }
-          else if (pnv2.first == "target") {
-            if (! valueLong(pnv2.second, bufferView.target))
-              return errorMsg("Invalid bufferViews target number");
-          }
-          else if (pnv2.first == "name") {
-            if (! valueString(pnv2.second, bufferView.name))
-              return errorMsg("Unhandled bufferViews name");
-          }
-          else {
-            return errorMsg("Invalid buffer name " + pnv2.first);
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -2375,7 +4042,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           BufferView bufferView;
 
-          if (! readBufferView(obj2, bufferView))
+          if (! readBufferView(obj2, bufferView, pnv.first))
             return false;
 
           jsonData.bufferViews.add(bufferView, IndName(-1));
@@ -2385,8 +4052,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " data");
 
@@ -2394,10 +4059,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           BufferView bufferView;
 
-          if (! readBufferView(obj2, bufferView))
+          if (! readBufferView(obj2, bufferView, pnv.first))
             return false;
 
-          jsonData.bufferViews.add(bufferView, IndName(name));
+          jsonData.bufferViews.add(bufferView, IndName(pnv1.first));
         }
       }
       else {
@@ -2405,27 +4070,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "buffers") {
-      auto readBuffer = [&](CJson::Object *jobj, Buffer &buffer) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "byteLength") {
-            if (! valueLong(pnv2.second, buffer.byteLength))
-              return errorMsg("Invalid buffers byteLength number");
-          }
-          else if (pnv2.first == "type") {
-            if (! valueString(pnv2.second, buffer.type))
-              return errorMsg("Invalid buffers type name");
-          }
-          else if (pnv2.first == "uri") {
-            if (! valueString(pnv2.second, buffer.uri))
-              return errorMsg("Invalid buffers uri name");
-          }
-          else
-            debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -2437,7 +4081,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Buffer buffer;
 
-          if (! readBuffer(obj2, buffer))
+          if (! readBuffer(obj2, buffer, pnv.first))
             return false;
 
           jsonData.buffers.add(buffer, IndName(-1));
@@ -2447,8 +4091,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -2456,10 +4098,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Buffer buffer;
 
-          if (! readBuffer(obj2, buffer))
+          if (! readBuffer(obj2, buffer, pnv.first))
             return false;
 
-          jsonData.buffers.add(buffer, IndName(name));
+          jsonData.buffers.add(buffer, IndName(pnv1.first));
         }
       }
       else {
@@ -2467,112 +4109,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "images") {
-      auto readImage = [&](CJson::Object *jobj, Image &image) {
-        auto processNameValue1 = [&](const std::string &name, const CJson::ValueP &nvalue) {
-          if      (name == "bufferView") {
-            if (! valueIndName(nvalue, image.bufferView))
-              return errorMsg("Invalid images bufferView ind/name");
-          }
-          else if (name == "mimeType") {
-            if (! valueString(nvalue, image.mimeType))
-              return errorMsg("Invalid images mimeType string");
-          }
-          else if (name == "name") {
-            if (! valueString(nvalue, image.name))
-              return errorMsg("Invalid images name string");
-          }
-          else if (name == "url") {
-            if (! valueString(nvalue, image.url))
-              return errorMsg("Invalid images url string");
-          }
-          else if (name == "uri") {
-            if (! valueString(nvalue, image.uri))
-              return errorMsg("Invalid images uri string");
-          }
-          else if (name == "width") {
-            if (! valueLong(nvalue, image.width))
-              return errorMsg("Invalid images width value");
-          }
-          else if (name == "height") {
-            if (! valueLong(nvalue, image.height))
-              return errorMsg("Invalid images height value");
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + name + " : " + nvalue->typeName());
-            return false;
-          }
-
-          return true;
-        };
-
-        auto processNameValue = [&](const std::string &name, const CJson::ValueP &nvalue) {
-          if      (name == "bufferView") {
-            if (! valueIndName(nvalue, image.bufferView))
-              return errorMsg("Invalid images bufferView ind/name");
-          }
-          else if (name == "mimeType") {
-            if (! valueString(nvalue, image.mimeType))
-              return errorMsg("Invalid images mimeType string");
-          }
-          else if (name == "name") {
-            if (! valueString(nvalue, image.name))
-              return errorMsg("Invalid images name string");
-          }
-          else if (name == "url") {
-            if (! valueString(nvalue, image.url))
-              return errorMsg("Invalid images url string");
-          }
-          else if (name == "uri") {
-            if (! valueString(nvalue, image.uri))
-              return errorMsg("Invalid images uri string");
-          }
-          else if (name == "width") {
-            if (! valueLong(nvalue, image.width))
-              return errorMsg("Invalid images width number");
-          }
-          else if (name == "height") {
-            if (! valueLong(nvalue, image.height))
-              return errorMsg("Invalid images height number");
-          }
-          else if (name == "extensions") {
-            if (! nvalue->isObject())
-              return errorMsg("Invalid image extensions");
-
-            auto *obj2 = nvalue->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj2->nameValueMap()) {
-              if (pnv3.first == "KHR_binary_glTF") {
-                if (! pnv3.second->isObject())
-                  return errorMsg("Invalid image extensions/KHR_binary_glTF");
-
-                auto *obj3 = pnv3.second->cast<CJson::Object>();
-
-                for (const auto &pnv4 : obj3->nameValueMap()) {
-                  if (! processNameValue1(pnv4.first, pnv4.second))
-                    return false;
-                }
-              }
-              else {
-                debugMsg("  " + pnv.first + "/" + name + "/" + pnv3.first);
-              }
-            }
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + name + " : " + nvalue->typeName());
-            return false;
-          }
-
-          return true;
-        };
-
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if (! processNameValue(pnv2.first, pnv2.second))
-            return false;
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -2584,7 +4120,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Image image;
 
-          if (! readImage(obj2, image))
+          if (! readImage(obj2, image, pnv.first))
             return false;
 
           jsonData.images.add(image, IndName(-1));
@@ -2594,8 +4130,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -2603,10 +4137,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Image image;
 
-          if (! readImage(obj2, image))
+          if (! readImage(obj2, image, pnv.first))
             return false;
 
-          jsonData.images.add(image, IndName(name));
+          jsonData.images.add(image, IndName(pnv1.first));
         }
       }
       else {
@@ -2614,309 +4148,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "materials") {
-      auto readMaterial = [&](CJson::Object *jobj, Material &material) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "name") {
-            if (! valueString(pnv2.second, material.name))
-              return errorMsg("Invalid materials name string");
-          }
-          else if (pnv2.first == "normalTexture") {
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid " + pnv.first + " normalTexture");
-
-            auto *obj3 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj3->nameValueMap()) {
-              if      (pnv3.first == "index") {
-                if (! valueLong(pnv3.second, material.normalTexture.index))
-                  return errorMsg("Invalid materials normalTexture index number");
-              }
-              else if (pnv3.first == "texCoord") {
-                if (! valueLong(pnv3.second, material.normalTexture.texCoord))
-                  return errorMsg("Invalid materials normalTexture texCoord number");
-              }
-              else if (pnv3.first == "scale") {
-                // TODO
-                TODOValue("Unhandled materials normalTexture scale", pnv3.second);
-              }
-              else if (pnv3.first == "extensions") {
-                // TODO
-                TODOValue("Unhandled materials normalTexture extensions", pnv3.second);
-              }
-              else {
-                warnMsg("Invalid materials normalTexture name " + pnv3.first);
-              }
-            }
-          }
-          else if (pnv2.first == "pbrMetallicRoughness") {
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid " + pnv.first + " pbrMetallicRoughness");
-
-            auto *obj3 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj3->nameValueMap()) {
-              if      (pnv3.first == "metallicFactor") {
-                if (! valueNumber(pnv3.second, material.metallicFactor))
-                  return errorMsg("Invalid material pbrMetallicRoughness/metallicFactor number");
-              }
-              else if (pnv3.first == "roughnessFactor") {
-                if (! valueNumber(pnv3.second, material.roughnessFactor))
-                  return errorMsg("Invalid material pbrMetallicRoughness/roughnessFactor number");
-              }
-              else if (pnv3.first == "baseColorTexture") {
-                if (! pnv3.second->isObject())
-                  return errorMsg("Invalid " + pnv.first + " baseColorTexture");
-
-                auto *obj4 = pnv3.second->cast<CJson::Object>();
-
-                for (const auto &pnv4 : obj4->nameValueMap()) {
-                  if      (pnv4.first == "index") {
-                    if (! valueLong(pnv4.second, material.baseColorTexture.index))
-                      return errorMsg("Invalid " + pnv.first + " baseColorTexture index number");
-                  }
-                  else if (pnv4.first == "texCoord") {
-                    if (! valueLong(pnv4.second, material.baseColorTexture.texCoord))
-                      return errorMsg("Invalid " + pnv.first + " baseColorTexture texCoord number");
-                  }
-                  else if (pnv4.first == "extensions") {
-                    // TODO
-                    TODOValue("Unhandled material baseColorTexture/extensions", pnv4.second);
-                  }
-                  else {
-                    warnMsg("Invalid material baseColorTexture/name " + pnv4.first);
-                  }
-                }
-              }
-              else if (pnv3.first == "metallicRoughnessTexture") {
-                if (! pnv3.second->isObject())
-                  return errorMsg("Invalid " + pnv.first + " metallicRoughnessTexture");
-
-                auto *obj4 = pnv3.second->cast<CJson::Object>();
-
-                for (const auto &pnv4 : obj4->nameValueMap()) {
-                  if      (pnv4.first == "index") {
-                    if (! valueLong(pnv4.second, material.metallicRoughnessTexture.index))
-                      return errorMsg("Invalid " + pnv.first + " " + pnv3.first + " index number");
-                  }
-                  else if (pnv4.first == "texCoord") {
-                    if (! valueLong(pnv4.second, material.metallicRoughnessTexture.texCoord))
-                      return errorMsg("Invalid " + pnv.first + " " + pnv3.first + " texCoord number");
-                  }
-                  else if (pnv4.first == "extensions") {
-                    // TODO
-                    TODOValue("Unhandled material metallicRoughnessTexture/extensions", pnv4.second);
-                  }
-                  else {
-                    warnMsg("Invalid material metallicRoughnessTexture/name " + pnv4.first);
-                  }
-                }
-              }
-              else if (pnv3.first == "baseColorFactor") {
-                Color color;
-                if (! valueColor(pnv3.second, color))
-                  return errorMsg("Invalid material pbrMetallicRoughness/baseColorFactor color");
-                TODOValue("Unhandled material pbrMetallicRoughness/baseColorFactor", pnv3.second);
-              }
-              else {
-                TODOValue("Invalid pbrMetallicRoughness name " + pnv3.first, pnv3.second);
-              }
-            }
-          }
-          else if (pnv2.first == "technique") {
-            if (! valueString(pnv2.second, material.technique))
-              return errorMsg("Invalid material technique number");
-          }
-          else if (pnv2.first == "values") {
-            if (! pnv.second->isObject())
-              return errorMsg("Invalid material values");
-
-            auto *obj2 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj2->nameValueMap()) {
-              auto name = pnv3.first;
-
-              if      (name == "ambient") {
-                Color ambient;
-                if (! valueColor(pnv3.second, ambient))
-                  return errorMsg("Invalid nodes ambient color");
-                material.ambient = ambient;
-              }
-              else if (name == "diffuse") {
-                Color diffuse;
-                if (! valueColor(pnv3.second, diffuse))
-                  return errorMsg("Invalid nodes diffuse color");
-                material.diffuse = diffuse;
-              }
-              else if (name == "emission") {
-                Color emission;
-                if (! valueColor(pnv3.second, emission))
-                  return errorMsg("Invalid nodes emission color");
-                material.emission = emission;
-              }
-              else if (name == "shininess") {
-                double shininess;
-                if (! valueNumber(pnv3.second, shininess))
-                  return errorMsg("Invalid material shininess value");
-                material.shininess = shininess;
-              }
-              else if (name == "specular") {
-                Color specular;
-                if (! valueColor(pnv3.second, specular))
-                  return errorMsg("Invalid nodes specular color");
-                material.specular = specular;
-              }
-              else if (name == "transparency") {
-                double transparency;
-                if (! valueNumber(pnv3.second, transparency))
-                  return errorMsg("Invalid material transparency value");
-                material.transparency = transparency;
-              }
-              else {
-                debugMsg(std::string("  material values ") + name +
-                         " : " + pnv3.second->typeName());
-              }
-            }
-          }
-          else if (pnv2.first == "occlusionTexture") {
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid " + pnv.first + " occlusionTexture");
-
-            auto *obj3 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj3->nameValueMap()) {
-              if      (pnv3.first == "index") {
-                if (! valueLong(pnv3.second, material.occlusionTexture.index))
-                  return errorMsg("Invalid materials occlusionTexture index number");
-              }
-              else if (pnv3.first == "texCoord") {
-                if (! valueLong(pnv3.second, material.occlusionTexture.texCoord))
-                  return errorMsg("Invalid materials occlusionTexture texCoord number");
-              }
-              else if (pnv3.first == "scale") {
-                // TODO
-                TODOValue("Unhandled materials occlusionTexture scale", pnv3.second);
-              }
-              else if (pnv3.first == "extensions") {
-                // TODO
-                TODOValue("Unhandled materials occlusionTexture extensions", pnv3.second);
-              }
-              else {
-                warnMsg("Invalid materials occlusionTexture name " + pnv3.first);
-              }
-            }
-          }
-          else if (pnv2.first == "extensions") {
-            // TODO
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid material extensions values");
-
-            auto *obj2 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj2->nameValueMap()) {
-              auto name = pnv3.first;
-
-              if (name == "KHR_materials_anisotropy") {
-                if (! pnv3.second->isObject())
-                  return errorMsg("Invalid material extensions KHR_materials_anisotropy values");
-
-                auto *obj3 = pnv3.second->cast<CJson::Object>();
-
-                for (const auto &pnv4 : obj3->nameValueMap()) {
-                  auto name1 = pnv4.first;
-
-                  if      (name1 == "anisotropyStrength") {
-                    double anisotropyStrength;
-                    if (! valueNumber(pnv4.second, anisotropyStrength))
-                      return errorMsg("Invalid material anisotropyStrength value");
-                  }
-                  else if (name1 == "anisotropyRotation") {
-                    double anisotropyRotation;
-                    if (! valueNumber(pnv4.second, anisotropyRotation))
-                      return errorMsg("Invalid material anisotropyRotation value");
-                  }
-                  else if (name1 == "anisotropyTexture") {
-                    TODO("material extension KHR_materials_anisotropy anisotropyTexture");
-                  }
-                  else
-                    debugMsg(std::string("  material extension KHR_materials_anisotropy ") + name1 +
-                             " : " + pnv4.second->typeName());
-                }
-              }
-              else if (name == "KHR_materials_iridescence") {
-                TODOValue("Invalid material KHR_materials_iridescence", pnv3.second);
-              }
-              else if (name == "KHR_materials_transmission") {
-                TODOValue("Invalid material KHR_materials_transmission", pnv3.second);
-              }
-              else if (name == "KHR_materials_volume") {
-                TODOValue("Invalid material KHR_materials_volume", pnv3.second);
-              }
-              else if (name == "KHR_materials_ior") {
-                TODOValue("Invalid material KHR_materials_ior", pnv3.second);
-              }
-              else
-                debugMsg(std::string("  material extension ") + name +
-                           " : " + pnv3.second->typeName());
-            }
-          }
-          else if (pnv2.first == "alphaCutoff") {
-            // TODO
-            TODOValue("Invalid material alphaCutoff", pnv2.second);
-          }
-          else if (pnv2.first == "alphaMode") {
-            // TODO
-            TODOValue("Invalid material alphaMode", pnv2.second);
-          }
-          else if (pnv2.first == "doubleSided") {
-            if (! valueBool(pnv2.second, material.doubleSided))
-              return errorMsg("Invalid material doubleSided value");
-          }
-          else if (pnv2.first == "emissiveFactor") {
-            std::vector<float> rvalues;
-            if (! arrayNumbers(pnv2.second, rvalues))
-              return errorMsg("Invalid materials emissiveFactor array");
-
-            if (rvalues.size() != 3)
-              return errorMsg("Invalid materials emissiveFactor array size");
-
-            material.emissiveFactor = Vec3(rvalues[0], rvalues[1], rvalues[2]);
-          }
-          else if (pnv2.first == "emissiveTexture") {
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid " + pnv.first + " emissiveTexture");
-
-            auto *obj3 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj3->nameValueMap()) {
-              if      (pnv3.first == "index") {
-                if (! valueLong(pnv3.second, material.emissiveTexture.index))
-                  return errorMsg("Invalid materials emissiveTexture index number");
-              }
-              else if (pnv3.first == "texCoord") {
-                if (! valueLong(pnv3.second, material.emissiveTexture.texCoord))
-                  return errorMsg("Invalid materials emissiveTexture texCoord number");
-              }
-              else if (pnv3.first == "scale") {
-                // TODO
-                TODOValue("Unhandled materials emissiveTexture scale", pnv3.second);
-              }
-              else if (pnv3.first == "extensions") {
-                // TODO
-                TODOValue("Unhandled materials emissiveTexture extensions", pnv3.second);
-              }
-              else {
-                warnMsg("Invalid materials emissiveTexture name " + pnv3.first);
-              }
-            }
-          }
-          else {
-            warnMsg("Invalid materials name " + pnv2.first);
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -2928,7 +4159,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Material material;
 
-          if (! readMaterial(obj2, material))
+          if (! readMaterial(obj2, material, pnv.first))
             return false;
 
           jsonData.materials.add(material, IndName(-1));
@@ -2938,8 +4169,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -2947,10 +4176,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Material material;
 
-          if (! readMaterial(obj2, material))
+          if (! readMaterial(obj2, material, pnv.first))
             return false;
 
-          jsonData.materials.add(material, name);
+          jsonData.materials.add(material, pnv1.first);
         }
       }
       else {
@@ -2958,146 +4187,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "meshes") {
-      auto readMesh = [&](CJson::Object *jobj, Mesh &mesh) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "name") {
-            if (! valueString(pnv2.second, mesh.name))
-              return errorMsg("Invalid name string");
-          }
-          else if (pnv2.first == "primitives") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " primitives");
-
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
-            Primitive primitive;
-
-            for (const auto &pv2 : arr2->values()) {
-              if (! pv2->isObject())
-                return errorMsg("Invalid JSON " + pnv.first + " primitives data");
-
-              auto *obj3 = pv2->cast<CJson::Object>();
-
-              for (const auto &pnv3 : obj3->nameValueMap()) {
-                if      (pnv3.first == "attributes") {
-                  if (! pnv3.second->isObject())
-                    return errorMsg("Invalid JSON " + pnv.first + " attributes");
-
-                  auto *obj4 = pnv3.second->cast<CJson::Object>();
-
-                  for (const auto &pnv4 : obj4->nameValueMap()) {
-                    if      (pnv4.first == "POSITION") { // VEC3
-                      if (! valueIndName(pnv4.second, primitive.position))
-                        return errorMsg("Invalid POSITION ind/name");
-                    }
-                    else if (pnv4.first == "NORMAL") { // VEC3
-                      if (! valueIndName(pnv4.second, primitive.normal))
-                        return errorMsg("Invalid NORMAL ind/name");
-                    }
-                    else if (pnv4.first == "TANGENT") { // VEC4
-                      // TODO
-                      TODOValue("Unhandled primitive TANGENT", pnv4.second);
-                    }
-                    else if (pnv4.first == "TEXCOORD_0") { // VEC2
-                      if (! valueIndName(pnv4.second, primitive.texCoord0))
-                        return errorMsg("Invalid TEXCOORD_0 ind/name");
-                    }
-                    else if (pnv4.first == "TEXCOORD_1") { // VEC2
-                      if (! valueIndName(pnv4.second, primitive.texCoord1))
-                        return errorMsg("Invalid TEXCOORD_1 ind/name");
-                    }
-                    else if (pnv4.first == "COLOR_0") { // VEC3 or VEC4
-                      // TODO
-                      TODOValue("Unhandled primitive COLOR_0", pnv4.second);
-                    }
-                    else if (pnv4.first == "JOINTS_0") { // VEC4
-                      if (! valueIndName(pnv4.second, primitive.joints0))
-                        return errorMsg("Invalid JOINTS_0 number");
-                    }
-                    else if (pnv4.first == "WEIGHTS_0") { // VEC4
-                      if (! valueIndName(pnv4.second, primitive.weights0))
-                        return errorMsg("Invalid WEIGHTS_0 number");
-                    }
-                    else {
-                      debugMsg("  " + pnv.first + "/" + pnv2.first + "/" + pnv3.first + "/" +
-                               pnv4.first + " : " + pnv4.second->typeName());
-                    }
-                  }
-                }
-                else if (pnv3.first == "indices") {
-                  if (! valueIndName(pnv3.second, primitive.indices))
-                    return errorMsg("Invalid indices ind/name");
-                }
-                else if (pnv3.first == "material") {
-                  if (! valueIndName(pnv3.second, primitive.material))
-                    return errorMsg("Invalid material ind/name");
-                }
-                else if (pnv3.first == "mode") {
-                  if (! valueLong(pnv3.second, primitive.mode))
-                    return errorMsg("Invalid material mode");
-                }
-                else if (pnv3.first == "targets") {
-                  if (! pnv3.second->isArray())
-                    return errorMsg("Invalid JSON " + pnv.first + " targets");
-
-                  auto *arr3 = pnv3.second->cast<CJson::Array>();
-
-                  for (const auto &pv3 : arr3->values()) {
-                    if (! pv3->isObject())
-                      return errorMsg("Invalid JSON " + pnv.first + " targets data");
-
-                    auto *obj4 = pv3->cast<CJson::Object>();
-
-                    for (const auto &pnv4 : obj4->nameValueMap()) {
-                      if      (pnv4.first == "POSITION") {
-                        IndName position;
-                        if (! valueIndName(pnv4.second, position))
-                          return errorMsg("Invalid target POSITION ind/name");
-                      }
-                      else if (pnv4.first == "NORMAL") {
-                        IndName normal;
-                        if (! valueIndName(pnv4.second, normal))
-                          return errorMsg("Invalid target NORMAL ind/name");
-                      }
-                      else if (pnv4.first == "TANGENT") {
-                        IndName tangent;
-                        if (! valueIndName(pnv4.second, tangent))
-                          return errorMsg("Invalid target NORMAL ind/name");
-                      }
-                      else {
-                        return errorMsg("Invalid targets name " + pnv4.first);
-                      }
-                    }
-                  }
-                }
-                else {
-                  debugMsg("  " + pnv.first + "/" + pnv3.first + " : " + pnv3.second->typeName());
-                }
-              }
-
-              mesh.primitives.push_back(primitive);
-            }
-          }
-          else if (pnv2.first == "weights") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " weights");
-
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv2 : arr2->values()) {
-              double r;
-              if (! valueNumber(pv2, r))
-                return errorMsg("Invalid primitives weights value");
-            }
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -3109,7 +4198,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Mesh mesh;
 
-          if (! readMesh(obj2, mesh))
+          if (! readMesh(obj2, mesh, pnv.first))
             return false;
 
           jsonData.meshes.add(mesh, IndName(-1));
@@ -3119,8 +4208,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -3128,10 +4215,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Mesh mesh;
 
-          if (! readMesh(obj2, mesh))
+          if (! readMesh(obj2, mesh, pnv.first))
             return false;
 
-          jsonData.meshes.add(mesh, name);
+          jsonData.meshes.add(mesh, pnv1.first);
         }
       }
       else {
@@ -3139,108 +4226,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "nodes") {
-      auto readNode = [&](CJson::Object *jobj, Node &node) {
-        for      (const auto &pnv2 : jobj->nameValueMap()) {
-          if (pnv2.first == "name") {
-            if (! valueString(pnv2.second, node.name))
-              return errorMsg("Invalid nodes name string");
-          }
-          else if (pnv2.first == "mesh") {
-            if (! valueIndName(pnv2.second, node.mesh))
-              return errorMsg("Invalid nodes mesh number");
-          }
-          else if (pnv2.first == "matrix") {
-            std::vector<float> rvalues;
-            if (! arrayNumbers(pnv2.second, rvalues))
-              return errorMsg("Invalid nodes matrix array");
-
-            if (rvalues.size() != 16)
-              return errorMsg("Invalid nodes matrix array size");
-
-            CGLMatrix3D m;
-            m.setData(&rvalues[0]);
-
-            node.matrix = m;
-          }
-          else if (pnv2.first == "children") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid nodes children array");
-
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv3 : arr2->values()) {
-              IndName indName;
-              if (! valueIndName(pv3, indName))
-                return errorMsg("Invalid nodes child");
-
-              node.children.push_back(indName);
-            }
-          }
-          else if (pnv2.first == "meshes") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid nodes meshes array");
-
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv3 : arr2->values()) {
-              if (! pv3->isString())
-                return errorMsg("Invalid nodes meshes string");
-
-              std::string str;
-              (void) valueString(pv3, str);
-            }
-
-            TODO("Unhandled nodes meshs");
-          }
-          else if (pnv2.first == "skin") {
-            if (! valueIndName(pnv2.second, node.skin))
-              return errorMsg("Invalid mesh skin number");
-          }
-          else if (pnv2.first == "rotation") {
-            std::vector<float> rvalues;
-            if (! arrayNumbers(pnv2.second, rvalues))
-              return errorMsg("Invalid nodes rotation array");
-
-            if (rvalues.size() != 4)
-              return errorMsg("Invalid nodes rotation array size");
-
-            node.rotation = Vec4(rvalues[0], rvalues[1], rvalues[2], rvalues[3]);
-          }
-          else if (pnv2.first == "scale") {
-            std::vector<float> rvalues;
-            if (! arrayNumbers(pnv2.second, rvalues))
-              return errorMsg("Invalid nodes scale array");
-
-            if (rvalues.size() != 3)
-              return errorMsg("Invalid nodes scale array size");
-
-            node.scale = Vec3(rvalues[0], rvalues[1], rvalues[2]);
-          }
-          else if (pnv2.first == "translation") {
-            std::vector<float> rvalues;
-            if (! arrayNumbers(pnv2.second, rvalues))
-              return errorMsg("Invalid nodes translation array");
-
-            if (rvalues.size() != 3)
-              return errorMsg("Invalid nodes translation array size");
-
-            node.translation = Vec3(rvalues[0], rvalues[1], rvalues[2]);
-          }
-          else if (pnv2.first == "camera") {
-            if (! valueLong(pnv2.second, node.camera))
-              return errorMsg("Invalid camera number");
-          }
-          else if (pnv2.first == "extensions") {
-            TODOValue("Unhandled node extensions", pnv2.second);
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -3251,7 +4236,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           auto *obj2 = pv1->cast<CJson::Object>();
 
           Node node;
-          if (! readNode(obj2, node))
+          if (! readNode(obj2, node, pnv.first))
             return false;
 
           jsonData.nodes.add(node, IndName(-1));
@@ -3261,18 +4246,16 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
           auto *obj2 = pnv1.second->cast<CJson::Object>();
 
           Node node;
-          if (! readNode(obj2, node))
+          if (! readNode(obj2, node, pnv.first))
             return false;
 
-          jsonData.nodes.add(node, name);
+          jsonData.nodes.add(node, pnv1.first);
         }
       }
       else {
@@ -3280,34 +4263,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "samplers") {
-      // GL_LINEAR               =  0x2601 (9729)
-      // GL_LINEAR_MIPMAP_LINEAR =  0x2703 (9987)
-      auto readSampler = [&](CJson::Object *jobj, Sampler &sampler) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "magFilter") {
-            if (! valueLong(pnv2.second, sampler.magFilter))
-              return errorMsg("Invalid magFilter number");
-          }
-          else if (pnv2.first == "minFilter") {
-            if (! valueLong(pnv2.second, sampler.minFilter))
-              return errorMsg("Invalid minFilter number");
-          }
-          else if (pnv2.first == "wrapS") {
-            if (! valueLong(pnv2.second, sampler.wrapS))
-              return errorMsg("Invalid wrapS number");
-          }
-          else if (pnv2.first == "wrapT") {
-            if (! valueLong(pnv2.second, sampler.wrapT))
-              return errorMsg("Invalid wrapT number");
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -3319,7 +4274,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Sampler sampler;
 
-          if (! readSampler(obj2, sampler))
+          if (! readSampler(obj2, sampler, pnv.first))
             return false;
 
           jsonData.samplers.add(sampler, IndName(-1));
@@ -3329,8 +4284,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -3338,10 +4291,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Sampler sampler;
 
-          if (! readSampler(obj2, sampler))
+          if (! readSampler(obj2, sampler, pnv.first))
             return false;
 
-          jsonData.samplers.add(sampler, IndName(name));
+          jsonData.samplers.add(sampler, IndName(pnv1.first));
         }
       }
       else {
@@ -3350,40 +4303,9 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
     }
     else if (pnv.first == "scene") {
       if (! valueIndName(pnv.second, jsonData.scene))
-        return errorMsg("Invalid scene ind/name");
+        return errorMsg("Invalid " + pnv.first + " ind/name");
     }
     else if (pnv.first == "scenes") {
-      auto readScene = [&](CJson::Object *jobj, Scene &scene) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "name") {
-            if (! valueString(pnv2.second, scene.name))
-              return errorMsg("Invalid name string");
-          }
-          else if (pnv2.first == "nodes") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " nodes");
-
-            auto *arr2 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv2 : arr2->values()) {
-              IndName indName;
-              if (! valueIndName(pv2, indName))
-                return errorMsg("Invalid scene node");
-
-              scene.nodes.push_back(indName);
-            }
-          }
-          else if (pnv2.first == "extensions") {
-            TODOValue("Unhandled scene extensions", pnv2.second);
-          }
-          else {
-            debugMsg("  " + pnv.first + "/" + pnv2.first + " : " + pnv2.second->typeName());
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -3395,7 +4317,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Scene scene;
 
-          if (! readScene(obj2, scene))
+          if (! readScene(obj2, scene, pnv.first))
             return false;
 
           jsonData.scenes.add(scene, IndName(-1));
@@ -3405,8 +4327,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -3414,10 +4334,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Scene scene;
 
-          if (! readScene(obj2, scene))
+          if (! readScene(obj2, scene, pnv.first))
             return false;
 
-          jsonData.scenes.add(scene, name);
+          jsonData.scenes.add(scene, pnv1.first);
         }
       }
       else {
@@ -3425,75 +4345,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "textures") {
-      auto readTexture = [&](CJson::Object *jobj, Texture &texture) {
-        for (const auto &pnv2 : jobj->nameValueMap()) {
-          if      (pnv2.first == "source") {
-            if (! valueIndName(pnv2.second, texture.source))
-              return errorMsg("Invalid texture source ind/name");
-          }
-          else if (pnv2.first == "sampler") {
-            if (! valueIndName(pnv2.second, texture.sampler))
-              return errorMsg("Invalid texture sampler ind/name");
-          }
-          else if (pnv2.first == "format") {
-            if (! valueLong(pnv2.second, texture.format))
-              return errorMsg("Invalid texture format");
-          }
-          else if (pnv2.first == "internalFormat") {
-            if (! valueLong(pnv2.second, texture.internalFormat))
-              return errorMsg("Invalid texture internalFormat");
-          }
-          else if (pnv2.first == "target") {
-            if (! valueLong(pnv2.second, texture.target))
-              return errorMsg("Invalid texture target");
-          }
-          else if (pnv2.first == "type") {
-            if (! valueLong(pnv2.second, texture.type))
-              return errorMsg("Invalid texture type");
-          }
-          else if (pnv2.first == "name") {
-            if (! valueString(pnv2.second, texture.name))
-              return errorMsg("Invalid texture name");
-          }
-          else if (pnv2.first == "extensions") {
-            if (! pnv2.second->isObject())
-              return errorMsg("Invalid textures extensions type");
-
-            auto *obj3 = pnv2.second->cast<CJson::Object>();
-
-            for (const auto &pnv3 : obj3->nameValueMap()) {
-              if (pnv3.first == "EXT_texture_webp") {
-                if (! pnv3.second->isObject())
-                  return errorMsg("Invalid textures extensions EXT_texture_webp");
-
-                auto *obj4 = pnv3.second->cast<CJson::Object>();
-
-                for (const auto &pnv4 : obj4->nameValueMap()) {
-                  if (pnv4.first == "source") {
-                    if (! valueIndName(pnv4.second, texture.source))
-                      return errorMsg("Invalid texture extensions EXT_texture_webp source ind/name");
-                  }
-                  else {
-                    debugMsg("Invalid textures extensions EXT_texture_webp name " +
-                             pnv4.first + " : " + pnv4.second->typeName());
-                  }
-                }
-              }
-              else {
-                debugMsg("Invalid textures extensions name " +
-                         pnv3.first + " : " + pnv3.second->typeName());
-              }
-            }
-            debugMsg(std::string("Invalid textures extensions : ") + pnv2.second->typeName());
-          }
-          else {
-            debugMsg("Invalid textures name " + pnv2.first + " : " + pnv2.second->typeName());
-          }
-        }
-
-        return true;
-      };
-
       if      (pnv.second->isArray()) {
         auto *arr1 = pnv.second->cast<CJson::Array>();
 
@@ -3505,7 +4356,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Texture texture;
 
-          if (! readTexture(obj2, texture))
+          if (! readTexture(obj2, texture, pnv.first))
             return false;
 
           jsonData.textures.add(texture, IndName(-1));
@@ -3515,8 +4366,6 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          auto name = pnv1.first;
-
           if (! pnv1.second->isObject())
             return errorMsg("Invalid JSON " + pnv.first + " array data");
 
@@ -3524,10 +4373,10 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
 
           Texture texture;
 
-          if (! readTexture(obj2, texture))
+          if (! readTexture(obj2, texture, pnv.first))
             return false;
 
-          jsonData.textures.add(texture, name);
+          jsonData.textures.add(texture, pnv1.first);
         }
       }
       else {
@@ -3535,137 +4384,105 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       }
     }
     else if (pnv.first == "animations") {
-      if (! pnv.second->isArray())
-        return errorMsg("Invalid JSON " + pnv.first + " data");
+      if (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
 
-      auto *arr1 = pnv.second->cast<CJson::Array>();
+        for (const auto &pv1 : arr1->values()) {
+          Animation animation;
 
-      for (const auto &pv1 : arr1->values()) {
-        Animation animation;
+          if (! pv1->isObject())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
 
-        if (! pv1->isObject())
-          return errorMsg("Invalid JSON " + pnv.first + " array data");
+          auto *obj2 = pv1->cast<CJson::Object>();
 
-        auto *obj2 = pv1->cast<CJson::Object>();
+          for (const auto &pnv2 : obj2->nameValueMap()) {
+            if      (pnv2.first == "name") {
+              if (! valueString(pnv2.second, animation.name))
+                return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
+            }
+            else if (pnv2.first == "channels") {
+              if (! pnv2.second->isArray())
+                return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " data");
 
-        for (const auto &pnv2 : obj2->nameValueMap()) {
-          auto name = pnv2.first;
+              auto *arr3 = pnv2.second->cast<CJson::Array>();
 
-          if      (name == "name") {
-            if (! valueString(pnv2.second, animation.name))
-              return errorMsg("Invalid animations name");
-          }
-          else if (name == "channels") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " " + name + " data");
+              Animation::Channels channels;
 
-            auto *arr3 = pnv2.second->cast<CJson::Array>();
+              for (const auto &pv3 : arr3->values()) {
+                AnimationChannel channel;
 
-            Animation::Channels channels;
+                if (! pv3->isObject())
+                  return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " array data");
 
-            for (const auto &pv3 : arr3->values()) {
-              AnimationChannel channel;
+                auto *obj3 = pv3->cast<CJson::Object>();
 
-              if (! pv3->isObject())
-                return errorMsg("Invalid JSON " + pnv.first + " " + name + " array data");
+                readAnimationChannel(obj3, channel, pnv.first + "/" + pnv2.first);
 
-              auto *obj3 = pv3->cast<CJson::Object>();
+                channels.push_back(channel);
+              }
 
-              for (const auto &pnv3 : obj3->nameValueMap()) {
-                auto name1 = pnv3.first;
+              animation.channelsArray.push_back(channels);
+            }
+            else if (pnv2.first == "samplers") {
+              if (! pnv2.second->isArray())
+                return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " data");
 
-                if      (name1 == "target") {
-                  if (! pnv3.second->isObject())
-                    return errorMsg("Invalid JSON " + pnv.first + " " + name +
-                                    " " + name1 + " data");
+              auto *arr3 = pnv2.second->cast<CJson::Array>();
 
-                  auto *obj4 = pnv3.second->cast<CJson::Object>();
+              for (const auto &pv3 : arr3->values()) {
+                AnimationSampler sampler;
 
-                  for (const auto &pnv4 : obj4->nameValueMap()) {
-                    auto name2 = pnv4.first;
+                if (! pv3->isObject())
+                  return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " array data");
 
-                    if      (name2 == "node") {
-                      if (! valueIndName(pnv4.second, channel.node))
-                        return errorMsg("Invalid channel node value");
-                    }
-                    else if (name2 == "path") {
-                      if (! valueString(pnv4.second, channel.path))
-                        return errorMsg("Invalid channel path value");
-                    }
-                    else if (name2 == "extensions") {
-                      TODOValue("Unhandled target extensions", pnv4.second);
-                    }
-                    else
-                      TODOValue("Unhandled animations channels target name " + name2,
-                                pnv4.second);
+                auto *obj3 = pv3->cast<CJson::Object>();
+
+                for (const auto &pnv3 : obj3->nameValueMap()) {
+                  if      (pnv3.first == "input") {
+                    if (! valueLong(pnv3.second, sampler.input))
+                      return errorMsg("Invalid " + pnv2.first + "/" + pnv3.first + " value");
                   }
-                }
-                else if (name1 == "sampler") {
-                  if (! valueLong(pnv3.second, channel.sampler))
-                    return errorMsg("Invalid channel sampler value");
-                }
-                else
-                  TODOValue("Unhandled animations channels name " + name1, pnv3.second);
-              }
+                  else if (pnv3.first == "output") {
+                    if (! valueLong(pnv3.second, sampler.output))
+                      return errorMsg("Invalid " + pnv2.first + "/" + pnv3.first + " value");
+                  }
+                  else if (pnv3.first == "interpolation") {
+                    if (! valueString(pnv3.second, sampler.interpolation))
+                      return errorMsg("Invalid " + pnv2.first + "/" + pnv3.first + " value");
 
-              channels.push_back(channel);
-            }
-
-            animation.channelsArray.push_back(channels);
-          }
-          else if (name == "samplers") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " " + name + " data");
-
-            auto *arr3 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv3 : arr3->values()) {
-              AnimationSampler sampler;
-
-              if (! pv3->isObject())
-                return errorMsg("Invalid JSON " + pnv.first + " " + name + " array data");
-
-              auto *obj3 = pv3->cast<CJson::Object>();
-
-              for (const auto &pnv3 : obj3->nameValueMap()) {
-                auto name1 = pnv3.first;
-
-                if      (name1 == "input") {
-                  if (! valueLong(pnv3.second, sampler.input))
-                    return errorMsg("Invalid sampler input value");
-                }
-                else if (name1 == "output") {
-                  if (! valueLong(pnv3.second, sampler.output))
-                    return errorMsg("Invalid sampler output value");
-                }
-                else if (name1 == "interpolation") {
-                  if (! valueString(pnv3.second, sampler.interpolation))
-                    return errorMsg("Invalid sampler interpolation value");
-
-                  if      (sampler.interpolation == "LINEAR")
-                    sampler.interpType = AnimationInterpolation::LINEAR;
-                  else if (sampler.interpolation == "STEP")
-                    sampler.interpType = AnimationInterpolation::STEP;
-                  else if (sampler.interpolation == "CUBICSPLINE")
-                    sampler.interpType = AnimationInterpolation::CUBICSPLINE;
+                    if      (sampler.interpolation == "LINEAR")
+                      sampler.interpType = AnimationInterpolation::LINEAR;
+                    else if (sampler.interpolation == "STEP")
+                      sampler.interpType = AnimationInterpolation::STEP;
+                    else if (sampler.interpolation == "CUBICSPLINE")
+                      sampler.interpType = AnimationInterpolation::CUBICSPLINE;
+                    else
+                      return errorMsg("Invalid " + pnv2.first + "/" + pnv3.first + " value '" +
+                                      sampler.interpolation + "'");
+                  }
                   else
-                    return errorMsg("Invalid sampler interpolation " + sampler.interpolation);
+                    TODOValue("Unhandled " + pnv.first + "/" + pnv2.first + " name " +
+                              pnv3.first, pnv3.second);
                 }
-                else
-                  TODOValue("Unhandled animations samplers name " + name1, pnv3.second);
+
+                animation.samplers.add(sampler, IndName(-1));
               }
-
-              animation.samplers.add(sampler, IndName(-1));
             }
+            else
+              TODOValue("Unhandled " + pnv.first + " name " + pnv2.first, pnv2.second);
           }
-          else
-            TODOValue("Unhandled animations name " + name, pnv2.second);
+
+          if (animation.name == "")
+            animation.name = "anim." + std::to_string(jsonData.animations.size() + 1);
+
+          jsonData.animations.push_back(animation);
         }
-
-        if (animation.name == "")
-          animation.name = "anim." + std::to_string(jsonData.animations.size() + 1);
-
-        jsonData.animations.push_back(animation);
+      }
+      else if (pnv.second->isObject()) {
+        (void) errorMsg("Invalid JSON " + pnv.first + " array data");
+      }
+      else {
+        (void) errorMsg("Invalid JSON " + pnv.first + " data");
       }
     }
     else if (pnv.first == "cameras") {
@@ -3683,71 +4500,83 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
           auto *obj2 = pv1->cast<CJson::Object>();
 
           for (const auto &pnv2 : obj2->nameValueMap()) {
-            auto name = pnv2.first;
-
-            if      (name == "name") {
+            if      (pnv2.first == "name") {
               if (! valueString(pnv2.second, camera.name))
-                return errorMsg("Invalid camera name");
+                return errorMsg("Invalid " + pnv.first + " name");
             }
-            else if (name == "type") {
+            else if (pnv2.first == "type") {
               if (! valueString(pnv2.second, camera.type))
-                return errorMsg("Invalid camera type");
+                return errorMsg("Invalid " + pnv.first + " type");
             }
-            else if (name == "perspective") {
+            else if (pnv2.first == "perspective") {
               if (! pnv2.second->isObject())
-                return errorMsg("Invalid camera perspective");
+                return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
 
               auto *obj3 = pnv2.second->cast<CJson::Object>();
 
               for (const auto &pnv3 : obj3->nameValueMap()) {
-                auto name1 = pnv3.first;
-
-                if      (name1 == "yfov") {
+                if      (pnv3.first == "yfov") {
                   if (! valueNumber(pnv3.second, camera.yfov))
-                    return errorMsg("Invalid camera yfov");
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
                 }
-                else if (name1 == "znear") {
+                else if (pnv3.first == "znear") {
                   if (! valueNumber(pnv3.second, camera.znear))
-                    return errorMsg("Invalid camera znear");
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
                 }
-                else if (name1 == "zfar") {
+                else if (pnv3.first == "zfar") {
                   if (! valueNumber(pnv3.second, camera.zfar))
-                    return errorMsg("Invalid camera zfar");
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
+                }
+                else if (pnv3.first == "aspectRatio") {
+                  if (! valueNumber(pnv3.second, camera.aspectRatio))
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
                 }
                 else
-                  TODOValue("Unhandled camera perspective " + name1, pnv3.second);
+                  TODOValue("Unhandled " + pnv.first + "/" + pnv2.first + "/" +
+                            pnv3.first, pnv3.second);
+              }
+            }
+            else if (pnv2.first == "orthographic") {
+              if (! pnv2.second->isObject())
+                return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
+
+              auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+              for (const auto &pnv3 : obj3->nameValueMap()) {
+                if      (pnv3.first == "xmag") {
+                  if (! valueNumber(pnv3.second, camera.xmag))
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
+                }
+                else if (pnv3.first == "ymag") {
+                  if (! valueNumber(pnv3.second, camera.ymag))
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
+                }
+                else if (pnv3.first == "znear") {
+                  if (! valueNumber(pnv3.second, camera.znear))
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
+                }
+                else if (pnv3.first == "zfar") {
+                  if (! valueNumber(pnv3.second, camera.zfar))
+                    return errorMsg("Invalid " + pnv.first + "/" + pnv3.first);
+                }
+                else
+                  TODOValue("Unhandled " + pnv.first + "/" + pnv2.first + "/" +
+                            pnv3.first, pnv3.second);
               }
             }
             else
-              TODOValue("Unhandled camera name " + name, pnv2.second);
+              TODOValue("Unhandled " + pnv.first + " name " + pnv2.first, pnv2.second);
           }
 
           jsonData.cameras.add(camera, IndName(ind++));
         }
       }
       else if (pnv.second->isObject()) {
-        return errorMsg("Invalid JSON " + pnv.first + " array data");
+        (void) errorMsg("Invalid JSON " + pnv.first + " array data");
       }
-      else
-        return errorMsg("Invalid JSON " + pnv.first + " data");
-    }
-    else if (pnv.first == "extensionsUsed") {
-      if (pnv.second->isArray()) {
-        auto *arr1 = pnv.second->cast<CJson::Array>();
-
-        for (const auto &pv1 : arr1->values()) {
-          if (! pv1->isString())
-            return errorMsg("Invalid JSON " + pnv.first + " array data");
-
-          std::string name;
-          if (! valueString(pv1, name))
-            return errorMsg("Invalid extensionsUsed name");
-
-          jsonData.extensionsUsed.push_back(name);
-        }
+      else {
+        (void) errorMsg("Invalid JSON " + pnv.first + " data");
       }
-      else
-        return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "programs") {
       // TODO
@@ -3758,56 +4587,59 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       TODOValue("Unhandled shaders", pnv.second);
     }
     else if (pnv.first == "skins") {
-      if (! pnv.second->isArray())
-        return errorMsg("Invalid JSON " + pnv.first + " array data");
+      if (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
 
-      auto *arr1 = pnv.second->cast<CJson::Array>();
+        int ind = 0;
 
-      int ind = 0;
+        for (const auto &pv1 : arr1->values()) {
+          Skin skin;
 
-      for (const auto &pv1 : arr1->values()) {
-        Skin skin;
+          if (! pv1->isObject())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
 
-        if (! pv1->isObject())
-          return errorMsg("Invalid JSON " + pnv.first + " array data");
+          auto *obj2 = pv1->cast<CJson::Object>();
 
-        auto *obj2 = pv1->cast<CJson::Object>();
-
-        for (const auto &pnv2 : obj2->nameValueMap()) {
-          auto name = pnv2.first;
-
-          if      (name == "inverseBindMatrices") {
-            if (! valueLong(pnv2.second, skin.inverseBindMatrices))
-              return errorMsg("Invalid sampler output value");
-          }
-          else if (name == "joints") {
-            if (! pnv2.second->isArray())
-              return errorMsg("Invalid JSON " + pnv.first + " " + pnv2.first + " array data");
-
-            auto *arr3 = pnv2.second->cast<CJson::Array>();
-
-            for (const auto &pv3 : arr3->values()) {
-              long ijoint;
-              if (! valueLong(pv3, ijoint))
-                return errorMsg("Invalid " + pnv.first + " " + pnv2.first + " array value");
-
-              skin.joints.push_back(ijoint);
+          for (const auto &pnv2 : obj2->nameValueMap()) {
+            if      (pnv2.first == "inverseBindMatrices") {
+              if (! valueLong(pnv2.second, skin.inverseBindMatrices))
+                return errorMsg("Invalid sampler output value");
             }
-          }
-          else if (name == "name") {
-            if (! valueString(pnv2.second, skin.name))
-              return errorMsg("Invalid " + pnv.first + " " + pnv2.first + " name");
-          }
-          else if (name == "skeleton") {
-            long iroot;
-            if (! valueLong(pnv2.second, iroot))
-              return errorMsg("Invalid " + pnv.first + " " + pnv2.first + " skeleton");
-          }
-          else
-            debugMsg(pnv2.first + " : " + pnv2.second->typeName());
-        }
+            else if (pnv2.first == "joints") {
+              if (! pnv2.second->isArray())
+                return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " array data");
 
-        jsonData.skins.add(skin, IndName(ind++));
+              auto *arr3 = pnv2.second->cast<CJson::Array>();
+
+              for (const auto &pv3 : arr3->values()) {
+                long ijoint;
+                if (! valueLong(pv3, ijoint))
+                  return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + " array value");
+
+                skin.joints.push_back(ijoint);
+              }
+            }
+            else if (pnv2.first == "name") {
+              if (! valueString(pnv2.second, skin.name))
+                return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + " string");
+            }
+            else if (pnv2.first == "skeleton") {
+              long iroot;
+              if (! valueLong(pnv2.second, iroot))
+                return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + " number");
+            }
+            else
+              debugValueMsg(pnv.first + "/" + pnv2.first, pnv2.second);
+          }
+
+          jsonData.skins.add(skin, IndName(ind++));
+        }
+      }
+      else if (pnv.second->isObject()) {
+        (void) errorMsg("Invalid JSON " + pnv.first + " array data");
+      }
+      else {
+        (void) errorMsg("Invalid JSON " + pnv.first + " data");
       }
     }
     else if (pnv.first == "techniques") {
@@ -3817,7 +4649,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         auto *obj1 = pnv.second->cast<CJson::Object>();
 
         for (const auto &pnv1 : obj1->nameValueMap()) {
-          debugMsg(pnv1.first + " : " + pnv1.second->typeName());
+          debugValueMsg(pnv.first + "/" + pnv1.first, pnv1.second);
         }
       }
       else if (pnv.second->isArray()) {
@@ -3826,16 +4658,222 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
         return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "extensions") {
-      TODOValue("Unhandled extensions", pnv.second);
-    }
-    else if (pnv.first == "extensionsRequired") {
-      TODOValue("Unhandled extensionsRequired", pnv.second);
+      if (pnv.second->isObject()) {
+        auto *obj1 = pnv.second->cast<CJson::Object>();
+
+        for (const auto &pnv1 : obj1->nameValueMap()) {
+          if      (pnv1.first == "KHR_lights_punctual") {
+            if (! pnv1.second->isObject())
+              return errorMsg("Invalid " + pnv.first + "/" + pnv1.first + " type");
+
+            auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+            for (const auto &pnv2 : obj2->nameValueMap()) {
+              if (pnv2.first == "lights") {
+                if (! pnv2.second->isArray())
+                  return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
+
+                auto *arr3 = pnv2.second->cast<CJson::Array>();
+
+                for (const auto &pv3 : arr3->values()) {
+                  if (! pv3->isObject())
+                    return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first +
+                                    " array data");
+
+                  auto *obj4 = pv3->cast<CJson::Object>();
+
+                  for (const auto &pnv4 : obj4->nameValueMap()) {
+                    if      (pnv4.first == "color") {
+                      OptColor color;
+                      if (! valueOptColor(pnv4.second, color))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " color");
+                    }
+                    else if (pnv4.first == "intensity") {
+                      OptReal real;
+                      if (! valueOptNumber(pnv4.second, real))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " number");
+                    }
+                    else if (pnv4.first == "name") {
+                      std::string name;
+                      if (! valueString(pnv4.second, name))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else if (pnv4.first == "type") {
+                      std::string type;
+                      if (! valueString(pnv4.second, type))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else
+                      debugValueMsg("Invalid name " + pnv.first + "/" + pnv2.first + "/" +
+                                    pnv4.first, pnv4.second);
+                  }
+                }
+              }
+              else
+                debugValueMsg(pnv.first + "/" + pnv1.first + "/" + pnv2.first, pnv2.second);
+            }
+          }
+          else if (pnv1.first == "KHR_materials_variants") {
+            if (! pnv1.second->isObject())
+              return errorMsg("Invalid " + pnv.first + "/" + pnv1.first + " type");
+
+            auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+            for (const auto &pnv2 : obj2->nameValueMap()) {
+              if (pnv2.first == "variants") {
+                if (! pnv2.second->isArray())
+                  return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
+
+                auto *arr3 = pnv2.second->cast<CJson::Array>();
+
+                for (const auto &pv3 : arr3->values()) {
+                  if (! pv3->isObject())
+                    return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " type");
+
+                  auto *obj4 = pv3->cast<CJson::Object>();
+
+                  for (const auto &pnv4 : obj4->nameValueMap()) {
+                    if (pnv4.first == "name") {
+                      std::string name;
+                      if (! valueString(pnv4.second, name))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else
+                      debugValueMsg("Invalid name " + pnv.first + "/" + pnv2.first + "/" +
+                                    pnv4.first, pnv4.second);
+                  }
+                }
+              }
+              else
+                debugValueMsg(pnv.first + "/" + pnv1.first + "/" + pnv2.first, pnv2.second);
+            }
+          }
+          else if (pnv1.first == "KHR_xmp") {
+            if (! pnv1.second->isObject())
+              return errorMsg("Invalid " + pnv.first + "/" + pnv1.first + " type");
+
+            auto *obj2 = pnv1.second->cast<CJson::Object>();
+
+            for (const auto &pnv2 : obj2->nameValueMap()) {
+              if      (pnv2.first == "@context") {
+                if (! pnv2.second->isObject())
+                  return errorMsg("Invalid JSON " + pnv.first + "/" + pnv1.first + "/" +
+                                  pnv2.first + " type");
+
+                auto *obj3 = pnv2.second->cast<CJson::Object>();
+
+                for (const auto &pnv3 : obj3->nameValueMap()) {
+                  if (pnv3.first == "dc") {
+                    std::string name;
+                    if (! valueString(pnv3.second, name))
+                      return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                      pnv3.first + " string");
+                  }
+                  else
+                    debugValueMsg(pnv.first + "/" + pnv1.first + "/" + pnv2.first + "/" +
+                                  pnv3.first, pnv3.second);
+                }
+
+              }
+              else if (pnv2.first == "packets") {
+                if (! pnv2.second->isArray())
+                  return errorMsg("Invalid " + pnv.first + "/" + pnv2.first);
+
+                auto *arr3 = pnv2.second->cast<CJson::Array>();
+
+                for (const auto &pv3 : arr3->values()) {
+                  if (! pv3->isObject())
+                    return errorMsg("Invalid JSON " + pnv.first + "/" + pnv2.first + " type");
+
+                  auto *obj4 = pv3->cast<CJson::Object>();
+
+                  for (const auto &pnv4 : obj4->nameValueMap()) {
+                    if      (pnv4.first == "dc:date") {
+                      std::string name;
+                      if (! valueString(pnv4.second, name))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else if (pnv4.first == "dc:title") {
+                      std::string name;
+                      if (! valueString(pnv4.second, name))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else if (pnv4.first == "xmp:CreatorTool") {
+                      std::string name;
+                      if (! valueString(pnv4.second, name))
+                        return errorMsg("Invalid " + pnv.first + "/" + pnv2.first + "/" +
+                                        pnv4.first + " string");
+                    }
+                    else
+                      debugValueMsg(pnv.first + "/" + pnv1.first + "/" + pnv2.first + "/" +
+                                    pnv4.first, pnv4.second);
+                  }
+                }
+              }
+              else
+                debugValueMsg(pnv.first + "/" + pnv1.first + "/" + pnv2.first, pnv2.second);
+            }
+          }
+          else if (pnv1.first == "KHR_xmp_json_ld") {
+            debugValueMsg(pnv.first + "/" + pnv1.first, pnv1.second);
+          }
+          else
+            debugValueMsg(pnv.first + "/" + pnv1.first, pnv1.second);
+        }
+      }
+      else if (pnv.second->isArray()) {
+        TODOValue("Unhandled " + pnv.first, pnv.second);
+      }
+      else
+        return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else if (pnv.first == "extensionsUsed") {
-      TODOValue("Unhandled extensionsUsed", pnv.second);
+      //TODOValue("Unhandled extensionsUsed", pnv.second);
+      if (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
+
+        for (const auto &pv1 : arr1->values()) {
+          if (! pv1->isString())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
+
+          std::string name;
+          if (! valueString(pv1, name))
+            return errorMsg("Invalid " + pnv.first + " name");
+
+          jsonData.extensionsUsed.push_back(name);
+        }
+      }
+      else
+        return errorMsg("Invalid JSON " + pnv.first + " array data");
+    }
+    else if (pnv.first == "extensionsRequired") {
+      //TODOValue("Unhandled extensionsRequired", pnv.second);
+      if (pnv.second->isArray()) {
+        auto *arr1 = pnv.second->cast<CJson::Array>();
+
+        for (const auto &pv1 : arr1->values()) {
+          if (! pv1->isString())
+            return errorMsg("Invalid JSON " + pnv.first + " array data");
+
+          std::string name;
+          if (! valueString(pv1, name))
+            return errorMsg("Invalid " + pnv.first + " name");
+
+          jsonData.extensionsUsed.push_back(name);
+        }
+      }
+      else
+        return errorMsg("Invalid JSON " + pnv.first + " array data");
     }
     else {
-      debugMsg(pnv.first + " : " + pnv.second->typeName());
+      debugValueMsg(pnv.first, pnv.second);
 
       return errorMsg("Unhandled name : " + pnv.first);
     }
@@ -4163,36 +5201,49 @@ printMaterial(const Material &material, const IndName &indName) const
   std::cerr << " material[" << indName << "]\n";
 
   std::cerr << "  name: " << material.name << "\n";
-  std::cerr << "  metallicFactor: " << material.metallicFactor << "\n";
-  std::cerr << "  roughnessFactor: " << material.roughnessFactor << "\n";
-  std::cerr << "  normalTexture\n";
-  if (material.normalTexture.index >= 0)
-    std::cerr << "   index: " << material.normalTexture.index << "\n";
-  if (material.normalTexture.texCoord >= 0)
-    std::cerr << "   texCoord: " << material.normalTexture.texCoord << "\n";
-  std::cerr << "  emissiveTexture\n";
-  if (material.emissiveTexture.index >= 0)
-    std::cerr << "   index: " << material.emissiveTexture.index << "\n";
-  if (material.emissiveTexture.texCoord >= 0)
-    std::cerr << "   texCoord: " << material.emissiveTexture.texCoord << "\n";
-  std::cerr << "  baseColorTexture\n";
-  if (material.baseColorTexture.index >= 0)
-    std::cerr << "   index: " << material.baseColorTexture.index << "\n";
-  if (material.baseColorTexture.texCoord >= 0)
-    std::cerr << "   texCoord: " << material.baseColorTexture.texCoord << "\n";
   std::cerr << "  technique: " << material.technique << "\n";
+
+  if (material.metallicFactor)
+    std::cerr << "  metallicFactor: "  << material.metallicFactor.value() << "\n";
+  if (material.roughnessFactor)
+    std::cerr << "  roughnessFactor: " << material.roughnessFactor.value() << "\n";
+
+  auto printTexture = [&](const MaterialTexture &texture, const std::string &id) {
+    std::cerr << "  " << id << "\n";
+    if (texture.index >= 0)
+      std::cerr << "   index: " << texture.index << "\n";
+    if (texture.texCoord)
+      std::cerr << "   texCoord: " << texture.texCoord.value() << "\n";
+    if (texture.scale)
+      std::cerr << "   scale: " << texture.scale.value() << "\n";
+    if (texture.strength)
+      std::cerr << "   strength: " << texture.strength.value() << "\n";
+  };
+
+  printTexture(material.normalTexture           , "normalTexture");
+  printTexture(material.occlusionTexture        , "occlusionTexture");
+  printTexture(material.metallicRoughnessTexture, "metallicRoughnessTexture");
+
   if (material.ambient)
     std::cerr << "  ambient: " << material.ambient.value() << "\n";
   if (material.diffuse)
     std::cerr << "  diffuse: " << material.diffuse.value() << "\n";
-  if (material.emission)
-    std::cerr << "  emission: " << material.emission.value() << "\n";
-  if (material.specular)
-    std::cerr << "  specular: " << material.specular.value() << "\n";
   if (material.shininess)
     std::cerr << "  shininess: " << material.shininess.value() << "\n";
   if (material.transparency)
     std::cerr << "  transparency: " << material.transparency.value() << "\n";
+
+  printTexture(material.baseColorTexture, "baseColorTexture");
+
+  printTexture(material.specularTexture, "specularTexture");
+  if (material.specular)
+    std::cerr << "  specular: " << material.specular.value() << "\n";
+
+  printTexture(material.emissiveTexture, "emissiveTexture");
+  if (material.emission)
+    std::cerr << "  emission: " << material.emission.value() << "\n";
+
+  printTexture(material.thicknessTexture, "thicknessTexture");
 }
 
 void
@@ -4250,6 +5301,8 @@ printPrimitive(const Primitive &primitive, int ia) const
     std::cerr << "    TEXCOORD_0: " << primitive.texCoord0 << "\n";
   if (! primitive.texCoord1.isEmpty())
     std::cerr << "    TEXCOORD_1: " << primitive.texCoord1 << "\n";
+  if (! primitive.texCoord2.isEmpty())
+    std::cerr << "    TEXCOORD_2: " << primitive.texCoord2 << "\n";
   if (! primitive.material.isEmpty())
     std::cerr << "    material: " << primitive.material << "\n";
 }

@@ -10,10 +10,17 @@
 #include <QSplitter>
 #include <QStackedWidget>
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
 CQNewGLModel::
 CQNewGLModel() :
  QFrame()
 {
+  buildDir_ = QUOTE(BUILD_DIR);
+
+  //---
+
   auto *layout = new QVBoxLayout(this);
 
   //---
@@ -47,10 +54,6 @@ CQNewGLModel() :
   splitter->addWidget(control_);
 
   control_->setVisible(false);
-
-  //---
-
-  CGeometryInst->setShininess(shininess_);
 }
 
 void
@@ -58,8 +61,6 @@ CQNewGLModel::
 setShininess(double r)
 {
   shininess_ = r;
-
-  CGeometryInst->setShininess(r);
 }
 
 void

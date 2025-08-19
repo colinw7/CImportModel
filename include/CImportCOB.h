@@ -41,6 +41,8 @@ class CImportCOB : public CImportBase {
                                 const CRGBA &diffuse, const CRGBA &specular, const CRGBA &emission,
                                 double shininess, const std::string &fileName) = 0;
 
+  CGeomScene3D &getScene() override;
+
  private:
   bool readName();
   bool readCoordinates();

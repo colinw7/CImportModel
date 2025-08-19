@@ -1,5 +1,6 @@
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModel.h>
 #include <CQGLBuffer.h>
 
 CQNewGLShaderProgram::
@@ -22,7 +23,7 @@ void
 CQNewGLShaderProgram::
 addVertexShader(const QString &name)
 {
-  auto buildDir = canvas_->buildDir();
+  auto buildDir = canvas_->app()->buildDir();
 
   if (! addShaderFromSourceFile(QOpenGLShader::Vertex, buildDir + "/shaders/" + name))
     std::cerr << log().toStdString() << "\n";
@@ -32,7 +33,7 @@ void
 CQNewGLShaderProgram::
 addFragmentShader(const QString &name)
 {
-  auto buildDir = canvas_->buildDir();
+  auto buildDir = canvas_->app()->buildDir();
 
   if (! addShaderFromSourceFile(QOpenGLShader::Fragment, buildDir + "/shaders/" + name))
     std::cerr << log().toStdString() << "\n";

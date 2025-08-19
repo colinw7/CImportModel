@@ -239,14 +239,6 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
 
   //---
 
-  ambientEdit_ = new CQColorEdit(this),
-
-  ambientEdit_->setColor(canvas->ambientColor());
-
-  addLabelEdit("Ambient", ambientEdit_);
-
-  //---
-
   depthTestCheck_ = new QCheckBox("Depth Test");
 
   depthTestCheck_->setChecked(canvas->isDepthTest());
@@ -276,6 +268,14 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
   polygonLineCheck_->setChecked(canvas->isPolygonLine());
 
   layout->addWidget(polygonLineCheck_);
+
+  //---
+
+  showNormalsCheck_ = new QCheckBox("Show Normals");
+
+  showNormalsCheck_->setChecked(canvas->isShowNormals());
+
+  layout->addWidget(showNormalsCheck_);
 
   //---
 
@@ -311,6 +311,49 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
 
   //---
 
+  auto *materialGroup  = new QGroupBox("Material");
+  auto *materialLayout = new QVBoxLayout(materialGroup);
+
+  layout->addWidget(materialGroup);
+
+  //---
+
+  auto addMaterialLabelEdit = [&](const QString &label, QWidget *w) {
+    auto *frame   = new QFrame;
+    auto *layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    materialLayout->addWidget(frame);
+  };
+
+  //---
+
+  ambientEdit_ = new CQColorEdit(this),
+
+  ambientEdit_->setColor(canvas->ambientColor());
+
+  addMaterialLabelEdit("Ambient", ambientEdit_);
+
+  //---
+
+  diffuseEdit_ = new CQColorEdit(this),
+
+  diffuseEdit_->setColor(canvas->diffuseColor());
+
+  addMaterialLabelEdit("Diffuse", diffuseEdit_);
+
+  //---
+
+  emissionEdit_ = new CQColorEdit(this),
+
+  emissionEdit_->setColor(canvas->emissionColor());
+
+  addMaterialLabelEdit("Emission", emissionEdit_);
+
+  //---
+
   auto createSlider = [&](const QString &label, double min, double max, double value,
                           const char *slotName) {
     auto *slider = new CQRealSlider(Qt::Horizontal);
@@ -328,19 +371,30 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
     return slider;
   };
 
-  auto *ambientSlider   = createSlider("Ambient"  , 0.0,   1.0, app->ambientStrength(),
-                                       SLOT(ambientFactorSlot(double)));
-  auto *diffuseSlider   = createSlider("Diffuse"  , 0.0,   1.0, app->diffuseStrength(),
-                                       SLOT(diffuseFactorSlot(double)));
-  auto *specularSlider  = createSlider("Specular" , 0.0,   1.0, app->specularStrength(),
-                                       SLOT(specularFactorSlot(double)));
+  auto *ambientSlider  = createSlider("Ambient" , 0.0, 1.0, app->ambientStrength(),
+                                      SLOT(ambientFactorSlot(double)));
+  auto *diffuseSlider  = createSlider("Diffuse" , 0.0, 1.0, app->diffuseStrength(),
+                                      SLOT(diffuseFactorSlot(double)));
+  auto *specularSlider = createSlider("Specular", 0.0, 1.0, app->specularStrength(),
+                                      SLOT(specularFactorSlot(double)));
+  auto *emissiveSlider = createSlider("Emissive", 0.0, 1.0, app->emissiveStrength(),
+                                      SLOT(emissiveFactorSlot(double)));
+
   auto *shininessSlider = createSlider("Shininess", 0.0, 100.0, app->shininess(),
                                        SLOT(shininessFactorSlot(double)));
 
-  layout->addWidget(ambientSlider);
-  layout->addWidget(diffuseSlider);
-  layout->addWidget(specularSlider);
-  layout->addWidget(shininessSlider);
+  materialLayout->addWidget(ambientSlider);
+  materialLayout->addWidget(diffuseSlider);
+  materialLayout->addWidget(specularSlider);
+  materialLayout->addWidget(emissiveSlider);
+  materialLayout->addWidget(shininessSlider);
+
+  //---
+
+  auto *controlGroup  = new QGroupBox("Control");
+  auto *controlLayout = new QVBoxLayout(controlGroup);
+
+  layout->addWidget(controlGroup);
 
   //---
 
@@ -362,9 +416,11 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
 
   connect(buttonGroup, SIGNAL(buttonClicked(int)), this, SLOT(typeSlot(int)));
 
-  layout->addWidget(modelCheck);
-  layout->addWidget(lightCheck);
-  layout->addWidget(cameraCheck);
+  controlLayout->addWidget(modelCheck);
+  controlLayout->addWidget(lightCheck);
+  controlLayout->addWidget(cameraCheck);
+
+  //---
 
   layout->addStretch(1);
 
@@ -383,6 +439,10 @@ connectSlots(bool b)
 
     connect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
             this, SLOT(ambientSlot(const QColor &)));
+    connect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(diffuseSlot(const QColor &)));
+    connect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(emissionSlot(const QColor &)));
 
     connect(depthTestCheck_, SIGNAL(stateChanged(int)), this, SLOT(depthTestSlot(int)));
 
@@ -391,6 +451,8 @@ connectSlots(bool b)
     connect(frontFaceCheck_, SIGNAL(stateChanged(int)), this, SLOT(frontFaceSlot(int)));
 
     connect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
+
+    connect(showNormalsCheck_, SIGNAL(stateChanged(int)), this, SLOT(showNormalsSlot(int)));
 
     connect(flipYZCheck_, SIGNAL(stateChanged(int)), this, SLOT(flipYZSlot(int)));
 
@@ -406,6 +468,10 @@ connectSlots(bool b)
 
     disconnect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
                this, SLOT(ambientSlot(const QColor &)));
+    disconnect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(diffuseSlot(const QColor &)));
+    disconnect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(emissionSlot(const QColor &)));
 
     disconnect(depthTestCheck_, SIGNAL(stateChanged(int)), this, SLOT(depthTestSlot(int)));
 
@@ -414,6 +480,8 @@ connectSlots(bool b)
     disconnect(frontFaceCheck_, SIGNAL(stateChanged(int)), this, SLOT(frontFaceSlot(int)));
 
     disconnect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
+
+    disconnect(showNormalsCheck_, SIGNAL(stateChanged(int)), this, SLOT(showNormalsSlot(int)));
 
     disconnect(flipYZCheck_, SIGNAL(stateChanged(int)), this, SLOT(flipYZSlot(int)));
 
@@ -442,6 +510,32 @@ ambientSlot(const QColor &c)
   auto *canvas = this->canvas();
 
   canvas->setAmbientColor(c);
+
+  canvas->updateObjectData();
+  canvas->update();
+}
+
+void
+CQNewGLGeneralControl::
+diffuseSlot(const QColor &c)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setDiffuseColor(c);
+
+  canvas->updateObjectData();
+  canvas->update();
+}
+
+void
+CQNewGLGeneralControl::
+emissionSlot(const QColor &c)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setEmissionColor(c);
+
+  canvas->updateObjectData();
   canvas->update();
 }
 
@@ -482,6 +576,18 @@ polygonLineSlot(int state)
   auto *canvas = this->canvas();
 
   canvas->setPolygonLine(state);
+  canvas->update();
+}
+
+void
+CQNewGLGeneralControl::
+showNormalsSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowNormals(state);
+
+  canvas->updateObjectData();
   canvas->update();
 }
 
@@ -537,7 +643,7 @@ ambientFactorSlot(double v)
   auto *app    = control_->app();
   auto *canvas = this->canvas();
 
-  app   ->setAmbientStrength(v);
+  app->setAmbientStrength(v);
   canvas->update();
 }
 
@@ -548,7 +654,7 @@ diffuseFactorSlot(double v)
   auto *app    = control_->app();
   auto *canvas = this->canvas();
 
-  app   ->setDiffuseStrength(v);
+  app->setDiffuseStrength(v);
   canvas->update();
 }
 
@@ -559,7 +665,18 @@ specularFactorSlot(double v)
   auto *app    = control_->app();
   auto *canvas = this->canvas();
 
-  app   ->setSpecularStrength(v);
+  app->setSpecularStrength(v);
+  canvas->update();
+}
+
+void
+CQNewGLGeneralControl::
+emissiveFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setEmissiveStrength(v);
   canvas->update();
 }
 
@@ -570,7 +687,9 @@ shininessFactorSlot(double v)
   auto *app    = control_->app();
   auto *canvas = this->canvas();
 
-  app   ->setShininess(v);
+  app->setShininess(v);
+
+  canvas->updateObjectData();
   canvas->update();
 }
 
@@ -780,17 +899,28 @@ CQNewGLLightControl::
 CQNewGLLightControl(CQNewGLControl *control) :
  CQNewGLControlFrame(control)
 {
-  auto *canvas = this->canvas();
+  auto *layout = new QVBoxLayout(this);
 
   //---
 
-  auto *layout = new QGridLayout(this);
+  lightsList_ = new QListWidget;
+
+  lightsList_->setSelectionMode(QListWidget::SingleSelection);
+
+  layout->addWidget(lightsList_);
+
+  //---
+
+  auto *controlFrame  = new QFrame;
+  auto *controlLayout = new QGridLayout(controlFrame);
+
+  layout->addWidget(controlFrame);
 
   int row = 0;
 
   auto addLabelEdit = [&](const QString &label, QWidget *w) {
-    layout->addWidget(new QLabel(label), row, 0);
-    layout->addWidget(w, row, 1);
+    controlLayout->addWidget(new QLabel(label), row, 0);
+    controlLayout->addWidget(w, row, 1);
     ++row;
   };
 
@@ -802,14 +932,25 @@ CQNewGLLightControl(CQNewGLControl *control) :
   //---
 
   colorEdit_ = new CQColorEdit;
-
-  colorEdit_->setColor(canvas->lightColor());
-
   addLabelEdit("Color", colorEdit_);
 
   //---
 
-  layout->setRowStretch(row, 1);
+  controlLayout->setRowStretch(row, 1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *addButton = new QPushButton("Add");
+
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLLightControl::addSlot);
+
+  buttonsLayout->addWidget(addButton);
+  buttonsLayout->addStretch(1);
 }
 
 void
@@ -817,12 +958,18 @@ CQNewGLLightControl::
 connectSlots(bool b)
 {
   if (b) {
+    connect(lightsList_, &QListWidget::currentItemChanged,
+            this, &CQNewGLLightControl::lightSelectedSlot);
+
     connect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLLightControl::posSlot);
 
     connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
             this, SLOT(colorSlot(const QColor &)));
   }
   else {
+    disconnect(lightsList_, &QListWidget::currentItemChanged,
+               this, &CQNewGLLightControl::lightSelectedSlot);
+
     disconnect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLLightControl::posSlot);
 
     disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
@@ -832,12 +979,29 @@ connectSlots(bool b)
 
 void
 CQNewGLLightControl::
+lightSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+{
+  auto *canvas = this->canvas();
+
+  int ind = item->data(Qt::UserRole).toInt();
+
+  canvas->setCurrentLight(ind);
+
+  updateWidgets(/*reload*/false);
+
+  canvas->update();
+}
+
+void
+CQNewGLLightControl::
 posSlot()
 {
+  auto *canvas = this->canvas();
+
   auto p = posEdit_->getValue();
 
-  canvas()->setLightPos(CGLVector3D(p.x, p.y, p.z));
-  canvas()->update();
+  canvas->setCurrentLightPos(CGLVector3D(p.x, p.y, p.z));
+  canvas->update();
 }
 
 void
@@ -846,18 +1010,55 @@ colorSlot(const QColor &c)
 {
   auto *canvas = this->canvas();
 
-  canvas->setLightColor(c);
+  canvas->setCurrentLightColor(c);
   canvas->update();
 }
 
 void
 CQNewGLLightControl::
-updateWidgets()
+addSlot()
 {
+  auto *canvas = this->canvas();
+
+  canvas->addLight();
+
+  control_->updateLights();
+
+  canvas->update();
+}
+
+void
+CQNewGLLightControl::
+updateWidgets(bool reload)
+{
+  auto *canvas = this->canvas();
+
   connectSlots(false);
 
-  auto p = canvas()->lightPos();
+  //---
+
+  if (reload) {
+    lightsList_->clear();
+
+    int ind = 0;
+
+    for (auto *light : canvas->lights()) {
+      auto name = light->name;
+
+      auto *item = new QListWidgetItem(name);
+
+      lightsList_->addItem(item);
+
+      item->setData(Qt::UserRole, ind++);
+    }
+  }
+
+  //---
+
+  auto p = canvas->currentLightPos();
   posEdit_->setValue(CPoint3D(p.x(), p.y(), p.z()));
+
+  colorEdit_->setColor(canvas->currentLightColor());
 
   connectSlots(true);
 }
@@ -870,8 +1071,7 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
 {
   auto *layout = new QVBoxLayout(this);
 
-  auto *groupBox = new QGroupBox("Objects");
-
+  auto *groupBox    = new QGroupBox("Objects");
   auto *groupLayout = new QVBoxLayout(groupBox);
 
   objectsList_ = new CQNewGLObjectsList(control);
@@ -2415,7 +2615,7 @@ CQNewGLObjectsList::
 objectSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
 {
   selectedInd_ = (item ? item->data(Qt::UserRole).toInt() : -1);
-  std::cerr << selectedInd_ << "\n";
+//std::cerr << selectedInd_ << "\n";
 
   Q_EMIT currentItemChanged();
 }

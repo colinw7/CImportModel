@@ -324,7 +324,7 @@ readFace(const std::string &line)
         num3 = CStrUtil::toInteger(fields[2]);
 
       if (num3 < 0)
-         num3 += nn + 1;
+        num3 += nn + 1;
 
       if (num3 > 0)
         normals.push_back(long(num3 - 1));

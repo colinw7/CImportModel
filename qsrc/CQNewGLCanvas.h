@@ -10,6 +10,7 @@
 #include <CRGBA.h>
 
 #include <QGLWidget>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QMatrix4x4>
 
 class CQNewGLModel;
@@ -23,7 +24,7 @@ class CGLTexture;
 class CGeomObject3D;
 class CGeomTexture;
 
-class CQNewGLCanvas : public QGLWidget {
+class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
   Q_OBJECT
 
   Q_PROPERTY(QColor bgColor READ bgColor WRITE setBgColor)
@@ -32,6 +33,7 @@ class CQNewGLCanvas : public QGLWidget {
   Q_PROPERTY(bool cullFace    READ isCullFace    WRITE setCullFace   )
   Q_PROPERTY(bool frontFace   READ isFrontFace   WRITE setFrontFace  )
   Q_PROPERTY(bool polygonLine READ isPolygonLine WRITE setPolygonLine)
+  Q_PROPERTY(bool showNormals READ isShowNormals WRITE setShowNormals)
 
  public:
   enum class BonesTransform {
@@ -66,6 +68,7 @@ class CQNewGLCanvas : public QGLWidget {
     CRGBA       ambient         { 0, 0, 0 };
     CRGBA       diffuse         { 1, 1, 1 };
     CRGBA       specular        { 0, 0, 0 };
+    CRGBA       emission        { 0, 0, 0, 0 };
     double      shininess       { 1.0 };
   };
 
@@ -79,8 +82,26 @@ class CQNewGLCanvas : public QGLWidget {
   struct ObjectData {
     CGeomObject3D* object { nullptr };
     ObjectDrawData modelData;
+    ObjectDrawData normalData;
     ObjectDrawData bonesData;
     ObjectDrawData boneData;
+  };
+
+  struct Light {
+    QString     name;
+    CGLVector3D pos    { 0.4f, 0.4f, 0.4f };
+    QColor      color  { 255, 255, 255 };
+    CQGLBuffer* buffer { nullptr };
+  };
+
+  using Lights = std::vector<Light *>;
+
+  struct LoadData {
+    bool invertX { false };
+    bool invertY { false };
+    bool invertZ { false };
+
+    LoadData() { }
   };
 
  public:
@@ -113,6 +134,14 @@ class CQNewGLCanvas : public QGLWidget {
   const QColor &ambientColor() const { return ambientColor_; }
   void setAmbientColor(const QColor &c);
 
+  const QColor &diffuseColor() const { return diffuseColor_; }
+  void setDiffuseColor(const QColor &c);
+
+  const QColor &emissionColor() const { return emissionColor_; }
+  void setEmissionColor(const QColor &c);
+
+  //---
+
   bool isDepthTest() const { return depthTest_; }
   void setDepthTest(bool b);
 
@@ -125,17 +154,32 @@ class CQNewGLCanvas : public QGLWidget {
   bool isPolygonLine() const { return polygonLine_; }
   void setPolygonLine(bool b);
 
+  bool isShowNormals() const { return showNormals_; }
+  void setShowNormals(bool b);
+
+  //---
+
   const CVector3D &modelTranslate() const { return modelTranslate_; }
   void setModelTranslate(const CVector3D &v) { modelTranslate_ = v; }
 
   const CVector3D &modelRotate() const { return modelRotate_; }
   void setModelRotate(const CVector3D &v) { modelRotate_ = v; }
 
-  const CGLVector3D &lightPos() const { return lightPos_; }
-  void setLightPos(const CGLVector3D &v) { lightPos_ = v; }
+  //---
 
-  const QColor &lightColor() const { return lightColor_; }
-  void setLightColor(const QColor &v) { lightColor_ = v; }
+  const Lights &lights() { return lights_; }
+
+  int currentLight() const { return currentLight_; }
+  void setCurrentLight(int i);
+
+  CGLVector3D lightPos(int i) const;
+  QColor lightColor(int i) const;
+
+  CGLVector3D currentLightPos() const { return lightPos(currentLight()); }
+  void setCurrentLightPos(const CGLVector3D &v);
+
+  QColor currentLightColor() const { return lightColor(currentLight()); }
+  void setCurrentLightColor(const QColor &c);
 
   //---
 
@@ -153,8 +197,6 @@ class CQNewGLCanvas : public QGLWidget {
 
   //---
 
-  const QString &buildDir() const { return buildDir_; }
-
   const CGLMatrix3D &projectionMatrix() const { return paintData_.projection; }
   const CGLMatrix3D &viewMatrix() const { return paintData_.view; }
 
@@ -162,7 +204,8 @@ class CQNewGLCanvas : public QGLWidget {
 
   //---
 
-  bool loadModel(const QString &modelName, CGeom3DType format);
+  bool loadModel(const QString &modelName, CGeom3DType format,
+                 const LoadData &loadData=LoadData());
 
   void setInitTextures(const InitTextureDatas &textures);
   void setTextureMap(const std::string &map);
@@ -174,6 +217,14 @@ class CQNewGLCanvas : public QGLWidget {
   void resizeGL(int, int) override;
 
   void resetRange();
+
+  //---
+
+  void addLight(bool update=true);
+
+  bool createFontTexture(uint *texture, int w, int h, uchar *data);
+
+  //---
 
   void mousePressEvent  (QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
@@ -213,6 +264,8 @@ class CQNewGLCanvas : public QGLWidget {
   void drawAxis();
   void drawLight();
 
+  void drawNormals(ObjectData *objectData);
+
   CMatrix3D getMeshGlobalTransform(ObjectData *objectData, bool invert) const;
   CMatrix3D getMeshLocalTransform (ObjectData *objectData, bool invert) const;
 
@@ -239,49 +292,84 @@ class CQNewGLCanvas : public QGLWidget {
 
   using ObjectDatas = std::map<CGeomObject3D*, ObjectData *>;
   using TextureMap  = std::map<std::string, TextureMapData>;
+  using Texts       = std::vector<CQNewGLText *>;
 
-  CQNewGLModel*         app_                { nullptr };
-  bool                  initialized_        { false };
-  QString               buildDir_;
-  CImportBase*          import_             { nullptr };
-  QColor                bgColor_            { 51, 76, 76 };
-  QColor                ambientColor_       { 100, 100, 100 };
-  bool                  depthTest_          { true };
-  bool                  cullFace_           { false };
-  bool                  frontFace_          { true };
-  bool                  polygonLine_        { false };
-  bool                  flipYZ_             { false };
-  bool                  showAxis_           { false };
-  bool                  invertDepth_        { false };
-  bool                  ortho_              { false };
-  double                time_               { 0.0 };
-  CVector3D             sceneSize_          { 1.0, 1.0, 1.0 };
-  float                 sceneScale_         { 1.0 };
-  CPoint3D              sceneCenter_        { 0 , 0, 0 };
-  CQNewGLCamera*        camera_             { nullptr };
-  CVector3D             modelRotate_        { 0.0, 0.0, 0.0 };
-  CVector3D             modelScale_         { 1.0, 1.0, 1.0 };
-  CVector3D             modelTranslate_     { 1.0, 1.0, 1.0 };
-  CGLVector3D           lightPos_           { 0.4f, 0.4f, 0.4f };
-  QColor                lightColor_         { 255, 255, 255 };
-  bool                  animEnabled_        { true };
-  QString               animName_;
-  bool                  bonesEnabled_       { false };
-  BonesTransform        bonesTransform_     { BonesTransform::INVERSE_BIND };
-  CQNewGLShaderProgram* modelShaderProgram_ { nullptr };
+  CQNewGLModel* app_           { nullptr };
+  bool          initialized_   { false };
+  CImportBase*  import_        { nullptr };
+  QColor        bgColor_       { 51, 76, 76 };
+  QColor        ambientColor_  { 100, 100, 100 };
+  QColor        diffuseColor_  { 255, 255, 255 };
+  QColor        emissionColor_ { 0, 0, 0 };
+  bool          depthTest_     { true };
+  bool          cullFace_      { false };
+  bool          frontFace_     { true };
+  bool          polygonLine_   { false };
+  bool          showNormals_   { false };
+  bool          flipYZ_        { false };
+  bool          showAxis_      { false };
+  bool          invertDepth_   { false };
+  bool          ortho_         { false };
+  double        time_          { 0.0 };
+
+  // scene
+  CVector3D sceneSize_     { 1.0, 1.0, 1.0 };
+  double    sceneScale_    { 1.0 };
+  float     invSceneScale_ { 1.0f };
+  CPoint3D  sceneCenter_   { 0, 0, 0 };
+
+  PaintData paintData_;
+
+  // camera
+  CQNewGLCamera* camera_ { nullptr };
+
+  // model
+  CVector3D modelRotate_    { 0.0, 0.0, 0.0 };
+  CVector3D modelScale_     { 1.0, 1.0, 1.0 };
+  CVector3D modelTranslate_ { 1.0, 1.0, 1.0 };
+
+  CQNewGLShaderProgram* modelShaderProgram_  { nullptr };
+  CQNewGLShaderProgram* normalShaderProgram_ { nullptr };
+
+  ObjectDatas objectDatas_;
+
+  // light
+  CQNewGLShaderProgram* lightShaderProgram_ { nullptr };
+
+  Lights lights_;
+  int    currentLight_ { 0 };
+
+  // anim
+  bool    animEnabled_ { true };
+  QString animName_;
+
+  // bones
+  bool           bonesEnabled_   { false };
+  BonesTransform bonesTransform_ { BonesTransform::INVERSE_BIND };
+
   CQNewGLShaderProgram* bonesShaderProgram_ { nullptr };
   CQNewGLShaderProgram* boneShaderProgram_  { nullptr };
-  CQNewGLShaderProgram* lightShaderProgram_ { nullptr };
-  CQNewGLShaderProgram* axisShaderProgram_  { nullptr };
-  FaceDatas             axisFaceDatas_;
-  ObjectDatas           objectDatas_;
-  InitTextureDatas      initTextures_;
-  TextureMap            textureMap_;
-  GLTextures            glTextures_;
-  PaintData             paintData_;
 
+  // axis
+  CQNewGLShaderProgram* axisShaderProgram_ { nullptr };
+  FaceDatas             axisFaceDatas_;
+
+  Texts axisTexts_;
+
+  // textures
+  InitTextureDatas initTextures_;
+  TextureMap       textureMap_;
+  GLTextures       glTextures_;
+
+  // font
   CQNewGLFont* font_ { nullptr };
-  CQNewGLText* text_ { nullptr };
+//CQNewGLText* text_ { nullptr };
+
+  // mouse
+  double mousePressX_ { 0.0 };
+  double mousePressY_ { 0.0 };
+  double mouseMoveX_  { 0.0 };
+  double mouseMoveY_  { 0.0 };
 };
 
 //---

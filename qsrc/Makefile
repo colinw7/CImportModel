@@ -815,7 +815,8 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		CQGLUtil.h \
-		../../CStrUtil/include/CStrUtil.h
+		../../CStrUtil/include/CStrUtil.h \
+		../../CUtil/include/CInterval.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLCanvas.o CQNewGLCanvas.cpp
 
 CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
@@ -1031,6 +1032,7 @@ CQNewGLShaderProgram.o: CQNewGLShaderProgram.cpp CQNewGLShaderProgram.h \
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
 		../../CUtil/include/CRGBName.h \
+		CQNewGLModel.h \
 		CQGLBuffer.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLShaderProgram.o CQNewGLShaderProgram.cpp
 
@@ -1045,17 +1047,18 @@ CQNewGLFont.o: CQNewGLFont.cpp CQNewGLFont.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CGaussianMatrix.h \
 		CQNewGLCanvas.h \
 		CQNewGLShaderProgram.h \
 		../../CUtil/include/CGeom3DType.h \
 		CGLCamera.h \
 		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CGaussianMatrix.h \
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
 		../../CUtil/include/CRGBName.h \
+		CQNewGLModel.h \
 		CQGLBuffer.h \
 		CQGLUtil.h \
 		stb_truetype.h

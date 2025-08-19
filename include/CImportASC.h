@@ -27,6 +27,8 @@ class CImportASC : public CImportBase {
 
   virtual void addITriangle(int i1, int i2, int i3, const CRGBA &rgba) = 0;
 
+  CGeomScene3D &getScene() override;
+
  private:
   bool readName();
   bool readNumObjects();

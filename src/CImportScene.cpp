@@ -455,7 +455,7 @@ readObject(const std::string &name)
           if (color_num >= 0 && color_num <= int(colors_.size()))
             rgba = CRGBName::toRGBA(colors_[uint(color_num)]);
           else
-            rgba = CRGBA(0,0,0,0);
+            rgba = CRGBA(0, 0, 0, 0);
         }
         else
           rgba = CRGBName::toRGBA(words[1].getWord());

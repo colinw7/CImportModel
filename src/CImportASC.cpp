@@ -1,4 +1,5 @@
 #include <CImportASC.h>
+#include <CGeomScene3D.h>
 #include <CStrUtil.h>
 #include <CRegExp.h>
 #include <CStrParse.h>
@@ -240,4 +241,12 @@ readNextLine()
   }
 
   return true;
+}
+
+CGeomScene3D &
+CImportASC::
+getScene()
+{
+  static CGeomScene3D scene;
+  return scene;
 }

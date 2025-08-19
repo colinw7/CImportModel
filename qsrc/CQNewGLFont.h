@@ -3,15 +3,17 @@
 
 #include <CGLVector2D.h>
 #include <CGLVector3D.h>
+#include <CMatrix3D.h>
 
 #include <QString>
 
 #include <vector>
 #include <cstdint>
 
-struct CQNewGLCanvas;
-struct CQNewGLShaderProgram;
+class  CQNewGLCanvas;
 struct CQNewGLFontData;
+class  TextShaderProgram;
+class  CQGLBuffer;
 
 class CQNewGLFont {
  public:
@@ -49,27 +51,33 @@ class CQNewGLFont {
 
   void init();
 
-  bool setFont(const QString &name);
+  const QString &fontName() { return name_; }
+  bool setFontName(const QString &name);
 
-  int size() const;
+  int size() const { return size_; }
+  void setSize(int s);
 
   GlyphInfo makeGlyphInfo(uint32_t character, float offsetX, float offsetY) const;
 
   CQNewGLCanvas *canvas() const { return canvas_; }
 
-  CQNewGLShaderProgram *shaderProgram() const { return shaderProgram_; }
+  TextShaderProgram *shaderProgram() const { return shaderProgram_; }
 
   bool bindTexture();
 
   int textureId() const;
 
  private:
+  bool updateFontData();
+
   bool readFile(const char *path, std::vector<uint8_t> &bytes) const;
 
  private:
-  CQNewGLCanvas*        canvas_        { nullptr };
-  CQNewGLShaderProgram* shaderProgram_ { nullptr };
-  CQNewGLFontData*      fontData_      { nullptr };
+  CQNewGLCanvas*     canvas_        { nullptr };
+  QString            name_;
+  int                size_          { 40 };
+  TextShaderProgram* shaderProgram_ { nullptr };
+  CQNewGLFontData*   fontData_      { nullptr };
 };
 
 //---
@@ -96,25 +104,40 @@ class CQNewGLText {
   const CGLVector3D &angle() const { return angle_; }
   void setAngle(const CGLVector3D &v) { angle_ = v; }
 
+  double size() const { return size_; }
+  void setSize(double r) { size_ = r; }
+
   void updateText();
 
   void render();
 
  private:
-  using RotatingLabel = CQNewGLFont::RotatingLabel;
+  CQGLBuffer *getBuffer();
+
+  CMatrix3D getModelMatrix() const;
+
+ private:
+//using RotatingLabel = CQNewGLFont::RotatingLabel;
 
   QString      text_;
   CQNewGLFont* font_  { nullptr };
   Color        color_ { 1, 1, 1 };
   CGLVector3D  position_;
-  CGLVector3D  angle_;
+  CGLVector3D  angle_ { 0, 0, 0 };
+  double       size_  { 0.1 };
 
+  CQGLBuffer *buffer_ { nullptr };
+
+#if 0
   std::vector<CGLVector3D> vertices_;
   std::vector<CGLVector2D> uvs_;
   std::vector<Color>       colors_;
   std::vector<uint16_t>    indexes_;
-  RotatingLabel            rotatingLabel_;
-  int                      indexElementCount_ { 0 };
+#endif
+
+//RotatingLabel rotatingLabel_;
+
+//int indexElementCount_ { 0 };
 };
 
 #endif

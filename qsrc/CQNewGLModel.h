@@ -24,6 +24,8 @@ class CQNewGLModel : public QFrame {
  public:
   CQNewGLModel();
 
+  const QString &buildDir() const { return buildDir_; }
+
   CQNewGLCanvas  *canvas () const { return canvas_; }
   CQNewGLControl *control() const { return control_; }
   CQNewGLUVMap   *uvMap  () const { return uvMap_; }
@@ -42,6 +44,9 @@ class CQNewGLModel : public QFrame {
 
   double specularStrength() const { return specularStrength_; }
   void setSpecularStrength(double r) { specularStrength_ = r; }
+
+  double emissiveStrength() const { return emissiveStrength_; }
+  void setEmissiveStrength(double r) { emissiveStrength_ = r; }
 
   double shininess() const { return shininess_; }
   void setShininess(double r);
@@ -72,6 +77,8 @@ class CQNewGLModel : public QFrame {
   void updateLights();
 
  private:
+  QString buildDir_;
+
   CQNewGLToolbar* toolbar_ { nullptr };
   CQNewGLCanvas*  canvas_  { nullptr };
   CQNewGLControl* control_ { nullptr };
@@ -85,6 +92,7 @@ class CQNewGLModel : public QFrame {
   double ambientStrength_  { 0.3 };
   double diffuseStrength_  { 1.0 };
   double specularStrength_ { 0.2 };
+  double emissiveStrength_ { 0.1 };
 
   double shininess_ { 32.0 };
 

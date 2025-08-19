@@ -178,6 +178,7 @@ class CImportGLTF : public CImportBase {
 
  private:
   using OptReal = std::optional<double>;
+  using OptLong = std::optional<long>;
 
   struct ChunkBuffer {
     std::vector<unsigned char> data;
@@ -233,12 +234,15 @@ class CImportGLTF : public CImportBase {
     long                count         { -1 };
     std::vector<double> min;
     std::vector<double> max;
+    bool                normalized    { false };
 
-    bool sparse                     { false };
-    long sparseCount                { -1 };
-    long sparseIndicesBufferView    { -1 };
-    long sparseIndicesComponentType { -1 };
-    long sparseValuesBufferView     { -1 };
+    bool    sparse                     { false };
+    long    sparseCount                { -1 };
+    IndName sparseIndicesBufferView;
+    long    sparseIndicesByteOffset    { -1 };
+    long    sparseIndicesComponentType { -1 };
+    IndName sparseValuesBufferView     { -1 };
+    long    sparseValuesByteOffset     { -1 };
   };
 
   struct Asset {
@@ -259,6 +263,7 @@ class CImportGLTF : public CImportBase {
   };
 
   struct Buffer : IndData {
+    std::string name;
     long        byteLength { 0 };
     std::string uri;
     std::string type;
@@ -279,28 +284,98 @@ class CImportGLTF : public CImportBase {
   using OptColor = std::optional<Color>;
 
   struct MaterialTexture {
-    long index    { -1 };
-    long texCoord { -1 };
+    long      index    { -1 };
+    OptLong   texCoord;
+    OptReal   scale;
+    OptReal   strength;
+    OptReal   rotation;
+    CVector2D scaleVector;
+    CVector2D offsetVector;
   };
 
   struct Material : IndData {
-    std::string     name;
-    double          metallicFactor { 0 };
-    double          roughnessFactor { 0 };
+    std::string name;
+    std::string technique;
+
+    OptReal         metallicFactor;
+    OptReal         roughnessFactor;
     MaterialTexture normalTexture;
-    MaterialTexture emissiveTexture;
     MaterialTexture occlusionTexture;
-    MaterialTexture baseColorTexture;
     MaterialTexture metallicRoughnessTexture;
-    std::string     technique;
-    OptColor        ambient;
-    OptColor        diffuse;
-    OptColor        emission;
+
+    OptColor ambient;
+    OptColor diffuse;
+    OptReal  shininess;
+    OptReal  transparency;
+
+    // base color
+    MaterialTexture baseColorTexture;
+    OptColor        baseColorFactor;
+
+    // specular
+    MaterialTexture specularTexture;
+    OptReal         specularFactor;
     OptColor        specular;
-    OptReal         shininess;
-    OptReal         transparency;
+    OptColor        specularColorFactor;
+
+    // emission
+    MaterialTexture emissiveTexture;
+    OptReal         emissiveStrength;
     OptVec3         emissiveFactor;
-    bool            doubleSided { false };
+    OptColor        emission;
+
+    // transmission
+    OptReal         transmissionFactor;
+    MaterialTexture transmissionTexture;
+
+    // attenuation
+    OptColor attenuationColor;
+    OptReal  attenuationDistance;
+
+    // thickness
+    OptReal         thicknessFactor;
+    MaterialTexture thicknessTexture;
+
+    bool        doubleSided { false };
+    std::string alphaMode;
+    OptReal     alphaCutoff;
+
+    OptReal         diffuseTransmissionFactor;
+    MaterialTexture diffuseTransmissionTexture;
+    OptColor        diffuseTransmissionColorFactor;
+    MaterialTexture diffuseTransmissionColorTexture;
+
+    // anisotropy
+    OptReal         anisotropyStrength;
+    OptReal         anisotropyRotation;
+    MaterialTexture anisotropyTexture;
+
+    // clearcoat
+    OptReal         clearcoatFactor;
+    OptReal         clearcoatRoughnessFactor;
+    MaterialTexture clearcoatTexture;
+    MaterialTexture clearcoatNormalTexture;
+    MaterialTexture clearcoatRoughnessTexture;
+
+    // sheen
+    OptColor        sheenColorFactor;
+    MaterialTexture sheenColorTexture;
+    OptReal         sheenRoughnessFactor;
+    MaterialTexture sheenRoughnessTexture;
+
+    // iridescence
+    OptReal         iridescenceFactor;
+    OptReal         iridescenceIor;
+    MaterialTexture iridescenceTexture;
+    MaterialTexture iridescenceThicknessTexture;
+    OptReal         iridescenceThicknessMinimum;
+    OptReal         iridescenceThicknessMaximum;
+
+    OptReal dispersion;
+    OptReal ior;
+
+    MaterialTexture diffuseTexture;
+    MaterialTexture specularGlossinessTexture;
   };
 
   struct Primitive {
@@ -310,9 +385,12 @@ class CImportGLTF : public CImportBase {
     IndName position;
     IndName texCoord0;
     IndName texCoord1;
+    IndName texCoord2;
     IndName material;
+    IndName color0;
     IndName joints0;
     IndName weights0;
+    IndName tangent;
   };
 
   struct Mesh : IndData {
@@ -354,6 +432,7 @@ class CImportGLTF : public CImportBase {
   };
 
   struct Sampler : IndData {
+    std::string    name;
     long magFilter { 0 };
     long minFilter { 0 };
     long wrapS     { 0 };
@@ -378,9 +457,12 @@ class CImportGLTF : public CImportBase {
   struct Camera : IndData {
     std::string name;
     std::string type;
-    double      yfov  { -1.0 };
-    double      znear { -1.0 };
-    double      zfar  { -1.0 };
+    double      xmag        { 0.0 };
+    double      ymag        { 0.0 };
+    double      yfov        { -1.0 };
+    double      znear       { -1.0 };
+    double      zfar        { -1.0 };
+    double      aspectRatio { 1.0 };
   };
 
   template<typename T>

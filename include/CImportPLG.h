@@ -31,6 +31,8 @@ class CImportPLG : public CImportBase {
   virtual void addITriangles(uint *inds, uint num_inds, CDrawType3D draw_type,
                              CShadeType3D shade_type, const CRGBA &rgba) = 0;
 
+  CGeomScene3D &getScene() override;
+
  private:
   CFile*      file_           { nullptr };
   std::string line_;

@@ -6,6 +6,8 @@
 #include <CFile.h>
 #include <CDeflate.h>
 
+#include <optional>
+
 class CStrParse;
 
 enum class DataType {
@@ -42,17 +44,38 @@ template<> inline DataType dataType<float      >() { return DataType::FLOAT ; }
 template<> inline DataType dataType<double     >() { return DataType::DOUBLE; }
 template<> inline DataType dataType<std::string>() { return DataType::STRING; }
 
-template<> inline DataType dataType<std::vector<uchar >>() { return DataType::BYTE_ARRAY; }
-template<> inline DataType dataType<std::vector<short >>() { return DataType::SHORT_ARRAY; }
-template<> inline DataType dataType<std::vector<int   >>() { return DataType::INT_ARRAY; }
-template<> inline DataType dataType<std::vector<long  >>() { return DataType::LONG_ARRAY; }
-template<> inline DataType dataType<std::vector<float >>() { return DataType::FLOAT_ARRAY; }
+template<> inline DataType dataType<std::vector<uchar >>() { return DataType::BYTE_ARRAY  ; }
+template<> inline DataType dataType<std::vector<short >>() { return DataType::SHORT_ARRAY ; }
+template<> inline DataType dataType<std::vector<int   >>() { return DataType::INT_ARRAY   ; }
+template<> inline DataType dataType<std::vector<long  >>() { return DataType::LONG_ARRAY  ; }
+template<> inline DataType dataType<std::vector<float >>() { return DataType::FLOAT_ARRAY ; }
 template<> inline DataType dataType<std::vector<double>>() { return DataType::DOUBLE_ARRAY; }
+
+template<typename T> inline const char *dataTypeString() { return ""; }
+
+template<> inline const char *dataTypeString<uchar      >() { return "BYTE"  ; }
+template<> inline const char *dataTypeString<short      >() { return "SHORT" ; }
+template<> inline const char *dataTypeString<int        >() { return "INT"   ; }
+template<> inline const char *dataTypeString<long       >() { return "LONG"  ; }
+template<> inline const char *dataTypeString<float      >() { return "FLOAT" ; }
+template<> inline const char *dataTypeString<double     >() { return "DOUBLE"; }
+template<> inline const char *dataTypeString<std::string>() { return "STRING"; }
+
+template<> inline const char *dataTypeString<std::vector<uchar >>() { return "BYTE_ARRAY"  ; }
+template<> inline const char *dataTypeString<std::vector<short >>() { return "SHORT_ARRAY" ; }
+template<> inline const char *dataTypeString<std::vector<int   >>() { return "INT_ARRAY"   ; }
+template<> inline const char *dataTypeString<std::vector<long  >>() { return "LONG_ARRAY"  ; }
+template<> inline const char *dataTypeString<std::vector<float >>() { return "FLOAT_ARRAY" ; }
+template<> inline const char *dataTypeString<std::vector<double>>() { return "DOUBLE_ARRAY"; }
 
 }
 
 class CImportFBX : public CImportBase {
  public:
+  using OptReal   = std::optional<double>;
+  using OptPoint3 = std::optional<CPoint3D>;
+  using OptColor  = std::optional<CRGBA>;
+
   template<typename T>
   static void *createData(const T &t) {
     auto *t1 = new T(t);
@@ -111,12 +134,19 @@ class CImportFBX : public CImportBase {
     }
 
     template<typename T>
+    static void printDataType(std::ostream &os, const T &t) {
+      os << t << " " << CImportFBXUtil::dataTypeString<T>();
+    }
+
+    template<typename T>
     static void printData(std::ostream &os, const T &t) {
       os << t;
     }
 
     template<typename T>
     static void printArray(std::ostream &os, const std::vector<T> &a) {
+      os << CImportFBXUtil::dataTypeString<T>() << "_ARRAY ";
+      os << "[" << a.size() << "] ";
       bool first = true;
       for (const auto &t : a) {
         if (! first) os << ", ";
@@ -137,19 +167,19 @@ class CImportFBX : public CImportBase {
 
     friend std::ostream &operator<<(std::ostream &os, const PropData &data) {
       if      (data.type() == DataType::BYTE)
-        printData(os, *reinterpret_cast<uchar *>(data.data_));
+        printDataType(os, *reinterpret_cast<uchar *>(data.data_));
       else if (data.type() == DataType::SHORT)
-        printData(os, *reinterpret_cast<short *>(data.data_));
+        printDataType(os, *reinterpret_cast<short *>(data.data_));
       else if (data.type() == DataType::INT)
-        printData(os, *reinterpret_cast<int *>(data.data_));
+        printDataType(os, *reinterpret_cast<int *>(data.data_));
       else if (data.type() == DataType::LONG)
-        printData(os, *reinterpret_cast<long *>(data.data_));
+        printDataType(os, *reinterpret_cast<long *>(data.data_));
       else if (data.type() == DataType::FLOAT)
-        printData(os, *reinterpret_cast<float *>(data.data_));
+        printDataType(os, *reinterpret_cast<float *>(data.data_));
       else if (data.type() == DataType::DOUBLE)
-        printData(os, *reinterpret_cast<double *>(data.data_));
+        printDataType(os, *reinterpret_cast<double *>(data.data_));
       else if (data.type() == DataType::STRING)
-        printData(os, *reinterpret_cast<std::string *>(data.data_));
+        printDataType(os, *reinterpret_cast<std::string *>(data.data_));
 
       else if (data.type() == DataType::BYTE_ARRAY)
         printArray(os, *reinterpret_cast<std::vector<uchar> *>(data.data_));
@@ -170,20 +200,149 @@ class CImportFBX : public CImportBase {
       return os;
     }
 
+    std::string toString() const {
+      if      (type() == DataType::BYTE)
+        return std::to_string(*reinterpret_cast<uchar *>(data_));
+      else if (type() == DataType::SHORT)
+        return std::to_string(*reinterpret_cast<short *>(data_));
+      else if (type() == DataType::INT)
+        return std::to_string(*reinterpret_cast<int *>(data_));
+      else if (type() == DataType::LONG)
+        return std::to_string(*reinterpret_cast<long *>(data_));
+      else if (type() == DataType::FLOAT)
+        return std::to_string(*reinterpret_cast<float *>(data_));
+      else if (type() == DataType::DOUBLE)
+        return std::to_string(*reinterpret_cast<double *>(data_));
+      else if (type() == DataType::STRING)
+        return *reinterpret_cast<std::string *>(data_);
+      else if (type() == DataType::BYTE_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<uchar> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::SHORT_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<short> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::INT_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<int> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::LONG_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<long> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::FLOAT_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<float> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::DOUBLE_ARRAY) {
+        std::ostringstream os;
+        printArray(os, *reinterpret_cast<std::vector<double> *>(data_));
+        return os.str();
+      }
+      else if (type() == DataType::NONE)
+        return "";
+      else
+        assert(false);
+
+      return "";
+    }
+
+    long toLong() const {
+     if      (type() == DataType::BYTE)
+        return *reinterpret_cast<uchar *>(data_);
+      else if (type() == DataType::SHORT)
+        return *reinterpret_cast<short *>(data_);
+      else if (type() == DataType::INT)
+        return *reinterpret_cast<int *>(data_);
+      else if (type() == DataType::LONG)
+        return *reinterpret_cast<long *>(data_);
+      else
+        assert(false);
+
+      return 0;
+    }
+
+    double toReal() const {
+     if      (type() == DataType::BYTE)
+        return *reinterpret_cast<uchar *>(data_);
+      else if (type() == DataType::SHORT)
+        return *reinterpret_cast<short *>(data_);
+      else if (type() == DataType::INT)
+        return *reinterpret_cast<int *>(data_);
+      else if (type() == DataType::LONG)
+        return static_cast<double>(*reinterpret_cast<long *>(data_));
+      else if (type() == DataType::FLOAT)
+        return *reinterpret_cast<float *>(data_);
+      else if (type() == DataType::DOUBLE)
+        return *reinterpret_cast<double *>(data_);
+      else
+        assert(false);
+
+      return 0;
+    }
+
+    std::vector<int> toIntArray() const {
+      if (type() == DataType::INT_ARRAY)
+        return *reinterpret_cast<std::vector<int> *>(data_);
+      else {
+        std::vector<int> ia;
+        ia.push_back(int(toLong()));
+        return ia;
+      }
+    }
+
+    std::vector<long> toLongArray() const {
+      if (type() == DataType::LONG_ARRAY)
+        return *reinterpret_cast<std::vector<long> *>(data_);
+      else
+        assert(false);
+
+      return std::vector<long>();
+    }
+
+    std::vector<float> toFloatArray() const {
+      if (type() == DataType::FLOAT_ARRAY)
+        return *reinterpret_cast<std::vector<float> *>(data_);
+      else
+        assert(false);
+
+      return std::vector<float>();
+    }
+
+    std::vector<double> toDoubleArray() const {
+      if (type() == DataType::DOUBLE_ARRAY)
+        return *reinterpret_cast<std::vector<double> *>(data_);
+      else {
+        std::vector<double> da;
+        da.push_back(toReal());
+        return da;
+      }
+    }
+
    private:
     DataType type_ { DataType::NONE };
     void*    data_ { nullptr };
   };
 
-  using PropDataArray = std::map<uint, PropData *>;
-  using PropDataMap   = std::map<std::string, PropDataArray>;
+  using PropDataArray    = std::map<uint, PropData *>;
+  using PropIndDataArray = std::map<uint, PropDataArray>;
+  using PropDataMap      = std::map<std::string, PropIndDataArray>;
 
   struct PropDataTree {
-    using Children = std::vector<PropDataTree *>;
+    using Children  = std::vector<PropDataTree *>;
+    using NameCount = std::map<std::string, uint>;
 
     std::string   name;
-    PropDataTree *parent { nullptr };
+    PropDataTree* parent { nullptr };
     PropDataMap   dataMap;
+    NameCount     nameCount;
+    PropDataArray parentDataMap;
     Children      children;
   };
 
@@ -203,8 +362,59 @@ class CImportFBX : public CImportBase {
     std::vector<TextBlock*> children;
   };
 
+  struct IndName {
+    long        ind  { -1 };
+    std::string name;
+
+    IndName() { }
+
+    IndName(long i) : ind(i) { }
+    IndName(const std::string &n) : name(n) { }
+
+    friend bool operator<(const IndName &lhs, const IndName &rhs) {
+      if (lhs.ind  >= 0  && rhs.ind  >= 0 ) return (lhs.ind  < rhs.ind );
+      if (lhs.name != "" && rhs.name != "") return (lhs.name < rhs.name);
+      return (lhs.ind >= 0);
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const IndName &i) {
+      if      (i.ind  >= 0 ) os << i.ind;
+      else if (i.name != "") os << i.name;
+      return os;
+    }
+
+    bool isEmpty() const { return (ind < 0 && name == ""); }
+
+    std::string to_string() const {
+      if (ind  >= 0 ) return std::to_string(ind);
+      else if (name != "") return name;
+      return "";
+    }
+
+    long to_long() const {
+      return ind;
+    }
+  };
+
+  template<typename T>
+  struct IndNameMap : public std::map<IndName, T> {
+    int lastInd { 0 };
+
+    bool isEmpty() const { return (*this).empty(); }
+
+    void add(T &d, const IndName &indName) {
+      d.indName = indName;
+
+      if (indName.name == "")
+        d.indName.ind = lastInd++;
+
+      (*this)[d.indName] = d;
+    }
+  };
+
   struct FileData {
-    std::vector<uchar> fileBytes;
+    std::vector<uchar> fileMem;
+    const uchar*       fileBytes { nullptr };
     ulong              filePos { 0 };
     ulong              fileSize { 0 };
 
@@ -276,6 +486,18 @@ class CImportFBX : public CImportBase {
     }
 
     bool readUInt(ulong *i) {
+      if (! readBytes(4))
+        return false;
+
+      *i = ((buffer[0] & 0xFF)      ) |
+           ((buffer[1] & 0xFF) <<  8) |
+           ((buffer[2] & 0xFF) << 16) |
+           ((buffer[3] & 0xFF) << 24);
+
+      return true;
+    }
+
+    bool readULong(ulong *i) {
       if (! readBytes(8))
         return false;
 
@@ -283,19 +505,15 @@ class CImportFBX : public CImportBase {
            (ulong(buffer[1] & 0xFF) <<  8) |
            (ulong(buffer[2] & 0xFF) << 16) |
            (ulong(buffer[3] & 0xFF) << 24) |
-           (ulong(buffer[0] & 0xFF) << 32) |
-           (ulong(buffer[1] & 0xFF) << 40) |
-           (ulong(buffer[2] & 0xFF) << 48) |
-           (ulong(buffer[3] & 0xFF) << 56);
+           (ulong(buffer[4] & 0xFF) << 32) |
+           (ulong(buffer[5] & 0xFF) << 40) |
+           (ulong(buffer[6] & 0xFF) << 48) |
+           (ulong(buffer[7] & 0xFF) << 56);
 
       return true;
     }
 
     bool readInt(int *i) {
-      return readData(i);
-    }
-
-    bool readULong(ulong *i) {
       return readData(i);
     }
 
@@ -359,11 +577,13 @@ class CImportFBX : public CImportBase {
         FileData fileData1;
 
         fileData1.fileSize = len*sizeof(T);
-        fileData1.fileBytes.resize(fileData1.fileSize);
+        fileData1.fileMem.resize(fileData1.fileSize);
 
         if (! CDeflate::deflate_bytes(buffer, compressedLen,
-                                      fileData1.fileBytes, uint(fileData1.fileSize)))
+                                      fileData1.fileMem, uint(fileData1.fileSize)))
           return errorMsg("Failed to uncompress data");
+
+        fileData1.fileBytes = &fileData1.fileMem[0];
 
         std::string vstr;
         for (uint i = 0; i < len; ++i) {
@@ -439,8 +659,14 @@ class CImportFBX : public CImportBase {
   void setHierName(bool b) { hierName_ = b; }
 
  private:
+  struct ModelData;
+  struct TextureData;
+  struct MaterialData;
+  struct AnimationDeformerData;
+
+  // Geometry Mesh Data
   struct GeometryData {
-    CGeomObject3D*      object { nullptr };
+    std::string         name;
     std::vector<int>    polygonVertexIndex;
     std::vector<double> vertices;
     std::vector<int>    edges;
@@ -451,30 +677,104 @@ class CImportFBX : public CImportBase {
     std::vector<int>    uvIndex;
     std::vector<double> uv;
     std::vector<int>    materials;
+    std::vector<int>    textures;
+    OptPoint3           translation;
+    OptPoint3           rotation;
+    OptPoint3           scale;
+
+    ModelData*             modelData    { nullptr };
+    AnimationDeformerData* deformerData { nullptr };
+
+    CGeomObject3D* object { nullptr };
   };
 
-  bool readBinary();
+  // Geometry Instance
+  struct ModelData {
+    std::string name;
+    std::string type;
+    OptPoint3   localTranslation;
+    OptPoint3   localRotation;
+    OptPoint3   localScaling;
+
+    TextureData*                        textureData  { nullptr };
+    MaterialData*                       materialData { nullptr };
+    std::vector<AnimationDeformerData*> deformerData;
+
+    ModelData*               parent { nullptr };
+    std::vector<ModelData *> children;
+
+    GeometryData*  geometryData { nullptr };
+
+    std::vector<GeometryData *> geometryDataList;
+  };
+
+  struct MaterialData;
+
+  struct TextureData {
+    std::string   name;
+    std::string   type;
+    std::string   fileName;
+    std::string   media;
+    CGeomTexture* texture { nullptr };
+
+    ModelData*    modelData { nullptr };
+    MaterialData* materialData { nullptr };
+  };
+
+  struct MaterialData {
+    std::string name;
+    OptColor    ambientColor;
+    OptReal     ambientFactor;
+    OptColor    diffuseColor;
+    OptReal     diffuseFactor;
+    OptColor    emissionColor;
+    OptReal     emissionFactor;
+    OptColor    specularColor;
+    OptReal     specularFactor;
+    OptReal     shininess;
+
+    TextureData*             textureData { nullptr };
+    std::vector<ModelData *> modelData;
+  };
+
+  //---
+
+  bool readBinary(bool &isBin);
   bool readAscii();
 
   bool readTextBlock(CStrParse &parse, TextBlock *block);
+
   void printTextBlock(TextBlock *block);
-  void processTextBlock(TextBlock *block);
+  void printNameValues(TextBlock *block);
+
+  bool processTextBlock(TextBlock *block);
+  bool processObjectsTextBlock(TextBlock *block);
+
+  std::vector<std::string> readValues(const std::string &value) const;
 
   bool readFileData(FileData &fileData);
 
   bool readScope(FileData &fileData, const std::string &scopeName,
                  PropDataTree *propDataTree);
 
-  bool readScopeData(const std::string &name, uint ind, FileData &fileData,
-                     PropDataTree *propDataTree);
+  bool readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
+                     const std::string &scopeName, PropDataTree *propDataTree);
 
   void dumpTree(PropDataTree *tree, int depth=0);
+  void dumpDataMap(PropDataTree *tree, int depth=0);
 
-  void addGeometry(PropDataTree *tree);
-  void addSubGeometry(PropDataTree *tree, GeometryData &geometryData);
-  void addGeometryObject(GeometryData &geometryData);
+  void processDataTree(PropDataTree *tree);
+  void processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData);
+
+  void addGeometryObject(GeometryData *geometryData);
+
+  CMatrix3D calcModelDataLocalTransform(ModelData *m) const;
+  CMatrix3D calcModelDataHierTransform(ModelData *m) const;
+
+  std::string calcModelDataHierName(ModelData *m) const;
 
   std::string hierName(PropDataTree *tree) const;
+  std::string hierName(TextBlock *block) const;
 
   std::string getObjectName();
 
@@ -497,6 +797,125 @@ class CImportFBX : public CImportBase {
   bool debug_    { false };
   bool dump_     { false };
   bool hierName_ { false };
+
+  using ConnectionMap = std::map<std::string, std::string>;
+
+  ConnectionMap connectionMap_;
+
+  struct GlobalData {
+    long   upAxis          { 0L };
+    long   upAxisSign      { 0L };
+    long   frontAxis       { 0L };
+    long   frontAxisSign   { 0L };
+    long   coordAxis       { 0L };
+    long   coordAxisSign   { 0L };
+    double unitScaleFactor { 1.0 };
+  };
+
+  // text format data
+  using TextureDataMap  = std::map<std::string, TextureData *>;
+  using MaterialDataMap = std::map<std::string, MaterialData *>;
+
+  TextureDataMap  textureDataMap_;
+  MaterialDataMap materialDataMap_;
+
+  // binary format data
+  GlobalData globalData_;
+
+  using IdType         = IndNameMap<std::string>;
+  using IdGeometryData = IndNameMap<GeometryData *>;
+  using IdModelData    = IndNameMap<ModelData *>;
+  using IdTextureData  = IndNameMap<TextureData *>;
+  using IdMaterialData = IndNameMap<MaterialData *>;
+
+  IdType         idType_;
+  IdGeometryData idGeometryData_;
+  IdModelData    idModelData_;
+  IdTextureData  idTextureData_;
+  IdMaterialData idMaterialData_;
+
+  struct AnimationLayerData;
+  struct AnimationCurveNodeData;
+  struct AnimationStackData;
+
+  struct AnimationCurveData {
+    std::string        name;
+    double             def { 0.0 };
+    std::vector<long>  keyTime;
+    std::vector<float> keyValueFloat;
+
+    AnimationCurveNodeData* animationCurveNode { nullptr };
+  };
+
+  struct AnimationCurveNodeData {
+    std::string type;
+    CPoint3D    p;
+
+    ModelData*          modelData          { nullptr };
+    AnimationLayerData* animationLayerData { nullptr };
+  };
+
+  struct AnimationDeformerData {
+    std::string         name;
+    std::string         type;
+    std::vector<int>    indexes;
+    std::vector<double> weights;
+
+    AnimationDeformerData*               parent { nullptr };
+    std::vector<AnimationDeformerData *> children;
+
+    GeometryData* geometryData { nullptr };
+    ModelData*    modelData    { nullptr };
+  };
+
+  struct AnimationLayerData {
+    std::string           name;
+    std::vector<CPoint3D> points;
+
+    AnimationStackData*                   animationStack { nullptr };
+    std::vector<AnimationCurveNodeData *> animationCurveNodes;
+  };
+
+  struct AnimationStackData {
+    std::string name;
+
+    std::vector<AnimationLayerData *> animationLayers;
+  };
+
+  struct NodeAttributeData {
+    std::string name;
+
+    ModelData* modelData { nullptr };
+  };
+
+  struct VideoData {
+    std::string name;
+
+    ModelData*   modelData   { nullptr };
+    TextureData* textureData { nullptr };
+  };
+
+  struct ConstraintData {
+    std::string name;
+  };
+
+  using IdAnimationCurveData     = IndNameMap<AnimationCurveData *>;
+  using IdAnimationCurveNodeData = IndNameMap<AnimationCurveNodeData *>;
+  using IdAnimationDeformerData  = IndNameMap<AnimationDeformerData *>;
+  using IdAnimationLayerData     = IndNameMap<AnimationLayerData *>;
+  using IdAnimationStackData     = IndNameMap<AnimationStackData *>;
+  using IdNodeAttributeData      = IndNameMap<NodeAttributeData *>;
+  using IdVideoData              = IndNameMap<VideoData *>;
+  using IdConstraintData         = IndNameMap<ConstraintData *>;
+
+  IdAnimationCurveData     animationCurveData_;
+  IdAnimationCurveNodeData animationCurveNodeData_;
+  IdAnimationDeformerData  animationDeformerData_;
+  IdAnimationLayerData     animationLayerData_;
+  IdAnimationStackData     animationStackData_;
+  IdNodeAttributeData      idNodeAttributeData_;
+  IdVideoData              videoData_;
+  IdConstraintData         constraintData_;
 };
 
 #endif

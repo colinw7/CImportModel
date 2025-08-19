@@ -1,5 +1,6 @@
 #include <CImportSTL.h>
 #include <CGeometry3D.h>
+#include <CStrParse.h>
 
 CImportSTL::
 CImportSTL(CGeomScene3D *scene, const std::string &name) :
@@ -223,7 +224,11 @@ readBinary()
     int i2 = object_->addVertex(CPoint3D(t.p2.x, t.p2.y, t.p2.z));
     int i3 = object_->addVertex(CPoint3D(t.p3.x, t.p3.y, t.p3.z));
 
-    object_->addITriangle(i1, i2, i3);
+    auto faceId = object_->addITriangle(i1, i2, i3);
+
+    auto &face = object_->getFace(faceId);
+
+    face.setNormal(CVector3D(t.normal.x, t.normal.y, t.normal.z));
   }
 
   return true;
@@ -233,7 +238,153 @@ bool
 CImportSTL::
 readAscii()
 {
-  std::cerr << "Ascii STL not handled\n";
+  file_->rewind();
 
-  return false;
+  //---
+
+  auto readLine = [&](std::string &line) {
+    line = "";
+
+    if (file_->eof())
+      return false;
+
+    while (! file_->eof()) {
+      auto c = file_->getC();
+
+      if (c == EOF) {
+        if (line == "")
+          return false;
+
+        break;
+      }
+
+      if (c == '\n')
+        break;
+
+      line += char(c);
+    }
+
+    return true;
+  };
+
+  auto errorMsg = [&](const std::string &msg) {
+    std::cerr << msg << "\n";
+    return false;
+  };
+
+  enum class State {
+    NONE,
+    SOLID,
+    FACET,
+    LOOP
+  };
+
+  //---
+
+  auto state = State::NONE;
+
+  std::string line;
+
+  CVector3D        normal;
+  std::vector<int> vertices;
+
+  while (readLine(line)) {
+    std::cerr << line << "\n";
+
+    CStrParse parse(line);
+
+    parse.skipSpace();
+
+    if      (state == State::NONE) {
+      if (parse.isString("solid "))
+        state = State::SOLID;
+      else
+        return errorMsg("Invalid line '" + line + "'");
+    }
+    else if (state == State::SOLID) {
+      if      (parse.isString("facet ")) {
+        parse.skipChars("facet");
+        parse.skipSpace();
+
+        if (parse.isString("normal ")) {
+          parse.skipChars("normal");
+
+          double x, y, z;
+
+          parse.skipSpace();
+          if (! parse.readReal(&x))
+            return errorMsg("Invalid real for x");
+
+          parse.skipSpace();
+          if (! parse.readReal(&y))
+            return errorMsg("Invalid real for y");
+
+          parse.skipSpace();
+          if (! parse.readReal(&z))
+            return errorMsg("Invalid real for z");
+
+          normal = CPoint3D(x, y, z);
+        }
+        else
+          normal = CPoint3D(0, 0, 1);
+
+        vertices.clear();
+
+        state = State::FACET;
+      }
+      else if (parse.isString("endsolid"))
+        state = State::NONE;
+      else
+        return errorMsg("Invalid line '" + line + "'");
+    }
+    else if (state == State::FACET) {
+      if      (parse.isString("outer loop"))
+        state = State::LOOP;
+      else if (parse.isString("endfacet"))
+        state = State::SOLID;
+      else
+        return errorMsg("Invalid line '" + line + "'");
+    }
+    else if (state == State::LOOP) {
+      if      (parse.isString("endloop")) {
+        if (vertices.size() != 3)
+          return errorMsg("Invalid number of vertices");
+
+        auto faceId = object_->addITriangle(vertices[0], vertices[1], vertices[2]);
+
+        auto &face = object_->getFace(faceId);
+
+        face.setNormal(normal);
+
+        state = State::FACET;
+      }
+      else if (parse.isString("vertex ")) {
+        parse.skipChars("vertex");
+
+        double x, y, z;
+
+        parse.skipSpace();
+        if (! parse.readReal(&x))
+          return errorMsg("Invalid real for x");
+
+        parse.skipSpace();
+        if (! parse.readReal(&y))
+          return errorMsg("Invalid real for y");
+
+        parse.skipSpace();
+        if (! parse.readReal(&z))
+          return errorMsg("Invalid real for z");
+
+        int iv = object_->addVertex(CPoint3D(x, y, z));
+
+        vertices.push_back(iv);
+      }
+      else
+        return errorMsg("Invalid line '" + line + "'");
+    }
+    else
+      return errorMsg("Invalid line '" + line + "'");
+  }
+
+  return true;
 }
