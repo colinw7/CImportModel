@@ -6,12 +6,14 @@ CImportV3D::
 CImportV3D(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
+  auto name1 = (name.size() ? name : "v3d");
+
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object_ = CGeometryInst->createObject3D(scene_, name1);
 
   scene_->addObject(object_);
 

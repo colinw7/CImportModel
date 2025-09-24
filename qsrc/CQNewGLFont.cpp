@@ -1,12 +1,12 @@
 #include <CQNewGLFont.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
+#include <CQNewGLUtil.h>
 
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 #include <CGLVector2D.h>
 #include <CGLVector3D.h>
-
 
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
@@ -38,24 +38,6 @@ class TextShaderProgram : public CQNewGLShaderProgram {
    CQNewGLShaderProgram(canvas) {
   }
 };
-
-//----
-
-namespace {
-
-bool checkError() {
-  // check GL error generated
-  GLenum err = glGetError();
-
-  if (err != GL_NO_ERROR) {
-    std::cerr << "OpenGL Error: " << gluErrorString(err) << "\n";
-    return false;
-  }
-
-  return true;
-}
-
-}
 
 //----
 
@@ -132,15 +114,15 @@ updateFontData()
 
   // allocate texture id
   glGenTextures(1, &fontData_->texture);
-  if (! checkError()) return false;
+  if (! checkError("glGenTextures")) return false;
 
   // set texture type
   glBindTexture(GL_TEXTURE_2D, fontData_->texture);
-  if (! checkError()) return false;
+  if (! checkError("glBindTexture")) return false;
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
@@ -149,22 +131,22 @@ updateFontData()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
 
   glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
   glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-  if (! checkError()) return false;
+  if (! checkError("glHint")) return false;
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fontData_->atlasWidth, fontData_->atlasHeight, 0,
                GL_RED, GL_UNSIGNED_BYTE, atlasData.get());
-  if (! checkError()) return false;
+  if (! checkError("glTexImage2D")) return false;
 
   canvas_->glGenerateMipmap(GL_TEXTURE_2D);
-  if (! checkError()) return false;
+  if (! checkError("glGenerateMipmap")) return false;
 #else
   if (! canvas_->createFontTexture(&fontData_->texture,
                                    fontData_->atlasWidth, fontData_->atlasHeight,
@@ -247,10 +229,10 @@ CQNewGLFont::
 bindTexture()
 {
   glEnable(GL_TEXTURE_2D);
-  if (! checkError()) return false;
+  if (! checkError("glEnable")) return false;
 
   glBindTexture(GL_TEXTURE_2D, textureId());
-  if (! checkError()) return false;
+  if (! checkError("glBindTexture")) return false;
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
@@ -259,17 +241,17 @@ bindTexture()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameterf")) return false;
 
   glActiveTexture(GL_TEXTURE0);
-  if (! checkError()) return false;
+  if (! checkError("glActiveTexture")) return false;
 
   return true;
 }
@@ -293,12 +275,9 @@ void
 CQNewGLText::
 updateText()
 {
-//auto *program = font_->shaderProgram();
-//auto *buffer  = program->getBuffer();
+  initBuffer();
 
-  auto *buffer = getBuffer();
-
-  buffer->clearAll();
+  //---
 
 //uint16_t lastIndex = 0;
 
@@ -321,13 +300,13 @@ updateText()
 
       //pos += position();
 
-      buffer->addPoint(pos.x(), pos.y(), pos.z());
+      buffer_->addPoint(pos.x(), pos.y(), pos.z());
 
       // u, v
-      buffer->addTexturePoint(glyphInfo.uvs[i].x(), glyphInfo.uvs[i].y());
+      buffer_->addTexturePoint(glyphInfo.uvs[i].x(), glyphInfo.uvs[i].y());
 
       // color
-      buffer->addColor(color().r, color().g, color().b);
+      buffer_->addColor(color().r, color().g, color().b);
     };
 
 #if 0
@@ -338,8 +317,13 @@ updateText()
 
     //---
 
-    buffer->addIndex(lastIndex); buffer->addIndex(lastIndex + 1); buffer->addIndex(lastIndex + 2);
-    buffer->addIndex(lastIndex); buffer->addIndex(lastIndex + 2); buffer->addIndex(lastIndex + 3);
+    buffer_->addIndex(lastIndex);
+    buffer_->addIndex(lastIndex + 1);
+    buffer_->addIndex(lastIndex + 2);
+
+    buffer_->addIndex(lastIndex);
+    buffer_->addIndex(lastIndex + 2);
+    buffer_->addIndex(lastIndex + 3);
 
     lastIndex += 4;
 #else
@@ -353,22 +337,22 @@ updateText()
 #endif
   }
 
-  buffer->load();
+  buffer_->load();
 
 //indexElementCount_ = 6*text_.length();
 }
 
-CQGLBuffer *
+void
 CQNewGLText::
-getBuffer()
+initBuffer()
 {
   if (! buffer_) {
     auto *program = font_->shaderProgram();
 
-    buffer_ = new CQGLBuffer(program);
+    buffer_ = program->createBuffer();
   }
 
-  return buffer_;
+  buffer_->clearAll();
 }
 
 void
@@ -377,24 +361,22 @@ render()
 {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  if (! checkError("glBlendFunc")) return;
 
   auto *program = font_->shaderProgram();
-//auto *buffer  = program->getBuffer();
-  auto *buffer  = getBuffer();
   auto *canvas  = font_->canvas();
 
-  buffer->bind();
+  buffer_->bind();
 
   program->bind();
 
-  program->setUniformValue("projection", CQGLUtil::toQMatrix(canvas->projectionMatrix()));
+  //---
 
-  program->setUniformValue("view", CQGLUtil::toQMatrix(canvas->viewMatrix()));
-
-  auto mm1 = canvas->getModelMatrix();
+//auto mm1 = canvas->getModelMatrix();
+  auto mm1 = CMatrix3D::identity();
   auto mm2 = getModelMatrix();
 
-  program->setUniformValue("model", CQGLUtil::toQMatrix(mm1*mm2));
+  canvas->addShaderMVP(program, mm1*mm2);
 
   //---
 
@@ -407,11 +389,11 @@ render()
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 //glDrawElements(GL_TRIANGLES, indexElementCount_, GL_UNSIGNED_SHORT, nullptr);
-  glDrawArrays(GL_TRIANGLES, 0, int(buffer->numPoints()));
+  glDrawArrays(GL_TRIANGLES, 0, int(buffer_->numPoints()));
 
   //---
 
-  buffer->unbind();
+  buffer_->unbind();
 
   glDisable(GL_BLEND);
 }

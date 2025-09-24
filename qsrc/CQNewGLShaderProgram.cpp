@@ -39,6 +39,7 @@ addFragmentShader(const QString &name)
     std::cerr << log().toStdString() << "\n";
 }
 
+#if 0
 CQGLBuffer *
 CQNewGLShaderProgram::
 getBuffer()
@@ -48,3 +49,11 @@ getBuffer()
 
   return buffer_;
 }
+#else
+CQGLBuffer *
+CQNewGLShaderProgram::
+createBuffer()
+{
+  return new CQGLBuffer(this);
+}
+#endif

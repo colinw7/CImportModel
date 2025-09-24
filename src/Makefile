@@ -30,9 +30,11 @@ CImportPly.cpp \
 CImportScene.cpp \
 CImportSTL.cpp \
 CImportV3D.cpp \
+CImportVoxel.cpp \
 CImportX3D.cpp \
 CImportBase.cpp \
 CDeflate.cpp \
+CSG.cpp \
 
 CPP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
 
@@ -42,6 +44,7 @@ $(CDEBUG) \
 -I$(INC_DIR) \
 -I../../CImportModel/include \
 -I../../CGeometry3D/include \
+-I../../CVoxel/include \
 -I../../CImageLib/include \
 -I../../CFont/include \
 -I../../CJson/include \

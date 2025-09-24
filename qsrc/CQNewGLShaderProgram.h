@@ -16,11 +16,12 @@ class CQNewGLShaderProgram : public QOpenGLShaderProgram {
   void addVertexShader  (const QString &name);
   void addFragmentShader(const QString &name);
 
-  CQGLBuffer *getBuffer();
+//CQGLBuffer *getBuffer();
+  CQGLBuffer *createBuffer();
 
  private:
   CQNewGLCanvas* canvas_ { nullptr };
-  CQGLBuffer*    buffer_ { nullptr };
+//CQGLBuffer*    buffer_ { nullptr };
 };
 
 #endif

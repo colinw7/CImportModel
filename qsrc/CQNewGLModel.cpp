@@ -90,7 +90,7 @@ void
 CQNewGLModel::
 updateCamera()
 {
-  control_->updateCamera();
+  control_->updateCameras();
 }
 
 void

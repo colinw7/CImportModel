@@ -31,6 +31,8 @@ class CQNewGLUVMap : public QFrame {
   CQNewGLModel*  model_       { nullptr };
   CGeomObject3D* object_      { nullptr };
   TextureType    textureType_ { TextureType::DIFFUSE };
+  QColor         bgColor_     { 0, 0, 0 };
+  QColor         lineColor_   { 255, 255, 255 };
 };
 
 #endif

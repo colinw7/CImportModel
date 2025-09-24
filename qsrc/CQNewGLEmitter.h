@@ -1,0 +1,131 @@
+#ifndef CQNewGLEmitter_H
+#define CQNewGLEmitter_H
+
+#include <CQNewGLObject.h>
+
+#include <CImageMgr.h>
+#include <CPoint3D.h>
+#include <CVector3D.h>
+
+#include <QObject>
+#include <QImage>
+
+class CQNewGLEmitterParticleSystem;
+class CFlocking;
+class CFireworks;
+
+class CQNewGLEmitter : public QObject, public CQNewGLObject {
+  Q_OBJECT
+
+ public:
+  enum class Type {
+    GENERATOR,
+    FLOCKING,
+    FIREWORKS
+  };
+
+ public:
+  static void initShader(CQNewGLCanvas *canvas);
+
+  //---
+
+  CQNewGLEmitter(CQNewGLCanvas *canvas);
+
+  //---
+
+  const Type &type() const { return type_; }
+  void setType(const Type &t);
+
+  const CPoint3D &position() const { return position_; }
+  void setPosition(const CPoint3D &p);
+
+  const CVector3D &minVelocity() const { return minVelocity_; }
+  void setMinVelocity(const CVector3D &v);
+
+  const CVector3D &maxVelocity() const { return maxVelocity_; }
+  void setMaxVelocity(const CVector3D &v);
+
+  const CRGBA &color() const { return color_; }
+  void setColor(const CRGBA &v) { color_ = v; }
+
+  int emitInterval() const { return emitInterval_; }
+  void setEmitInterval(int i);
+
+  int maxParticles() const { return maxParticles_; }
+  void setMaxParticles(int i) { maxParticles_ = i; }
+
+  double pointSize() const { return pointSize_; }
+  void setPointSize(double r) { pointSize_ = r; }
+
+  double step() const { return step_; }
+  void setStep(double r) { step_ = r; }
+
+  double gravity() const { return gravity_; }
+  void setGravity(double r) { gravity_ = r; }
+
+  double mass() const { return mass_; }
+  void setMass(double r) { mass_ = r; }
+
+  bool isEnabled() const { return enabled_; }
+  void setEnabled(bool b) { enabled_ = b; }
+
+  bool isRunning() const { return running_; }
+  void setRunning(bool b) { running_ = b; }
+
+  const QString &imageName() const { return imageName_; }
+  void setImageName(const QString &s);
+
+  //---
+
+  void addGeometry();
+
+  void drawGeometry();
+
+  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+
+ private Q_SLOTS:
+  void stepSlot();
+
+ private:
+  void updateTexture();
+
+ private:
+  static CQNewGLShaderProgram* shaderProgram_;
+
+  Type type_ { Type::GENERATOR };
+
+  CPoint3D position_ { 0.0, 0.0, 0.0 };
+
+  CVector3D minVelocity_ { -1.0, -1.0, -1.0 };
+  CVector3D maxVelocity_ {  1.0,  1.0,  1.0 };
+
+  CRGBA color_ { 0.0, 1.0, 0.0 };
+
+  double gravity_ { 0.0 };
+
+  double step_ { 0.01 };
+  double mass_ { 1.0 };
+
+  double pointSize_ { 1.0 };
+
+  bool enabled_ { false };
+  bool running_ { true };
+  uint steps_   { 0 };
+
+  int emitInterval_ { 10 };
+
+  int maxParticles_ { 100 };
+
+  QString imageName_ { "particle.png" };
+
+  CQNewGLEmitterParticleSystem *particleSystem_ { nullptr };
+
+  CQGLTexture* texture_ { nullptr };
+
+  bool updateGeometry_ { true };
+
+  CFlocking*  flocking_  { nullptr };
+  CFireworks* fireworks_ { nullptr };
+};
+
+#endif

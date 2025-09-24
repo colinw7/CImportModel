@@ -2,38 +2,60 @@
 #define CQNewGLCanvas_H
 
 #include <CQNewGLShaderProgram.h>
+#include <CQNewGLFaceData.h>
 
 #include <CGeom3DType.h>
-#include <CGLCamera.h>
 #include <CGLVector3D.h>
+#include <CGLCamera.h>
 #include <CPoint3D.h>
 #include <CRGBA.h>
+#include <CImagePtr.h>
 
 #include <QGLWidget>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLFunctions_3_3_Core>
 #include <QMatrix4x4>
 
 class CQNewGLModel;
 class CQNewGLCamera;
+class CQNewGLLight;
 class CQNewGLFont;
 class CQNewGLText;
+class CQNewGLAxes;
+class CQNewGLBBox;
+class CQNewGLNormals;
+class CQNewGLHull;
+class CQNewGLTerrain;
+class CQNewGLMaze;
+class CQNewGLSkybox;
+class CQNewGLEmitter;
+class CQNewGLFractal;
+class CQNewGLDrawTree;
+class CQNewGLShape;
+class CQNewGLPath;
 
-class CImportBase;
 class CQGLBuffer;
-class CGLTexture;
+class CQGLTexture;
+class CGeomScene3D;
 class CGeomObject3D;
 class CGeomTexture;
+class CBBox3D;
 
-class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
+class CDungeon;
+
+//---
+
+//class CQNewGLCanvas : public QGLWidget, public QOpenGLFunctions_3_3_Core {
+class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   Q_OBJECT
 
   Q_PROPERTY(QColor bgColor READ bgColor WRITE setBgColor)
 
-  Q_PROPERTY(bool depthTest   READ isDepthTest   WRITE setDepthTest  )
-  Q_PROPERTY(bool cullFace    READ isCullFace    WRITE setCullFace   )
-  Q_PROPERTY(bool frontFace   READ isFrontFace   WRITE setFrontFace  )
-  Q_PROPERTY(bool polygonLine READ isPolygonLine WRITE setPolygonLine)
-  Q_PROPERTY(bool showNormals READ isShowNormals WRITE setShowNormals)
+  Q_PROPERTY(bool depthTest    READ isDepthTest    WRITE setDepthTest   )
+  Q_PROPERTY(bool cullFace     READ isCullFace     WRITE setCullFace    )
+  Q_PROPERTY(bool frontFace    READ isFrontFace    WRITE setFrontFace   )
+  Q_PROPERTY(bool polygonSolid READ isPolygonSolid WRITE setPolygonSolid)
+  Q_PROPERTY(bool polygonLine  READ isPolygonLine  WRITE setPolygonLine )
 
  public:
   enum class BonesTransform {
@@ -50,29 +72,17 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
   using InitTextureDatas = std::vector<InitTextureData>;
 
   struct TextureData {
-    CGLTexture   *glTexture   { nullptr };
-    CGeomTexture *geomTexture { nullptr };
+    CQGLTexture*  glTexture   { nullptr };
+    CGeomTexture* geomTexture { nullptr };
   };
 
   using GLTextures = std::map<int, TextureData>;
 
-  struct FaceData {
-    int         boneId          { -1 };
-    int         parentBoneId    { -1 };
-    int         pos             { 0 };
-    int         len             { 0 };
-    CGLTexture *diffuseTexture  { nullptr };
-    CGLTexture *specularTexture { nullptr };
-    CGLTexture *normalTexture   { nullptr };
-    CGLTexture *emissiveTexture { nullptr };
-    CRGBA       ambient         { 0, 0, 0 };
-    CRGBA       diffuse         { 1, 1, 1 };
-    CRGBA       specular        { 0, 0, 0 };
-    CRGBA       emission        { 0, 0, 0, 0 };
-    double      shininess       { 1.0 };
-  };
+  //---
 
-  using FaceDatas = std::vector<FaceData>;
+  using FaceDatas = std::vector<CQNewGLFaceData>;
+
+  //---
 
   struct ObjectDrawData {
     CQGLBuffer *buffer { nullptr };
@@ -87,14 +97,32 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
     ObjectDrawData boneData;
   };
 
-  struct Light {
-    QString     name;
-    CGLVector3D pos    { 0.4f, 0.4f, 0.4f };
-    QColor      color  { 255, 255, 255 };
-    CQGLBuffer* buffer { nullptr };
+  //---
+
+  using Cameras = std::vector<CQNewGLCamera *>;
+  using Lights  = std::vector<CQNewGLLight  *>;
+  using Shapes  = std::vector<CQNewGLShape  *>;
+
+  //---
+
+  using Texts = std::vector<CQNewGLText *>;
+
+  //---
+
+  struct BasisData {
+    CQNewGLShaderProgram* shaderProgram { nullptr };
+    CQGLBuffer*           buffer        { nullptr };
+    CGeomObject3D*        object        { nullptr };
+    FaceDatas             faceDatas;
+    Texts                 texts;
+    bool                  needsUpdate   { false };
+    bool                  show          { false };
+    double                lineWidth     { -1.0 };
+    double                lineSize      { -1.0 };
+    CRGBA                 color         { 0.8, 0.8, 0.8 };
   };
 
-  using Lights = std::vector<Light *>;
+  //---
 
   struct LoadData {
     bool invertX { false };
@@ -104,23 +132,23 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
     LoadData() { }
   };
 
+  //---
+
+  using Emitters = std::vector<CQNewGLEmitter *>;
+  using Paths    = std::vector<CQNewGLPath *>;
+
  public:
   CQNewGLCanvas(CQNewGLModel *app);
 
   CQNewGLModel* app() const { return app_; }
 
-  CImportBase* importBase() const { return import_; }
-
-  CQNewGLCamera *camera() const { return camera_; }
+  CGeomScene3D* scene() const { return scene_; }
 
   bool isFlipYZ() const { return flipYZ_; }
   void setFlipYZ(bool b);
 
   bool isInvertDepth() const { return invertDepth_; }
   void setInvertDepth(bool b);
-
-  bool isShowAxis() const { return showAxis_; }
-  void setShowAxis(bool b);
 
   bool isOrtho() const { return ortho_; }
   void setOrtho(bool b);
@@ -151,43 +179,75 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
   bool isFrontFace() const { return frontFace_; }
   void setFrontFace(bool b);
 
+  bool isPolygonSolid() const { return polygonSolid_; }
+  void setPolygonSolid(bool b);
+
   bool isPolygonLine() const { return polygonLine_; }
   void setPolygonLine(bool b);
 
+  //---
+
+  // normals
   bool isShowNormals() const { return showNormals_; }
   void setShowNormals(bool b);
 
-  //---
+  double normalsSize() const { return normalsSize_; }
+  void setNormalsSize(double r);
 
-  const CVector3D &modelTranslate() const { return modelTranslate_; }
-  void setModelTranslate(const CVector3D &v) { modelTranslate_ = v; }
+  const QColor &normalsColor() const { return normalsColor_; }
+  void setNormalsColor(const QColor &c);
 
-  const CVector3D &modelRotate() const { return modelRotate_; }
-  void setModelRotate(const CVector3D &v) { modelRotate_ = v; }
+  double calcNormalsSize() const;
 
-  //---
-
-  const Lights &lights() { return lights_; }
-
-  int currentLight() const { return currentLight_; }
-  void setCurrentLight(int i);
-
-  CGLVector3D lightPos(int i) const;
-  QColor lightColor(int i) const;
-
-  CGLVector3D currentLightPos() const { return lightPos(currentLight()); }
-  void setCurrentLightPos(const CGLVector3D &v);
-
-  QColor currentLightColor() const { return lightColor(currentLight()); }
-  void setCurrentLightColor(const QColor &c);
+  bool isTangentSpaceNormal() const { return tangentSpaceNormal_; }
+  void setTangentSpaceNormal(bool b);
 
   //---
 
-  bool isAnimEnabled() const { return animEnabled_; }
-  void setAnimEnabled(bool b) { animEnabled_ = b; }
+  void enableDepthTest();
+  void enableCullFace();
+  void enableFrontFace();
+  void enablePolygonLine();
 
-  const QString &animName() const { return animName_; }
-  void setAnimName(const QString &s) { animName_ = s; }
+  //---
+
+  bool isTimerRunning() const { return timerRunning_; }
+  void setTimerRunning(bool b);
+
+  void startTimer();
+  void stopTimer();
+
+  //---
+
+//const CVector3D &modelTranslate() const { return modelTranslate_; }
+//void setModelTranslate(const CVector3D &v) { modelTranslate_ = v; }
+
+//const CVector3D &modelRotate() const { return modelRotate_; }
+//void setModelRotate(const CVector3D &v) { modelRotate_ = v; }
+
+  //---
+
+  // objects
+  void setCurrentObject(CGeomObject3D *object);
+
+  int currentObjectNum() const { return currentObjectNum_; }
+  void setCurrentObjectNum(int i);
+
+  CGeomObject3D *getCurrentObject() const;
+  CGeomObject3D *getObject(int ind) const;
+
+  CQNewGLCanvas::ObjectData *getCurrentObjectData() const;
+  CQNewGLCanvas::ObjectData *getObjectData(int ind) const;
+
+  CGeomObject3D *getSelectedObject() const;
+
+  //--
+
+  // bones
+  CGeomObject3D *getBonesObject() const;
+
+  bool isShowBonePoints() const { return showBonePoints_; }
+  void setShowBonePoints(bool b);
 
   bool isBonesEnabled() const { return bonesEnabled_; }
   void setBonesEnabled(bool b) { bonesEnabled_ = b; }
@@ -197,10 +257,130 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   //---
 
+  // basis
+  bool isShowBasis() const { return basisData_.show; }
+  void setShowBasis(bool b);
+
+  double basisLineWidth() const { return basisData_.lineWidth; }
+  void setBasisLineWidth(double s) { basisData_.lineWidth = s; }
+
+  double basisLineSize() const { return basisData_.lineSize; }
+  void setBasisLineSize(double s) { basisData_.lineSize = s; }
+
+  //---
+
+  // cameras
+  bool isShowCameras() const { return showCameras_; }
+  void setShowCameras(bool b);
+
+  const Cameras &cameras() { return cameras_; }
+
+  int currentCamera() const { return currentCamera_; }
+  void setCurrentCamera(int i);
+
+  CQNewGLCamera *getCurrentCamera() const;
+  CQNewGLCamera *getCamera(int i) const;
+
+  void setCameraRotate(bool b);
+  void setCameraRotateAt(const CGLCamera::RotateAt &at);
+
+  //---
+
+  // lights
+  bool isShowLights() const { return showLights_; }
+  void setShowLights(bool b);
+
+  const Lights &lights() { return lights_; }
+
+  int currentLight() const { return currentLight_; }
+  void setCurrentLight(int i);
+
+  CQNewGLLight *getCurrentLight() const;
+
+  //---
+
+  // font
+  CQNewGLFont *getFont() const { return font_; }
+
+  //---
+
+  // axes
+  CQNewGLAxes *getAxes() const { return axes_; }
+
+  //---
+
+  // bbox
+  CQNewGLBBox *getBBox() const { return bbox_; }
+
+  //---
+
+  // normal
+  CQNewGLNormals *getNormals() const { return normals_; }
+
+  //---
+
+  // hull
+  CQNewGLHull *getHull() const { return hull_; }
+
+  //---
+
+  // terrain
+  CQNewGLTerrain *getTerrain() const { return terrain_; }
+
+  //---
+
+  // maze
+  CQNewGLMaze *getMaze() const { return maze_; }
+
+  //---
+
+  // skybox
+  CQNewGLSkybox *getSkybox() const { return skybox_; }
+
+  //---
+
+  // fractal
+  CQNewGLFractal *getFractal() const { return fractal_; }
+
+  //---
+
+  // draw tree
+  CQNewGLDrawTree *getDrawTree() const { return drawTree_; }
+
+  //---
+
+  // shapes
+  const Shapes &shapes() { return shapes_; }
+
+  int currentShape() const { return currentShape_; }
+  void setCurrentShape(int i);
+
+  CQNewGLShape *getCurrentShape() const;
+
+  //---
+
+  // eye line
+  bool isShowEyeline() const { return showEyeline_; }
+  void setShowEyeline(bool b) { showEyeline_ = b; }
+
+  //---
+
+  bool isAnimEnabled() const { return animEnabled_; }
+  void setAnimEnabled(bool b) { animEnabled_ = b; }
+
+  const QString &animName() const { return animName_; }
+  void setAnimName(const QString &s) { animName_ = s; }
+
+  //---
+
   const CGLMatrix3D &projectionMatrix() const { return paintData_.projection; }
   const CGLMatrix3D &viewMatrix() const { return paintData_.view; }
 
+  const CGLVector3D &viewPos() const { return paintData_.viewPos; }
+
   CMatrix3D getModelMatrix() const;
+
+  double sceneScale() const { return sceneScale_; }
 
   //---
 
@@ -220,7 +400,12 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   //---
 
-  void addLight(bool update=true);
+  void addCamera  (bool update=true);
+  void resetCamera();
+
+  void addLight (bool update=true);
+
+  //---
 
   bool createFontTexture(uint *texture, int w, int h, uchar *data);
 
@@ -234,37 +419,203 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   void keyPressEvent(QKeyEvent *event) override;
 
-  void updateObjectData();
+  void setMousePos(double x, double y, bool add, bool show);
+
+  void calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev);
+
+  //---
+
+  void updateObjectsData();
+  void updateObjectData(CGeomObject3D *object);
+
   void updateModelData();
+
+  // bones
   void updateBonesData();
   void updateBoneData();
-  void updateAxis();
+
+  void updateCameraBuffer();
+
+  //---
+
+  // axes
+  void updateAxes();
+  void drawAxes();
+
+  //---
+
+  // bbox
+  void updateBBox();
+  void drawBBox();
+
+  //---
+
+  // normal
+  void updateNormals();
+  void drawNormals();
+
+  //---
+
+  // hull
+  void updateHull();
+  void drawHull();
+
+  //---
+
+  // terrain
+  void updateTerrain();
+  void drawTerrain();
+
+  //---
+
+  // maze
+  void updateMaze();
+  void drawMaze();
+
+  //---
+
+  // skybox
+  void updateSkybox();
+  void drawSkybox();
+
+  //---
+
+  // emitters
+  const Emitters &getEmitters() const { return emitters_; }
+
+  void addEmitter();
+
+  CQNewGLEmitter *getCurrentEmitter() const;
+  void setCurrentEmitterNum(int n) { emitterNum_ = n; }
+
+  void updateEmitters();
+  void drawEmitters();
+
+  //---
+
+  // fractal
+  void updateFractal();
+  void drawFractal();
+
+  //---
+
+  // draw tree
+  void updateDrawTree();
+  void drawDrawTree();
+
+  //---
+
+  // shape
+  CQNewGLShape *addShape();
+
+  void drawShapes();
+
+  //---
+
+  void clearEyeLines();
+
+  void drawPaths();
+
+  //---
+
+  // shader helpers
+  void addShaderMVP(CQNewGLShaderProgram *program, const CMatrix3D &modelMatrix);
+  void addShaderLightGlobals(CQNewGLShaderProgram *program);
+  void addShaderLights(CQNewGLShaderProgram *program);
+  void addShaderCurrentLight(CQNewGLShaderProgram *program);
+
+  //---
+
+  void updateBasis();
+
+  void updateLightBuffer();
+
+  //---
+
+  // bones
+  void addBonesCube(ObjectData *objectData, const CPoint3D &c, int nodeId,
+                    const CRGBA &color, int &pos) const;
+  void addBonesLine(ObjectData *objectData, const CPoint3D &c1, const CPoint3D &c2,
+                    int boneId, int parentBoneId, const CRGBA &color, int &pos) const;
+
+  void addBoneCube(ObjectData *objectData, const CMatrix3D &m, int nodeId, double cubeSize,
+                   const CRGBA &color, int &pos, CBBox3D &bbox) const;
+
+  CPoint3D applyBonePointTransform(const CPoint3D &p, int *boneIds, double *boneWeights) const;
+  CPoint3D applyBoneTransform(const CPoint3D &p, int boneId) const;
+
+  //---
+
+  void setSceneBBox(const CBBox3D &bbox);
 
   const GLTextures &glTextures() const { return glTextures_; }
 
-  CGLTexture   *getTextureByName    (const std::string &name) const;
+  CQGLTexture  *getTextureByName    (const std::string &name) const;
   CGeomTexture *getGeomTextureByName(const std::string &name) const;
 
-  CGLTexture *getTexture(CGeomTexture *texture, bool add);
+  CQGLTexture *makeTexture(const CImagePtr &image) const;
+
+  CQGLTexture *getTexture(CGeomTexture *texture, bool add);
+
+  //---
+
+  void placeObjectCamera(CGeomObject3D *);
+
+  //---
+
+  void addCube(CQGLBuffer *buffer, const CPoint3D &center, double size, const CRGBA &color,
+               std::vector<CQNewGLFaceData> &faceDatas) const;
+  void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const CRGBA &color,
+               std::vector<CQNewGLFaceData> &faceDatas) const;
+
+  void addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
+               const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+  void addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r,
+                   const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas,
+                   int &pos) const;
+  void addSphere(CQGLBuffer *buffer, const CPoint3D &c, double r, const CRGBA &color,
+                 std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+
+  CMatrix3D getShapeRotationMatrix(const CPoint3D &p1, const CPoint3D &p2) const;
+
+  //---
+
+  CBBox3D getObjectBBox(CGeomObject3D *object) const;
+  CBBox3D getModelBBox(CGeomObject3D *object) const;
 
  Q_SIGNALS:
   void modelMatrixChanged();
+
+  void timerStep();
+
+  void currentObjectChanged();
+  void currentCameraChanged();
+  void currentLightChanged();
+  void currentShapeChanged();
+
+  void modelAdded();
+  void textureAdded();
+  void cameraAdded();
+  void lightAdded();
+  void shapeAdded();
 
  private:
   void loadInitTextures();
 
   GLuint loadTexture(const std::string &name);
 
-  void updateLightBuffer();
-
   void drawObjectModel(ObjectData *objectData);
+
+  // bones
   void drawObjectBones(ObjectData *objectData);
   void drawObjectBone (ObjectData *objectData);
 
-  void drawAxis();
-  void drawLight();
+  void drawBasis();
 
-  void drawNormals(ObjectData *objectData);
+  void drawCameras();
+  void drawLights();
+
+  void drawObjectNormals(ObjectData *objectData);
 
   CMatrix3D getMeshGlobalTransform(ObjectData *objectData, bool invert) const;
   CMatrix3D getMeshLocalTransform (ObjectData *objectData, bool invert) const;
@@ -273,13 +624,19 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   CGeomObject3D *getRootObject(CGeomObject3D *object) const;
 
+  void getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const;
+
+ public Q_SLOTS:
+  void timerSlot();
+
  private:
   struct PaintData {
     CGLVector3D viewPos;
     CGLMatrix3D projection;
     CGLMatrix3D view;
 
-    std::vector<QMatrix4x4> nodeMatrices;
+    std::vector<CMatrix3D>  nodeMatrices;
+    std::vector<QMatrix4x4> nodeQMatrices;
     int                     numNodeMatrices { 128 };
   };
 
@@ -292,25 +649,23 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   using ObjectDatas = std::map<CGeomObject3D*, ObjectData *>;
   using TextureMap  = std::map<std::string, TextureMapData>;
-  using Texts       = std::vector<CQNewGLText *>;
 
-  CQNewGLModel* app_           { nullptr };
-  bool          initialized_   { false };
-  CImportBase*  import_        { nullptr };
-  QColor        bgColor_       { 51, 76, 76 };
-  QColor        ambientColor_  { 100, 100, 100 };
-  QColor        diffuseColor_  { 255, 255, 255 };
-  QColor        emissionColor_ { 0, 0, 0 };
-  bool          depthTest_     { true };
-  bool          cullFace_      { false };
-  bool          frontFace_     { true };
-  bool          polygonLine_   { false };
-  bool          showNormals_   { false };
-  bool          flipYZ_        { false };
-  bool          showAxis_      { false };
-  bool          invertDepth_   { false };
-  bool          ortho_         { false };
-  double        time_          { 0.0 };
+  CQNewGLModel* app_            { nullptr };
+  bool          initialized_    { false };
+  CGeomScene3D* scene_;
+  QColor        bgColor_        { 51, 76, 76 };
+  QColor        ambientColor_   { 100, 100, 100 };
+  QColor        diffuseColor_   { 255, 255, 255 };
+  QColor        emissionColor_  { 0, 0, 0 };
+  bool          depthTest_      { true };
+  bool          cullFace_       { false };
+  bool          frontFace_      { true };
+  bool          polygonSolid_   { true };
+  bool          polygonLine_    { false };
+  bool          flipYZ_         { false };
+  bool          invertDepth_    { false };
+  bool          ortho_          { false };
+  double        time_           { 0.0 };
 
   // scene
   CVector3D sceneSize_     { 1.0, 1.0, 1.0 };
@@ -320,22 +675,38 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
 
   PaintData paintData_;
 
-  // camera
-  CQNewGLCamera* camera_ { nullptr };
+  int pixelWidth_  { 0 };
+  int pixelHeight_ { 0 };
 
-  // model
-  CVector3D modelRotate_    { 0.0, 0.0, 0.0 };
-  CVector3D modelScale_     { 1.0, 1.0, 1.0 };
-  CVector3D modelTranslate_ { 1.0, 1.0, 1.0 };
+  double aspect_ { 1.0 };
+
+  // objects
+  ObjectDatas objectDatas_;
+  int         currentObjectNum_ { 0 };
+
+//CVector3D modelRotate_    { 0.0, 0.0, 0.0 };
+//CVector3D modelScale_     { 1.0, 1.0, 1.0 };
+//CVector3D modelTranslate_ { 0.0, 0.0, 0.0 };
 
   CQNewGLShaderProgram* modelShaderProgram_  { nullptr };
   CQNewGLShaderProgram* normalShaderProgram_ { nullptr };
 
-  ObjectDatas objectDatas_;
+  // camera
+  bool                showCameras_    { false };
+  Cameras             cameras_;
+  int                 currentCamera_  { 0 };
+  bool                cameraRotate_   { false };
+  CGLCamera::RotateAt cameraRotateAt_ { CGLCamera::RotateAt::ORIGIN };
+
+  // normals
+  bool   showNormals_  { false };
+  double normalsSize_  { -1.0 };
+  QColor normalsColor_ { 255, 255, 255 };
+
+  bool tangentSpaceNormal_ { true };
 
   // light
-  CQNewGLShaderProgram* lightShaderProgram_ { nullptr };
-
+  bool   showLights_ { false };
   Lights lights_;
   int    currentLight_ { 0 };
 
@@ -344,17 +715,15 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
   QString animName_;
 
   // bones
+  bool           showBonePoints_ { false };
   bool           bonesEnabled_   { false };
   BonesTransform bonesTransform_ { BonesTransform::INVERSE_BIND };
 
   CQNewGLShaderProgram* bonesShaderProgram_ { nullptr };
   CQNewGLShaderProgram* boneShaderProgram_  { nullptr };
 
-  // axis
-  CQNewGLShaderProgram* axisShaderProgram_ { nullptr };
-  FaceDatas             axisFaceDatas_;
-
-  Texts axisTexts_;
+  // basis
+  BasisData basisData_;
 
   // textures
   InitTextureDatas initTextures_;
@@ -365,26 +734,67 @@ class CQNewGLCanvas : public QGLWidget, protected QOpenGLFunctions_3_3_Core {
   CQNewGLFont* font_ { nullptr };
 //CQNewGLText* text_ { nullptr };
 
+  // axes
+  CQNewGLAxes* axes_            { nullptr };
+  bool         axesNeedsUpdate_ { false };
+
+  // bbox
+  CQNewGLBBox* bbox_ { nullptr };
+
+  // normal
+  CQNewGLNormals* normals_ { nullptr };
+
+  // hull
+  CQNewGLHull* hull_ { nullptr };
+
+  // terrain
+  CQNewGLTerrain* terrain_ { nullptr };
+
+  // maze
+  CQNewGLMaze* maze_ { nullptr };
+
+  // terrain
+  CQNewGLSkybox* skybox_ { nullptr };
+
+  // emitters
+  Emitters emitters_;
+  int      emitterNum_ { 0 };
+
+  // fractal
+  CQNewGLFractal* fractal_ { nullptr };
+
+  // draw tree
+  CQNewGLDrawTree* drawTree_ { nullptr };
+
+  // shapes
+  Shapes shapes_;
+  int    currentShape_ { 0 };
+
+  // paths
+  Paths paths_;
+
+  // eye line
+  bool         showEyeline_ { false };
+  CQNewGLPath* eyeLine1_    { nullptr };
+  CQNewGLPath* eyeLine2_    { nullptr };
+
+  CVector3D eyeVector1_;
+  CVector3D eyeVector2_;
+
   // mouse
-  double mousePressX_ { 0.0 };
-  double mousePressY_ { 0.0 };
-  double mouseMoveX_  { 0.0 };
-  double mouseMoveY_  { 0.0 };
-};
+  struct MouseData {
+    double          pressX { 0.0 };
+    double          pressY { 0.0 };
+    double          moveX  { 0.0 };
+    double          moveY  { 0.0 };
+    Qt::MouseButton button { Qt::NoButton };
+  };
 
-//---
+  MouseData mouseData_;
 
-class CQNewGLCamera : public CGLCamera {
- public:
-  CQNewGLCamera(CQNewGLCanvas *canvas, const CGLVector3D &v);
-
-  void viewChanged() override;
-
-  void reset();
-
- private:
-  CQNewGLCanvas* canvas_ { nullptr };
-  CGLVector3D    v_;
+  // timer
+  QTimer* timer_        { nullptr };
+  bool    timerRunning_ { false };
 };
 
 #endif

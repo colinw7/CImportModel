@@ -4,6 +4,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
+#include <QColor>
 
 #include <vector>
 #include <cassert>
@@ -116,7 +117,11 @@ class CQGLBuffer {
 
   //---
 
-  bool hasBonesPart() const { return (data_.types & static_cast<unsigned int>(Parts::BONE)); }
+  bool hasPointPart  () const { return (data_.types & static_cast<unsigned int>(Parts::POINT  )); }
+  bool hasNormalPart () const { return (data_.types & static_cast<unsigned int>(Parts::NORMAL )); }
+  bool hasColorPart  () const { return (data_.types & static_cast<unsigned int>(Parts::COLOR  )); }
+  bool hasTexturePart() const { return (data_.types & static_cast<unsigned int>(Parts::TEXTURE)); }
+  bool hasBonesPart  () const { return (data_.types & static_cast<unsigned int>(Parts::BONE   )); }
 
   //---
 
@@ -187,6 +192,14 @@ class CQGLBuffer {
     data_.dataValid = false;
   }
 
+  void addColor(const CRGBA &c) {
+    addColor(Color(c.getRedF(), c.getGreenF(), c.getBlueF()));
+  }
+
+  void addColor(const QColor &c) {
+    addColor(Color(c.redF(), c.greenF(), c.blueF()));
+  }
+
   void addColor(float r, float g, float b) {
     addColor(Color(r, g, b));
   }
@@ -233,6 +246,24 @@ class CQGLBuffer {
     data_.indicesSet = true;
   }
 
+  //---
+
+  struct PointData {
+    Point        point;
+    Point        normal;
+    Color        color;
+    TexturePoint texturePoint;
+  };
+
+  void getPointData(int i, PointData &data) {
+    if (hasPointPart  ()) data.point        = data_.points[i];
+    if (hasNormalPart ()) data.normal       = data_.normals[i];
+    if (hasColorPart  ()) data.color        = data_.colors[i];
+    if (hasTexturePart()) data.texturePoint = data_.texturePoints[i];
+  }
+
+  //---
+
   void load() {
     initData();
 
@@ -258,7 +289,7 @@ class CQGLBuffer {
     uint span = 0;
 
     // store points in vertex array (location 0)
-    if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
+    if (hasPointPart()) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
       data_.program->enableAttributeArray(vid++);
@@ -266,7 +297,7 @@ class CQGLBuffer {
     }
 
     // store normals in vertex array (location 1)
-    if (data_.types & static_cast<unsigned int>(Parts::NORMAL)) {
+    if (hasNormalPart()) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
       data_.program->enableAttributeArray(vid++);
@@ -274,7 +305,7 @@ class CQGLBuffer {
     }
 
     // store colors in vertex array (location 2)
-    if (data_.types & static_cast<unsigned int>(Parts::COLOR)) {
+    if (hasColorPart()) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        3, int(data_.span*sizeof(float)));
       data_.program->enableAttributeArray(vid++);
@@ -282,7 +313,7 @@ class CQGLBuffer {
     }
 
     // store texture points in vertex array (location 3)
-    if (data_.types & static_cast<unsigned int>(Parts::TEXTURE)) {
+    if (hasTexturePart()) {
       data_.program->setAttributeArray(vid, reinterpret_cast<float *>(span*sizeof(float)),
                                        2, int(data_.span*sizeof(float)));
       data_.program->enableAttributeArray(vid++);
@@ -319,6 +350,8 @@ class CQGLBuffer {
   }
 
   void bind() {
+    assert(data_.dataValid);
+
     // seeing as we only have a single VAO there's no need to bind it every time,
     // but we'll do so to keep things a bit more organized
     data_.vObj->bind();
@@ -394,23 +427,23 @@ class CQGLBuffer {
       data_.numData = 0;
       data_.span    = 0;
 
-      if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
+      if (hasPointPart()) {
         data_.numData += data_.points.size()*3;
         data_.span += 3;
       }
 
-      if (data_.types & static_cast<unsigned int>(Parts::NORMAL)) {
+      if (hasNormalPart()) {
         data_.numData += data_.normals.size()*3;
         data_.span += 3;
       }
 
-      if (data_.types & static_cast<unsigned int>(Parts::COLOR)) {
+      if (hasColorPart()) {
         assert(data_.colors.size() == numPoints());
         data_.numData += data_.colors.size()*3;
         data_.span += 3;
       }
 
-      if (data_.types & static_cast<unsigned int>(Parts::TEXTURE)) {
+      if (hasTexturePart()) {
         assert(data_.texturePoints.size() == numPoints());
         data_.numData += data_.texturePoints.size()*2;
         data_.span += 2;
@@ -432,7 +465,7 @@ class CQGLBuffer {
       auto np = numPoints();
 
       for (size_t ip = 0; ip < np; ++ip) {
-        if (data_.types & static_cast<unsigned int>(Parts::POINT)) {
+        if (hasPointPart()) {
           const auto &p = data_.points[ip];
 
           data_.data[i++] = p.x;
@@ -440,7 +473,7 @@ class CQGLBuffer {
           data_.data[i++] = p.z;
         }
 
-        if (data_.types & static_cast<unsigned int>(Parts::NORMAL)) {
+        if (hasNormalPart()) {
           const auto &p = data_.normals[ip];
 
           data_.data[i++] = p.x;
@@ -448,7 +481,7 @@ class CQGLBuffer {
           data_.data[i++] = p.z;
         }
 
-        if (data_.types & static_cast<unsigned int>(Parts::COLOR)) {
+        if (hasColorPart()) {
           const auto &c = data_.colors[ip];
 
           data_.data[i++] = c.r;
@@ -456,7 +489,7 @@ class CQGLBuffer {
           data_.data[i++] = c.b;
         }
 
-        if (data_.types & static_cast<unsigned int>(Parts::TEXTURE)) {
+        if (hasTexturePart()) {
           const auto &p = data_.texturePoints[ip];
 
           data_.data[i++] = p.x;

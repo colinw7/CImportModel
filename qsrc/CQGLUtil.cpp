@@ -1,6 +1,8 @@
 #include <CQGLUtil.h>
 #include <CGLMatrix3D.h>
 #include <CMatrix3D.h>
+#include <CRGBA.h>
+#include <QColor>
 
 #include <GL/glut.h>
 
@@ -41,6 +43,20 @@ CQGLUtil::
 toVector(const CGLVector3D &v)
 {
   return QVector3D(v.x(), v.y(), v.z());
+}
+
+QVector3D
+CQGLUtil::
+toVector(const QColor &c)
+{
+  return QVector3D(c.redF(), c.greenF(), c.blueF());
+}
+
+QVector3D
+CQGLUtil::
+toVector(const CRGBA &c)
+{
+  return QVector3D(c.getRed(), c.getGreen(), c.getBlue());
 }
 
 int

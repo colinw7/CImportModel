@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQNewGLToolbar_t {
-    QByteArrayData data[3];
-    char stringdata0[29];
+    QByteArrayData data[9];
+    char stringdata0[88];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -33,11 +33,19 @@ struct qt_meta_stringdata_CQNewGLToolbar_t {
 static const qt_meta_stringdata_CQNewGLToolbar_t qt_meta_stringdata_CQNewGLToolbar = {
     {
 QT_MOC_LITERAL(0, 0, 14), // "CQNewGLToolbar"
-QT_MOC_LITERAL(1, 15, 12), // "settingsSlot"
-QT_MOC_LITERAL(2, 28, 0) // ""
+QT_MOC_LITERAL(1, 15, 10), // "cameraSlot"
+QT_MOC_LITERAL(2, 26, 0), // ""
+QT_MOC_LITERAL(3, 27, 9), // "modelSlot"
+QT_MOC_LITERAL(4, 37, 9), // "lightSlot"
+QT_MOC_LITERAL(5, 47, 8), // "playSlot"
+QT_MOC_LITERAL(6, 56, 9), // "pauseSlot"
+QT_MOC_LITERAL(7, 66, 8), // "stepSlot"
+QT_MOC_LITERAL(8, 75, 12) // "settingsSlot"
 
     },
-    "CQNewGLToolbar\0settingsSlot\0"
+    "CQNewGLToolbar\0cameraSlot\0\0modelSlot\0"
+    "lightSlot\0playSlot\0pauseSlot\0stepSlot\0"
+    "settingsSlot"
 };
 #undef QT_MOC_LITERAL
 
@@ -47,7 +55,7 @@ static const uint qt_meta_data_CQNewGLToolbar[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       1,   14, // methods
+       7,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -55,9 +63,21 @@ static const uint qt_meta_data_CQNewGLToolbar[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   19,    2, 0x08 /* Private */,
+       1,    0,   49,    2, 0x08 /* Private */,
+       3,    0,   50,    2, 0x08 /* Private */,
+       4,    0,   51,    2, 0x08 /* Private */,
+       5,    0,   52,    2, 0x08 /* Private */,
+       6,    0,   53,    2, 0x08 /* Private */,
+       7,    0,   54,    2, 0x08 /* Private */,
+       8,    0,   55,    2, 0x08 /* Private */,
 
  // slots: parameters
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
     QMetaType::Void,
 
        0        // eod
@@ -69,7 +89,13 @@ void CQNewGLToolbar::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         auto *_t = static_cast<CQNewGLToolbar *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->settingsSlot(); break;
+        case 0: _t->cameraSlot(); break;
+        case 1: _t->modelSlot(); break;
+        case 2: _t->lightSlot(); break;
+        case 3: _t->playSlot(); break;
+        case 4: _t->pauseSlot(); break;
+        case 5: _t->stepSlot(); break;
+        case 6: _t->settingsSlot(); break;
         default: ;
         }
     }
@@ -105,13 +131,13 @@ int CQNewGLToolbar::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 7)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 7;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 7)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 1;
+        _id -= 7;
     }
     return _id;
 }

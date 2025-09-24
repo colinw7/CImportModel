@@ -39,6 +39,19 @@ class CImportBase {
 
   //---
 
+  static CGeom3DType filenameToType(const std::string &filename) {
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos)
+      return CGEOM_3D_TYPE_NONE;
+
+    auto suffix = filename.substr(pos + 1, -1);
+
+    for (size_t i = 0; i < suffix.size(); ++i)
+      suffix[i] = char(std::tolower(suffix[i]));
+
+    return suffixToType(suffix);
+  }
+
   static CGeom3DType suffixToType(const std::string &suffix) {
     if      (suffix == "3ds"  ) return CGEOM_3D_TYPE_3DS;
     else if (suffix == "3drw" ) return CGEOM_3D_TYPE_3DRW;
@@ -54,11 +67,13 @@ class CImportBase {
     else if (suffix == "scene") return CGEOM_3D_TYPE_SCENE;
     else if (suffix == "stl"  ) return CGEOM_3D_TYPE_STL;
     else if (suffix == "v3d"  ) return CGEOM_3D_TYPE_V3D;
+    else if (suffix == "vox"  ) return CGEOM_3D_TYPE_VOXEL;
+    else if (suffix == "voxel") return CGEOM_3D_TYPE_VOXEL;
     else if (suffix == "x3d"  ) return CGEOM_3D_TYPE_X3D;
     else return CGEOM_3D_TYPE_NONE;
   }
 
-  static CImportBase *createModel(CGeom3DType type);
+  static CImportBase *createModel(CGeom3DType type, const std::string &name="");
 
  protected:
   using SceneP  = std::unique_ptr<CGeomScene3D>;

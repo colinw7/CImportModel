@@ -26,6 +26,7 @@ class CQNewGLModel : public QFrame {
 
   const QString &buildDir() const { return buildDir_; }
 
+  CQNewGLToolbar *toolbar() const { return toolbar_; }
   CQNewGLCanvas  *canvas () const { return canvas_; }
   CQNewGLControl *control() const { return control_; }
   CQNewGLUVMap   *uvMap  () const { return uvMap_; }

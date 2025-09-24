@@ -1,63 +1,42 @@
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
-#include <CQNewGLControl.h>
 #include <CQNewGLFont.h>
+#include <CQNewGLCamera.h>
+#include <CQNewGLLight.h>
+#include <CQNewGLAxes.h>
+#include <CQNewGLBBox.h>
+#include <CQNewGLNormals.h>
+#include <CQNewGLHull.h>
+#include <CQNewGLTerrain.h>
+#include <CQNewGLMaze.h>
+#include <CQNewGLSkybox.h>
+#include <CQNewGLEmitter.h>
+#include <CQNewGLFractal.h>
+#include <CQNewGLDrawTree.h>
+#include <CQNewGLShape.h>
+#include <CQNewGLPath.h>
+#include <CQNewGLToolbar.h>
+#include <CQNewGLUtil.h>
 
 #include <CImportBase.h>
 #include <CQGLBuffer.h>
-#include <CGLTexture.h>
+#include <CQGLTexture.h>
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 #include <CGeomTexture.h>
+#include <CGeomCone3D.h>
+#include <CGeomCylinder3D.h>
+#include <CGeomSphere3D.h>
 #include <CQGLUtil.h>
 #include <CFile.h>
+#include <CSphere3D.h>
 #include <CStrUtil.h>
-#include <CInterval.h>
 
 #include <QOpenGLShaderProgram>
 #include <QMouseEvent>
+#include <QTimer>
 
 #include <GL/glu.h>
-
-namespace {
-
-CGLVector3D QColorToVector(const QColor &c) {
-  return CGLVector3D(c.red()/255.0, c.green()/255.0, c.blue()/255.0);
-}
-
-CGLVector3D ColorToVector(const CRGBA &c) {
-  return CGLVector3D(c.getRed(), c.getGreen(), c.getBlue());
-}
-
-CRGBA QColorToRGBA(const QColor &c) {
-  return CRGBA(c.red()/255.0, c.green()/255.0, c.blue()/255.0);
-}
-
-double max3(double x, double y, double z) {
-  return std::max(std::max(x, y), z);
-}
-
-bool checkError() {
-  // check GL error generated
-  GLenum err = glGetError();
-
-  if (err != GL_NO_ERROR) {
-    std::cerr << "OpenGL Error: " << gluErrorString(err) << "\n";
-    return false;
-  }
-
-  return true;
-}
-
-static char cString[256];
-
-const char *toCString(const QString &str) {
-  assert(str.length() < 255);
-  strcpy(cString, str.toStdString().c_str());
-  return cString;
-}
-
-}
 
 //---
 
@@ -68,6 +47,16 @@ CQNewGLCanvas(CQNewGLModel *app) :
   setFocusPolicy(Qt::StrongFocus);
 
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+  //---
+
+  scene_ = CGeometryInst->createScene3D();
+
+  //---
+
+  timer_ = new QTimer;
+
+  connect(timer_, &QTimer::timeout, this, &CQNewGLCanvas::timerSlot);
 }
 
 void
@@ -76,15 +65,15 @@ setFlipYZ(bool b)
 {
   flipYZ_ = b;
 
-  updateObjectData();
+  updateObjectsData();
   update();
 }
 
 void
 CQNewGLCanvas::
-setShowAxis(bool b)
+setShowBasis(bool b)
 {
-  showAxis_ = b;
+  basisData_.show = b;
 
   update();
 }
@@ -95,12 +84,12 @@ setInvertDepth(bool b)
 {
   invertDepth_ = b;
 
-  for (auto *light : lights_) {
+  for (auto *light : lights()) {
     if (isInvertDepth())
-      light->pos.flipYZ();
+      light->flipYZ();
   }
 
-  updateObjectData();
+  updateObjectsData();
   update();
 }
 
@@ -137,7 +126,7 @@ setDiffuseColor(const QColor &c)
 {
   diffuseColor_ = c;
 
-  updateObjectData();
+  updateObjectsData();
   update();
 }
 
@@ -147,7 +136,7 @@ setEmissionColor(const QColor &c)
 {
   emissionColor_ = c;
 
-  updateObjectData();
+  updateObjectsData();
   update();
 }
 
@@ -157,7 +146,14 @@ setDepthTest(bool b)
 {
   depthTest_ = b;
 
-  if (b)
+  enableDepthTest();
+}
+
+void
+CQNewGLCanvas::
+enableDepthTest()
+{
+  if (depthTest_)
     glEnable(GL_DEPTH_TEST);
   else
     glDisable(GL_DEPTH_TEST);
@@ -169,7 +165,14 @@ setCullFace(bool b)
 {
   cullFace_ = b;
 
-  if (b)
+  enableCullFace();
+}
+
+void
+CQNewGLCanvas::
+enableCullFace()
+{
+  if (cullFace_)
     glEnable(GL_CULL_FACE);
   else
     glDisable(GL_CULL_FACE);
@@ -181,10 +184,24 @@ setFrontFace(bool b)
 {
   frontFace_ = b;
 
-  if (b)
+  enableFrontFace();
+}
+
+void
+CQNewGLCanvas::
+enableFrontFace()
+{
+  if (frontFace_)
     glFrontFace(GL_CW);
   else
     glFrontFace(GL_CCW);
+}
+
+void
+CQNewGLCanvas::
+setPolygonSolid(bool b)
+{
+  polygonSolid_ = b;
 }
 
 void
@@ -193,7 +210,14 @@ setPolygonLine(bool b)
 {
   polygonLine_ = b;
 
-  if (b)
+  enablePolygonLine();
+}
+
+void
+CQNewGLCanvas::
+enablePolygonLine()
+{
+  if (polygonLine_)
     glEnable(GL_POLYGON_OFFSET_LINE);
   else
     glDisable(GL_POLYGON_OFFSET_LINE);
@@ -203,72 +227,341 @@ setPolygonLine(bool b)
 
 void
 CQNewGLCanvas::
+setShowBonePoints(bool b)
+{
+  showBonePoints_ = b;
+}
+
+//---
+
+void
+CQNewGLCanvas::
 setShowNormals(bool b)
 {
   showNormals_ = b;
 }
 
+double
+CQNewGLCanvas::
+calcNormalsSize() const
+{
+  if (normalsSize_ <= 0.0)
+    return sceneScale_/100.0;
+
+  return normalsSize_;
+}
+
+void
+CQNewGLCanvas::
+setNormalsSize(double r)
+{
+  normalsSize_ = r;
+}
+
+void
+CQNewGLCanvas::
+setNormalsColor(const QColor &c)
+{
+  normalsColor_ = c;
+}
+
+void
+CQNewGLCanvas::
+setTangentSpaceNormal(bool b)
+{
+  tangentSpaceNormal_ = b;
+}
+
 //---
 
+void
+CQNewGLCanvas::
+setCurrentObject(CGeomObject3D *object)
+{
+  int i = 0;
+
+  for (auto &po : objectDatas_) {
+    auto *objectData = po.second;
+
+    if (objectData->object == object) {
+      setCurrentObjectNum(i);
+      return;
+    }
+
+    ++i;
+  }
+}
+
+void
+CQNewGLCanvas::
+setCurrentObjectNum(int i)
+{
+  currentObjectNum_ = i;
+
+  updateObjectsData();
+  update();
+
+  Q_EMIT currentObjectChanged();
+}
+
+CGeomObject3D *
+CQNewGLCanvas::
+getCurrentObject() const
+{
+  return getObject(currentObjectNum_);
+}
+
+CQNewGLCanvas::ObjectData *
+CQNewGLCanvas::
+getCurrentObjectData() const
+{
+  return getObjectData(currentObjectNum_);
+}
+
+CGeomObject3D *
+CQNewGLCanvas::
+getObject(int ind) const
+{
+  auto *objectData = getObjectData(ind);
+
+  if (objectData)
+    return objectData->object;
+
+  return nullptr;
+}
+
+CQNewGLCanvas::ObjectData *
+CQNewGLCanvas::
+getObjectData(int ind) const
+{
+  int i = 0;
+
+  for (auto &po : objectDatas_) {
+    auto *objectData = po.second;
+
+    if (i == ind)
+      return objectData;
+
+    ++i;
+  }
+
+  return nullptr;
+}
+
+CGeomObject3D *
+CQNewGLCanvas::
+getSelectedObject() const
+{
+  for (auto &po : objectDatas_) {
+    auto *objectData = po.second;
+
+    if (objectData->object->getSelected())
+      return objectData->object;
+  }
+
+  return nullptr;
+}
+
+CGeomObject3D *
+CQNewGLCanvas::
+getBonesObject() const
+{
+  // TODO: bone for current object
+  const auto &objects = scene_->getObjects();
+
+  auto n = int(objects.size());
+
+  for (int i = 0; i < n; ++i) {
+    if (! objects[i]->getNodes().empty())
+      return objects[i];
+  }
+
+  return nullptr;
+}
+
+//---
+
+void
+CQNewGLCanvas::
+setShowCameras(bool b)
+{
+  showCameras_ = b;
+
+  update();
+}
+
+void
+CQNewGLCanvas::
+setCurrentCamera(int i)
+{
+  currentCamera_ = i;
+
+  Q_EMIT currentCameraChanged();
+}
+
+CQNewGLCamera *
+CQNewGLCanvas::
+getCurrentCamera() const
+{
+  return getCamera(currentCamera_);
+}
+
+CQNewGLCamera *
+CQNewGLCanvas::
+getCamera(int ind) const
+{
+  int ind1 = ind;
+
+  if (ind1 < 0 || ind1 > int(cameras_.size()))
+    ind1 = 0;
+
+  return cameras_[ind1];
+}
+
+void
+CQNewGLCanvas::
+setCameraRotate(bool b)
+{
+  cameraRotate_ = b;
+
+  getCurrentCamera()->setRotate(b);
+}
+
+void
+CQNewGLCanvas::
+setCameraRotateAt(const CGLCamera::RotateAt &at)
+{
+  cameraRotateAt_ = at;
+
+  getCurrentCamera()->setRotateAt(at);
+}
+
+//---
+
+void
+CQNewGLCanvas::
+setShowLights(bool b)
+{
+  showLights_ = b;
+
+  update();
+}
+
+#if 0
 CGLVector3D
 CQNewGLCanvas::
 lightPos(int i) const
 {
-  return lights_[i]->pos;
+  return lights_[i]->position();
 }
 
 QColor
 CQNewGLCanvas::
 lightColor(int i) const
 {
-  return lights_[i]->color;
+  return lights_[i]->color();
 }
+#endif
 
 void
 CQNewGLCanvas::
 setCurrentLight(int i)
 {
   currentLight_ = i;
+
+  Q_EMIT currentLightChanged();
+}
+
+CQNewGLLight *
+CQNewGLCanvas::
+getCurrentLight() const
+{
+  int currentLight = currentLight_;
+
+  if (currentLight < 0 || currentLight >= int(lights_.size()))
+    currentLight = 0;
+
+  return lights_[currentLight];
+}
+
+//---
+
+void
+CQNewGLCanvas::
+setTimerRunning(bool b)
+{
+  if (b != timerRunning_) {
+    timerRunning_ = b;
+
+    if (timerRunning_) {
+      startTimer();
+
+      timerSlot();
+    }
+    else
+      stopTimer();
+  }
 }
 
 void
 CQNewGLCanvas::
-setCurrentLightPos(const CGLVector3D &v)
+startTimer()
 {
-  lights_[currentLight_]->pos = v;
+  timer_->start(100);
 }
 
 void
 CQNewGLCanvas::
-setCurrentLightColor(const QColor &c)
+stopTimer()
 {
-  lights_[currentLight_]->color = c;
+  timer_->stop();
+}
+
+void
+CQNewGLCanvas::
+timerSlot()
+{
+  Q_EMIT timerStep();
 }
 
 //---
 
 bool
 CQNewGLCanvas::
-loadModel(const QString &modelName, CGeom3DType format, const LoadData &loadData)
+loadModel(const QString &fileName, CGeom3DType format, const LoadData &loadData)
 {
-  // import model
-  import_ = CImportBase::createModel(format);
+  static uint modeInd;
 
-  if (! import_) {
+  auto modelName = QString("Model.%1").arg(++modeInd);
+
+  // import model
+  auto *im = CImportBase::createModel(format, modelName.toStdString());
+
+  if (! im) {
     std::cerr << "Invalid format\n";
     return false;
   }
 
-  import_->setInvertX(loadData.invertX);
-  import_->setInvertY(loadData.invertY);
-  import_->setInvertZ(loadData.invertZ);
+  im->setInvertX(loadData.invertX);
+  im->setInvertY(loadData.invertY);
+  im->setInvertZ(loadData.invertZ);
 
-  CFile file(modelName.toStdString());
+  CFile file(fileName.toStdString());
 
-  if (! import_->read(file)) {
-    std::cerr << "Failed to read model '" << modelName.toStdString() << "'\n";
+  if (! im->read(file)) {
+    delete im;
+    std::cerr << "Failed to read model '" << fileName.toStdString() << "'\n";
     return false;
   }
+
+  auto *scene = im->releaseScene();
+
+  delete im;
+
+  for (auto *object : scene->getObjects())
+    scene_->addObject(object);
+
+  Q_EMIT modelAdded();
 
   return true;
 }
@@ -329,10 +622,10 @@ initializeGL()
 
   //---
 
-  setDepthTest  (depthTest_);
-  setCullFace   (cullFace_);
-  setFrontFace  (frontFace_);
-  setPolygonLine(polygonLine_);
+  enableDepthTest  ();
+  enableCullFace   ();
+  enableFrontFace  ();
+  enablePolygonLine();
 
   //---
 
@@ -351,15 +644,13 @@ initializeGL()
 
   //---
 
-  lightShaderProgram_ = new CQNewGLShaderProgram(this);
-  lightShaderProgram_->addShaders("light.vs", "light.fs");
-
+  // lights
   addLight(/*update*/false);
 
   //---
 
-  axisShaderProgram_ = new CQNewGLShaderProgram(this);
-  axisShaderProgram_->addShaders("axis.vs", "axis.fs");
+  basisData_.shaderProgram = new CQNewGLShaderProgram(this);
+  basisData_.shaderProgram->addShaders("basis.vs", "basis.fs");
 
   //---
 
@@ -369,13 +660,6 @@ initializeGL()
   //---
 
   loadInitTextures();
-
-  //---
-
-  // camera
-  camera_ = new CQNewGLCamera(this, CGLVector3D(0.0f, 0.0f, 1.414f));
-
-  camera_->setLastPos(float(app_->windowWidth())/2.0f, float(app_->windowHeight())/2.0f);
 
   //---
 
@@ -398,17 +682,212 @@ initializeGL()
 
   //---
 
-  updateObjectData();
+  axes_ = new CQNewGLAxes(this);
+  axes_->setVisible(false);
+
+  CQNewGLAxes::initShader(this);
 
   //---
+
+  bbox_ = new CQNewGLBBox(this);
+  bbox_->setVisible(false);
+
+  CQNewGLBBox::initShader(this);
+
+  //---
+
+  normals_ = new CQNewGLNormals(this);
+  normals_->setVisible(false);
+
+  CQNewGLNormals::initShader(this);
+
+  //---
+
+  hull_ = new CQNewGLHull(this);
+  hull_->setVisible(false);
+
+  CQNewGLHull::initShader(this);
+
+  //---
+
+  terrain_ = new CQNewGLTerrain(this);
+
+  CQNewGLTerrain::initShader(this);
+
+  //---
+
+  maze_ = new CQNewGLMaze(this);
+
+  CQNewGLMaze::initShader(this);
+
+  //---
+
+  skybox_ = new CQNewGLSkybox(this);
+
+  CQNewGLSkybox::initShader(this);
+
+  //---
+
+  fractal_ = new CQNewGLFractal(this);
+
+  CQNewGLFractal::initShader(this);
+
+  //---
+
+  drawTree_ = new CQNewGLDrawTree(this);
+
+  CQNewGLDrawTree::initShader(this);
+
+  //---
+
+  CQNewGLShape::initShader(this);
+
+  //---
+
+  CQNewGLPath::initShader(this);
+
+  //---
+
+  updateObjectsData();
+
+  //---
+
+  // cameras
+  addCamera(/*update*/false);
+
+  //---
+
+  updateCameraBuffer();
 
   updateLightBuffer();
 }
 
 void
 CQNewGLCanvas::
+addCamera(bool update)
+{
+  CQNewGLCamera::initShader(this);
+
+  //---
+
+  auto f  = std::sqrt(2.0);
+  auto f1 = f*sceneScale_;
+
+  //---
+
+  CGLVector3D position, up;
+  QColor      color;
+
+  auto ic = cameras_.size();
+
+#if 0
+  double x = 0;
+
+  if (ic > 0) {
+    auto ic2 = (ic + 1)/2;
+
+    if (ic & 1)
+      x -= ic2*sceneScale_;
+    else
+      x += ic2*sceneScale_;
+  }
+
+  position = CGLVector3D(x, f1, f1);
+#else
+  auto ic1 = ic % 4;
+
+  if      (ic1 == 0) {
+    position = CGLVector3D(f1, f1, f1);
+    up       = CGLVector3D(0, 1, 0);
+    color    = QColor(255, 255, 255);
+  }
+  else if (ic1 == 1) {
+    position = CGLVector3D(f1, sceneCenter_.y, sceneCenter_.z);
+    up       = CGLVector3D(0, 1, 0);
+    color    = QColor(255, 0, 0);
+  }
+  else if (ic1 == 2) {
+    position = CGLVector3D(sceneCenter_.x, f1, sceneCenter_.z);
+    up       = CGLVector3D(0, 0, 1);
+    color    = QColor(0, 255, 0);
+  }
+  else if (ic1 == 3) {
+    position = CGLVector3D(sceneCenter_.x, sceneCenter_.y, f1);
+    up       = CGLVector3D(0, 1, 0);
+    color    = QColor(0, 0, 255);
+  }
+#endif
+
+  //---
+
+  auto origin = CGLVector3D(sceneCenter_.x, sceneCenter_.y, sceneCenter_.z);
+
+  auto *camera = new CQNewGLCamera(this, origin, position, up);
+
+  camera->setName(QString("Camera.%1").arg(cameras_.size() + 1));
+
+  camera->setColor(color);
+
+  camera->setLastPos(float(app_->windowWidth())/2.0f, float(app_->windowHeight())/2.0f);
+
+  cameras_.push_back(camera);
+
+  //---
+
+  Q_EMIT cameraAdded();
+
+  //---
+
+  if (update)
+    updateCameraBuffer();
+}
+
+void
+CQNewGLCanvas::
+resetCamera()
+{
+  auto *camera = cameras_[0];
+
+  auto *object = getCurrentObject();
+
+  auto f = std::sqrt(2.0);
+
+  CGLVector3D position, origin;
+
+  if (object) {
+    auto bbox = getObjectBBox(object);
+
+    auto c = bbox.getCenter();
+    auto s = bbox.getMaxSize();
+
+    auto f1 = f*s;
+
+    position = CGLVector3D(f1, f1, f1);
+    origin   = CGLVector3D(c.x, c.y, c.z);
+  }
+  else {
+    auto f1 = f*sceneScale_;
+
+    position = CGLVector3D(f1, f1, f1);
+    origin   = CGLVector3D(sceneCenter_.x, sceneCenter_.y, sceneCenter_.z);
+  }
+
+  camera->setOrigin(origin);
+  camera->setPosition(position);
+}
+
+void
+CQNewGLCanvas::
 addLight(bool update)
 {
+  CQNewGLLight::initShader(this);
+
+  //---
+
+  auto lightRadius = 4*sceneScale_;
+
+  //--
+
   auto il = lights_.size();
 
   double x = 0;
@@ -417,21 +896,31 @@ addLight(bool update)
     auto il2 = (il + 1)/2;
 
     if (il & 1)
-      x -= il2*0.1;
+      x -= il2;
     else
-      x += il2*0.1;
+      x += il2;
   }
 
-  auto *light = new Light;
+  //---
 
-  light->name = QString("Light%1").arg(il + 1);
+  auto *light = new CQNewGLLight(this);
 
-  light->pos = CGLVector3D(x, 0.4f, 0.4f);
+  light->setName    (QString("Light%1").arg(il + 1));
+  light->setPosition(CGLVector3D(x*lightRadius, lightRadius, lightRadius));
+
+  if (il == 0)
+    light->setType(CQNewGLLight::Type::DIRECTIONAL);
+  else
+    light->setType(CQNewGLLight::Type::POINT);
 
   lights_.push_back(light);
 
+  //---
+
   if (update)
     updateLightBuffer();
+
+  Q_EMIT lightAdded();
 }
 
 bool
@@ -442,16 +931,16 @@ createFontTexture(uint *texture, int w, int h, uchar *data)
 
   // allocate texture id
   glGenTextures(1, texture);
-  if (! checkError()) return false;
+  if (! checkError("glGenTextures")) return false;
 
   // set texture type
   glBindTexture(GL_TEXTURE_2D, *texture);
-  if (! checkError()) return false;
+  if (! checkError("glGenTexture")) return false;
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
@@ -460,29 +949,30 @@ createFontTexture(uint *texture, int w, int h, uchar *data)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
 
   glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-  if (! checkError()) return false;
+  if (! checkError("glTexParameteri")) return false;
 #else
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  if (! checkError()) return false;
+  if (! checkError("glPixelStorei")) return false;
 #endif
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, data);
-  if (! checkError()) return false;
+  if (! checkError("glTexImage2D")) return false;
 
   glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-  if (! checkError()) return false;
+  if (! checkError("glHint")) return false;
 
   glGenerateMipmap(GL_TEXTURE_2D);
-  if (! checkError()) return false;
+  if (! checkError("glGenerateMipmap")) return false;
 
   //---
 
 #if 0
+  // dump font to png
   auto src = CImageNoSrc();
 
   auto image = CImageMgrInst->createImage(src);
@@ -509,28 +999,37 @@ void
 CQNewGLCanvas::
 loadInitTextures()
 {
-  for (const auto &textureData : initTextures_) {
-    CImageFileSrc src(textureData.name);
-
+  auto loadTexture = [&](const QString &name, bool flipV=false) {
+    CImageFileSrc src(name.toStdString());
     auto image = CImageMgrInst->createImage(src);
 
-    if (textureData.flipV)
+    if (flipV)
       image->flipH();
 
     auto *texture1 = CGeometryInst->createTexture(image);
 
-    texture1->setName(textureData.name);
+    texture1->setName(name.toStdString());
 
     (void) getTexture(texture1, /*add*/true);
-  }
+  };
 
   //---
 
-  auto *importBase = this->importBase();
+  auto defNames = QStringList() << "Marble_Texture.jpg";
 
-  auto &scene = importBase->getScene();
+  auto texturesDir = app()->buildDir() + "/textures";
 
-  for (auto *object : scene.getObjects()) {
+  for (const auto &name : defNames)
+    loadTexture(texturesDir + "/" + name);
+
+  //---
+
+  for (const auto &textureData : initTextures_)
+    loadTexture(QString::fromStdString(textureData.name), textureData.flipV);
+
+  //---
+
+  for (auto *object : scene_->getObjects()) {
     auto name = object->getName();
 
     auto pt = textureMap_.find(name);
@@ -567,74 +1066,300 @@ loadInitTextures()
   }
 }
 
+//---
+
+void
+CQNewGLCanvas::
+updateCameraBuffer()
+{
+  for (auto *camera : cameras_)
+    camera->addGeometry();
+}
+
+void
+CQNewGLCanvas::
+drawCameras()
+{
+//auto *currentCamera = getCurrentCamera();
+
+  CQNewGLShaderProgram *program = nullptr;
+
+  for (auto *camera : cameras_) {
+//  if (camera == currentCamera)
+//    continue;
+
+    if (! program) {
+      program = camera->shaderProgram();
+
+      program->bind();
+    }
+
+    camera->drawGeometry();
+  }
+
+  if (program)
+    program->release();
+}
+
+//---
+
 void
 CQNewGLCanvas::
 updateLightBuffer()
 {
-  for (auto *light : lights_) {
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    if (! light->buffer)
-      light->buffer = new CQGLBuffer(lightShaderProgram_);
+  for (auto *light : lights())
+    light->addGeometry();
+}
 
-    auto addLightPoint = [&](float x, float y, float z) {
-      light->buffer->addPoint(x, y, z);
-    };
+void
+CQNewGLCanvas::
+drawLights()
+{
+  CQNewGLShaderProgram *program = nullptr;
 
-    addLightPoint(-0.5f, -0.5f, -0.5f);
-    addLightPoint( 0.5f, -0.5f, -0.5f);
-    addLightPoint( 0.5f,  0.5f, -0.5f);
+  for (auto *light : lights()) {
+    if (! program) {
+      auto *program = light->shaderProgram();
 
-    addLightPoint( 0.5f,  0.5f, -0.5f);
-    addLightPoint(-0.5f,  0.5f, -0.5f);
-    addLightPoint(-0.5f, -0.5f, -0.5f);
+      program->bind();
+    }
 
-    addLightPoint(-0.5f, -0.5f,  0.5f);
-    addLightPoint( 0.5f, -0.5f,  0.5f);
-    addLightPoint( 0.5f,  0.5f,  0.5f);
+    light->drawGeometry();
+  }
 
-    addLightPoint( 0.5f,  0.5f,  0.5f);
-    addLightPoint(-0.5f,  0.5f,  0.5f);
-    addLightPoint(-0.5f, -0.5f,  0.5f);
+  if (program)
+    program->release();
+}
 
-    addLightPoint(-0.5f,  0.5f,  0.5f);
-    addLightPoint(-0.5f,  0.5f, -0.5f);
-    addLightPoint(-0.5f, -0.5f, -0.5f);
+//---
 
-    addLightPoint(-0.5f, -0.5f, -0.5f);
-    addLightPoint(-0.5f, -0.5f,  0.5f);
-    addLightPoint(-0.5f,  0.5f,  0.5f);
+void
+CQNewGLCanvas::
+updateTerrain()
+{
+  if (terrain_)
+    terrain_->addGeometry();
+}
 
-    addLightPoint( 0.5f,  0.5f,  0.5f);
-    addLightPoint( 0.5f,  0.5f, -0.5f);
-    addLightPoint( 0.5f, -0.5f, -0.5f);
+void
+CQNewGLCanvas::
+drawTerrain()
+{
+  if (terrain_)
+    terrain_->drawGeometry();
+}
 
-    addLightPoint( 0.5f, -0.5f, -0.5f);
-    addLightPoint( 0.5f, -0.5f,  0.5f);
-    addLightPoint( 0.5f,  0.5f,  0.5f);
+//---
 
-    addLightPoint(-0.5f, -0.5f, -0.5f);
-    addLightPoint( 0.5f, -0.5f, -0.5f);
-    addLightPoint( 0.5f, -0.5f,  0.5f);
+void
+CQNewGLCanvas::
+updateMaze()
+{
+  if (maze_)
+    maze_->addGeometry();
+}
 
-    addLightPoint( 0.5f, -0.5f,  0.5f);
-    addLightPoint(-0.5f, -0.5f,  0.5f);
-    addLightPoint(-0.5f, -0.5f, -0.5f);
+void
+CQNewGLCanvas::
+drawMaze()
+{
+  if (maze_)
+    maze_->drawGeometry();
+}
 
-    addLightPoint(-0.5f,  0.5f, -0.5f);
-    addLightPoint( 0.5f,  0.5f, -0.5f);
-    addLightPoint( 0.5f,  0.5f,  0.5f);
+//---
 
-    addLightPoint( 0.5f,  0.5f,  0.5f);
-    addLightPoint(-0.5f,  0.5f,  0.5f);
-    addLightPoint(-0.5f,  0.5f, -0.5f);
+void
+CQNewGLCanvas::
+updateSkybox()
+{
+  if (skybox_)
+    skybox_->addGeometry();
+}
 
-    light->buffer->load();
+void
+CQNewGLCanvas::
+drawSkybox()
+{
+  if (skybox_)
+    skybox_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+addEmitter()
+{
+  if (emitters_.empty())
+    CQNewGLEmitter::initShader(this);
+
+  auto *emitter = new CQNewGLEmitter(this);
+
+  emitters_.push_back(emitter);
+
+  emitterNum_ = emitters_.size() - 1;
+
+  emitter->setName(QString("Emitter.%1").arg(emitters_.size()));
+}
+
+CQNewGLEmitter *
+CQNewGLCanvas::
+getCurrentEmitter() const
+{
+  if (emitterNum_ < 0 || emitterNum_ >= int(emitters_.size()))
+    return nullptr;
+
+  return emitters_[emitterNum_];
+}
+
+void
+CQNewGLCanvas::
+updateEmitters()
+{
+  for (auto *emitter : emitters_) {
+    if (! emitter->isEnabled())
+      continue;
+
+    emitter->addGeometry();
   }
 }
 
 void
 CQNewGLCanvas::
-updateObjectData()
+drawEmitters()
+{
+  for (auto *emitter : emitters_) {
+    if (! emitter->isEnabled())
+      continue;
+
+    emitter->drawGeometry();
+  }
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateFractal()
+{
+  if (fractal_)
+    fractal_->addGeometry();
+}
+
+void
+CQNewGLCanvas::
+drawFractal()
+{
+  if (fractal_)
+    fractal_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateDrawTree()
+{
+  if (drawTree_)
+    drawTree_->addGeometry();
+}
+
+void
+CQNewGLCanvas::
+drawDrawTree()
+{
+  if (drawTree_)
+    drawTree_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+setCurrentShape(int i)
+{
+  currentShape_ = i;
+
+  Q_EMIT currentShapeChanged();
+}
+
+CQNewGLShape *
+CQNewGLCanvas::
+getCurrentShape() const
+{
+  if (shapes_.empty())
+    return nullptr;
+
+  int currentShape = currentShape_;
+
+  if (currentShape < 0 || currentShape >= int(shapes_.size()))
+    currentShape = 0;
+
+  return shapes_[currentShape];
+}
+
+CQNewGLShape *
+CQNewGLCanvas::
+addShape()
+{
+  auto *shape = new CQNewGLShape(this);
+
+  shapes_.push_back(shape);
+
+  shape->setName(QString("Shape.%1").arg(shapes_.size()));
+  shape->setActive(true);
+
+  Q_EMIT shapeAdded();
+
+  return shape;
+}
+
+void
+CQNewGLCanvas::
+drawShapes()
+{
+  for (auto *shape : shapes_) {
+    if (shape->isVisible())
+      shape->drawGeometry();
+  }
+}
+
+//---
+
+void
+CQNewGLCanvas::
+clearEyeLines()
+{
+  delete eyeLine1_;
+  delete eyeLine2_;
+
+  eyeLine1_ = nullptr;
+  eyeLine2_ = nullptr;
+}
+
+void
+CQNewGLCanvas::
+drawPaths()
+{
+  if (! isShowEyeline())
+    return;
+
+  if (eyeLine1_)
+    eyeLine1_->drawGeometry();
+
+  if (eyeLine2_)
+    eyeLine2_->drawGeometry();
+
+  for (auto *path : paths_)
+    path->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateObjectsData()
 {
   if (! initialized_)
     return;
@@ -646,9 +1371,29 @@ updateObjectData()
   else
     updateModelData();
 
-  updateAxis();
+//updateAxes();
+  axesNeedsUpdate_ = true;
+
+  if (bbox_->isVisible())
+    updateBBox();
+
+  if (normals_->isVisible())
+    updateNormals();
+
+  if (hull_->isVisible())
+    updateHull();
+
+//updateBasis();
+  basisData_.needsUpdate = true;
 
 //text_->updateText();
+}
+
+void
+CQNewGLCanvas::
+updateObjectData(CGeomObject3D *)
+{
+  updateObjectsData();
 }
 
 void
@@ -656,9 +1401,7 @@ CQNewGLCanvas::
 updateModelData()
 {
   // set up vertex data (and buffer(s)) and configure vertex attributes
-  auto *importBase = this->importBase();
-
-  if (! importBase) {
+  if (scene_->getObjects().empty()) {
     sceneScale_    = 1.0;
     invSceneScale_ = 1.0;
     return;
@@ -666,19 +1409,26 @@ updateModelData()
 
   //---
 
-  auto &scene = importBase->getScene();
-
   CBBox3D bbox;
-//scene.getBBox(bbox);
+
+//CBBox3D bbox1;
+//scene_->getBBox(bbox1);
 
   //---
 
-  bool useBones    = (isAnimEnabled() && animName() != "");
-  bool showNormals = isShowNormals();
+  bool useBones       = (isAnimEnabled() && animName() != "");
+  bool showNormals    = isShowNormals();
+  bool showBonePoints = (useBones && isShowBonePoints());
+
+  int    boneNodeIds[4];
+  double boneWeights[4];
+
+  auto normalsSize  = calcNormalsSize();
+  auto normalsColor = this->normalsColor();
 
   //---
 
-  const auto &objects = scene.getObjects();
+  const auto &objects = scene_->getObjects();
 
   for (auto *object : objects) {
     ObjectData *objectData { nullptr };
@@ -693,11 +1443,15 @@ updateModelData()
     if (! objectData->object)
       objectData->object = object;
 
-    if (! objectData->modelData.buffer)
-      objectData->modelData.buffer = new CQGLBuffer(modelShaderProgram_);
+    //---
 
-    if (showNormals && ! objectData->normalData.buffer)
-      objectData->normalData.buffer = new CQGLBuffer(normalShaderProgram_);
+    if (! objectData->modelData.buffer)
+      objectData->modelData.buffer = modelShaderProgram_->createBuffer();
+
+    if (showNormals) {
+      if (! objectData->normalData.buffer)
+        objectData->normalData.buffer = normalShaderProgram_->createBuffer();
+    }
 
     //---
 
@@ -746,6 +1500,11 @@ updateModelData()
 
     //---
 
+    if (showBonePoints)
+      (void) rootObject->updateNodesAnimationData(animName().toStdString(), time());
+
+    //---
+
     auto *diffuseTexture  = object->getDiffuseTexture();
     auto *specularTexture = object->getSpecularTexture();
     auto *normalTexture   = object->getNormalTexture();
@@ -758,7 +1517,7 @@ updateModelData()
     int pos = 0;
 
     for (const auto *face : faces) {
-      FaceData faceData;
+      CQNewGLFaceData faceData;
 
       faceData.boneId = nodeId;
 
@@ -768,27 +1527,18 @@ updateModelData()
 
       //---
 
+      // set face textures
       auto *diffuseTexture1 = face->getDiffuseTexture();
-
-      if (! diffuseTexture1)
-        diffuseTexture1 = diffuseTexture;
+      if (! diffuseTexture1) diffuseTexture1 = diffuseTexture;
 
       auto *specularTexture1 = face->getSpecularTexture();
-
-      if (! specularTexture1)
-        specularTexture1 = specularTexture;
+      if (! specularTexture1) specularTexture1 = specularTexture;
 
       auto *normalTexture1 = face->getNormalTexture();
-
-      if (! normalTexture1)
-        normalTexture1 = normalTexture;
+      if (! normalTexture1) normalTexture1 = normalTexture;
 
       auto *emissiveTexture1 = face->getEmissiveTexture();
-
-      if (! emissiveTexture1)
-        emissiveTexture1 = emissiveTexture;
-
-      //---
+      if (! emissiveTexture1) emissiveTexture1 = emissiveTexture;
 
       if (diffuseTexture1)
         faceData.diffuseTexture = getTexture(diffuseTexture1, /*add*/true);
@@ -802,6 +1552,10 @@ updateModelData()
       if (emissiveTexture1)
         faceData.emissiveTexture = getTexture(emissiveTexture1, /*add*/true);
 
+      //---
+
+      // set face material
+
 //    const auto &material = face->getMaterial();
 
 //    faceData.ambient   = material.getAmbient ();
@@ -810,12 +1564,17 @@ updateModelData()
       faceData.emission  = face->emission().value_or(QColorToRGBA(emissionColor()));
       faceData.shininess = face->shininess().value_or(app_->shininess());
 
+      //---
+
+      // set face normal
       CVector3D normal;
 
       if (face->getNormalSet())
         normal = face->getNormal();
       else
         face->calcNormal(normal);
+
+      //---
 
       const auto &vertices = face->getVertices();
 
@@ -831,6 +1590,8 @@ updateModelData()
 
         //---
 
+        // update color, normal for custom vertex value
+
         auto normal1 = normal;
         auto color1  = color;
 
@@ -839,6 +1600,28 @@ updateModelData()
 
         if (vertex.hasColor())
           color1 = vertex.getColor();
+
+        //---
+
+        if (faceData.normalTexture) {
+          const auto &tpoint = face->getTexturePoint(vertex, iv);
+
+          int tw = faceData.normalTexture->getWidth ();
+          int th = faceData.normalTexture->getHeight();
+
+          auto tx = CMathUtil::clamp(tpoint.x, 0.0, 1.0);
+          auto ty = CMathUtil::clamp(tpoint.y, 0.0, 1.0);
+
+          // get normal value from texture
+          auto rgba = faceData.normalTexture->getImage().pixel(tx*(tw - 1), ty*(th - 1));
+          auto tnormal = CVector3D(qRed(rgba)/255.0, qGreen(rgba)/255.0, qBlue(rgba)/255.0);
+
+          // this normal is in tangent space
+          if (isTangentSpaceNormal())
+            normal1 = (tnormal*2.0 - CVector3D(1.0, 1.0, 1.0)).normalized();
+          else
+            normal1 = tnormal;
+        }
 
         //---
 
@@ -866,27 +1649,35 @@ updateModelData()
           return n1;
         };
 
+        auto addPointNormal = [&](const CPoint3D &p, const CVector3D &n) {
+          auto n1 = calcNormal(n);
+
+//        auto p3 = p + normalsSize*n2.normalize();
+          auto p3 = p + normalsSize*n1.normalize();
+
+          normalBuffer->addPoint(float(p.x), float(p.y), float(p.z));
+          normalBuffer->addColor(normalsColor);
+
+          normalBuffer->addPoint(float(p3.x), float(p3.y), float(p3.z));
+          normalBuffer->addColor(normalsColor);
+        };
+
         auto addPoint = [&](const CPoint3D &p, const CVector3D &n) {
           CPoint3D p1, p2;
           calcPoint(p, p1, p2);
 
           auto p11 = (useBones ? p1 : p2);
 
-          modelBuffer->addPoint(float(p11.x), float(p11.y), float(p11.z));
+          if (showBonePoints) {
+            p11 = applyBonePointTransform(p1, boneNodeIds, boneWeights);
+          }
 
-          bbox += p2;
+          modelBuffer->addPoint(float(p11.x), float(p11.y), float(p11.z));
 
           //---
 
-          if (showNormals) {
-            auto p3 = p11 + sceneScale_*calcNormal(n).normalize()/100.0;
-
-            normalBuffer->addPoint(float(p11.x), float(p11.y), float(p11.z));
-            normalBuffer->addColor(1.0f, 1.0f, 1.0f);
-
-            normalBuffer->addPoint(float(p3.x), float(p3.y), float(p3.z));
-            normalBuffer->addColor(1.0f, 1.0f, 1.0f);
-          }
+          if (showNormals)
+            addPointNormal(p11, n);
         };
 
         auto addNormal = [&](const CVector3D &n) {
@@ -894,6 +1685,22 @@ updateModelData()
 
           modelBuffer->addNormal(float(n1.getX()), float(n1.getY()), float(n1.getZ()));
         };
+
+        //---
+
+        const auto &jointData = vertex.getJointData();
+
+        if (jointData.nodeDatas[0].node >= 0) {
+          for (int i = 0; i < 4; ++i) {
+            boneNodeIds[i] = jointData.nodeDatas[i].node;
+            boneWeights[i] = jointData.nodeDatas[i].weight;
+          }
+
+          modelBuffer->addBoneIds    (boneNodeIds[0], boneNodeIds[1],
+                                      boneNodeIds[2], boneNodeIds[3]);
+          modelBuffer->addBoneWeights(boneWeights[0], boneWeights[1],
+                                      boneWeights[2], boneWeights[3]);
+        }
 
         //---
 
@@ -905,7 +1712,7 @@ updateModelData()
 
         //---
 
-        modelBuffer->addColor(color1.getRedF(), color1.getGreenF(), color1.getBlueF());
+        modelBuffer->addColor(color1);
 
         //---
 
@@ -916,22 +1723,6 @@ updateModelData()
         }
         else
           modelBuffer->addTexturePoint(0.0f, 0.0f);
-
-        //---
-
-        const auto &jointData = vertex.getJointData();
-
-        if (jointData.nodeDatas[0].node >= 0) {
-          modelBuffer->addBoneIds(jointData.nodeDatas[0].node,
-                                  jointData.nodeDatas[1].node,
-                                  jointData.nodeDatas[2].node,
-                                  jointData.nodeDatas[3].node);
-
-          modelBuffer->addBoneWeights(jointData.nodeDatas[0].weight,
-                                      jointData.nodeDatas[1].weight,
-                                      jointData.nodeDatas[2].weight,
-                                      jointData.nodeDatas[3].weight);
-        }
 
         //---
 
@@ -951,10 +1742,38 @@ updateModelData()
 
     if (showNormals)
       normalBuffer->load();
+
+    //---
+
+    if (! object->parent()) {
+      auto bbox1 = getObjectBBox(object);
+
+      bbox += bbox1;
+    }
   }
 
   //---
 
+  setSceneBBox(bbox);
+
+  //std::cerr << "Scene Scale : " << sceneScale_ << "\n";
+
+#if 0
+  // move to center, add scale to unit cube
+  modelTranslate_.setX(-sceneCenter_.getX());
+  modelTranslate_.setY(-sceneCenter_.getY());
+  modelTranslate_.setZ(-sceneCenter_.getZ());
+
+  modelScale_.setX(invSceneScale_);
+  modelScale_.setY(invSceneScale_);
+  modelScale_.setZ(invSceneScale_);
+#endif
+}
+
+void
+CQNewGLCanvas::
+setSceneBBox(const CBBox3D &bbox)
+{
   sceneSize_   = bbox.getSize();
   sceneCenter_ = bbox.getCenter();
 
@@ -967,14 +1786,28 @@ updateModelData()
   invSceneScale_ = (sceneScale_ > 0.0 ? 1.0/sceneScale_ : 1.0);
 
   //std::cerr << "Scene Scale : " << sceneScale_ << "\n";
+}
 
-  modelTranslate_.setX(-sceneCenter_.getX());
-  modelTranslate_.setY(-sceneCenter_.getY());
-  modelTranslate_.setZ(-sceneCenter_.getZ());
+CPoint3D
+CQNewGLCanvas::
+applyBonePointTransform(const CPoint3D &p, int *boneIds, double *boneWeights) const
+{
+  auto result = CPoint3D(0, 0, 0);
 
-  modelScale_.setX(invSceneScale_);
-  modelScale_.setY(invSceneScale_);
-  modelScale_.setZ(invSceneScale_);
+  for (int i = 0; i < 4; ++i) {
+    auto boneTransform = paintData_.nodeMatrices[boneIds[i]];
+
+    result += boneWeights[i]*(boneTransform*p);
+  }
+
+  return result;
+}
+
+CPoint3D
+CQNewGLCanvas::
+applyBoneTransform(const CPoint3D &p, int boneId) const
+{
+  return paintData_.nodeMatrices[boneId]*p;
 }
 
 void
@@ -982,9 +1815,7 @@ CQNewGLCanvas::
 updateBonesData()
 {
   // set up vertex data (and buffer(s)) and configure vertex attributes
-  auto *importBase = this->importBase();
-
-  if (! importBase) {
+  if (scene_->getObjects().empty()) {
     sceneScale_    = 1.0;
     invSceneScale_ = 1.0;
     return;
@@ -992,129 +1823,18 @@ updateBonesData()
 
   //---
 
-  auto &scene = importBase->getScene();
-
   CBBox3D bbox;
-//scene.getBBox(bbox);
+
+//CBBox3D bbox1;
+//scene_->getBBox(bbox1);
 
   //---
-
-  auto pointSize = 0.05f;
 
   auto color = CRGBA(1.0, 0.0, 0.0);
 
-  auto addCube = [&](ObjectData *objectData, const CPoint3D &c, int nodeId, int &pos) {
-    static GLfloat cube_normal[6][3] = {
-      {-1.0,  0.0,  0.0},
-      { 0.0,  1.0,  0.0},
-      { 1.0,  0.0,  0.0},
-      { 0.0, -1.0,  0.0},
-      { 0.0,  0.0,  1.0},
-      { 0.0,  0.0, -1.0}
-    };
-
-    static GLint cube_faces[6][4] = {
-      {0, 1, 2, 3},
-      {3, 2, 6, 7},
-      {7, 6, 5, 4},
-      {4, 5, 1, 0},
-      {5, 6, 2, 1},
-      {7, 4, 0, 3}
-    };
-
-    GLfloat v[8][3];
-
-    v[0][0] = v[1][0] = v[2][0] = v[3][0] = -0.5;
-    v[4][0] = v[5][0] = v[6][0] = v[7][0] =  0.5;
-    v[0][1] = v[1][1] = v[4][1] = v[5][1] = -0.5;
-    v[2][1] = v[3][1] = v[6][1] = v[7][1] =  0.5;
-    v[0][2] = v[3][2] = v[4][2] = v[7][2] = -0.5;
-    v[1][2] = v[2][2] = v[5][2] = v[6][2] =  0.5;
-
-    auto *buffer = objectData->bonesData.buffer;
-
-    auto cubePoint = [&](int i, int j) {
-      const auto &v1 = v[cube_faces[i][j]];
-
-      return CPoint3D(c.x + pointSize*v1[0], c.y + pointSize*v1[1], c.z + pointSize*v1[2]);
-    };
-
-    auto cubeNormal = [&](int i) {
-      const auto &n = cube_normal[i];
-
-      return CPoint3D(n[0], n[1], n[2]);
-    };
-
-    auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
-      buffer->addPoint(p.x, p.y, p.z);
-      buffer->addNormal(n.x, n.y, n.z);
-      buffer->addColor(c.getRedF(), c.getGreenF(), c.getBlueF());
-      buffer->addTexturePoint(0.0f, 0.0f);
-    };
-
-    for (GLint i = 5; i >= 0; i--) {
-      FaceData faceData;
-
-      faceData.boneId       = nodeId;
-      faceData.parentBoneId = -1;
-      faceData.pos          = pos;
-      faceData.len          = 4;
-
-      auto p1 = cubePoint(i, 0);
-      auto p2 = cubePoint(i, 1);
-      auto p3 = cubePoint(i, 2);
-      auto p4 = cubePoint(i, 3);
-      auto n  = cubeNormal(i);
-
-      addPoint(p1, n, color);
-      addPoint(p2, n, color);
-      addPoint(p3, n, color);
-      addPoint(p4, n, color);
-
-      objectData->bonesData.faceDatas.push_back(faceData);
-
-      pos += faceData.len;
-    }
-  };
-
   //---
 
-  auto addLine = [&](ObjectData *objectData, const CPoint3D &c1, const CPoint3D &c2,
-                     int boneId, int parentBoneId, int &pos) {
-    auto *buffer = objectData->bonesData.buffer;
-
-    auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c, int id) {
-      buffer->addPoint(p.x, p.y, p.z);
-      buffer->addNormal(n.x, n.y, n.z);
-      buffer->addColor(c.getRedF(), c.getGreenF(), c.getBlueF());
-      buffer->addTexturePoint(float(id), 0.0f);
-    };
-
-    FaceData faceData;
-
-    faceData.boneId       = boneId;
-    faceData.parentBoneId = parentBoneId;
-    faceData.pos          = pos;
-    faceData.len          = 4;
-
-    auto dp = CPoint3D(pointSize, 0, 0);
-
-    auto p1 = c1 - dp;
-    auto p2 = c1 + dp;
-    auto p3 = c2 + dp;
-    auto p4 = c2 - dp;
-    auto n  = CPoint3D(0, 0, 1);
-
-    addPoint(p1, n, color, 0);
-    addPoint(p2, n, color, 0);
-    addPoint(p3, n, color, 1);
-    addPoint(p4, n, color, 1);
-
-    objectData->bonesData.faceDatas.push_back(faceData);
-
-    pos += faceData.len;
-  };
-
+  // transform node to model coords
   auto transformNode = [&](const CGeomObject3D::NodeData &nodeData) {
     CMatrix3D m;
 
@@ -1130,7 +1850,7 @@ updateBonesData()
 
   //---
 
-  const auto &objects = scene.getObjects();
+  const auto &objects = scene_->getObjects();
 
   for (auto *object : objects) {
     ObjectData *objectData { nullptr };
@@ -1145,7 +1865,8 @@ updateBonesData()
     if (! objectData->object)
       objectData->object = object;
 
-    objectData->bonesData.buffer = bonesShaderProgram_->getBuffer();
+    if (! objectData->bonesData.buffer)
+      objectData->bonesData.buffer = bonesShaderProgram_->createBuffer();
 
     //---
 
@@ -1175,7 +1896,7 @@ updateBonesData()
 
       //---
 
-      addCube(objectData, c, nodeId, pos);
+      addBonesCube(objectData, c, nodeId, color, pos);
 
       //---
 
@@ -1187,7 +1908,7 @@ updateBonesData()
         if (pnode.valid) {
           auto c1 = transformNode(pnode);
 
-          addLine(objectData, c, c1, nodeId, node.parent, pos);
+          addBonesLine(objectData, c, c1, nodeId, node.parent, color, pos);
         }
       }
     }
@@ -1197,18 +1918,7 @@ updateBonesData()
 
   //---
 
-  sceneSize_   = bbox.getSize();
-  sceneCenter_ = bbox.getCenter();
-
-  std::cerr << "Scene Size : " << sceneSize_.getX() << " " <<
-               sceneSize_.getY() << " " << sceneSize_.getZ() << "\n";
-  std::cerr << "Scene Center : " << sceneCenter_.getX() << " " <<
-               sceneCenter_.getY() << " " << sceneCenter_.getZ() << "\n";
-
-  sceneScale_    = max3(sceneSize_.getX(), sceneSize_.getY(), sceneSize_.getZ());
-  invSceneScale_ = (sceneScale_ > 0.0 ? 1.0/sceneScale_ : 1.0);
-
-  //std::cerr << "Scene Scale : " << sceneScale_ << "\n";
+  setSceneBBox(bbox);
 }
 
 void
@@ -1216,9 +1926,7 @@ CQNewGLCanvas::
 updateBoneData()
 {
   // set up vertex data (and buffer(s)) and configure vertex attributes
-  auto *importBase = this->importBase();
-
-  if (! importBase) {
+  if (scene_->getObjects().empty()) {
     sceneScale_    = 1.0;
     invSceneScale_ = 1.0;
     return;
@@ -1228,103 +1936,6 @@ updateBoneData()
 
   CBBox3D bbox;
 //scene.getBBox(bbox);
-
-  auto updateSceneSize = [&]() {
-    sceneSize_   = bbox.getSize();
-    sceneCenter_ = bbox.getCenter();
-
-    sceneScale_    = max3(sceneSize_.getX(), sceneSize_.getY(), sceneSize_.getZ());
-    invSceneScale_ = (sceneScale_ > 0.0 ? 1.0/sceneScale_ : 1.0);
-
-    std::cerr << "Scene Size : " << sceneSize_.getX() << " " <<
-                 sceneSize_.getY() << " " << sceneSize_.getZ() << "\n";
-    std::cerr << "Scene Center : " << sceneCenter_.getX() << " " <<
-                 sceneCenter_.getY() << " " << sceneCenter_.getZ() << "\n";
-  //std::cerr << "Scene Scale : " << sceneScale_ << "\n";
-  };
-
-  //---
-
-  auto addCube = [&](ObjectData *objectData, const CMatrix3D &m, int nodeId, int &pos,
-                     double cubeSize, const CRGBA &color) {
-    auto c = CPoint3D(0.0, 0.0, 0.0);
-
-    static GLfloat cube_normal[6][3] = {
-      {-1.0,  0.0,  0.0},
-      { 0.0,  1.0,  0.0},
-      { 1.0,  0.0,  0.0},
-      { 0.0, -1.0,  0.0},
-      { 0.0,  0.0,  1.0},
-      { 0.0,  0.0, -1.0}
-    };
-
-    static GLint cube_faces[6][4] = {
-      {0, 1, 2, 3},
-      {3, 2, 6, 7},
-      {7, 6, 5, 4},
-      {4, 5, 1, 0},
-      {5, 6, 2, 1},
-      {7, 4, 0, 3}
-    };
-
-    GLfloat v[8][3];
-
-    v[0][0] = v[1][0] = v[2][0] = v[3][0] = -0.5;
-    v[4][0] = v[5][0] = v[6][0] = v[7][0] =  0.5;
-    v[0][1] = v[1][1] = v[4][1] = v[5][1] = -0.5;
-    v[2][1] = v[3][1] = v[6][1] = v[7][1] =  0.5;
-    v[0][2] = v[3][2] = v[4][2] = v[7][2] = -0.5;
-    v[1][2] = v[2][2] = v[5][2] = v[6][2] =  0.5;
-
-    auto *buffer = objectData->boneData.buffer;
-
-    auto cubePoint = [&](int i, int j) {
-      const auto &v1 = v[cube_faces[i][j]];
-
-      return CPoint3D(c.x + cubeSize*v1[0], c.y + cubeSize*v1[1], c.z + cubeSize*v1[2]);
-    };
-
-    auto cubeNormal = [&](int i) {
-      const auto &n = cube_normal[i];
-
-      return CPoint3D(n[0], n[1], n[2]);
-    };
-
-    auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
-      auto p1 = m*p;
-      auto n1 = m*n;
-
-      buffer->addPoint(p1.x, p1.y, p1.z);
-      buffer->addNormal(n1.x, n1.y, n1.z);
-      buffer->addColor(c.getRedF(), c.getGreenF(), c.getBlueF());
-
-      bbox += CPoint3D(p1.x, p1.y, p1.z);
-    };
-
-    for (GLint i = 5; i >= 0; i--) {
-      FaceData faceData;
-
-      faceData.boneId       = nodeId;
-      faceData.parentBoneId = -1;
-      faceData.pos          = pos;
-      faceData.len          = 4;
-
-      auto p1 = cubePoint(i, 0);
-      auto p2 = cubePoint(i, 1);
-      auto p3 = cubePoint(i, 2);
-      auto p4 = cubePoint(i, 3);
-      auto n  = cubeNormal(i);
-
-      addPoint(p1, n, color);
-      addPoint(p2, n, color);
-      addPoint(p3, n, color);
-      addPoint(p4, n, color);
-
-      objectData->boneData.faceDatas.push_back(faceData);
-
-      pos += faceData.len;
-    }
-  };
 
   //---
 
@@ -1348,7 +1959,8 @@ updateBoneData()
     if (! objectData->object)
       objectData->object = rootObject;
 
-    objectData->boneData.buffer = boneShaderProgram_->getBuffer();
+    if (! objectData->boneData.buffer)
+      objectData->boneData.buffer = boneShaderProgram_->createBuffer();
 
     //---
 
@@ -1362,19 +1974,17 @@ updateBoneData()
 
     int pos = 0;
 
-    addCube(objectData, app_->boneMatrix(), boneInd, pos, 1.0, CRGBA(1.0, 0.0, 0.0));
-
-    updateSceneSize();
+    addBoneCube(objectData, app_->boneMatrix(), boneInd, 1.0, CRGBA(1.0, 0.0, 0.0), pos, bbox);
 
 #if 0
-    //auto cubeSize = max3(sceneSize_.getX(), sceneSize_.getY(), sceneSize_.getZ())/2.0;
+    //auto cubeSize = sceneScale_/2.0;
     auto cubeSize = 1.0;
 
-    addCube(objectData,
+    addBoneCube(objectData,
       CMatrix3D::translation(sceneCenter_.getX(), sceneCenter_.getY(), sceneCenter_.getZ()),
-      boneInd, pos, cubeSize, CRGBA(0.0, 1.0, 0.0));
+      boneInd, cubeSize, CRGBA(0.0, 1.0, 0.0), pos, bbox);
 #else
-    addCube(objectData, CMatrix3D::identity(), boneInd, pos, 1.0, CRGBA(0.0, 1.0, 0.0));
+    addBoneCube(objectData, CMatrix3D::identity(), boneInd, 1.0, CRGBA(0.0, 1.0, 0.0), pos, bbox);
 #endif
 
     buffer->load();
@@ -1382,10 +1992,234 @@ updateBoneData()
 
   //---
 
-  updateSceneSize();
+  setSceneBBox(bbox);
 }
 
-CGLTexture *
+//---
+
+void
+CQNewGLCanvas::
+addBonesCube(ObjectData *objectData, const CPoint3D &c, int nodeId,
+             const CRGBA &color, int &pos) const
+{
+  static GLfloat cube_normal[6][3] = {
+    {-1.0,  0.0,  0.0},
+    { 0.0,  1.0,  0.0},
+    { 1.0,  0.0,  0.0},
+    { 0.0, -1.0,  0.0},
+    { 0.0,  0.0,  1.0},
+    { 0.0,  0.0, -1.0}
+  };
+
+  static GLint cube_faces[6][4] = {
+    {0, 1, 2, 3},
+    {3, 2, 6, 7},
+    {7, 6, 5, 4},
+    {4, 5, 1, 0},
+    {5, 6, 2, 1},
+    {7, 4, 0, 3}
+  };
+
+  GLfloat v[8][3];
+
+  v[0][0] = v[1][0] = v[2][0] = v[3][0] = -0.5;
+  v[4][0] = v[5][0] = v[6][0] = v[7][0] =  0.5;
+  v[0][1] = v[1][1] = v[4][1] = v[5][1] = -0.5;
+  v[2][1] = v[3][1] = v[6][1] = v[7][1] =  0.5;
+  v[0][2] = v[3][2] = v[4][2] = v[7][2] = -0.5;
+  v[1][2] = v[2][2] = v[5][2] = v[6][2] =  0.5;
+
+  //---
+
+  auto pointSize = 0.05f;
+
+  auto *buffer = objectData->bonesData.buffer;
+
+  auto cubePoint = [&](int i, int j) {
+    const auto &v1 = v[cube_faces[i][j]];
+
+    return CPoint3D(c.x + pointSize*v1[0], c.y + pointSize*v1[1], c.z + pointSize*v1[2]);
+  };
+
+  auto cubeNormal = [&](int i) {
+    const auto &n = cube_normal[i];
+
+    return CPoint3D(n[0], n[1], n[2]);
+  };
+
+  auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
+    buffer->addPoint(p.x, p.y, p.z);
+    buffer->addNormal(n.x, n.y, n.z);
+    buffer->addColor(c);
+    buffer->addTexturePoint(0.0f, 0.0f);
+  };
+
+  for (GLint i = 5; i >= 0; i--) {
+    CQNewGLFaceData faceData;
+
+    faceData.boneId       = nodeId;
+    faceData.parentBoneId = -1;
+    faceData.pos          = pos;
+    faceData.len          = 4;
+
+    auto p1 = cubePoint(i, 0);
+    auto p2 = cubePoint(i, 1);
+    auto p3 = cubePoint(i, 2);
+    auto p4 = cubePoint(i, 3);
+    auto n  = cubeNormal(i);
+
+    addPoint(p1, n, color);
+    addPoint(p2, n, color);
+    addPoint(p3, n, color);
+    addPoint(p4, n, color);
+
+    objectData->bonesData.faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
+}
+
+void
+CQNewGLCanvas::
+addBoneCube(ObjectData *objectData, const CMatrix3D &m, int nodeId, double cubeSize,
+            const CRGBA &color, int &pos, CBBox3D &bbox) const
+{
+  auto c = CPoint3D(0.0, 0.0, 0.0);
+
+  static GLfloat cube_normal[6][3] = {
+    {-1.0,  0.0,  0.0},
+    { 0.0,  1.0,  0.0},
+    { 1.0,  0.0,  0.0},
+    { 0.0, -1.0,  0.0},
+    { 0.0,  0.0,  1.0},
+    { 0.0,  0.0, -1.0}
+  };
+
+  static GLint cube_faces[6][4] = {
+    {0, 1, 2, 3},
+    {3, 2, 6, 7},
+    {7, 6, 5, 4},
+    {4, 5, 1, 0},
+    {5, 6, 2, 1},
+    {7, 4, 0, 3}
+  };
+
+  GLfloat v[8][3];
+
+  v[0][0] = v[1][0] = v[2][0] = v[3][0] = -0.5;
+  v[4][0] = v[5][0] = v[6][0] = v[7][0] =  0.5;
+  v[0][1] = v[1][1] = v[4][1] = v[5][1] = -0.5;
+  v[2][1] = v[3][1] = v[6][1] = v[7][1] =  0.5;
+  v[0][2] = v[3][2] = v[4][2] = v[7][2] = -0.5;
+  v[1][2] = v[2][2] = v[5][2] = v[6][2] =  0.5;
+
+  //---
+
+  auto *buffer = objectData->boneData.buffer;
+
+  auto cubePoint = [&](int i, int j) {
+    const auto &v1 = v[cube_faces[i][j]];
+
+    return CPoint3D(c.x + cubeSize*v1[0], c.y + cubeSize*v1[1], c.z + cubeSize*v1[2]);
+  };
+
+  auto cubeNormal = [&](int i) {
+    const auto &n = cube_normal[i];
+
+    return CPoint3D(n[0], n[1], n[2]);
+  };
+
+  auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
+    auto p1 = m*p;
+    auto n1 = m*n;
+
+    buffer->addPoint(p1.x, p1.y, p1.z);
+    buffer->addNormal(n1.x, n1.y, n1.z);
+    buffer->addColor(c);
+
+    bbox += CPoint3D(p1.x, p1.y, p1.z);
+  };
+
+  for (GLint i = 5; i >= 0; i--) {
+    CQNewGLFaceData faceData;
+
+    faceData.boneId       = nodeId;
+    faceData.parentBoneId = -1;
+    faceData.pos          = pos;
+    faceData.len          = 4;
+
+    auto p1 = cubePoint(i, 0);
+    auto p2 = cubePoint(i, 1);
+    auto p3 = cubePoint(i, 2);
+    auto p4 = cubePoint(i, 3);
+    auto n  = cubeNormal(i);
+
+    addPoint(p1, n, color);
+    addPoint(p2, n, color);
+    addPoint(p3, n, color);
+    addPoint(p4, n, color);
+
+    objectData->boneData.faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
+}
+
+void
+CQNewGLCanvas::
+addBonesLine(ObjectData *objectData, const CPoint3D &c1, const CPoint3D &c2,
+             int boneId, int parentBoneId, const CRGBA &color, int &pos) const
+{
+  auto pointSize = 0.05f;
+
+  auto *buffer = objectData->bonesData.buffer;
+
+  auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c, int id) {
+    buffer->addPoint(p.x, p.y, p.z);
+    buffer->addNormal(n.x, n.y, n.z);
+    buffer->addColor(c);
+    buffer->addTexturePoint(float(id), 0.0f);
+  };
+
+  CQNewGLFaceData faceData;
+
+  faceData.boneId       = boneId;
+  faceData.parentBoneId = parentBoneId;
+  faceData.pos          = pos;
+  faceData.len          = 4;
+
+  auto dp = CPoint3D(pointSize, 0, 0);
+
+  auto p1 = c1 - dp;
+  auto p2 = c1 + dp;
+  auto p3 = c2 + dp;
+  auto p4 = c2 - dp;
+  auto n  = CPoint3D(0, 0, 1);
+
+  addPoint(p1, n, color, 0);
+  addPoint(p2, n, color, 0);
+  addPoint(p3, n, color, 1);
+  addPoint(p4, n, color, 1);
+
+  objectData->bonesData.faceDatas.push_back(faceData);
+
+  pos += faceData.len;
+}
+
+//---
+
+CQGLTexture *
+CQNewGLCanvas::
+makeTexture(const CImagePtr &image) const
+{
+  auto *texture = new CQGLTexture(image);
+
+  texture->setFunctions(const_cast<CQNewGLCanvas *>(this));
+
+  return texture;
+}
+
+CQGLTexture *
 CQNewGLCanvas::
 getTexture(CGeomTexture *texture, bool add)
 {
@@ -1397,7 +2231,7 @@ getTexture(CGeomTexture *texture, bool add)
 
     const auto &image = texture->image()->image();
 
-    auto *glTexture = new CGLTexture(image);
+    auto *glTexture = makeTexture(image);
 
     glTexture->setName(texture->name());
 
@@ -1408,7 +2242,7 @@ getTexture(CGeomTexture *texture, bool add)
 
     pt = glTextures_.insert(pt, GLTextures::value_type(texture->id(), textureData));
 
-    app_->control()->updateTextures();
+    Q_EMIT textureAdded();
   }
 
   const auto &textureData = (*pt).second;
@@ -1416,7 +2250,7 @@ getTexture(CGeomTexture *texture, bool add)
   return textureData.glTexture;
 }
 
-CGLTexture *
+CQGLTexture *
 CQNewGLCanvas::
 getTextureByName(const std::string &name) const
 {
@@ -1449,7 +2283,9 @@ CQNewGLCanvas::
 paintGL()
 {
   // per-frame time logic
-  camera_->updateFrameTime();
+  auto *camera = getCurrentCamera();
+
+  camera->updateFrameTime();
 
   //---
 
@@ -1458,19 +2294,19 @@ paintGL()
 
   //---
 
+  pixelWidth_  = width ();
+  pixelHeight_ = height();
+
   // set view
-  auto aspect = float(app_->windowWidth())/float(app_->windowHeight());
+  aspect_ = float(pixelWidth_)/float(pixelHeight_);
 
   if (isOrtho())
-    paintData_.projection =
-      CGLMatrix3D::ortho(-1, 1, -1, 1, camera_->near(), camera_->far());
+    paintData_.projection = camera->getOrthoMatrix();
   else
-    paintData_.projection =
-      CGLMatrix3D::perspective(camera_->zoom(), aspect, camera_->near(), camera_->far());
+    paintData_.projection = camera->getPerspectiveMatrix(aspect_);
 
-  paintData_.view = camera_->getViewMatrix();
-
-  paintData_.viewPos = camera_->position();
+  paintData_.view    = camera->getViewMatrix();
+  paintData_.viewPos = camera->position();
 
   //---
 
@@ -1484,19 +2320,71 @@ paintGL()
 
     if      (app_->isShowBone())
       drawObjectBone(objectData);
-    else if (isBonesEnabled())
+    else if (isBonesEnabled()) {
       drawObjectBones(objectData);
+
+      if (! isPolygonSolid() && isPolygonLine())
+        drawObjectModel(objectData);
+    }
     else
       drawObjectModel(objectData);
-
-    if (isShowNormals())
-      drawNormals(objectData);
   }
 
   //---
 
-  // draw light
-  drawLight();
+  if (isShowNormals()) {
+    for (auto &po : objectDatas_) {
+      auto *objectData = po.second;
+
+      auto *object = objectData->object;
+      if (! object->getVisible())
+        continue;
+
+      drawObjectNormals(objectData);
+    }
+  }
+
+  //---
+
+  drawTerrain();
+
+  //---
+
+  drawMaze();
+
+  //---
+
+  drawSkybox();
+
+  //---
+
+  drawEmitters();
+
+  //---
+
+  drawFractal();
+
+  //---
+
+  drawDrawTree();
+
+  //---
+
+  drawShapes();
+
+  //---
+
+  drawPaths();
+
+  //---
+
+  // draw cameras
+  if (isShowCameras())
+    drawCameras();
+
+  // draw lights
+  if (isShowLights())
+    drawLights();
 
   //---
 
@@ -1505,9 +2393,33 @@ paintGL()
 
   //---
 
-  // draw axis
-  if (isShowAxis())
-    drawAxis();
+  // draw axes
+  if (axes_->isVisible())
+    drawAxes();
+
+  //---
+
+  // draw current object bbox
+  if (bbox_->isVisible())
+    drawBBox();
+
+  //---
+
+  // draw current object normal
+  if (normals_->isVisible())
+    drawNormals();
+
+  //---
+
+  // draw current object hull
+  if (hull_->isVisible())
+    drawHull();
+
+  //---
+
+  // draw current object basis
+  if (isShowBasis())
+    drawBasis();
 }
 
 void
@@ -1526,6 +2438,7 @@ drawObjectModel(ObjectData *objectData)
   }
 
   bool useBonePoints = (useBones && objectData->modelData.buffer->hasBonesPart());
+  bool showBonePoints = (useBones && isShowBonePoints());
 
   //---
 
@@ -1537,56 +2450,34 @@ drawObjectModel(ObjectData *objectData)
 
   //---
 
-  modelShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(paintData_.viewPos));
+  modelShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(viewPos()));
 
-  // pass projection matrix to shader (note that in this case it could change every frame)
-  modelShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-
-  // camera/view transformation
-  modelShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-  int il = 0;
-
-  for (auto *light : lights_) {
-    auto lightName = QString("lights[%1]").arg(il);
-
-    modelShaderProgram_->setUniformValue(toCString(lightName + ".enabled"), true);
-
-    modelShaderProgram_->setUniformValue(toCString(lightName + ".position"),
-      CQGLUtil::toVector(light->pos));
-    modelShaderProgram_->setUniformValue(toCString(lightName + ".color"),
-      CQGLUtil::toVector(QColorToVector(light->color)));
-
-    ++il;
-
-    if (il >= 3)
-      break;
-  }
-
-  for ( ; il < 3; ++il) {
-    auto lightName = QString("lights[%1]").arg(il);
-
-    modelShaderProgram_->setUniformValue(toCString(lightName + ".enabled"), false);
-  }
-
-  auto ambientColor1 = QColorToVector(ambientColor());
-
-  modelShaderProgram_->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor1));
+  //---
 
   // model rotation
+#if 0
   auto modelMatrix = CMatrix3D::identity();
+
   modelMatrix.scaled(modelScale_.getX(), modelScale_.getY(), modelScale_.getZ());
   modelMatrix.rotated(modelRotate_.x(), CVector3D(1.0, 0.0, 0.0));
   modelMatrix.rotated(modelRotate_.y(), CVector3D(0.0, 1.0, 0.0));
   modelMatrix.rotated(modelRotate_.z(), CVector3D(0.0, 0.0, 1.0));
   modelMatrix.translated(modelTranslate_.getX(), modelTranslate_.getY(), modelTranslate_.getZ());
+#else
+  //auto modelMatrix = getModelMatrix();
+  auto modelMatrix = object->getHierTransform();
+#endif
 
   if (useBones) {
     auto meshMatrix = getMeshGlobalTransform(objectData, /*invert*/false);
     modelMatrix = meshMatrix*modelMatrix;
   }
 
-  modelShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+  addShaderMVP(modelShaderProgram_, modelMatrix);
+
+  //---
+
+  addShaderLights(modelShaderProgram_);
 
   //---
 
@@ -1595,22 +2486,27 @@ drawObjectModel(ObjectData *objectData)
     updateNodeMatrices(objectData);
 
     modelShaderProgram_->setUniformValueArray("globalBoneTransform",
-      &paintData_.nodeMatrices[0], paintData_.numNodeMatrices);
+      &paintData_.nodeQMatrices[0], paintData_.numNodeMatrices);
   }
 
   //---
 
-  modelShaderProgram_->setUniformValue("useBones", useBones);
-  modelShaderProgram_->setUniformValue("useBonePoints", useBonePoints);
-
-  modelShaderProgram_->setUniformValue("isSelected", isSelected);
-
-  modelShaderProgram_->setUniformValue("ambientStrength" , float(app_->ambientStrength()));
-  modelShaderProgram_->setUniformValue("diffuseStrength" , float(app_->diffuseStrength()));
-  modelShaderProgram_->setUniformValue("specularStrength", float(app_->specularStrength()));
-  modelShaderProgram_->setUniformValue("emissiveStrength", float(app_->emissiveStrength()));
+  if (! showBonePoints) {
+    modelShaderProgram_->setUniformValue("useBones", useBones);
+    modelShaderProgram_->setUniformValue("useBonePoints", useBonePoints);
+  }
+  else {
+    modelShaderProgram_->setUniformValue("useBones", false);
+    modelShaderProgram_->setUniformValue("useBonePoints", false);
+  }
 
   //---
+
+  addShaderLightGlobals(modelShaderProgram_);
+
+  //---
+
+  modelShaderProgram_->setUniformValue("isSelected", isSelected);
 
   // render model
   for (const auto &faceData : objectData->modelData.faceDatas) {
@@ -1675,17 +2571,21 @@ drawObjectModel(ObjectData *objectData)
       modelShaderProgram_->setUniformValue("emissiveTexture.texture", 3);
     }
 
-    auto emissionColor1 = ColorToVector(faceData.emission);
-
-    modelShaderProgram_->setUniformValue("emissionColor", CQGLUtil::toVector(emissionColor1));
+    modelShaderProgram_->setUniformValue("emissionColor", CQGLUtil::toVector(faceData.emission));
 
     //---
 
-    modelShaderProgram_->setUniformValue("isWireframe", 0);
+    modelShaderProgram_->setUniformValue("tangentSpaceNormal", isTangentSpaceNormal());
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //---
 
-    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+    if (isPolygonSolid()) {
+      modelShaderProgram_->setUniformValue("isWireframe", 0);
+
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+      glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+    }
 
     if (isPolygonLine()) {
       modelShaderProgram_->setUniformValue("isWireframe", 1);
@@ -1696,7 +2596,74 @@ drawObjectModel(ObjectData *objectData)
     }
   }
 
+  //---
+
   objectData->modelData.buffer->unbind();
+
+  modelShaderProgram_->release();
+}
+
+void
+CQNewGLCanvas::
+addShaderMVP(CQNewGLShaderProgram *program, const CMatrix3D &modelMatrix)
+{
+  // pass projection matrix to shader (note that in this case it could change every frame)
+  program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
+
+  // camera/view transformation
+  program->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
+
+  // model matrix
+  program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+}
+
+void
+CQNewGLCanvas::
+addShaderLightGlobals(CQNewGLShaderProgram *program)
+{
+  program->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor()));
+
+  //---
+
+  program->setUniformValue("ambientStrength" , float(app_->ambientStrength()));
+  program->setUniformValue("diffuseStrength" , float(app_->diffuseStrength()));
+  program->setUniformValue("specularStrength", float(app_->specularStrength()));
+  program->setUniformValue("emissiveStrength", float(app_->emissiveStrength()));
+}
+
+void
+CQNewGLCanvas::
+addShaderLights(CQNewGLShaderProgram *program)
+{
+  // max four active lights
+  int il = 0;
+
+  for (auto *light : lights()) {
+    auto lightName = QString("lights[%1]").arg(il);
+
+    light->setShaderData(program, lightName);
+
+    ++il;
+
+    if (il >= 4)
+      break;
+  }
+
+  for ( ; il < 4; ++il) {
+    auto lightName = QString("lights[%1]").arg(il);
+
+    program->setUniformValue(toCString(lightName + ".enabled"), false);
+  }
+}
+
+void
+CQNewGLCanvas::
+addShaderCurrentLight(CQNewGLShaderProgram *program)
+{
+  auto *light = getCurrentLight();
+
+  program->setUniformValue("lightColor", CQGLUtil::toVector(QColorToVector(light->color())));
+  program->setUniformValue("lightPos", CQGLUtil::toVector(light->position()));
 }
 
 void
@@ -1724,26 +2691,16 @@ drawObjectBones(ObjectData *objectData)
 
   //---
 
-  bonesShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(paintData_.viewPos));
+  bonesShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(viewPos()));
 
-  // pass projection matrix to shader (note that in this case it could change every frame)
-  bonesShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-
-  // camera/view transformation
-  bonesShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-  bonesShaderProgram_->setUniformValue("lightColor",
-    CQGLUtil::toVector(QColorToVector(lightColor(currentLight_))));
-  bonesShaderProgram_->setUniformValue("lightPos",
-    CQGLUtil::toVector(lightPos(currentLight_)));
-
-  auto ambientColor1 = QColorToVector(ambientColor());
-
-  bonesShaderProgram_->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor1));
-
-  // model rotation
   auto modelMatrix = getModelMatrix();
-  bonesShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+  addShaderMVP(bonesShaderProgram_, modelMatrix);
+
+  //---
+
+  addShaderCurrentLight(bonesShaderProgram_);
+
+  addShaderLightGlobals(bonesShaderProgram_);
 
   //---
 
@@ -1752,18 +2709,14 @@ drawObjectBones(ObjectData *objectData)
     updateNodeMatrices(objectData);
 
     bonesShaderProgram_->setUniformValueArray("globalBoneTransform",
-      &paintData_.nodeMatrices[0], paintData_.numNodeMatrices);
+      &paintData_.nodeQMatrices[0], paintData_.numNodeMatrices);
   }
 
   //---
 
   bonesShaderProgram_->setUniformValue("useBones", useBones);
-  bonesShaderProgram_->setUniformValue("isSelected", isSelected);
 
-  bonesShaderProgram_->setUniformValue("ambientStrength" , float(app_->ambientStrength()));
-  bonesShaderProgram_->setUniformValue("diffuseStrength" , float(app_->diffuseStrength()));
-  bonesShaderProgram_->setUniformValue("specularStrength", float(app_->specularStrength()));
-  bonesShaderProgram_->setUniformValue("emissiveStrength", float(app_->emissiveStrength()));
+  bonesShaderProgram_->setUniformValue("isSelected", isSelected);
 
   //---
 
@@ -1780,11 +2733,13 @@ drawObjectBones(ObjectData *objectData)
 
     //---
 
-    bonesShaderProgram_->setUniformValue("isWireframe", 0);
+    if (isPolygonSolid()) {
+      bonesShaderProgram_->setUniformValue("isWireframe", 0);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+      glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+    }
 
     if (isPolygonLine()) {
       bonesShaderProgram_->setUniformValue("isWireframe", 1);
@@ -1796,6 +2751,8 @@ drawObjectBones(ObjectData *objectData)
   }
 
   objectData->bonesData.buffer->unbind();
+
+  bonesShaderProgram_->release();
 }
 
 void
@@ -1819,33 +2776,16 @@ drawObjectBone(ObjectData *objectData)
 
   //---
 
-  boneShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(paintData_.viewPos));
+  boneShaderProgram_->setUniformValue("viewPos", CQGLUtil::toVector(viewPos()));
 
-  // pass projection matrix to shader (note that in this case it could change every frame)
-  boneShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-
-  // camera/view transformation
-  boneShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-  boneShaderProgram_->setUniformValue("lightColor",
-    CQGLUtil::toVector(QColorToVector(lightColor(currentLight_))));
-  boneShaderProgram_->setUniformValue("lightPos",
-    CQGLUtil::toVector(lightPos(currentLight_)));
-
-  auto ambientColor1 = QColorToVector(ambientColor());
-
-  boneShaderProgram_->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor1));
-
-  // model rotation
   auto modelMatrix = getModelMatrix();
-  boneShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+  addShaderMVP(boneShaderProgram_, modelMatrix);
 
   //---
 
-  boneShaderProgram_->setUniformValue("ambientStrength" , float(app_->ambientStrength()));
-  boneShaderProgram_->setUniformValue("diffuseStrength" , float(app_->diffuseStrength()));
-  boneShaderProgram_->setUniformValue("specularStrength", float(app_->specularStrength()));
-  boneShaderProgram_->setUniformValue("emissiveStrength", float(app_->emissiveStrength()));
+  addShaderCurrentLight(boneShaderProgram_);
+
+  addShaderLightGlobals(boneShaderProgram_);
 
   //---
 
@@ -1857,11 +2797,13 @@ drawObjectBone(ObjectData *objectData)
     //---
 
 #if 0
-    boneShaderProgram_->setUniformValue("isWireframe", 0);
+    if (isPolygonSolid()) {
+      boneShaderProgram_->setUniformValue("isWireframe", 0);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+      glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+    }
 
     if (isPolygonLine()) {
       boneShaderProgram_->setUniformValue("isWireframe", 1);
@@ -1884,47 +2826,12 @@ drawObjectBone(ObjectData *objectData)
 
 void
 CQNewGLCanvas::
-drawAxis()
+drawObjectNormals(ObjectData *objectData)
 {
-  auto *axisBuffer = axisShaderProgram_->getBuffer();
-
-  axisBuffer->bind();
-
-  axisShaderProgram_->bind();
+  auto *object = objectData->object;
 
   //---
 
-  // pass projection matrix to shader (note that in this case it could change every frame)
-  axisShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-
-  // camera/view transformation
-  axisShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-  // model rotation
-  auto modelMatrix = getModelMatrix();
-  axisShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
-
-  //---
-
-  // render axis
-  for (const auto &faceData : axisFaceDatas_) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
-  }
-
-  axisBuffer->unbind();
-
-  //---
-
-  for (auto *text : axisTexts_)
-    text->render();
-}
-
-void
-CQNewGLCanvas::
-drawNormals(ObjectData *objectData)
-{
   if (! objectData->normalData.buffer)
     return;
 
@@ -1934,15 +2841,9 @@ drawNormals(ObjectData *objectData)
 
   //---
 
-  // pass projection matrix to shader (note that in this case it could change every frame)
-  normalShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-
-  // camera/view transformation
-  normalShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-  // model rotation
-  auto modelMatrix = getModelMatrix();
-  normalShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+//auto modelMatrix = getModelMatrix();
+  auto modelMatrix = object->getHierTransform();
+  addShaderMVP(normalShaderProgram_, modelMatrix);
 
   //---
 
@@ -1954,36 +2855,10 @@ drawNormals(ObjectData *objectData)
   //---
 
   objectData->normalData.buffer->unbind();
-}
 
-void
-CQNewGLCanvas::
-drawLight()
-{
-  for (auto *light : lights_) {
-    // setup light shader
-    light->buffer->bind();
+  //---
 
-    lightShaderProgram_->bind();
-
-    lightShaderProgram_->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix()));
-    lightShaderProgram_->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix()));
-
-    auto lightPos = light->pos;
-
-    auto lightMatrix = CMatrix3D::translation(lightPos.x(), lightPos.y(), lightPos.z());
-    lightMatrix.scaled(0.01, 0.01, 0.01);
-    lightShaderProgram_->setUniformValue("model", CQGLUtil::toQMatrix(lightMatrix));
-
-    lightShaderProgram_->setUniformValue("lightColor",
-      CQGLUtil::toVector(QColorToVector(light->color)));
-
-    // draw light
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    //light->buffer->drawTriangles();
-
-    light->buffer->unbind();
-  }
+  boneShaderProgram_->release();
 }
 
 CMatrix3D
@@ -1991,11 +2866,15 @@ CQNewGLCanvas::
 getModelMatrix() const
 {
   auto modelMatrix = CMatrix3D::identity();
+
+#if 0
   modelMatrix.scaled(invSceneScale_, invSceneScale_, invSceneScale_);
   modelMatrix.rotated(modelRotate_.x(), CVector3D(1.0, 0.0, 0.0));
   modelMatrix.rotated(modelRotate_.y(), CVector3D(0.0, 1.0, 0.0));
   modelMatrix.rotated(modelRotate_.z(), CVector3D(0.0, 0.0, 1.0));
   modelMatrix.translated(-sceneCenter_.getX(), -sceneCenter_.getY(), -sceneCenter_.getZ());
+#endif
+
   return modelMatrix;
 }
 
@@ -2118,7 +2997,8 @@ updateNodeMatrices(ObjectData *objectData)
       childWorkData.node       = &childNodeData;
 //    childWorkData.animMatrix = parentWorkData.animMatrix*childNodeData.animMatrix;
 //    childWorkData.transform  = childWorkData.animMatrix*childInverseBindMatrix;
-      childWorkData.transform  = inverseMeshMatrix*childNodeData.hierAnimMatrix*childInverseBindMatrix;
+      childWorkData.transform  =
+        inverseMeshMatrix*childNodeData.hierAnimMatrix*childInverseBindMatrix;
 
       nodeMatrices[id] = childWorkData.transform;
 
@@ -2154,47 +3034,149 @@ updateNodeMatrices(ObjectData *objectData)
     std::cerr << "Too many bones\n";
 #endif
 
-  paintData_.nodeMatrices.resize(paintData_.numNodeMatrices);
+  paintData_.nodeMatrices .resize(paintData_.numNodeMatrices);
+  paintData_.nodeQMatrices.resize(paintData_.numNodeMatrices);
 
   int im = 0;
-  for (const auto &m : nodeMatrices)
-    paintData_.nodeMatrices[im++] = CQGLUtil::toQMatrix(m);
+  for (const auto &m : nodeMatrices) {
+    paintData_.nodeMatrices [im] = m;
+    paintData_.nodeQMatrices[im] = CQGLUtil::toQMatrix(m);
+
+    ++im;
+  }
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateAxes()
+{
+  axes_->updateGeometry();
 }
 
 void
 CQNewGLCanvas::
-updateAxis()
+drawAxes()
 {
-  auto *axisBuffer = axisShaderProgram_->getBuffer();
+  if (axesNeedsUpdate_) {
+    updateAxes();
 
-  axisBuffer->clearBuffers();
+    axesNeedsUpdate_ = false;
+  }
 
-  axisFaceDatas_.clear();
+  axes_->drawGeometry();
+}
 
-  auto sceneScale = max3(sceneSize_.getX(), sceneSize_.getY(), sceneSize_.getZ());
+//---
 
-  auto pointSize = sceneScale/1000.0;
+void
+CQNewGLCanvas::
+updateBBox()
+{
+  bbox_->updateGeometry();
+}
 
-  auto color = CRGBA(0.5, 0.5, 0.5);
+void
+CQNewGLCanvas::
+drawBBox()
+{
+  bbox_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateNormals()
+{
+  normals_->updateGeometry();
+}
+
+void
+CQNewGLCanvas::
+drawNormals()
+{
+  normals_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateHull()
+{
+  hull_->updateGeometry();
+}
+
+void
+CQNewGLCanvas::
+drawHull()
+{
+  hull_->drawGeometry();
+}
+
+//---
+
+void
+CQNewGLCanvas::
+updateBasis()
+{
+  auto *object = getCurrentObject();
+  if (! object) return;
+
+  basisData_.object = object;
+
+  //---
+
+  if (! basisData_.buffer)
+    basisData_.buffer = basisData_.shaderProgram->createBuffer();
+
+  basisData_.buffer->clearBuffers();
+
+  basisData_.faceDatas.clear();
+
+  //---
+
+  auto lineWidth = basisData_.lineWidth;
+  auto lineSize  = basisData_.lineSize;
+
+  if (lineWidth < 0) {
+    auto bbox = getModelBBox(object);
+
+    lineWidth = bbox.getMaxSize()/250.0;
+  }
+
+  if (lineSize < 0)
+    lineSize = 1.0;
+
+  auto color = basisData_.color;
+
+  //---
 
   int pos = 0;
 
+#if 0
   auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
-    axisBuffer->addPoint(p.x, p.y, p.z);
-    axisBuffer->addNormal(n.x, n.y, n.z);
-    axisBuffer->addColor(c.getRedF(), c.getGreenF(), c.getBlueF());
+    basisData_.buffer->addPoint(p.x, p.y, p.z);
+    basisData_.buffer->addNormal(n.x, n.y, n.z);
+    basisData_.buffer->addColor(c);
   };
+#endif
 
-  auto addLine = [&](const CPoint3D &c1, const CPoint3D &c2, const CPoint3D &dp) {
-    FaceData faceData;
+  auto addLine = [&](const CPoint3D &c1, const CPoint3D &c2, const CPoint3D & /*dp*/) {
+#if 0
+    CQNewGLFaceData faceData;
 
     faceData.pos = pos;
     faceData.len = 4;
 
-    auto p1 = c1 - dp;
-    auto p2 = c1 + dp;
-    auto p3 = c2 + dp;
-    auto p4 = c2 - dp;
+    auto dp1 = lineWidth*dp;
+
+    auto p1 = c1 - dp1;
+    auto p2 = c1 + dp1;
+    auto p3 = c2 + dp1;
+    auto p4 = c2 - dp1;
     auto n  = CPoint3D(0, 0, 1);
 
     addPoint(p1, n, color);
@@ -2202,77 +3184,124 @@ updateAxis()
     addPoint(p3, n, color);
     addPoint(p4, n, color);
 
-    axisFaceDatas_.push_back(faceData);
+    basisData_.faceDatas.push_back(faceData);
 
     pos += faceData.len;
+#else
+    addCylinder(basisData_.buffer, c1, c2, lineWidth, color, basisData_.faceDatas, pos);
+#endif
   };
 
   //---
 
-  CInterval interval(-sceneScale, sceneScale);
+  CPoint3D pu, pv, pw;
 
-  //---
+  if (object) {
+    CVector3D u, v, w;
+    getBasis(object, u, v, w);
 
-#if 0
-  addLine(CPoint3D(-sceneSize_.getX(), 0, 0), CPoint3D(sceneSize_.getX(), 0, 0));
-  addLine(CPoint3D(0, -sceneSize_.getY(), 0), CPoint3D(0, sceneSize_.getY(), 0));
-  addLine(CPoint3D(0, 0, -sceneSize_.getZ()), CPoint3D(0, 0, sceneSize_.getZ()));
-#else
-  for (uint i = 0; i <= interval.calcNumMajor(); ++i) {
-    double x = interval.interval(i);
+    auto bbox = getModelBBox(object);
 
-    addLine(CPoint3D(x, 0, -sceneScale), CPoint3D(x, 0, sceneScale), CPoint3D(0, pointSize, 0));
-    addLine(CPoint3D(x, -sceneScale, 0), CPoint3D(x, sceneScale, 0), CPoint3D(0, 0, pointSize));
+    auto c = bbox.getCenter();
+    auto s = lineSize*bbox.getRadius();
 
-    addLine(CPoint3D(-sceneScale, x, 0), CPoint3D(sceneScale, x, 0), CPoint3D(0, 0, pointSize));
-    addLine(CPoint3D(0, x, -sceneScale), CPoint3D(0, x, sceneScale), CPoint3D(pointSize, 0, 0));
+    pu = c + s*u;
+    pv = c + s*v;
+    pw = c + s*w;
 
-    addLine(CPoint3D(0, -sceneScale, x), CPoint3D(0, sceneScale, x), CPoint3D(pointSize, 0, 0));
-    addLine(CPoint3D(-sceneScale, 0, x), CPoint3D(sceneScale, 0, x), CPoint3D(0, pointSize, 0));
+    addLine(c, pu, CPoint3D(0, 1, 0));
+    addLine(c, pv, CPoint3D(1, 0, 0));
+    addLine(c, pw, CPoint3D(0, 1, 0));
   }
-#endif
-
-  axisBuffer->load();
 
   //---
 
-  axisTexts_.clear();
+  basisData_.buffer->load();
+
+  //---
+
+  auto transform = object->getHierTransform();
+
+  for (auto *text : basisData_.texts)
+    delete text;
+
+  basisData_.texts.clear();
 
   auto createText = [&](const QString &str, const CPoint3D &pos, double size) {
+    auto pos1 = transform*pos;
+
     auto *text = new CQNewGLText(str);
 
     text->setFont(font_);
     text->setColor(CQNewGLFont::Color(1, 1, 1));
-    text->setPosition(CGLVector3D(pos.x, pos.y, pos.z));
+    text->setPosition(CGLVector3D(pos1.x, pos1.y, pos1.z));
     text->setSize(size);
 
-    axisTexts_.push_back(text);
+    basisData_.texts.push_back(text);
 
     return text;
   };
 
-  auto ts1 = sceneScale/10.0;
-  auto ts2 = sceneScale/20.0;
+  if (object) {
+    auto ts = sceneScale_/10.0;
 
-  (void) createText("X", CPoint3D(sceneScale, -ts1, 0), ts1);
-  (void) createText("Y", CPoint3D(0, sceneScale, ts1), ts1);
-  (void) createText("Z", CPoint3D(0, ts1, sceneScale), ts1);
+    (void) createText("U", pu, ts);
+    (void) createText("V", pv, ts);
+    (void) createText("W", pw, ts);
 
-  for (uint i = 0; i <= interval.calcNumMajor(); ++i) {
-    double x = interval.interval(i);
+    for (auto *text : basisData_.texts)
+      text->updateText();
+  }
+}
 
-    auto label = QString("%1").arg(x);
+void
+CQNewGLCanvas::
+drawBasis()
+{
+  if (basisData_.needsUpdate) {
+    updateBasis();
 
-    auto d = label.length()*ts2/2.0;
-
-    (void) createText(label, CPoint3D(x - d, 0, 0), ts2);
-    (void) createText(label, CPoint3D(0, x - d, 0), ts2);
-    (void) createText(label, CPoint3D(0, 0, x - d), ts2);
+    basisData_.needsUpdate = false;
   }
 
-  for (auto *text : axisTexts_)
-    text->updateText();
+  //---
+
+  auto *object = basisData_.object;
+
+  //---
+
+  basisData_.buffer->bind();
+
+  basisData_.shaderProgram->bind();
+
+  //---
+
+//auto modelMatrix = getModelMatrix();
+  auto modelMatrix = object->getHierTransform();
+  addShaderMVP(basisData_.shaderProgram, modelMatrix);
+
+  //---
+
+  // render basis
+  for (const auto &faceData : basisData_.faceDatas) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+  }
+
+  basisData_.buffer->unbind();
+
+  //---
+
+  basisData_.shaderProgram->release();
+
+  //---
+
+  for (auto *text : basisData_.texts)
+    text->render();
 }
+
+//---
 
 CGeomObject3D *
 CQNewGLCanvas::
@@ -2302,13 +3331,35 @@ void
 CQNewGLCanvas::
 mousePressEvent(QMouseEvent *e)
 {
-  mousePressX_ = e->x();
-  mousePressY_ = e->y();
+  mouseData_.pressX = e->x();
+  mouseData_.pressY = e->y();
+  mouseData_.button = e->button();
 
-  auto type = app_->type();
+  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
+  bool showEyeLine  = ! isLeftButton && isShowEyeline();
 
-  if (type == CQNewGLModel::Type::CAMERA)
-    camera_->setLastPos(mousePressX_, mousePressY_);
+  if (showEyeLine) {
+    clearEyeLines();
+
+    eyeLine1_ = new CQNewGLPath(this);
+    eyeLine2_ = new CQNewGLPath(this);
+  }
+
+  setMousePos(mouseData_.pressX, mouseData_.pressY, /*add*/false, showEyeLine);
+
+  //---
+
+  if (isLeftButton) {
+    auto type = app_->type();
+
+    if (type == CQNewGLModel::Type::CAMERA) {
+      auto *camera = getCurrentCamera();
+
+      camera->setLastPos(mouseData_.pressX, mouseData_.pressY);
+    }
+  }
+
+  //---
 
   update();
 }
@@ -2317,6 +3368,12 @@ void
 CQNewGLCanvas::
 mouseReleaseEvent(QMouseEvent *)
 {
+#if 0
+  clearEyeLines();
+#endif
+
+  mouseData_.button = Qt::NoButton;
+
   update();
 }
 
@@ -2324,36 +3381,209 @@ void
 CQNewGLCanvas::
 mouseMoveEvent(QMouseEvent *e)
 {
-  mouseMoveX_ = e->x();
-  mouseMoveY_ = e->y();
+  mouseData_.moveX = e->x();
+  mouseData_.moveY = e->y();
+
+  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
+  bool showEyeLine  = ! isLeftButton && isShowEyeline();
+
+  setMousePos(mouseData_.moveX, mouseData_.moveY, /*add*/true, showEyeLine);
 
   //---
 
-  auto type = app_->type();
+  if (isLeftButton) {
+    auto type = app_->type();
 
-  if      (type == CQNewGLModel::Type::CAMERA) {
-    float xoffset, yoffset;
-    camera_->deltaPos(mouseMoveX_, mouseMoveY_, xoffset, yoffset);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      auto *camera = getCurrentCamera();
 
-    camera_->setLastPos(mouseMoveX_, mouseMoveY_);
+      float xoffset, yoffset;
+      camera->deltaPos(mouseData_.moveX, mouseData_.moveY, xoffset, yoffset);
 
-    camera_->processMouseMovement(xoffset, yoffset);
+      camera->setLastPos(mouseData_.moveX, mouseData_.moveY);
+
+      camera->processMouseMovement(xoffset, yoffset);
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      auto dx = sceneSize_.getX()*(mouseData_.moveX - mouseData_.pressX)/width ();
+      auto dy = sceneSize_.getY()*(mouseData_.moveY - mouseData_.pressY)/height();
+
+      light->setPosition(light->position() + CGLVector3D(dx, dy, 0.0f));
+
+      app()->updateLights();
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+    }
   }
-  else if (type == CQNewGLModel::Type::LIGHT) {
-    auto dx = sceneSize_.getX()*(mouseMoveX_ - mousePressX_)/width ();
-    auto dy = sceneSize_.getY()*(mouseMoveY_ - mousePressY_)/height();
 
-    lights_[currentLight_]->pos += CGLVector3D(dx, dy, 0.0f);
+  //---
 
-    app()->updateLights();
-  }
-  else if (type == CQNewGLModel::Type::MODEL) {
-  }
-
-  mousePressX_ = mouseMoveX_;
-  mousePressY_ = mouseMoveY_;
+  mouseData_.pressX = mouseData_.moveX;
+  mouseData_.pressY = mouseData_.moveY;
 
   update();
+}
+
+void
+CQNewGLCanvas::
+setMousePos(double xpos, double ypos, bool add, bool show)
+{
+  CPoint3D ep1, ep2;
+  CVector3D ev;
+  calcEyeLine(CPoint2D(xpos, ypos), ep1, ep2, ev);
+  //std::cerr << "Eye Line: (" << xpos << "," << ypos << ") (" << ep1 << "," << ep2 << ")\n";
+
+  // show on toolbar
+  app_->toolbar()->setPosLabel(QString("%1 %2 %3").arg(ep1.x).arg(ep1.y).arg(ep1.z));
+
+//auto *camera = getCurrentCamera();
+//ep2 = camera->origin();
+
+  auto ep3 = ep2;
+  auto ep4 = ep2;
+
+  //---
+
+  // intersect eye line with current object
+  auto *object = getCurrentObject();
+
+  if (object) {
+    CLine3D line(ep1, ep2);
+
+    auto bbox = getObjectBBox(object);
+
+    auto c = bbox.getCenter();
+    auto s = bbox.getMaxSize();
+
+    CSphere3D sphere(s/2.0);
+
+    sphere.translate(c);
+
+    double tmin, tmax;
+    if (sphere.intersect(line, &tmin, &tmax)) {
+      ep3 = line.point(tmin);
+      ep4 = line.point(tmax);
+    }
+  }
+
+  //---
+
+  // show eye line
+  if (show) {
+    CGLPath3D path;
+
+    path.lineTo(ep1);
+    path.lineTo(ep2);
+    path.lineTo(ep3);
+    path.lineTo(ep4);
+
+    if (add) {
+      eyeVector2_ = ev;
+
+      eyeLine2_->setPath(path);
+      eyeLine2_->updateGeometry();
+
+      //---
+
+#if 0
+      auto *object = getCurrentObject();
+
+      if (object) {
+        auto *camera = getCurrentCamera();
+
+        auto bbox = getObjectBBox(object);
+
+        auto cop = camera->origin().vector();
+        auto cor = CVector3D(bbox.getCenter());
+
+        auto q = camera->trackBall(cop, cor, eyeVector1_, eyeVector2_);
+
+        CMatrix3D m2;
+        q.toRotationMatrix(m2);
+
+        auto m1 = CMatrix3D::translation(-cor.getX(), -cor.getY(), -cor.getZ());
+        auto m3 = CMatrix3D::translation( cor.getX(),  cor.getY(),  cor.getZ());
+
+        object->setTransform(object->getTransform()*m1*m2*m3);
+      }
+#endif
+
+      eyeVector1_ = eyeVector2_;
+    }
+    else {
+      eyeVector1_ = ev;
+
+      eyeLine1_->setPath(path);
+      eyeLine1_->updateGeometry();
+    }
+  }
+}
+
+void
+CQNewGLCanvas::
+calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev)
+{
+  auto imatrix1 = projectionMatrix().inverse();
+
+  const auto &viewMatrix = this->viewMatrix();
+  auto imatrix2 = viewMatrix.inverse();
+
+  //---
+
+  // set pixel (mouse) position in GL coords
+  double x1, y1;
+
+  if (aspect_ > 1.0) {
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0, -aspect_,  aspect_);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,      1.0,     -1.0);
+  }
+  else {
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0,    -1.0,       1.0);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,  aspect_, -aspect_);
+  }
+
+  auto z1 = 1.0;
+
+  // unobserve point
+  float xp1, yp1, zp1;
+  imatrix1.multiplyPoint(x1, y1, z1, &xp1, &yp1, &zp1);
+//imatrix1.multiplyVector(x1, y1, z1, &xp1, &yp1, &zp1);
+
+  zp1 = -1.0;
+
+  float xv1, yv1, zv1;
+//imatrix2.multiplyPoint(xp1, yp1, zp1, &xv1, &yv1, &zv1);
+  imatrix2.multiplyVector(xp1, yp1, zp1, &xv1, &yv1, &zv1);
+
+  ev = CVector3D(xv1, yv1, zv1).normalized();
+
+  ep1 = CPoint3D(xv1, yv1, zv1);
+
+  //---
+
+#if 0
+  // screen center in GL coords
+//auto x2 = x1;
+//auto y2 = y1;
+  auto x2 = 0.0;
+  auto y2 = 0.0;
+  auto z2 = 1.0;
+
+  // unobserve points
+  float xp2, yp2, zp2;
+  imatrix1.multiplyPoint(x2, y2, z2, &xp2, &yp2, &zp2);
+
+  float xv2, yv2, zv2;
+  imatrix2.multiplyPoint(xp2, yp2, zp2, &xv2, &yv2, &zv2);
+
+  ep2 = CPoint3D(xv2, yv2, zv2);
+#else
+  auto *camera = getCurrentCamera();
+  ep2 = camera->origin().point();
+#endif
 }
 
 void
@@ -2365,12 +3595,17 @@ wheelEvent(QWheelEvent *e)
   auto type = app_->type();
 
   if      (type == CQNewGLModel::Type::CAMERA) {
-    camera_->processMouseScroll(dw);
+    auto *camera = getCurrentCamera();
+
+    camera->processMouseScroll(dw);
+    updateCameraBuffer();
   }
   else if (type == CQNewGLModel::Type::LIGHT) {
+    auto *light = getCurrentLight();
+
     auto dz = dw*sceneSize_.getZ()/4.0;
 
-    lights_[currentLight_]->pos += CGLVector3D(0.0f, 0.0f, dz);
+    light->setPosition(light->position() + CGLVector3D(0.0f, 0.0f, dz));
 
     app()->updateLights();
   }
@@ -2384,209 +3619,811 @@ void
 CQNewGLCanvas::
 keyPressEvent(QKeyEvent *e)
 {
+  CGLCamera::ProcessKeyData processKeyData;
+
   bool isShift   = (e->modifiers() & Qt::ShiftModifier);
   bool isControl = (e->modifiers() & Qt::ControlModifier);
 
-  auto dt = 0.01f; /* camera_->deltaTime(); */
-  auto da = M_PI/180.0;
+  auto *camera = getCurrentCamera();
 
+  auto dt = 0.1 /* camera->deltaTime() */;
+//auto da = M_PI/180.0;
+
+#if 0
   if (isShift) {
     dt = -dt;
     da = -da;
   }
+#endif
+
+  processKeyData.deltaTime = dt;
+  processKeyData.rotate    = cameraRotate_;
+  processKeyData.strafe    = isShift;
 
   auto type = app_->type();
 
-  if      (e->key() == Qt::Key_W) {
-    if      (type == CQNewGLModel::Type::CAMERA)
-      camera_->processKeyboard(CGLCamera::Movement::FORWARD, dt);
+  if      (e->key() == Qt::Key_Q) {
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      processKeyData.rotateAt =
+        (isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
+      camera->processKeyboard(CGLCamera::Movement::ROTATE_LEFT, processKeyData);
+      updateCameraBuffer();
+    }
     else if (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos += CGLVector3D(0.0f, 0.1f, 0.0f);
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+
+        auto bbox = getObjectBBox(object);
+        auto o = bbox.getCenter();
+
+        auto da = 1.0;
+
+        auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
+        CMatrix3D m2;
+        if      (isControl)
+          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), u);
+        else if (isShift)
+          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), w);
+        else
+          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), v);
+        auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
+        object->setTransform(m1*m2*m3*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+    }
+  }
+  else if (e->key() == Qt::Key_E) {
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      processKeyData.rotateAt =
+        (isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
+      camera->processKeyboard(CGLCamera::Movement::ROTATE_RIGHT, processKeyData);
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+
+        auto bbox = getObjectBBox(object);
+        auto o = bbox.getCenter();
+
+        auto da = 1.0;
+
+        auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
+        CMatrix3D m2;
+        if      (isControl)
+          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), u);
+        else if (isShift)
+          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), w);
+        else
+          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), v);
+        auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
+        object->setTransform(m1*m2*m3*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+    }
+  }
+  else if (e->key() == Qt::Key_W) {
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() + CGLVector3D(0.0f, 0.1f, 0.0f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setZ(modelTranslate_.getZ() + sceneSize_.z()/100.0);
 
         Q_EMIT modelMatrixChanged();
       }
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = w*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
     }
+#endif
   }
   else if (e->key() == Qt::Key_S) {
-    if      (type == CQNewGLModel::Type::CAMERA)
-      camera_->processKeyboard(CGLCamera::Movement::BACKWARD, dt);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
+      updateCameraBuffer();
+    }
     else if (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos -= CGLVector3D(0.0f, 0.1f, 0.0f);
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() - CGLVector3D(0.0f, 0.1f, 0.0f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setZ(modelTranslate_.getZ() - sceneSize_.z()/100.0);
 
         Q_EMIT modelMatrixChanged();
       }
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = w*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
     }
+#endif
   }
   else if (e->key() == Qt::Key_A) {
     if      (type == CQNewGLModel::Type::CAMERA) {
-      if (! isControl)
-        camera_->processKeyboard(CGLCamera::Movement::LEFT, dt);
-      else
-        camera_->processKeyboard(CGLCamera::Movement::UP, dt);
+      camera->processKeyboard(CGLCamera::Movement::STRAFE_LEFT, processKeyData);
+      updateCameraBuffer();
     }
     else if (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos -= CGLVector3D(0.1f, 0.0f, 0.0f);
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
 
       app()->updateLights();
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = u*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
     }
   }
   else if (e->key() == Qt::Key_D) {
     if      (type == CQNewGLModel::Type::CAMERA) {
-      if (! isControl)
-        camera_->processKeyboard(CGLCamera::Movement::RIGHT, dt);
-      else
-        camera_->processKeyboard(CGLCamera::Movement::DOWN, dt);
+      camera->processKeyboard(CGLCamera::Movement::STRAFE_RIGHT, processKeyData);
+      updateCameraBuffer();
     }
     else if (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos += CGLVector3D(0.1f, 0.0f, 0.0f);
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
 
       app()->updateLights();
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = u*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
     }
   }
   else if (e->key() == Qt::Key_X) {
     if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setX(modelTranslate_.getX() + sceneSize_.x()/100.0);
-
-        Q_EMIT modelMatrixChanged();
       }
       else {
         modelRotate_.setX(modelRotate_.x() + da);
-
-        Q_EMIT modelMatrixChanged();
       }
+
+      Q_EMIT modelMatrixChanged();
+#endif
     }
   }
   else if (e->key() == Qt::Key_Y) {
     if (type == CQNewGLModel::Type::MODEL) {
-      if (isControl)
+#if 0
+      if (isControl) {
         modelTranslate_.setY(modelTranslate_.getY() + sceneSize_.y()/100.0);
+      }
       else {
         modelRotate_.setY(modelRotate_.y() + da);
-
-        Q_EMIT modelMatrixChanged();
       }
+
+      Q_EMIT modelMatrixChanged();
+#endif
     }
   }
   else if (e->key() == Qt::Key_Z) {
     if (type == CQNewGLModel::Type::MODEL) {
-      if (isControl)
+#if 0
+      if (isControl) {
         modelTranslate_.setZ(modelTranslate_.getZ() + sceneSize_.z()/100.0);
+      }
       else {
         modelRotate_.setZ(modelRotate_.z() + da);
-
-        Q_EMIT modelMatrixChanged();
       }
+
+      Q_EMIT modelMatrixChanged();
+#endif
     }
   }
   else if (e->key() == Qt::Key_Up) {
-    if      (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos += CGLVector3D(0.0f, 0.0f, 0.1f);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      if (! isControl)
+        camera->processKeyboard(CGLCamera::Movement::UP, processKeyData);
+      else
+        camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
+
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() + CGLVector3D(0.0f, 0.0f, 0.1f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setY(modelTranslate_.getY() + sceneSize_.y()/100.0);
-
-        Q_EMIT modelMatrixChanged();
       }
       else {
         double f = 1.1;
-
         modelScale_.setX(modelScale_.getX()*f);
         modelScale_.setY(modelScale_.getY()*f);
         modelScale_.setZ(modelScale_.getZ()*f);
-
-        Q_EMIT modelMatrixChanged();
       }
+
+      Q_EMIT modelMatrixChanged();
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = v*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+#endif
     }
   }
   else if (e->key() == Qt::Key_Down) {
-    if      (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos -= CGLVector3D(0.0f, 0.0f, 0.1f);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      if (! isControl)
+        camera->processKeyboard(CGLCamera::Movement::DOWN, processKeyData);
+      else
+        camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
+
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() - CGLVector3D(0.0f, 0.0f, 0.1f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setY(modelTranslate_.getY() - sceneSize_.y()/100.0);
-
-        Q_EMIT modelMatrixChanged();
       }
       else {
         double f = 1.1;
-
         modelScale_.setX(modelScale_.getX()/f);
         modelScale_.setY(modelScale_.getY()/f);
         modelScale_.setZ(modelScale_.getZ()/f);
-
-        Q_EMIT modelMatrixChanged();
       }
+
+      Q_EMIT modelMatrixChanged();
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = v*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+#endif
     }
   }
   else if (e->key() == Qt::Key_Left) {
-    if      (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos += CGLVector3D(0.1f, 0.0f, 0.0f);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setX(modelTranslate_.getX() - sceneSize_.x()/100.0);
 
         Q_EMIT modelMatrixChanged();
       }
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = u*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+#endif
     }
   }
   else if (e->key() == Qt::Key_Right) {
-    if      (type == CQNewGLModel::Type::LIGHT) {
-      lights_[currentLight_]->pos -= CGLVector3D(0.1f, 0.0f, 0.0f);
+    if      (type == CQNewGLModel::Type::CAMERA) {
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
 
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
+#if 0
       if (isControl) {
         modelTranslate_.setX(modelTranslate_.getX() + sceneSize_.x()/100.0);
 
         Q_EMIT modelMatrixChanged();
       }
+#else
+      auto *object = getCurrentObject();
+
+      if (object) {
+        CVector3D u, v, w;
+        getBasis(object, u, v, w);
+        auto t = u*sceneScale_/100.0;
+
+        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+        object->setTransform(m*object->getTransform());
+
+        if (getCurrentCamera()->isFollowObject())
+          placeObjectCamera(object);
+
+        updateObjectData(object);
+      }
+#endif
     }
   }
 
   update();
 }
 
+void
+CQNewGLCanvas::
+placeObjectCamera(CGeomObject3D *object)
+{
+  CVector3D u, v, w;
+  getBasis(object, u, v, w);
+
+  auto bbox = getObjectBBox(object);
+  auto o = bbox.getCenter();
+
+  auto *currentCamera = getCurrentCamera();
+
+  auto p = o - w*bbox.getSize();
+
+  currentCamera->setOrigin(CGLVector3D(o.x, o.y, o.z));
+  currentCamera->setPosition(CGLVector3D(p.x, p.y, p.z));
+
+  updateCameraBuffer();
+}
+
+CBBox3D
+CQNewGLCanvas::
+getObjectBBox(CGeomObject3D *object) const
+{
+  auto bbox = getModelBBox(object);
+
+  auto modelMatrix = object->getHierTransform();
+
+  const auto &pmin = bbox.getMin();
+  const auto &pmax = bbox.getMax();
+
+  std::vector<CPoint3D> points;
+
+  auto addPoint = [&](double x, double y, double z) {
+    points.push_back(CPoint3D(x, y, z));
+  };
+
+  addPoint(pmin.getX(), pmin.getY(), pmin.getZ());
+  addPoint(pmax.getX(), pmin.getY(), pmin.getZ());
+  addPoint(pmax.getX(), pmax.getY(), pmin.getZ());
+  addPoint(pmin.getX(), pmax.getY(), pmin.getZ());
+  addPoint(pmin.getX(), pmin.getY(), pmax.getZ());
+  addPoint(pmax.getX(), pmin.getY(), pmax.getZ());
+  addPoint(pmax.getX(), pmax.getY(), pmax.getZ());
+  addPoint(pmin.getX(), pmax.getY(), pmax.getZ());
+
+  CBBox3D bbox1;
+
+  for (const auto &p : points)
+    bbox1.add(modelMatrix*p);
+
+  return bbox1;
+}
+
+CBBox3D
+CQNewGLCanvas::
+getModelBBox(CGeomObject3D *object) const
+{
+  CBBox3D bbox;
+  object->getModelBBox(bbox);
+
+#if 0
+  const auto &modelMatrix = object->getHierTransform();
+  auto p1 = modelMatrix*bbox.getMin();
+  auto p2 = modelMatrix*bbox.getMax();
+
+  return CBBox3D(p1, p2);
+#endif
+
+  return bbox;
+}
+
+void
+CQNewGLCanvas::
+getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const
+{
+  CVector3D u1, v1, w1;
+  object->getBasis(u1, v1, w1);
+
+  const auto &modelMatrix = object->getHierTransform();
+
+  u = (modelMatrix*u1).normalized();
+  v = (modelMatrix*v1).normalized();
+  w = (modelMatrix*w1).normalized();
+}
+
 //---
 
-CQNewGLCamera::
-CQNewGLCamera(CQNewGLCanvas *canvas, const CGLVector3D &v) :
- CGLCamera(v), canvas_(canvas), v_(v)
+void
+CQNewGLCanvas::
+addCube(CQGLBuffer *buffer, const CPoint3D &center, double size, const CRGBA &color,
+        std::vector<CQNewGLFaceData> &faceDatas) const
 {
+  CBBox3D bbox(center.getX() - size/2.0, center.getY() - size/2.0, center.getZ() - size/2.0,
+               center.getX() + size/2.0, center.getY() + size/2.0, center.getZ() + size/2.0);
+
+  addCube(buffer, bbox, color, faceDatas);
 }
 
 void
-CQNewGLCamera::
-viewChanged()
+CQNewGLCanvas::
+addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const CRGBA &color,
+        std::vector<CQNewGLFaceData> &faceDatas) const
 {
-  canvas_->app()->updateCamera();
+  static double cube_normal[6][3] = {
+    {-1.0,  0.0,  0.0},
+    { 0.0,  1.0,  0.0},
+    { 1.0,  0.0,  0.0},
+    { 0.0, -1.0,  0.0},
+    { 0.0,  0.0,  1.0},
+    { 0.0,  0.0, -1.0}
+  };
+
+  static int cube_faces[6][4] = {
+    {0, 1, 2, 3},
+    {3, 2, 6, 7},
+    {7, 6, 5, 4},
+    {4, 5, 1, 0},
+    {5, 6, 2, 1},
+    {7, 4, 0, 3}
+  };
+
+  double v[8][3];
+
+  v[0][0] = v[1][0] = v[2][0] = v[3][0] = -0.5;
+  v[4][0] = v[5][0] = v[6][0] = v[7][0] =  0.5;
+  v[0][1] = v[1][1] = v[4][1] = v[5][1] = -0.5;
+  v[2][1] = v[3][1] = v[6][1] = v[7][1] =  0.5;
+  v[0][2] = v[3][2] = v[4][2] = v[7][2] = -0.5;
+  v[1][2] = v[2][2] = v[5][2] = v[6][2] =  0.5;
+
+  //---
+
+  auto x_size = bbox.getXSize();
+  auto y_size = bbox.getYSize();
+  auto z_size = bbox.getZSize();
+  auto center = bbox.getCenter();
+
+  //---
+
+  auto cubePoint = [&](int i, int j) {
+    const auto &v1 = v[cube_faces[i][j]];
+
+    return CPoint3D(center.x + x_size*v1[0], center.y + y_size*v1[1], center.z + z_size*v1[2]);
+  };
+
+  auto cubeNormal = [&](int i) {
+    const auto &n = cube_normal[i];
+
+    return CPoint3D(n[0], n[1], n[2]);
+  };
+
+  auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c, const CPoint2D &tp) {
+    buffer->addPoint(p.x, p.y, p.z);
+    buffer->addNormal(n.x, n.y, n.z);
+    buffer->addColor(c);
+    buffer->addTexturePoint(tp.x, tp.y);
+  };
+
+  auto tp1 = CPoint2D(0.0, 0.0);
+  auto tp2 = CPoint2D(1.0, 0.0);
+  auto tp3 = CPoint2D(1.0, 1.0);
+  auto tp4 = CPoint2D(0.0, 1.0);
+
+  int pos = 0;
+
+  for (GLint i = 5; i >= 0; i--) {
+    CQNewGLFaceData faceData;
+
+    faceData.pos = pos;
+    faceData.len = 4;
+
+    auto p1 = cubePoint(i, 0);
+    auto p2 = cubePoint(i, 1);
+    auto p3 = cubePoint(i, 2);
+    auto p4 = cubePoint(i, 3);
+
+    auto normal = cubeNormal(i);
+
+    addPoint(p1, normal, color, tp1);
+    addPoint(p2, normal, color, tp2);
+    addPoint(p3, normal, color, tp3);
+    addPoint(p4, normal, color, tp4);
+
+    faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
 }
 
 void
-CQNewGLCamera::
-reset()
+CQNewGLCanvas::
+addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
+        const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const
 {
-  init(v_, CGLVector3D(0, 1, 0), -90, 0);
+  auto *object = new CGeomObject3D(nullptr, "");
+
+  auto h = p1.distanceTo(p2);
+
+  CGeomCone3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), w, h, 20);
+  CGeomCone3D::addNormals(object, w, h);
+
+  auto m1 = CMatrix3D::translation(0, h/2.0, 0.0);
+  auto m2 = getShapeRotationMatrix(p1, p2);;
+  auto m3 = CMatrix3D::translation(p1.x, p1.y, p1.z);
+
+  auto modelMatrix = m3*m2*m1;
+
+  auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c, const CPoint2D &tp) {
+    auto p1 = modelMatrix*p;
+
+    buffer->addPoint(p1.x, p1.y, p1.z);
+    buffer->addNormal(n.getX(), n.getY(), n.getZ());
+    buffer->addColor(c);
+    buffer->addTexturePoint(tp.x, tp.y);
+  };
+
+  for (auto *face : object->getFaces()) {
+    const auto &vertices = face->getVertices();
+
+    CQNewGLFaceData faceData;
+
+    faceData.pos = pos;
+    faceData.len = vertices.size();
+
+    for (auto vertexInd : vertices) {
+      auto *vertex = object->getVertexP(vertexInd);
+
+      addPoint(vertex->getModel(), vertex->getNormal(), color, vertex->getTextureMap());
+    }
+
+    faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
+
+  delete object;
+}
+
+void
+CQNewGLCanvas::
+addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r,
+            const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const
+{
+  auto *object = new CGeomObject3D(nullptr, "");
+
+  auto h = p1.distanceTo(p2);
+
+  CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h, 20);
+  CGeomCylinder3D::addNormals(object, 2*r, h);
+
+  auto m1 = CMatrix3D::translation(0.0, h/2.0, 0.0);
+  auto m2 = getShapeRotationMatrix(p1, p2);;
+  auto m3 = CMatrix3D::translation(p1.x, p1.y, p1.z);
+
+  auto modelMatrix = m3*m2*m1;
+
+  auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c, const CPoint2D &tp) {
+    auto p1 = modelMatrix*p;
+
+    buffer->addPoint(p1.x, p1.y, p1.z);
+    buffer->addNormal(n.getX(), n.getY(), n.getZ());
+    buffer->addColor(c);
+    buffer->addTexturePoint(tp.x, tp.y);
+  };
+
+  for (auto *face : object->getFaces()) {
+    const auto &vertices = face->getVertices();
+
+    CQNewGLFaceData faceData;
+
+    faceData.pos = pos;
+    faceData.len = vertices.size();
+
+    for (auto vertexInd : vertices) {
+      auto *vertex = object->getVertexP(vertexInd);
+
+      addPoint(vertex->getModel(), vertex->getNormal(), color, vertex->getTextureMap());
+    }
+
+    faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
+
+  delete object;
+}
+
+void
+CQNewGLCanvas::
+addSphere(CQGLBuffer *buffer, const CPoint3D &c, double r,
+          const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const
+{
+  auto *object = new CGeomObject3D(nullptr, "");
+
+  CGeomSphere3D::addGeometry(object, CPoint3D(0, 0, 0), r);
+  CGeomSphere3D::addNormals(object, r);
+  CGeomSphere3D::addTexturePoints(object);
+
+  auto modelMatrix = CMatrix3D::translation(c.x, c.y, c.z);
+
+  auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c, const CPoint2D &tp) {
+    auto p1 = modelMatrix*p;
+
+    buffer->addPoint(p1.x, p1.y, p1.z);
+    buffer->addNormal(n.getX(), n.getY(), n.getZ());
+    buffer->addColor(c);
+    buffer->addTexturePoint(tp.x, tp.y);
+  };
+
+  for (auto *face : object->getFaces()) {
+    const auto &vertices = face->getVertices();
+
+    CQNewGLFaceData faceData;
+
+    faceData.pos = pos;
+    faceData.len = vertices.size();
+
+    const auto &texturePoints = face->getTexturePoints();
+
+    size_t iv = 0;
+
+    for (auto vertexInd : vertices) {
+      CPoint2D tp;
+
+      if (iv < texturePoints.size())
+        tp = texturePoints[iv];
+
+      auto *vertex = object->getVertexP(vertexInd);
+
+      addPoint(vertex->getModel(), vertex->getNormal(), color, tp);
+
+      ++iv;
+    }
+
+    faceDatas.push_back(faceData);
+
+    pos += faceData.len;
+  }
+
+  delete object;
+}
+
+CMatrix3D
+CQNewGLCanvas::
+getShapeRotationMatrix(const CPoint3D &p1, const CPoint3D &p2) const
+{
+  auto v1 = CVector3D(0, 1, 0); v1.normalize();
+  auto v2 = CVector3D(p1, p2) ; v2.normalize();
+
+  auto q = CQuaternion::rotationArc(v1, v2);
+
+  CMatrix3D m;
+  q.toRotationMatrix(m);
+
+  return m;
 }

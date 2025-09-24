@@ -87,14 +87,14 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
   if (name1 == "")
     name1 = "gltf";
 
-  object_ = CGeometryInst->createObject3D(scene_, name1);
+  object_  = CGeometryInst->createObject3D(scene_, name1);
+  pobject_ = ObjectP(object_);
 
   scene_->addObject(object_);
 
-  if (! pobject_)
-    pobject_ = ObjectP(object_);
-
   rootObject_ = object_;
+
+  isPsuedoObject_ = true;
 }
 
 CImportGLTF::
@@ -1253,9 +1253,20 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
   auto *object = CGeometryInst->createObject3D(scene_, name);
 
-  scene_->addObject(object);
+  if (isPsuedoObject_) {
+    scene_->removeObject(object_, /*force*/true);
 
-  rootObject_->addChild(object);
+    object_  = object;
+    pobject_ = ObjectP(object_);
+
+    rootObject_ = object_;
+
+    isPsuedoObject_ = false;
+  }
+  else
+    rootObject_->addChild(object);
+
+  scene_->addObject(object);
 
   //---
 

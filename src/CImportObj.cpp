@@ -148,7 +148,7 @@ readVertex(const std::string &line)
 
   CStrUtil::addWords(line, words);
 
-  if (words.size() != 3)
+  if (words.size() < 3)
     return false;
 
   if (! CStrUtil::isReal(words[0]) ||
@@ -162,7 +162,20 @@ readVertex(const std::string &line)
 
   CPoint3D p(x, y, z);
 
-  object_->addVertex(p);
+  int ind = object_->addVertex(p);
+
+  if (words.size() >= 6) {
+    if (! CStrUtil::isReal(words[3]) ||
+        ! CStrUtil::isReal(words[4]) ||
+        ! CStrUtil::isReal(words[5]))
+      return false;
+
+    double r = CStrUtil::toReal(words[3]);
+    double g = CStrUtil::toReal(words[4]);
+    double b = CStrUtil::toReal(words[5]);
+
+    object_->setVertexColor(ind, CRGBA(r, g, b));
+  }
 
   return true;
 }

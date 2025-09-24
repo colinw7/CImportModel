@@ -42,15 +42,24 @@ class CImportScene : public CImportBase {
   void           readRotate(CGeomObject3D *object, int num_patches);
   void           readColors();
   void           readTextures();
+  void           readCSG(const std::string &name);
   CMatrix3D      readTransforms();
   CGeomObject3D *getObject(const std::string &name);
   CGeomObject3D *getPrimitive(const std::string &name);
   int            lookupCommand(const std::string &command, const char **commands);
-  void           getRGBA(int color, CRGBA *rgba);
+
+  CRGBA wordToColor(const std::string &word) const;
+  CRGBA getRGBA(int color) const;
+
+  bool isSkipLine(const std::string &line) const;
+
+  void errorMsg(const std::string &msg) const;
 
  private:
   using NameObjMap = std::map<std::string, CGeomObject3D *>;
   using Names      = std::vector<std::string>;
+
+  std::string modelDir_;
 
   CGeomScene3D* scene_ { nullptr };
   SceneP        pscene_;

@@ -653,6 +653,8 @@ class CImportGLTF : public CImportBase {
 
   CGeomObject3D *rootObject_ { nullptr };
 
+  bool isPsuedoObject_ { true };
+
   bool binary_ { false };
 
   bool debug_     { false };

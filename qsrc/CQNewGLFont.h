@@ -112,7 +112,7 @@ class CQNewGLText {
   void render();
 
  private:
-  CQGLBuffer *getBuffer();
+  void initBuffer();
 
   CMatrix3D getModelMatrix() const;
 

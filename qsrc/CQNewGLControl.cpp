@@ -2,16 +2,31 @@
 #include <CQNewGLModel.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLUVMap.h>
+#include <CQNewGLCamera.h>
+#include <CQNewGLLight.h>
+#include <CQNewGLAxes.h>
+#include <CQNewGLBBox.h>
+#include <CQNewGLNormals.h>
+#include <CQNewGLHull.h>
+#include <CQNewGLTerrain.h>
+#include <CQNewGLMaze.h>
+#include <CQNewGLSkybox.h>
+#include <CQNewGLEmitter.h>
+#include <CQNewGLFractal.h>
+#include <CQNewGLDrawTree.h>
+#include <CQNewGLShape.h>
+#include <CQNewGLUtil.h>
 
 #include <CImportBase.h>
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 #include <CGeomTexture.h>
-#include <CGLCamera.h>
-#include <CGLTexture.h>
+#include <CQGLTexture.h>
+#include <CQUtil.h>
 
 #include <CQColorEdit.h>
 #include <CQRealSpin.h>
+#include <CQIntegerSpin.h>
 #include <CQSlider.h>
 #include <CQPoint3DEdit.h>
 #include <CQMatrix3D.h>
@@ -27,7 +42,6 @@
 #include <QVBoxLayout>
 #include <QFileDialog>
 #include <QDir>
-#include <QTimer>
 
 #include <svg/play_svg.h>
 #include <svg/pause_svg.h>
@@ -53,37 +67,119 @@ CQNewGLControl(CQNewGLModel *app) :
 
   //---
 
+  modelTab_ = new QTabWidget;
+
+  modelTab_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+  tab_->addTab(modelTab_, "Scene");
+
+  //---
+
+  int modelTabNum = 0;
+
+  auto addModelTab = [&](QWidget *w, const QString &label) {
+    modelTabName_[modelTabNum++] = label;
+
+    modelTab_->addTab(w, label);
+  };
+
   generalControl_ = new CQNewGLGeneralControl(this);
 
-  tab_->addTab(generalControl_, "General");
+  addModelTab(generalControl_, "General");
 
   objectsControl_ = new CQNewGLObjectsControl(this);
 
-  tab_->addTab(objectsControl_, "Model");
+  addModelTab(objectsControl_, "Models");
 
   cameraControl_ = new CQNewGLCameraControl(this);
 
-  tab_->addTab(cameraControl_, "Camera");
+  addModelTab(cameraControl_, "Cameras");
 
-  lightControl_ = new CQNewGLLightControl(this);
+  lightsControl_ = new CQNewGLLightsControl(this);
 
-  tab_->addTab(lightControl_, "Lights");
+  addModelTab(lightsControl_, "Lights");
+
+  normalsControl_ = new CQNewGLNormalsControl(this);
+
+  addModelTab(normalsControl_, "Normals");
+
+  axesControl_ = new CQNewGLAxesControl(this);
+
+  addModelTab(axesControl_, "Axes");
+
+  bboxControl_ = new CQNewGLBBoxControl(this);
+
+  addModelTab(bboxControl_, "BBox");
+
+  hullControl_ = new CQNewGLHullControl(this);
+
+  addModelTab(hullControl_, "Hull");
+
+  basisControl_ = new CQNewGLBasisControl(this);
+
+  addModelTab(basisControl_, "Basis");
 
   texturesControl_ = new CQNewGLTexturesControl(this);
 
-  tab_->addTab(texturesControl_, "Textures");
+  addModelTab(texturesControl_, "Textures");
 
   uvControl_ = new CQNewGLUVControl(this);
 
-  tab_->addTab(uvControl_, "UV");
+  addModelTab(uvControl_, "UV");
 
   animControl_ = new CQNewGLAnimControl(this);
 
-  tab_->addTab(animControl_, "Animation");
+  addModelTab(animControl_, "Animation");
 
   bonesControl_ = new CQNewGLBonesControl(this);
 
-  tab_->addTab(bonesControl_, "Bones");
+  addModelTab(bonesControl_, "Bones");
+
+  //---
+
+  shapesTab_ = new QTabWidget;
+
+  shapesTab_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+  tab_->addTab(shapesTab_, "Extras");
+
+  int shapesTabNum = 0;
+
+  auto addShapesTab = [&](QWidget *w, const QString &label) {
+    shapesTabName_[shapesTabNum++] = label;
+
+    shapesTab_->addTab(w, label);
+  };
+
+  //---
+
+  terrainControl_ = new CQNewGLTerrainControl(this);
+
+  addShapesTab(terrainControl_, "Terrain");
+
+  mazeControl_ = new CQNewGLMazeControl(this);
+
+  addShapesTab(mazeControl_, "Maze");
+
+  skyboxControl_ = new CQNewGLSkyboxControl(this);
+
+  addShapesTab(skyboxControl_, "Skybox");
+
+  emitterControl_ = new CQNewGLEmitterControl(this);
+
+  addShapesTab(emitterControl_, "Emitter");
+
+  fractalControl_ = new CQNewGLFractalControl(this);
+
+  addShapesTab(fractalControl_, "Fractal");
+
+  drawTreeControl_ = new CQNewGLDrawTreeControl(this);
+
+  addShapesTab(drawTreeControl_, "Draw Tree");
+
+  shapeControl_ = new CQNewGLShapeControl(this);
+
+  addShapesTab(shapeControl_, "Shape");
 
   //---
 
@@ -91,7 +187,12 @@ CQNewGLControl(CQNewGLModel *app) :
 
   //---
 
-  connect(tab_, SIGNAL(currentChanged(int)), this, SLOT(tabSlot(int)));
+  connect(modelTab_, SIGNAL(currentChanged(int)), this, SLOT(modelTabSlot(int)));
+
+  connect(canvas(), SIGNAL(textureAdded()), this, SLOT(invalidateTextures()));
+  connect(canvas(), SIGNAL(cameraAdded()), this, SLOT(invalidateCameras()));
+  connect(canvas(), SIGNAL(lightAdded()), this, SLOT(invalidateLights()));
+//connect(canvas(), SIGNAL(shapeAdded()), this, SLOT(invalidateShapes()));
 }
 
 CQNewGLCanvas *
@@ -110,15 +211,17 @@ uvMap() const
 
 void
 CQNewGLControl::
-tabSlot(int ind)
+modelTabSlot(int ind)
 {
+  auto tabName = modelTabName_[ind];
+
   bool isShowBone = app_->isShowBone();
 
-  app_->setShowUVMap(ind == 5);
-  app_->setShowBone (ind == 7);
+  app_->setShowUVMap(tabName == "UV");
+  app_->setShowBone (tabName == "Bones");
 
   if (app_->isShowBone() != isShowBone) {
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
     canvas()->update();
   }
 }
@@ -127,27 +230,70 @@ void
 CQNewGLControl::
 updateWidgets()
 {
-  updateCamera();
-  updateLights();
+  updateGeneral();
+
   updateObjects();
+
+  updateCameras();
+  updateLights();
+  updateNormals();
+
+  updateAxes();
+  updateBBox();
+  updateHull();
+
   updateTextures();
   updateUV();
   updateAnim();
   updateBones();
+
+  updateTerrain();
+  updateMaze();
+
+  updateSkybox();
+
+  updateEmitter();
+
+  updateFractal();
+
+  updateDrawTree();
+
+  updateShape();
 }
 
 void
 CQNewGLControl::
-updateCamera()
+invalidateCameras()
 {
-  cameraControl_->updateWidgets();
+  cameraControl_->invalidateCameras();
 }
 
 void
 CQNewGLControl::
-updateLights()
+invalidateLights()
 {
-  lightControl_->updateWidgets();
+  lightsControl_->invalidateLights();
+}
+
+void
+CQNewGLControl::
+invalidateTextures()
+{
+  texturesControl_->invalidateTextures();
+}
+
+void
+CQNewGLControl::
+invalidateShapes()
+{
+  shapeControl_->invalidateShapes();
+}
+
+void
+CQNewGLControl::
+updateGeneral()
+{
+  generalControl_->updateWidgets();
 }
 
 void
@@ -156,6 +302,48 @@ updateObjects()
 {
   objectsControl_->updateWidgets();
   animControl_   ->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateCameras()
+{
+  cameraControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateLights()
+{
+  lightsControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateNormals()
+{
+  normalsControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateAxes()
+{
+  axesControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateBBox()
+{
+  bboxControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateHull()
+{
+  hullControl_->updateWidgets();
 }
 
 void
@@ -187,18 +375,62 @@ updateBones()
   bonesControl_->updateWidgets();
 }
 
+void
+CQNewGLControl::
+updateTerrain()
+{
+  terrainControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateMaze()
+{
+  mazeControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateSkybox()
+{
+  skyboxControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateEmitter()
+{
+  emitterControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateFractal()
+{
+  fractalControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateDrawTree()
+{
+  drawTreeControl_->updateWidgets();
+}
+
+void
+CQNewGLControl::
+updateShape()
+{
+  shapeControl_->updateWidgets();
+}
+
 CGeomObject3D *
 CQNewGLControl::
 getRootObject() const
 {
-  const auto &scene = canvas()->importBase()->getScene();
+  auto *object = canvas()->getObject(0);
 
-  const auto &objects = scene.getObjects();
-  if (objects.empty()) return nullptr;
-
-  auto *object = objects[0];
-
-  while (object->parent())
+  while (object && object->parent())
     object = object->parent();
 
   return object;
@@ -210,11 +442,6 @@ CQNewGLGeneralControl::
 CQNewGLGeneralControl(CQNewGLControl *control) :
  CQNewGLControlFrame(control)
 {
-  auto *app    = control->app();
-  auto *canvas = this->canvas();
-
-  //---
-
   auto *layout = new QVBoxLayout(this);
 
   //---
@@ -231,163 +458,56 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
 
   //---
 
-  colorEdit_ = new CQColorEdit(this),
-
-  colorEdit_->setColor(canvas->bgColor());
+  colorEdit_ = new CQColorEdit(this);
 
   addLabelEdit("Bg Color", colorEdit_);
 
   //---
 
+  auto *glOptionsGroup  = new QGroupBox("GL Options");
+  auto *glOptionsLayout = new QVBoxLayout(glOptionsGroup);
+
+  layout->addWidget(glOptionsGroup);
+
   depthTestCheck_ = new QCheckBox("Depth Test");
 
-  depthTestCheck_->setChecked(canvas->isDepthTest());
-
-  layout->addWidget(depthTestCheck_);
+  glOptionsLayout->addWidget(depthTestCheck_);
 
   //---
 
   cullCheck_ = new QCheckBox("Cull Face");
 
-  cullCheck_->setChecked(canvas->isCullFace());
-
-  layout->addWidget(cullCheck_);
+  glOptionsLayout->addWidget(cullCheck_);
 
   //---
 
   frontFaceCheck_ = new QCheckBox("Front Face");
 
-  frontFaceCheck_->setChecked(canvas->isFrontFace());
+  glOptionsLayout->addWidget(frontFaceCheck_);
 
-  layout->addWidget(frontFaceCheck_);
+  //---
+
+  polygonSolidCheck_ = new QCheckBox("Polygon Solid");
+
+  layout->addWidget(polygonSolidCheck_);
 
   //---
 
   polygonLineCheck_ = new QCheckBox("Polygon Line");
 
-  polygonLineCheck_->setChecked(canvas->isPolygonLine());
-
   layout->addWidget(polygonLineCheck_);
-
-  //---
-
-  showNormalsCheck_ = new QCheckBox("Show Normals");
-
-  showNormalsCheck_->setChecked(canvas->isShowNormals());
-
-  layout->addWidget(showNormalsCheck_);
 
   //---
 
   flipYZCheck_ = new QCheckBox("Flip YZ");
 
-  flipYZCheck_->setChecked(canvas->isFlipYZ());
-
   layout->addWidget(flipYZCheck_);
-
-  //---
-
-  axisCheck_ = new QCheckBox("Show Axis");
-
-  axisCheck_->setChecked(canvas->isShowAxis());
-
-  layout->addWidget(axisCheck_);
-
-  //---
-
-  orthoCheck_ = new QCheckBox("Ortho");
-
-  orthoCheck_->setChecked(canvas->isOrtho());
-
-  layout->addWidget(orthoCheck_);
 
   //---
 
   invertDepthCheck_ = new QCheckBox("Invert Depth");
 
-  invertDepthCheck_->setChecked(canvas->isInvertDepth());
-
   layout->addWidget(invertDepthCheck_);
-
-  //---
-
-  auto *materialGroup  = new QGroupBox("Material");
-  auto *materialLayout = new QVBoxLayout(materialGroup);
-
-  layout->addWidget(materialGroup);
-
-  //---
-
-  auto addMaterialLabelEdit = [&](const QString &label, QWidget *w) {
-    auto *frame   = new QFrame;
-    auto *layout1 = new QHBoxLayout(frame);
-
-    layout1->addWidget(new QLabel(label));
-    layout1->addWidget(w);
-
-    materialLayout->addWidget(frame);
-  };
-
-  //---
-
-  ambientEdit_ = new CQColorEdit(this),
-
-  ambientEdit_->setColor(canvas->ambientColor());
-
-  addMaterialLabelEdit("Ambient", ambientEdit_);
-
-  //---
-
-  diffuseEdit_ = new CQColorEdit(this),
-
-  diffuseEdit_->setColor(canvas->diffuseColor());
-
-  addMaterialLabelEdit("Diffuse", diffuseEdit_);
-
-  //---
-
-  emissionEdit_ = new CQColorEdit(this),
-
-  emissionEdit_->setColor(canvas->emissionColor());
-
-  addMaterialLabelEdit("Emission", emissionEdit_);
-
-  //---
-
-  auto createSlider = [&](const QString &label, double min, double max, double value,
-                          const char *slotName) {
-    auto *slider = new CQRealSlider(Qt::Horizontal);
-
-    slider->setRange(min, max);
-    slider->setSingleStep((max - min)/100.0);
-    slider->setPageStep((max - min)/10.0);
-
-    slider->setLabel(label);
-    slider->setToolTip(label);
-    slider->setValue(value);
-
-    connect(slider, SIGNAL(valueChanged(double)), this, slotName);
-
-    return slider;
-  };
-
-  auto *ambientSlider  = createSlider("Ambient" , 0.0, 1.0, app->ambientStrength(),
-                                      SLOT(ambientFactorSlot(double)));
-  auto *diffuseSlider  = createSlider("Diffuse" , 0.0, 1.0, app->diffuseStrength(),
-                                      SLOT(diffuseFactorSlot(double)));
-  auto *specularSlider = createSlider("Specular", 0.0, 1.0, app->specularStrength(),
-                                      SLOT(specularFactorSlot(double)));
-  auto *emissiveSlider = createSlider("Emissive", 0.0, 1.0, app->emissiveStrength(),
-                                      SLOT(emissiveFactorSlot(double)));
-
-  auto *shininessSlider = createSlider("Shininess", 0.0, 100.0, app->shininess(),
-                                       SLOT(shininessFactorSlot(double)));
-
-  materialLayout->addWidget(ambientSlider);
-  materialLayout->addWidget(diffuseSlider);
-  materialLayout->addWidget(specularSlider);
-  materialLayout->addWidget(emissiveSlider);
-  materialLayout->addWidget(shininessSlider);
 
   //---
 
@@ -433,64 +553,62 @@ void
 CQNewGLGeneralControl::
 connectSlots(bool b)
 {
+  CQUtil::connectDisconnect(b, colorEdit_, SIGNAL(colorChanged(const QColor &)),
+                            this, SLOT(bgColorSlot(const QColor &)));
+
   if (b) {
-    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(bgColorSlot(const QColor &)));
-
-    connect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(ambientSlot(const QColor &)));
-    connect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(diffuseSlot(const QColor &)));
-    connect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(emissionSlot(const QColor &)));
-
     connect(depthTestCheck_, SIGNAL(stateChanged(int)), this, SLOT(depthTestSlot(int)));
 
     connect(cullCheck_, SIGNAL(stateChanged(int)), this, SLOT(cullSlot(int)));
 
     connect(frontFaceCheck_, SIGNAL(stateChanged(int)), this, SLOT(frontFaceSlot(int)));
 
-    connect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
+    connect(polygonSolidCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonSolidSlot(int)));
 
-    connect(showNormalsCheck_, SIGNAL(stateChanged(int)), this, SLOT(showNormalsSlot(int)));
+    connect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
 
     connect(flipYZCheck_, SIGNAL(stateChanged(int)), this, SLOT(flipYZSlot(int)));
 
-    connect(axisCheck_, SIGNAL(stateChanged(int)), this, SLOT(axisSlot(int)));
-
     connect(invertDepthCheck_, SIGNAL(stateChanged(int)), this, SLOT(invertDepthSlot(int)));
-
-    connect(orthoCheck_, SIGNAL(stateChanged(int)), this, SLOT(orthoSlot(int)));
   }
   else {
-    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(bgColorSlot(const QColor &)));
-
-    disconnect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(ambientSlot(const QColor &)));
-    disconnect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(diffuseSlot(const QColor &)));
-    disconnect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(emissionSlot(const QColor &)));
-
     disconnect(depthTestCheck_, SIGNAL(stateChanged(int)), this, SLOT(depthTestSlot(int)));
 
     disconnect(cullCheck_, SIGNAL(stateChanged(int)), this, SLOT(cullSlot(int)));
 
     disconnect(frontFaceCheck_, SIGNAL(stateChanged(int)), this, SLOT(frontFaceSlot(int)));
 
-    disconnect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
+    disconnect(polygonSolidCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonSolidSlot(int)));
 
-    disconnect(showNormalsCheck_, SIGNAL(stateChanged(int)), this, SLOT(showNormalsSlot(int)));
+    disconnect(polygonLineCheck_, SIGNAL(stateChanged(int)), this, SLOT(polygonLineSlot(int)));
 
     disconnect(flipYZCheck_, SIGNAL(stateChanged(int)), this, SLOT(flipYZSlot(int)));
 
-    disconnect(axisCheck_, SIGNAL(stateChanged(int)), this, SLOT(axisSlot(int)));
-
     disconnect(invertDepthCheck_, SIGNAL(stateChanged(int)), this, SLOT(invertDepthSlot(int)));
-
-    disconnect(orthoCheck_, SIGNAL(stateChanged(int)), this, SLOT(orthoSlot(int)));
   }
+}
+
+void
+CQNewGLGeneralControl::
+updateWidgets()
+{
+  auto *canvas = this->canvas();
+
+  connectSlots(false);
+
+  colorEdit_->setColor(canvas->bgColor());
+
+  depthTestCheck_->setChecked(canvas->isDepthTest());
+  cullCheck_     ->setChecked(canvas->isCullFace());
+  frontFaceCheck_->setChecked(canvas->isFrontFace());
+
+  polygonSolidCheck_->setChecked(canvas->isPolygonSolid());
+  polygonLineCheck_ ->setChecked(canvas->isPolygonLine());
+
+  flipYZCheck_     ->setChecked(canvas->isFlipYZ());
+  invertDepthCheck_->setChecked(canvas->isInvertDepth());
+
+  connectSlots(true);
 }
 
 void
@@ -500,42 +618,6 @@ bgColorSlot(const QColor &c)
   auto *canvas = this->canvas();
 
   canvas->setBgColor(c);
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-ambientSlot(const QColor &c)
-{
-  auto *canvas = this->canvas();
-
-  canvas->setAmbientColor(c);
-
-  canvas->updateObjectData();
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-diffuseSlot(const QColor &c)
-{
-  auto *canvas = this->canvas();
-
-  canvas->setDiffuseColor(c);
-
-  canvas->updateObjectData();
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-emissionSlot(const QColor &c)
-{
-  auto *canvas = this->canvas();
-
-  canvas->setEmissionColor(c);
-
-  canvas->updateObjectData();
   canvas->update();
 }
 
@@ -571,23 +653,21 @@ frontFaceSlot(int state)
 
 void
 CQNewGLGeneralControl::
-polygonLineSlot(int state)
+polygonSolidSlot(int state)
 {
   auto *canvas = this->canvas();
 
-  canvas->setPolygonLine(state);
+  canvas->setPolygonSolid(state);
   canvas->update();
 }
 
 void
 CQNewGLGeneralControl::
-showNormalsSlot(int state)
+polygonLineSlot(int state)
 {
   auto *canvas = this->canvas();
 
-  canvas->setShowNormals(state);
-
-  canvas->updateObjectData();
+  canvas->setPolygonLine(state);
   canvas->update();
 }
 
@@ -602,95 +682,11 @@ flipYZSlot(int state)
 
 void
 CQNewGLGeneralControl::
-axisSlot(int state)
-{
-  auto *canvas = this->canvas();
-
-  canvas->setShowAxis(state);
-}
-
-void
-CQNewGLGeneralControl::
 invertDepthSlot(int state)
 {
   auto *canvas = this->canvas();
 
   canvas->setInvertDepth(state);
-}
-
-void
-CQNewGLGeneralControl::
-orthoSlot(int state)
-{
-  auto *canvas = this->canvas();
-
-  canvas->setOrtho(state);
-}
-
-void
-CQNewGLGeneralControl::
-uvMapSlot(int state)
-{
-  auto *app = control_->app();
-
-  app->setShowUVMap(state);
-}
-
-void
-CQNewGLGeneralControl::
-ambientFactorSlot(double v)
-{
-  auto *app    = control_->app();
-  auto *canvas = this->canvas();
-
-  app->setAmbientStrength(v);
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-diffuseFactorSlot(double v)
-{
-  auto *app    = control_->app();
-  auto *canvas = this->canvas();
-
-  app->setDiffuseStrength(v);
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-specularFactorSlot(double v)
-{
-  auto *app    = control_->app();
-  auto *canvas = this->canvas();
-
-  app->setSpecularStrength(v);
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-emissiveFactorSlot(double v)
-{
-  auto *app    = control_->app();
-  auto *canvas = this->canvas();
-
-  app->setEmissiveStrength(v);
-  canvas->update();
-}
-
-void
-CQNewGLGeneralControl::
-shininessFactorSlot(double v)
-{
-  auto *app    = control_->app();
-  auto *canvas = this->canvas();
-
-  app->setShininess(v);
-
-  canvas->updateObjectData();
-  canvas->update();
 }
 
 void
@@ -708,20 +704,59 @@ CQNewGLCameraControl::
 CQNewGLCameraControl(CQNewGLControl *control) :
  CQNewGLControlFrame(control)
 {
-  auto *layout = new QGridLayout(this);
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  camerasList_ = new QListWidget;
+
+  camerasList_->setSelectionMode(QListWidget::SingleSelection);
+
+  layout->addWidget(camerasList_);
+
+  //---
+
+  auto *controlFrame  = new QFrame;
+  auto *controlLayout = new QGridLayout(controlFrame);
+
+  layout->addWidget(controlFrame);
 
   int row = 0;
 
-  auto addLabelEdit = [&](const QString &label, QWidget *w) {
-    layout->addWidget(new QLabel(label), row, 0);
-    layout->addWidget(w, row, 1);
+  auto addLabelEdit = [&](const QString &label, auto *w) {
+    controlLayout->addWidget(new QLabel(label), row, 0);
+    controlLayout->addWidget(w, row, 1);
     ++row;
+    return w;
   };
 
   //---
 
+  showCheck_    = addLabelEdit("Show"    , new QCheckBox);
+  followCheck_  = addLabelEdit("Follow"  , new QCheckBox);
+  eyelineCheck_ = addLabelEdit("Eye Line", new QCheckBox);
+
+  //---
+
+  orthoCheck_ = addLabelEdit("Ortho", new QCheckBox);
+
+  //---
+
+  updateCurrentCheck_ = new QCheckBox;
+  addLabelEdit("Update Current", updateCurrentCheck_);
+
   rotateCheck_ = new QCheckBox;
   addLabelEdit("Rotate", rotateCheck_);
+
+  rotateAtCombo_ = new QComboBox;
+  addLabelEdit("Rotate At", rotateAtCombo_);
+
+  strafeCheck_ = new QCheckBox;
+  addLabelEdit("Strafe", strafeCheck_);
+
+  rotateAtCombo_->addItems(QStringList() << "Camera" << "Origin");
+
+  //---
 
   zoomEdit_ = new CQRealSpin;
   addLabelEdit("Zoom", zoomEdit_);
@@ -741,18 +776,65 @@ CQNewGLCameraControl(CQNewGLControl *control) :
   rollEdit_ = new CQRealSpin;
   addLabelEdit("Roll", rollEdit_);
 
-  posEdit_ = new CQPoint3DEdit;
-  addLabelEdit("Position", posEdit_);
+  //---
 
-  //--
-
-  resetButton_ = new QPushButton("Reset");
-
-  layout->addWidget(resetButton_);
+  speedEdit_ = new CQRealSpin;
+  addLabelEdit("Speed", speedEdit_);
 
   //---
 
-  layout->setRowStretch(row, 1);
+  originEdit_ = new CQPoint3DEdit;
+  originEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Origin", originEdit_);
+
+  positionEdit_ = new CQPoint3DEdit;
+  positionEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Position", positionEdit_);
+
+  upEdit_ = new CQPoint3DEdit;
+  upEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Up", upEdit_);
+
+  rightEdit_ = new CQPoint3DEdit;
+  rightEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Right", rightEdit_);
+
+  //---
+
+  matrixEdit_ = new CQMatrix3D;
+  matrixEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Matrix", matrixEdit_);
+
+  //---
+
+  colorEdit_ = new CQColorEdit;
+  addLabelEdit("Color", colorEdit_);
+
+  //---
+
+  controlLayout->setRowStretch(row, 1);
+
+  //--
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *addButton   = new QPushButton("Add");
+  auto *resetButton = new QPushButton("Reset");
+  auto *initButton  = new QPushButton("Init");
+
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLCameraControl::addSlot);
+  connect(resetButton, &QPushButton::clicked, this, &CQNewGLCameraControl::resetSlot);
+  connect(initButton, &QPushButton::clicked, this, &CQNewGLCameraControl::initSlot);
+
+  buttonsLayout->addWidget(addButton);
+  buttonsLayout->addWidget(resetButton);
+  buttonsLayout->addWidget(initButton);
+  buttonsLayout->addStretch(1);
+
+  //---
 
   connectSlots(true);
 }
@@ -762,26 +844,86 @@ CQNewGLCameraControl::
 connectSlots(bool b)
 {
   if (b) {
+    connect(showCheck_, &QCheckBox::stateChanged, this,
+            &CQNewGLCameraControl::showSlot);
+    connect(followCheck_, &QCheckBox::stateChanged, this,
+            &CQNewGLCameraControl::followSlot);
+    connect(eyelineCheck_, &QCheckBox::stateChanged, this,
+            &CQNewGLCameraControl::eyelineSlot);
+
+    connect(orthoCheck_, SIGNAL(stateChanged(int)), this, SLOT(orthoSlot(int)));
+
+    connect(camerasList_, &QListWidget::currentItemChanged,
+            this, &CQNewGLCameraControl::cameraSelectedSlot);
+
+    connect(updateCurrentCheck_, &QCheckBox::stateChanged, this,
+            &CQNewGLCameraControl::updateCurrentSlot);
+
     connect(rotateCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::rotateSlot);
+    connect(rotateAtCombo_, SIGNAL(currentIndexChanged(int)), this, SLOT(rotateAtSlot(int)));
+    connect(strafeCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::strafeSlot);
+
     connect(zoomEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::zoomSlot);
     connect(nearEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::nearSlot);
     connect(farEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::farSlot);
     connect(yawEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::yawSlot);
     connect(pitchEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::pitchSlot);
     connect(rollEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::rollSlot);
-    connect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLCameraControl::posSlot);
-    connect(resetButton_, &QPushButton::clicked, this, &CQNewGLCameraControl::resetSlot);
+
+    connect(speedEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::speedSlot);
+
+    connect(originEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLCameraControl::originSlot);
+    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLCameraControl::positionSlot);
+    connect(upEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLCameraControl::upSlot);
+    connect(rightEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLCameraControl::rightSlot);
+
+    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(colorSlot(const QColor &)));
   }
   else {
+    disconnect(showCheck_, &QCheckBox::stateChanged, this,
+               &CQNewGLCameraControl::showSlot);
+    disconnect(followCheck_, &QCheckBox::stateChanged, this,
+               &CQNewGLCameraControl::followSlot);
+    disconnect(eyelineCheck_, &QCheckBox::stateChanged, this,
+               &CQNewGLCameraControl::eyelineSlot);
+
+    disconnect(orthoCheck_, SIGNAL(stateChanged(int)), this, SLOT(orthoSlot(int)));
+
+    disconnect(camerasList_, &QListWidget::currentItemChanged,
+               this, &CQNewGLCameraControl::cameraSelectedSlot);
+
+    disconnect(updateCurrentCheck_, &QCheckBox::stateChanged, this,
+               &CQNewGLCameraControl::updateCurrentSlot);
+
     disconnect(rotateCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::rotateSlot);
+    disconnect(rotateAtCombo_, SIGNAL(currentIndexChanged(int)), this, SLOT(rotateAtSlot(int)));
+    disconnect(strafeCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::strafeSlot);
+
     disconnect(zoomEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::zoomSlot);
     disconnect(nearEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::nearSlot);
     disconnect(farEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::farSlot);
     disconnect(yawEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::yawSlot);
     disconnect(pitchEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::pitchSlot);
     disconnect(rollEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::rollSlot);
-    disconnect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLCameraControl::posSlot);
-    disconnect(resetButton_, &QPushButton::clicked, this, &CQNewGLCameraControl::resetSlot);
+
+    disconnect(speedEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::speedSlot);
+
+    disconnect(originEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLCameraControl::originSlot);
+    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLCameraControl::positionSlot);
+    disconnect(upEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLCameraControl::upSlot);
+    disconnect(rightEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLCameraControl::rightSlot);
+
+    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(colorSlot(const QColor &)));
   }
 }
 
@@ -789,7 +931,71 @@ CQNewGLCamera *
 CQNewGLCameraControl::
 camera() const
 {
-  return canvas()->camera();
+  if (updateCurrent_)
+    return canvas()->getCurrentCamera();
+  else
+    return canvas()->getCamera(currentCamera_);
+}
+
+void
+CQNewGLCameraControl::
+showSlot(int b)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowCameras(b);
+  canvas->update();
+}
+
+void
+CQNewGLCameraControl::
+followSlot(int b)
+{
+  auto *canvas = this->canvas();
+
+  camera()->setFollowObject(b);
+  canvas->update();
+}
+
+void
+CQNewGLCameraControl::
+eyelineSlot(int b)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowEyeline(b);
+}
+
+void
+CQNewGLCameraControl::
+orthoSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setOrtho(state);
+}
+
+void
+CQNewGLCameraControl::
+cameraSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+{
+  auto *canvas = this->canvas();
+
+  currentCamera_ = item->data(Qt::UserRole).toInt();
+
+  if (updateCurrent_)
+    canvas->setCurrentCamera(currentCamera_);
+
+  updateWidgets();
+
+  canvas->update();
+}
+
+void
+CQNewGLCameraControl::
+updateCurrentSlot(int b)
+{
+  updateCurrent_ = b;
 }
 
 void
@@ -812,7 +1018,24 @@ void
 CQNewGLCameraControl::
 rotateSlot(int b)
 {
-  camera()->setRotate(b);
+  canvas()->setCameraRotate(b);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+rotateAtSlot(int i)
+{
+  canvas()->setCameraRotateAt(i == 0 ?
+    CQNewGLCamera::RotateAt::POSITION : CQNewGLCamera::RotateAt::ORIGIN);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+strafeSlot(int b)
+{
+  camera()->setStrafe(b);
   canvas()->update();
 }
 
@@ -850,12 +1073,81 @@ rollSlot(double r)
 
 void
 CQNewGLCameraControl::
-posSlot()
+speedSlot(double r)
 {
-  auto p = posEdit_->getValue();
+  camera()->setMovementSpeed(r);
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+originSlot()
+{
+  auto p = originEdit_->getValue();
+
+  camera()->setOrigin(CGLVector3D(p.x, p.y, p.z));
+
+  canvas()->updateCameraBuffer();
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+positionSlot()
+{
+  auto p = positionEdit_->getValue();
 
   camera()->setPosition(CGLVector3D(p.x, p.y, p.z));
+
+  canvas()->updateCameraBuffer();
   canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+upSlot()
+{
+  auto p = upEdit_->getValue();
+
+  camera()->setUp(CGLVector3D(p.x, p.y, p.z));
+
+  canvas()->updateCameraBuffer();
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+rightSlot()
+{
+  auto p = rightEdit_->getValue();
+
+  camera()->setRight(CGLVector3D(p.x, p.y, p.z));
+
+  canvas()->updateCameraBuffer();
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+colorSlot(const QColor &c)
+{
+  camera()->setColor(c);
+
+  canvas()->updateCameraBuffer();
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+addSlot()
+{
+  auto *canvas = this->canvas();
+
+  canvas->addCamera();
+
+  control_->updateCameras();
+
+  canvas->update();
 }
 
 void
@@ -868,15 +1160,65 @@ resetSlot()
 
 void
 CQNewGLCameraControl::
+initSlot()
+{
+  canvas()->resetCamera();
+  canvas()->update();
+}
+
+void
+CQNewGLCameraControl::
+invalidateCameras()
+{
+  camerasInvalid_ = true;
+}
+
+void
+CQNewGLCameraControl::
 updateWidgets()
 {
-  connectSlots(false);
-
+  auto *canvas = this->canvas();
   auto *camera = this->camera();
+
+  connectSlots(false);
 
   //---
 
+  if (camerasInvalid_) {
+    camerasInvalid_ = false;
+
+    camerasList_->clear();
+
+    int ind = 0;
+
+    for (auto *camera : canvas->cameras()) {
+      const auto &name = camera->name();
+
+      auto *item = new QListWidgetItem(name);
+
+      camerasList_->addItem(item);
+
+      item->setData(Qt::UserRole, ind++);
+    }
+  }
+
+  //---
+
+  showCheck_->setChecked(canvas->isShowCameras());
+
+  followCheck_->setChecked(camera->isFollowObject());
+
+  eyelineCheck_->setChecked(canvas->isShowEyeline());
+
+  orthoCheck_->setChecked(canvas->isOrtho());
+
+  updateCurrentCheck_->setChecked(updateCurrent_);
+
   rotateCheck_->setChecked(camera->isRotate());
+
+  rotateAtCombo_->setCurrentIndex(camera->rotateAt() == CQNewGLCamera::RotateAt::POSITION ? 0 : 1);
+
+  strafeCheck_->setChecked(camera->isStrafe());
 
   zoomEdit_->setValue(camera->zoom());
 
@@ -887,19 +1229,268 @@ updateWidgets()
   pitchEdit_->setValue(camera->pitch());
   rollEdit_ ->setValue(camera->roll());
 
+  speedEdit_ ->setValue(camera->movementSpeed());
+
+  auto o = camera->origin();
+  originEdit_->setValue(CPoint3D(o.x(), o.y(), o.z()));
+
   auto p = camera->position();
-  posEdit_->setValue(CPoint3D(p.x(), p.y(), p.z()));
+  positionEdit_->setValue(CPoint3D(p.x(), p.y(), p.z()));
+
+  auto u = camera->up();
+  upEdit_->setValue(CPoint3D(u.x(), u.y(), u.z()));
+
+  auto r = camera->right();
+  rightEdit_->setValue(CPoint3D(r.x(), r.y(), r.z()));
+
+  //---
+
+  matrixEdit_->setValue(camera->getViewMatrix().toCMatrix());
+
+  colorEdit_->setColor(camera->color());
+
+  //---
 
   connectSlots(true);
 }
 
 //---
 
-CQNewGLLightControl::
-CQNewGLLightControl(CQNewGLControl *control) :
+CQNewGLNormalsControl::
+CQNewGLNormalsControl(CQNewGLControl *control) :
  CQNewGLControlFrame(control)
 {
   auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  auto addLabelEdit = [&](const QString &label, auto *w) {
+    auto *frame   = new QFrame;
+    auto *layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+
+    return w;
+  };
+
+  //---
+
+  show1Check_ = addLabelEdit("Show Normals", new QCheckBox);
+  show2Check_ = addLabelEdit("New Normals" , new QCheckBox);
+
+  //---
+
+  sizeEdit_  = addLabelEdit("Size" , new CQRealSpin);
+  colorEdit_ = addLabelEdit("Color", new CQColorEdit(this));
+
+  //---
+
+  tangentSpaceCheck_ = addLabelEdit("Tangent Space", new QCheckBox(this));
+
+  //---
+
+  layout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLNormalsControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(show1Check_, SIGNAL(stateChanged(int)), this, SLOT(show1Slot(int)));
+    connect(show2Check_, SIGNAL(stateChanged(int)), this, SLOT(show2Slot(int)));
+    connect(sizeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLNormalsControl::sizeSlot);
+    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(colorSlot(const QColor &)));
+    connect(tangentSpaceCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(tangentSpaceSlot(int)));
+  }
+  else {
+    disconnect(show1Check_, SIGNAL(stateChanged(int)), this, SLOT(show1Slot(int)));
+    disconnect(show2Check_, SIGNAL(stateChanged(int)), this, SLOT(show2Slot(int)));
+    disconnect(sizeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLNormalsControl::sizeSlot);
+    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(colorSlot(const QColor &)));
+    disconnect(tangentSpaceCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(tangentSpaceSlot(int)));
+  }
+}
+
+void
+CQNewGLNormalsControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas  = this->canvas();
+  auto *normals = canvas->getNormals();
+
+  show1Check_->setChecked(canvas->isShowNormals());
+  show2Check_->setChecked(normals->isVisible());
+
+  sizeEdit_ ->setValue(canvas->normalsSize());
+  colorEdit_->setColor(canvas->normalsColor());
+
+  tangentSpaceCheck_->setChecked(canvas->isTangentSpaceNormal());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLNormalsControl::
+show1Slot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowNormals(state);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLNormalsControl::
+show2Slot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *normals = canvas->getNormals();
+
+  normals->setVisible(state);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLNormalsControl::
+sizeSlot(double s)
+{
+  auto *canvas  = this->canvas();
+  auto *normals = canvas->getNormals();
+
+  canvas ->setNormalsSize(s);
+  normals->setLineSize(s);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLNormalsControl::
+colorSlot(const QColor &c)
+{
+  auto *canvas  = this->canvas();
+  auto *normals = canvas->getNormals();
+
+  canvas ->setNormalsColor(c);
+  normals->setLineColor(c);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLNormalsControl::
+tangentSpaceSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setTangentSpaceNormal(state);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+//---
+
+CQNewGLLightsControl::
+CQNewGLLightsControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  auto *materialGroup  = new QGroupBox("Material");
+  auto *materialLayout = new QVBoxLayout(materialGroup);
+
+  layout->addWidget(materialGroup);
+
+  //---
+
+  auto addMaterialLabelEdit = [&](const QString &label, QWidget *w) {
+    auto *frame   = new QFrame;
+    auto *layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    materialLayout->addWidget(frame);
+  };
+
+  //---
+
+  ambientEdit_ = new CQColorEdit(this);
+
+  addMaterialLabelEdit("Ambient", ambientEdit_);
+
+  //---
+
+  diffuseEdit_ = new CQColorEdit(this);
+
+  addMaterialLabelEdit("Diffuse", diffuseEdit_);
+
+  //---
+
+  emissionEdit_ = new CQColorEdit(this);
+
+  addMaterialLabelEdit("Emission", emissionEdit_);
+
+  //---
+
+  auto createSlider = [&](const QString &label, double min, double max, double value,
+                          const char *slotName) {
+    auto *slider = new CQRealSlider(Qt::Horizontal);
+
+    slider->setRange(min, max);
+    slider->setSingleStep((max - min)/100.0);
+    slider->setPageStep((max - min)/10.0);
+
+    slider->setLabel(label);
+    slider->setToolTip(label);
+    slider->setValue(value);
+
+    connect(slider, SIGNAL(valueChanged(double)), this, slotName);
+
+    return slider;
+  };
+
+  auto *app = control_->app();
+
+  auto *ambientSlider  = createSlider("Ambient" , 0.0, 1.0, app->ambientStrength(),
+                                      SLOT(ambientFactorSlot(double)));
+  auto *diffuseSlider  = createSlider("Diffuse" , 0.0, 1.0, app->diffuseStrength(),
+                                      SLOT(diffuseFactorSlot(double)));
+  auto *specularSlider = createSlider("Specular", 0.0, 1.0, app->specularStrength(),
+                                      SLOT(specularFactorSlot(double)));
+  auto *emissiveSlider = createSlider("Emissive", 0.0, 1.0, app->emissiveStrength(),
+                                      SLOT(emissiveFactorSlot(double)));
+
+  auto *shininessSlider = createSlider("Shininess", 0.0, 100.0, app->shininess(),
+                                       SLOT(shininessFactorSlot(double)));
+
+  materialLayout->addWidget(ambientSlider);
+  materialLayout->addWidget(diffuseSlider);
+  materialLayout->addWidget(specularSlider);
+  materialLayout->addWidget(emissiveSlider);
+  materialLayout->addWidget(shininessSlider);
 
   //---
 
@@ -926,13 +1517,32 @@ CQNewGLLightControl(CQNewGLControl *control) :
 
   //---
 
-  posEdit_ = new CQPoint3DEdit;
-  addLabelEdit("Position", posEdit_);
+  showCheck_ = new QCheckBox;
+  addLabelEdit("Show", showCheck_);
 
   //---
 
+  typeCombo_ = new QComboBox;
+  typeCombo_->addItems(QStringList() << "Directional" << "Point" << "Spot");
+  addLabelEdit("Type", typeCombo_);
+
+  enabledCheck_ = new QCheckBox;
+  addLabelEdit("Enabled", enabledCheck_);
+
+  positionEdit_ = new CQPoint3DEdit;
+  addLabelEdit("Position", positionEdit_);
+
+  directionEdit_ = new CQPoint3DEdit;
+  addLabelEdit("Direction", directionEdit_);
+
   colorEdit_ = new CQColorEdit;
   addLabelEdit("Color", colorEdit_);
+
+  radiusEdit_ = new CQRealSpin;
+  addLabelEdit("Radius", radiusEdit_);
+
+  cutoffEdit_ = new CQRealSpin;
+  addLabelEdit("Cut Off", cutoffEdit_);
 
   //---
 
@@ -947,38 +1557,177 @@ CQNewGLLightControl(CQNewGLControl *control) :
 
   auto *addButton = new QPushButton("Add");
 
-  connect(addButton, &QPushButton::clicked, this, &CQNewGLLightControl::addSlot);
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLLightsControl::addSlot);
 
   buttonsLayout->addWidget(addButton);
   buttonsLayout->addStretch(1);
 }
 
 void
-CQNewGLLightControl::
+CQNewGLLightsControl::
+invalidateLights()
+{
+  lightsInvalid_ = true;
+}
+
+void
+CQNewGLLightsControl::
 connectSlots(bool b)
 {
   if (b) {
+    connect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(ambientSlot(const QColor &)));
+    connect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(diffuseSlot(const QColor &)));
+    connect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(emissionSlot(const QColor &)));
+
     connect(lightsList_, &QListWidget::currentItemChanged,
-            this, &CQNewGLLightControl::lightSelectedSlot);
+            this, &CQNewGLLightsControl::lightSelectedSlot);
 
-    connect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLLightControl::posSlot);
+    connect(showCheck_, &QCheckBox::stateChanged, this,
+            &CQNewGLLightsControl::showSlot);
 
+    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(typeSlot(int)));
+    connect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
+    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLLightsControl::positionSlot);
+    connect(directionEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLLightsControl::directionSlot);
     connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
             this, SLOT(colorSlot(const QColor &)));
+    connect(radiusEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLLightsControl::radiusSlot);
+    connect(cutoffEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLLightsControl::cutoffSlot);
   }
   else {
+    disconnect(ambientEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(ambientSlot(const QColor &)));
+    disconnect(diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(diffuseSlot(const QColor &)));
+    disconnect(emissionEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(emissionSlot(const QColor &)));
+
     disconnect(lightsList_, &QListWidget::currentItemChanged,
-               this, &CQNewGLLightControl::lightSelectedSlot);
+               this, &CQNewGLLightsControl::lightSelectedSlot);
 
-    disconnect(posEdit_, &CQPoint3DEdit::editingFinished, this, &CQNewGLLightControl::posSlot);
+    disconnect(showCheck_, &QCheckBox::stateChanged, this,
+               &CQNewGLLightsControl::showSlot);
 
+    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+               this, SLOT(typeSlot(int)));
+    disconnect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
+    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLLightsControl::positionSlot);
+    disconnect(directionEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLLightsControl::directionSlot);
     disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
                this, SLOT(colorSlot(const QColor &)));
+    disconnect(radiusEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLLightsControl::radiusSlot);
+    disconnect(cutoffEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLLightsControl::cutoffSlot);
   }
 }
 
 void
-CQNewGLLightControl::
+CQNewGLLightsControl::
+ambientSlot(const QColor &c)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setAmbientColor(c);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+diffuseSlot(const QColor &c)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setDiffuseColor(c);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+emissionSlot(const QColor &c)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setEmissionColor(c);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+ambientFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setAmbientStrength(v);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+diffuseFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setDiffuseStrength(v);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+specularFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setSpecularStrength(v);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+emissiveFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setEmissiveStrength(v);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+shininessFactorSlot(double v)
+{
+  auto *app    = control_->app();
+  auto *canvas = this->canvas();
+
+  app->setShininess(v);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+
+void
+CQNewGLLightsControl::
 lightSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
 {
   auto *canvas = this->canvas();
@@ -987,35 +1736,112 @@ lightSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
 
   canvas->setCurrentLight(ind);
 
-  updateWidgets(/*reload*/false);
+  updateWidgets();
 
   canvas->update();
 }
 
 void
-CQNewGLLightControl::
-posSlot()
+CQNewGLLightsControl::
+showSlot(int state)
 {
   auto *canvas = this->canvas();
+  canvas->setShowLights(state);
 
-  auto p = posEdit_->getValue();
-
-  canvas->setCurrentLightPos(CGLVector3D(p.x, p.y, p.z));
   canvas->update();
 }
 
 void
-CQNewGLLightControl::
+CQNewGLLightsControl::
+typeSlot(int ind)
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  if      (ind == 0)
+    light->setType(CQNewGLLight::Type::DIRECTIONAL);
+  else if (ind == 1)
+    light->setType(CQNewGLLight::Type::POINT);
+  else if (ind == 2)
+    light->setType(CQNewGLLight::Type::SPOT);
+
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+enabledSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  light->setEnabled(state);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+positionSlot()
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  auto p = positionEdit_->getValue();
+
+  light->setPosition(CGLVector3D(p.x, p.y, p.z));
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+directionSlot()
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  auto p = directionEdit_->getValue();
+
+  light->setDirection(CGLVector3D(p.x, p.y, p.z));
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
 colorSlot(const QColor &c)
 {
   auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
 
-  canvas->setCurrentLightColor(c);
+  light->setColor(c);
+
+  canvas->updateLightBuffer();
   canvas->update();
 }
 
 void
-CQNewGLLightControl::
+CQNewGLLightsControl::
+radiusSlot(double r)
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  light->setRadius(r);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
+cutoffSlot(double r)
+{
+  auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+
+  light->setCutoff(r);
+  canvas->update();
+}
+
+void
+CQNewGLLightsControl::
 addSlot()
 {
   auto *canvas = this->canvas();
@@ -1028,8 +1854,8 @@ addSlot()
 }
 
 void
-CQNewGLLightControl::
-updateWidgets(bool reload)
+CQNewGLLightsControl::
+updateWidgets()
 {
   auto *canvas = this->canvas();
 
@@ -1037,13 +1863,19 @@ updateWidgets(bool reload)
 
   //---
 
-  if (reload) {
+  ambientEdit_ ->setColor(canvas->ambientColor());
+  diffuseEdit_ ->setColor(canvas->diffuseColor());
+  emissionEdit_->setColor(canvas->emissionColor());
+
+  if (lightsInvalid_) {
+    lightsInvalid_ = false;
+
     lightsList_->clear();
 
     int ind = 0;
 
     for (auto *light : canvas->lights()) {
-      auto name = light->name;
+      const auto &name = light->name();
 
       auto *item = new QListWidgetItem(name);
 
@@ -1055,12 +1887,371 @@ updateWidgets(bool reload)
 
   //---
 
-  auto p = canvas->currentLightPos();
-  posEdit_->setValue(CPoint3D(p.x(), p.y(), p.z()));
+  showCheck_->setChecked(canvas->isShowLights());
 
-  colorEdit_->setColor(canvas->currentLightColor());
+  //---
+
+  auto *light = canvas->getCurrentLight();
+
+  typeCombo_    ->setCurrentIndex(static_cast<int>(light->type()));
+  enabledCheck_ ->setChecked(light->isEnabled());
+  positionEdit_ ->setValue(light->position().point());
+  directionEdit_->setValue(light->direction().point());
+  colorEdit_    ->setColor(light->color());
+  radiusEdit_   ->setValue(light->radius());
+  cutoffEdit_   ->setValue(light->cutoff());
+
+  //---
 
   connectSlots(true);
+}
+
+//---
+
+CQNewGLAxesControl::
+CQNewGLAxesControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  axisCheck_ = new QCheckBox("Show Axis");
+
+  layout->addWidget(axisCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLAxesControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(axisCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+  else {
+    disconnect(axisCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+}
+
+void
+CQNewGLAxesControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *axes   = canvas->getAxes();
+
+  axisCheck_->setChecked(axes->isVisible());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLAxesControl::
+showSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *axes   = canvas->getAxes();
+
+  axes->setVisible(state);
+  canvas->update();
+}
+
+//---
+
+CQNewGLBBoxControl::
+CQNewGLBBoxControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  showCheck_ = new QCheckBox("Show BBox");
+
+  layout->addWidget(showCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLBBoxControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+  else {
+    disconnect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+}
+
+void
+CQNewGLBBoxControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *bbox   = canvas->getBBox();
+
+  showCheck_->setChecked(bbox->isVisible());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLBBoxControl::
+showSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *bbox   = canvas->getBBox();
+
+  bbox->setVisible(state);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+//---
+
+CQNewGLHullControl::
+CQNewGLHullControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  showCheck_ = new QCheckBox("Show Hull");
+
+  layout->addWidget(showCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLHullControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+  else {
+    disconnect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+  }
+}
+
+void
+CQNewGLHullControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *hull   = canvas->getHull();
+
+  showCheck_->setChecked(hull->isVisible());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLHullControl::
+showSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *hull   = canvas->getHull();
+
+  hull->setVisible(state);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+//---
+
+CQNewGLBasisControl::
+CQNewGLBasisControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //---
+
+  auto addLabelEdit = [&](const QString &label, auto *w) {
+    auto *layout1 = new QHBoxLayout;
+
+    layout->addLayout(layout1);
+
+    auto *labelW = new QLabel(label);
+
+    layout1->addWidget(labelW);
+    layout1->addWidget(w);
+
+    return w;
+  };
+
+  showCheck_ = addLabelEdit("Show Basis", new QCheckBox);
+
+  sizeEdit_  = addLabelEdit("Size" , new CQRealSpin);
+  widthEdit_ = addLabelEdit("Width", new CQRealSpin);
+
+  basisUEdit_ = addLabelEdit("U (Right)"  , new CQPoint3DEdit);
+  basisVEdit_ = addLabelEdit("V (Up)"     , new CQPoint3DEdit);
+  basisWEdit_ = addLabelEdit("W (Forward)", new CQPoint3DEdit);
+
+  layout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+
+  //---
+
+  updateWidgets();
+}
+
+void
+CQNewGLBasisControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(canvas(), SIGNAL(currentObjectChanged()), this, SLOT(updateWidgets()));
+
+    connect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+    connect(sizeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLBasisControl::sizeSlot);
+    connect(widthEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLBasisControl::widthSlot);
+
+    connect(basisUEdit_, SIGNAL(editingFinished()), this, SLOT(basisUSlot()));
+    connect(basisVEdit_, SIGNAL(editingFinished()), this, SLOT(basisVSlot()));
+    connect(basisWEdit_, SIGNAL(editingFinished()), this, SLOT(basisWSlot()));
+  }
+  else {
+    disconnect(canvas(), SIGNAL(currentObjectChanged()), this, SLOT(updateWidgets()));
+
+    disconnect(showCheck_, SIGNAL(stateChanged(int)), this, SLOT(showSlot(int)));
+    disconnect(sizeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLBasisControl::sizeSlot);
+    disconnect(widthEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLBasisControl::widthSlot);
+
+    disconnect(basisUEdit_, SIGNAL(editingFinished()), this, SLOT(basisUSlot()));
+    disconnect(basisVEdit_, SIGNAL(editingFinished()), this, SLOT(basisVSlot()));
+    disconnect(basisWEdit_, SIGNAL(editingFinished()), this, SLOT(basisWSlot()));
+  }
+}
+
+void
+CQNewGLBasisControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+
+  showCheck_->setChecked(canvas->isShowBasis());
+  sizeEdit_ ->setValue(canvas->basisLineSize());
+  widthEdit_->setValue(canvas->basisLineWidth());
+
+  auto *object = canvas->getCurrentObject();
+
+  if (object) {
+    CVector3D u, v, w;
+    object->getBasis(u, v, w);
+
+    basisUEdit_->setValue(CPoint3D(u.getX(), u.getY(), u.getZ()));
+    basisVEdit_->setValue(CPoint3D(v.getX(), v.getY(), v.getZ()));
+    basisWEdit_->setValue(CPoint3D(w.getX(), w.getY(), w.getZ()));
+  }
+  else {
+    basisUEdit_->setValue(CPoint3D(1, 0, 0));
+    basisVEdit_->setValue(CPoint3D(0, 1, 0));
+    basisWEdit_->setValue(CPoint3D(0, 0, 1));
+
+  }
+
+  connectSlots(true);
+}
+
+void
+CQNewGLBasisControl::
+showSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowBasis(state);
+  canvas->update();
+}
+
+void
+CQNewGLBasisControl::
+sizeSlot(double s)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setBasisLineSize(s);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLBasisControl::
+widthSlot(double w)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setBasisLineWidth(w);
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLBasisControl::
+basisUSlot()
+{
+  auto *canvas = this->canvas();
+
+  auto *object = canvas->getCurrentObject();
+  if (! object) return;
+
+  auto u1 = basisUEdit_->getValue();
+  auto v1 = basisVEdit_->getValue();
+  auto w1 = basisWEdit_->getValue();
+
+  object->setBasis(CVector3D(u1), CVector3D(v1), CVector3D(w1));
+
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLBasisControl::
+basisVSlot()
+{
+  basisUSlot();
+}
+
+void
+CQNewGLBasisControl::
+basisWSlot()
+{
+  basisUSlot();
 }
 
 //---
@@ -1085,65 +2276,69 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
   auto *controlFrame  = new QFrame;
   auto *controlLayout = new QHBoxLayout(controlFrame);
 
+  auto addControlSpacer = [&](int w) {
+    auto *spacer = new QFrame;
+    spacer->setFixedWidth(w);
+    controlLayout->addWidget(spacer);
+  };
+
   selectButton_   = new QPushButton("Select");
   deselectButton_ = new QPushButton("Deselect");
-  showButton_     = new QPushButton("Show");
-  hideButton_     = new QPushButton("Hide");
+
+  controlLayout->addWidget(selectButton_);
+  controlLayout->addWidget(deselectButton_);
+
+  addControlSpacer(8);
+
+  showButton_ = new QPushButton("Show");
+  hideButton_ = new QPushButton("Hide");
 
   showButton_->setEnabled(false);
   hideButton_->setEnabled(false);
 
-  controlLayout->addWidget(selectButton_);
-  controlLayout->addWidget(deselectButton_);
   controlLayout->addWidget(showButton_);
   controlLayout->addWidget(hideButton_);
+
+  addControlSpacer(8);
+
+  currentButton_ = new QPushButton("Current");
+
+  currentButton_->setEnabled(false);
+
+  controlLayout->addWidget(currentButton_);
+
   controlLayout->addStretch(1);
 
   groupLayout->addWidget(controlFrame);
 
   //---
 
-  auto createPointEdit = [&](const QString &label) {
+  auto addLabelEdit = [&](const QString &label, auto *w) {
     auto *layout1 = new QHBoxLayout;
 
     layout->addLayout(layout1);
 
     auto *labelW = new QLabel(label);
-    auto *edit   = new CQPoint3DEdit;
 
     layout1->addWidget(labelW);
-    layout1->addWidget(edit);
+    layout1->addWidget(w);
 
-    return edit;
+    return w;
   };
 
   auto createTextureEdit = [&](const QString &label) {
-    auto *layout1 = new QHBoxLayout;
+    auto *edit = new CQNewGLTextureChooser(control_);
 
-    layout->addLayout(layout1);
-
-    auto *labelW = new QLabel(label);
-    auto *edit   = new CQNewGLTextureChooser(control_);
-
-    edit->updateWidgets();
-
-    layout1->addWidget(labelW);
-    layout1->addWidget(edit);
+    addLabelEdit(label, edit);
 
     return edit;
   };
 
 #if 0
   auto createStringEdit = [&](const QString &label) {
-    auto *layout1 = new QHBoxLayout;
+    auto *edit = new QLineEdit;
 
-    layout->addLayout(layout1);
-
-    auto *labelW = new QLabel(label);
-    auto *edit   = new QLineEdit;
-
-    layout1->addWidget(labelW);
-    layout1->addWidget(edit);
+    addLabelEdit(label, edit);
 
     return edit;
   };
@@ -1151,20 +2346,41 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
 
   //---
 
-  centerEdit_ = createPointEdit("Center");
-  sizeEdit_   = createPointEdit("Size"  );
+  centerEdit_ = addLabelEdit("Center", new CQPoint3DEdit);
+  sizeEdit_   = addLabelEdit("Size"  , new CQPoint3DEdit);
 
-  translateEdit_ = createPointEdit("Translate");
-  rotateEdit_    = createPointEdit("Rotate");
+#if 0
+  translateEdit_ = addLabelEdit("Translate", new CQPoint3DEdit);
+  rotateEdit_    = addLabelEdit("Rotate"   , new CQPoint3DEdit);
+#endif
 
-  diffuseMapEdit_  = createTextureEdit("Diffuse Map" );
-  normalMapEdit_   = createTextureEdit("Normal Map"  );
-  specularMapEdit_ = createTextureEdit("Specular Map");
-  emissiveMapEdit_ = createTextureEdit("Emissive Map");
+  //---
+
+  diffuseTextureEdit_  = createTextureEdit("Diffuse Map" );
+  normalTextureEdit_   = createTextureEdit("Normal Map"  );
+  specularTextureEdit_ = createTextureEdit("Specular Map");
+  emissiveTextureEdit_ = createTextureEdit("Emissive Map");
 
   //---
 
   layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *addButton   = new QPushButton("Add");
+  auto *resetButton = new QPushButton("Reset Transform");
+
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLObjectsControl::addSlot);
+  connect(resetButton, &QPushButton::clicked, this, &CQNewGLObjectsControl::resetSlot);
+
+  buttonsLayout->addWidget(addButton);
+  buttonsLayout->addWidget(resetButton);
+  buttonsLayout->addStretch(1);
 
   //---
 
@@ -1180,13 +2396,6 @@ updateWidgets()
   //---
 
   objectsList_->updateObjects();
-
-  //---
-
-  diffuseMapEdit_ ->updateWidgets();
-  normalMapEdit_  ->updateWidgets();
-  specularMapEdit_->updateWidgets();
-  emissiveMapEdit_->updateWidgets();
 
   //---
 
@@ -1207,17 +2416,20 @@ connectSlots(bool b)
     connect(deselectButton_, &QPushButton::clicked, this, &CQNewGLObjectsControl::deselectSlot);
     connect(showButton_    , &QPushButton::clicked, this, &CQNewGLObjectsControl::showSlot);
     connect(hideButton_    , &QPushButton::clicked, this, &CQNewGLObjectsControl::hideSlot);
+    connect(currentButton_ , &QPushButton::clicked, this, &CQNewGLObjectsControl::currentSlot);
 
     connect(centerEdit_, SIGNAL(editingFinished()), this, SLOT(centerSlot()));
     connect(sizeEdit_  , SIGNAL(editingFinished()), this, SLOT(sizeSlot()));
 
+#if 0
     connect(translateEdit_, SIGNAL(editingFinished()), this, SLOT(translateSlot()));
     connect(rotateEdit_, SIGNAL(editingFinished()), this, SLOT(rotateSlot()));
+#endif
 
-    connect(diffuseMapEdit_ , SIGNAL(textureChanged()), this, SLOT(diffuseMapSlot()));
-    connect(normalMapEdit_  , SIGNAL(textureChanged()), this, SLOT(normalMapSlot()));
-    connect(specularMapEdit_, SIGNAL(textureChanged()), this, SLOT(specularMapSlot()));
-    connect(emissiveMapEdit_, SIGNAL(textureChanged()), this, SLOT(emissiveMapSlot()));
+    connect(diffuseTextureEdit_ , SIGNAL(textureChanged()), this, SLOT(diffuseMapSlot()));
+    connect(normalTextureEdit_  , SIGNAL(textureChanged()), this, SLOT(normalMapSlot()));
+    connect(specularTextureEdit_, SIGNAL(textureChanged()), this, SLOT(specularMapSlot()));
+    connect(emissiveTextureEdit_, SIGNAL(textureChanged()), this, SLOT(emissiveMapSlot()));
   }
   else {
     disconnect(canvas(), SIGNAL(modelMatrixChanged()), this, SLOT(updateModelMatrix()));
@@ -1229,17 +2441,20 @@ connectSlots(bool b)
     disconnect(deselectButton_, &QPushButton::clicked, this, &CQNewGLObjectsControl::deselectSlot);
     disconnect(showButton_    , &QPushButton::clicked, this, &CQNewGLObjectsControl::showSlot);
     disconnect(hideButton_    , &QPushButton::clicked, this, &CQNewGLObjectsControl::hideSlot);
+    disconnect(currentButton_ , &QPushButton::clicked, this, &CQNewGLObjectsControl::currentSlot);
 
     disconnect(centerEdit_, SIGNAL(editingFinished()), this, SLOT(centerSlot()));
     disconnect(sizeEdit_  , SIGNAL(editingFinished()), this, SLOT(sizeSlot()));
 
+#if 0
     disconnect(translateEdit_, SIGNAL(editingFinished()), this, SLOT(translateSlot()));
     disconnect(rotateEdit_, SIGNAL(editingFinished()), this, SLOT(rotateSlot()));
+#endif
 
-    disconnect(diffuseMapEdit_ , SIGNAL(textureChanged()), this, SLOT(diffuseMapSlot()));
-    disconnect(normalMapEdit_  , SIGNAL(textureChanged()), this, SLOT(normalMapSlot()));
-    disconnect(specularMapEdit_, SIGNAL(textureChanged()), this, SLOT(specularMapSlot()));
-    disconnect(emissiveMapEdit_, SIGNAL(textureChanged()), this, SLOT(emissiveMapSlot()));
+    disconnect(diffuseTextureEdit_ , SIGNAL(textureChanged()), this, SLOT(diffuseMapSlot()));
+    disconnect(normalTextureEdit_  , SIGNAL(textureChanged()), this, SLOT(normalMapSlot()));
+    disconnect(specularTextureEdit_, SIGNAL(textureChanged()), this, SLOT(specularMapSlot()));
+    disconnect(emissiveTextureEdit_, SIGNAL(textureChanged()), this, SLOT(emissiveMapSlot()));
   }
 }
 
@@ -1249,11 +2464,13 @@ updateModelMatrix()
 {
   connectSlots(false);
 
+#if 0
   auto tv = canvas()->modelTranslate();
   auto rv = canvas()->modelRotate();
 
   translateEdit_->setValue(CPoint3D(tv.x(), tv.y(), tv.z()));
   rotateEdit_   ->setValue(CPoint3D(rv.x(), rv.y(), rv.z()));
+#endif
 
   connectSlots(true);
 }
@@ -1271,18 +2488,7 @@ void
 CQNewGLObjectsControl::
 updateSelected(int ind)
 {
-  const auto &scene = canvas()->importBase()->getScene();
-
-  const auto &objects = scene.getObjects();
-
-  auto n = int(objects.size());
-
-  CGeomObject3D *object = nullptr;
-
-  for (int i = 0; i < n; ++i) {
-    if (i == ind)
-      object = objects[i];
-  }
+  auto *object = canvas()->getObject(ind);
 
   //---
 
@@ -1296,26 +2502,36 @@ updateSelected(int ind)
   showButton_->setEnabled(object && ! object->getVisible());
   hideButton_->setEnabled(object &&   object->getVisible());
 
+  currentButton_->setEnabled(object);
+
   //---
 
   if (object) {
-    centerEdit_ ->setValue(object->getModelCenter());
-    sizeEdit_   ->setValue(object->getModelSize().point());
+    auto bbox = canvas()->getObjectBBox(object);
+
+    centerEdit_->setValue(bbox.getCenter());
+    sizeEdit_  ->setValue(bbox.getSize().point());
   }
   else {
-    centerEdit_ ->setValue(CPoint3D(0, 0, 0));
-    sizeEdit_   ->setValue(CPoint3D(1, 1, 1));
+    centerEdit_->setValue(CPoint3D(0, 0, 0));
+    sizeEdit_  ->setValue(CPoint3D(1, 1, 1));
   }
+
+  //---
 
   auto *textureMap  = (object ? object->getDiffuseTexture () : nullptr);
   auto *normalMap   = (object ? object->getNormalTexture  () : nullptr);
   auto *specularMap = (object ? object->getSpecularTexture() : nullptr);
   auto *emissiveMap = (object ? object->getEmissiveTexture() : nullptr);
 
-  diffuseMapEdit_ ->setCurrentText(textureMap  ? QString::fromStdString(textureMap ->name()) : "");
-  normalMapEdit_  ->setCurrentText(normalMap   ? QString::fromStdString(normalMap  ->name()) : "");
-  specularMapEdit_->setCurrentText(specularMap ? QString::fromStdString(specularMap->name()) : "");
-  emissiveMapEdit_->setCurrentText(emissiveMap ? QString::fromStdString(emissiveMap->name()) : "");
+  diffuseTextureEdit_ ->setCurrentText(
+    textureMap  ? QString::fromStdString(textureMap ->name()) : "");
+  normalTextureEdit_  ->setCurrentText(
+    normalMap   ? QString::fromStdString(normalMap  ->name()) : "");
+  specularTextureEdit_->setCurrentText(
+    specularMap ? QString::fromStdString(specularMap->name()) : "");
+  emissiveTextureEdit_->setCurrentText(
+    emissiveMap ? QString::fromStdString(emissiveMap->name()) : "");
 
   canvas()->update();
   uvMap ()->update();
@@ -1370,7 +2586,7 @@ showSlot()
   if (object) {
     object->setVisible(true);
 
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
     canvas()->update();
 
     showButton_->setEnabled(false);
@@ -1383,37 +2599,98 @@ CQNewGLObjectsControl::
 hideSlot()
 {
   auto *object = getObjectListSelected();
+  if (! object) return;
 
-  if (object) {
-    object->setVisible(false);
+  object->setVisible(false);
 
-    canvas()->updateObjectData();
-    canvas()->update();
+  canvas()->updateObjectsData();
+  canvas()->update();
 
-    showButton_->setEnabled(true);
-    hideButton_->setEnabled(false);
-  }
+  showButton_->setEnabled(true);
+  hideButton_->setEnabled(false);
+}
+
+void
+CQNewGLObjectsControl::
+currentSlot()
+{
+  auto *object = getObjectListSelected();
+  if (! object) return;
+
+  canvas()->setCurrentObject(object);
 }
 
 void
 CQNewGLObjectsControl::
 centerSlot()
 {
+  auto *object = getObjectListSelected();
+  if (! object) return;
+
+  auto bbox = canvas()->getObjectBBox(object);
+
+  auto c1 = bbox.getCenter();
+  auto c2 = centerEdit_->getValue();
+
+  auto t = CMatrix3D::translation(c2.x - c1.x, c2.y - c1.y, c2.z - c1.z);
+
+  object->setTransform(t*object->getTransform());
+
+  canvas()->updateObjectsData();
+  canvas()->update();
+
+  //---
+
+  bbox = canvas()->getObjectBBox(object);
+
+  centerEdit_->setValue(bbox.getCenter());
+  sizeEdit_  ->setValue(bbox.getSize().point());
 }
 
 void
 CQNewGLObjectsControl::
 sizeSlot()
 {
+  auto *object = getObjectListSelected();
+  if (! object) return;
+
+  auto bbox = canvas()->getObjectBBox(object);
+
+  auto s1 = bbox.getSize().point();
+  auto s2 = sizeEdit_->getValue();
+
+  double f = 1.0;
+
+  auto dx = std::abs(s2.x - s1.x);
+  auto dy = std::abs(s2.y - s1.y);
+  auto dz = std::abs(s2.z - s1.z);
+
+  if      (dx > dy && dx > dz) f = s2.x/s1.x;
+  else if (dy > dz)            f = s2.y/s1.y;
+  else                         f = s2.z/s1.z;
+
+  auto s = CMatrix3D::scale(f, f, f);
+
+  object->setTransform(s*object->getTransform());
+
+  canvas()->updateObjectsData();
+  canvas()->update();
+
+  //---
+
+  bbox = canvas()->getObjectBBox(object);
+
+  centerEdit_->setValue(bbox.getCenter());
+  sizeEdit_  ->setValue(bbox.getSize().point());
 }
 
 void
 CQNewGLObjectsControl::
 translateSlot()
 {
-  auto p = translateEdit_->getValue();
+//auto p = translateEdit_->getValue();
+//canvas()->setModelTranslate(CVector3D(p.x, p.y, p.z));
 
-  canvas()->setModelTranslate(CVector3D(p.x, p.y, p.z));
   canvas()->update();
 }
 
@@ -1421,9 +2698,9 @@ void
 CQNewGLObjectsControl::
 rotateSlot()
 {
-  auto p = rotateEdit_->getValue();
+//auto p = rotateEdit_->getValue();
+//canvas()->setModelRotate(CVector3D(p.x, p.y, p.z));
 
-  canvas()->setModelRotate(CVector3D(p.x, p.y, p.z));
   canvas()->update();
 }
 
@@ -1442,7 +2719,7 @@ diffuseMapSlot()
   if (object) {
     object->setDiffuseTexture(texture);
 
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
     canvas()->update();
     uvMap ()->update();
   }
@@ -1463,7 +2740,7 @@ normalMapSlot()
   if (object) {
     object->setNormalTexture(texture);
 
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
     canvas()->update();
   }
 }
@@ -1483,7 +2760,7 @@ specularMapSlot()
   if (object) {
     object->setSpecularTexture(texture);
 
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
     canvas()->update();
   }
 }
@@ -1503,7 +2780,40 @@ emissiveMapSlot()
   if (object) {
     object->setEmissiveTexture(texture);
 
-    canvas()->updateObjectData();
+    canvas()->updateObjectsData();
+    canvas()->update();
+  }
+}
+
+void
+CQNewGLObjectsControl::
+addSlot()
+{
+//auto dir = QDir::current().dirName();
+  auto dir = canvas()->app()->buildDir() + "/models";
+
+  auto fileName = QFileDialog::getOpenFileName(this, "Open Model File", dir, "Files (*.*)");
+  if (! fileName.length()) return;
+
+  auto format = CImportBase::filenameToType(fileName.toStdString());
+
+  CQNewGLCanvas::LoadData loadData;
+
+  if (! canvas()->loadModel(fileName, format, loadData))
+    std::cerr << "Failed to load model '" << fileName.toStdString() << "'\n";
+
+  canvas()->updateModelData();
+  canvas()->update();
+}
+
+void
+CQNewGLObjectsControl::
+resetSlot()
+{
+  auto *object = getObjectListSelected();
+
+  if (object) {
+    object->setTransform(CMatrix3D::identity());
     canvas()->update();
   }
 }
@@ -1512,18 +2822,7 @@ CGeomObject3D *
 CQNewGLObjectsControl::
 getSelectedObject() const
 {
-  const auto &scene = canvas()->importBase()->getScene();
-
-  const auto &objects = scene.getObjects();
-
-  auto n = int(objects.size());
-
-  for (int i = 0; i < n; ++i) {
-    if (objects[i]->getSelected())
-      return objects[i];
-  }
-
-  return nullptr;
+  return canvas()->getSelectedObject();
 }
 
 CGeomObject3D *
@@ -1580,28 +2879,39 @@ CQNewGLTexturesControl(CQNewGLControl *control) :
 
 void
 CQNewGLTexturesControl::
+invalidateTextures()
+{
+  texturesInvalid_ = true;
+}
+
+void
+CQNewGLTexturesControl::
 updateWidgets()
 {
   connectSlots(false);
 
   auto *canvas = this->canvas();
 
-  texturesList_->clear();
+  if (texturesInvalid_) {
+    texturesInvalid_ = false;
 
-  int ind = 0;
+    texturesList_->clear();
 
-  const auto &textures = canvas->glTextures();
+    int ind = 0;
 
-  for (const auto &pr : textures) {
-    const auto &textureData = pr.second;
+    const auto &textures = canvas->glTextures();
 
-    auto objectName = QString::fromStdString(textureData.glTexture->getName());
+    for (const auto &pr : textures) {
+      const auto &textureData = pr.second;
 
-    auto *item = new QListWidgetItem(objectName);
+      auto objectName = QString::fromStdString(textureData.glTexture->getName());
 
-    texturesList_->addItem(item);
+      auto *item = new QListWidgetItem(objectName);
 
-    item->setData(Qt::UserRole, ind++);
+      texturesList_->addItem(item);
+
+      item->setData(Qt::UserRole, ind++);
+    }
   }
 
   connectSlots(true);
@@ -1634,6 +2944,29 @@ textureSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
   textureInd_ = item->data(Qt::UserRole).toInt();
 
   image_->update();
+}
+
+QString
+CQNewGLTexturesControl::
+textureName() const
+{
+  auto *canvas = this->canvas();
+
+  const auto &textures = canvas->glTextures();
+
+  int ind = 0;
+
+  for (const auto &pr : textures) {
+    if (ind == textureInd_) {
+      const auto &textureData = pr.second;
+
+      return QString::fromStdString(textureData.glTexture->getName());
+    }
+
+    ++ind;
+  }
+
+  return "";
 }
 
 //---
@@ -1727,7 +3060,7 @@ paintEvent(QPaintEvent *)
 
   int i = 0;
 
-  CGLTexture *texture = nullptr;
+  CQGLTexture *texture = nullptr;
 
   for (const auto &pr : textures) {
     const auto &textureData = pr.second;
@@ -1743,14 +3076,13 @@ paintEvent(QPaintEvent *)
   if (! texture)
     return;
 
-  auto *qimage = dynamic_cast<CQImage *>(texture->getImage().get());
+  const auto &qimage = texture->getImage();
 
-  auto qimage1 = qimage->getQImage().scaled(256, 256,
+  auto qimage1 = qimage.scaled(256, 256,
     Qt::KeepAspectRatio, Qt::FastTransformation);
 
   p.drawImage(0, 0, qimage1);
 }
-
 
 //---
 
@@ -1759,13 +3091,55 @@ CQNewGLTextureChooser(CQNewGLControl *control) :
  control_(control)
 {
   connectSlots(true);
+
+  auto *canvas = control_->canvas();
+
+  connect(canvas, SIGNAL(textureAdded()), this, SLOT(needsUpdateSlot()));
+}
+
+void
+CQNewGLTextureChooser::
+needsUpdateSlot()
+{
+  needsUpdate_ = true;
+
+  updateWidgets();
+}
+
+void
+CQNewGLTextureChooser::
+setTextureName(const QString &name)
+{
+  auto *canvas = control_->canvas();
+
+  const auto &textures = canvas->glTextures();
+
+  int ind = 0;
+
+  for (const auto &pr : textures) {
+    const auto &textureData = pr.second;
+
+    if (QString::fromStdString(textureData.glTexture->getName()) == name) {
+      setCurrentIndex(ind + 1);
+      return;
+    }
+
+    ++ind;
+  }
+
+  setCurrentIndex(0);
 }
 
 void
 CQNewGLTextureChooser::
 updateWidgets()
 {
+  if (! needsUpdate_)
+    return;
+
   connectSlots(false);
+
+  int currentInd = currentIndex();
 
   auto *canvas = control_->canvas();
 
@@ -1784,6 +3158,8 @@ updateWidgets()
 
     addItem(objectName, QVariant(ind++));
   }
+
+  setCurrentIndex(currentInd);
 
   connectSlots(true);
 }
@@ -1918,7 +3294,7 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   //---
 
-  auto addLabelEdit = [&](const QString &label, QWidget *w) {
+  auto addLabelEdit = [&](const QString &label, auto *w) {
     auto *frame   = new QFrame;
     auto *layout1 = new QHBoxLayout(frame);
 
@@ -1926,6 +3302,8 @@ CQNewGLAnimControl(CQNewGLControl *control) :
     layout1->addWidget(w);
 
     layout->addWidget(frame);
+
+    return w;
   };
 
   //---
@@ -1948,6 +3326,14 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   //---
 
+  showBonePointsCheck_ = new QCheckBox("Show Bone Points");
+
+  showBonePointsCheck_->setChecked(canvas()->isShowBonePoints());
+
+  layout->addWidget(showBonePointsCheck_);
+
+  //---
+
 //objectsList_ = new CQNewGLObjectsList(control);
 
 //layout->addWidget(objectsList_);
@@ -1959,8 +3345,7 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   //---
 
-  timeEdit_ = new CQRealSpin;
-  addLabelEdit("Time", timeEdit_);
+  timeEdit_ = addLabelEdit("Time", new CQRealSpin);
 
   //---
 
@@ -2001,9 +3386,9 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   connectSlots(true);
 
-  timer_ = new QTimer;
+  //---
 
-  connect(timer_, &QTimer::timeout, this, &CQNewGLAnimControl::timerSlot);
+  connect(canvas(), SIGNAL(timerStep()), this, SLOT(timerSlot()));
 }
 
 #if 0
@@ -2061,6 +3446,15 @@ updateWidgets()
 
   timeEdit_->setRange(tmin, tmax);
 
+  //---
+
+  timeEdit_   ->setEnabled(false);
+  playButton_ ->setEnabled(false);
+  pauseButton_->setEnabled(false);
+  stepButton_ ->setEnabled(false);
+
+  //---
+
   connectSlots(true);
 }
 
@@ -2074,6 +3468,8 @@ connectSlots(bool b)
 
     connect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
     connect(bonesCheck_, SIGNAL(stateChanged(int)), this, SLOT(bonesSlot(int)));
+    connect(showBonePointsCheck_, SIGNAL(stateChanged(int)), this, SLOT(showBonePointsSlot(int)));
+
     connect(bonesTransform_, SIGNAL(currentIndexChanged(int)),
             this, SLOT(bonesTransformSlot(int)));
     connect(nameCombo_, SIGNAL(currentIndexChanged(int)), this, SLOT(nameChanged(int)));
@@ -2085,6 +3481,9 @@ connectSlots(bool b)
 
     disconnect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
     disconnect(bonesCheck_, SIGNAL(stateChanged(int)), this, SLOT(bonesSlot(int)));
+    disconnect(showBonePointsCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(showBonePointsSlot(int)));
+
     disconnect(bonesTransform_, SIGNAL(currentIndexChanged(int)),
                this, SLOT(bonesTransformSlot(int)));
     disconnect(nameCombo_, SIGNAL(currentIndexChanged(int)), this, SLOT(nameChanged(int)));
@@ -2099,7 +3498,7 @@ enabledSlot(int state)
   auto *canvas = control_->canvas();
 
   canvas->setAnimEnabled(state);
-  canvas->updateObjectData();
+  canvas->updateObjectsData();
   canvas->update();
 }
 
@@ -2110,7 +3509,19 @@ bonesSlot(int state)
   auto *canvas = control_->canvas();
 
   canvas->setBonesEnabled(state);
-  canvas->updateObjectData();
+  canvas->updateObjectsData();
+  canvas->update();
+}
+
+void
+CQNewGLAnimControl::
+showBonePointsSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setShowBonePoints(state);
+
+  canvas->updateObjectsData();
   canvas->update();
 }
 
@@ -2127,7 +3538,7 @@ bonesTransformSlot(int ind)
   else if (ind == 2)
     canvas->setBonesTransform(CQNewGLCanvas::BonesTransform::GLOBAL);
 
-  canvas->updateObjectData();
+  canvas->updateObjectsData();
   canvas->update();
 }
 
@@ -2149,8 +3560,13 @@ nameChanged(int ind)
   auto *canvas = control_->canvas();
 
   canvas->setAnimName(name);
-  canvas->updateObjectData();
+  canvas->updateObjectsData();
   canvas->update();
+
+  timeEdit_   ->setEnabled(name != "");
+  playButton_ ->setEnabled(name != "");
+  pauseButton_->setEnabled(name != "");
+  stepButton_ ->setEnabled(name != "");
 }
 
 void
@@ -2160,6 +3576,10 @@ timeSlot(double t)
   auto *canvas = control_->canvas();
 
   canvas->setTime(t);
+
+  if (canvas->isShowBonePoints())
+    canvas->updateObjectsData();
+
   canvas->update();
 }
 
@@ -2169,14 +3589,14 @@ playSlot()
 {
   step();
 
-  timer_->start(100);
+  running_ = true;
 }
 
 void
 CQNewGLAnimControl::
 pauseSlot()
 {
-  timer_->stop();
+  running_ = false;
 }
 
 void
@@ -2190,7 +3610,8 @@ void
 CQNewGLAnimControl::
 timerSlot()
 {
-  step();
+  if (running_)
+    step();
 }
 
 void
@@ -2218,6 +3639,8 @@ CQNewGLBonesControl(CQNewGLControl *control) :
 {
   auto *layout = new QVBoxLayout(this);
 
+  //--
+
   auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
     auto *frame = new QFrame;
 
@@ -2233,7 +3656,7 @@ CQNewGLBonesControl(CQNewGLControl *control) :
     layout->addWidget(frame);
   };
 
-  //---
+  //--
 
   bonesList_ = new QListWidget;
 
@@ -2385,18 +3808,7 @@ CGeomObject3D *
 CQNewGLBonesControl::
 getBonesObject() const
 {
-  const auto &scene = canvas()->importBase()->getScene();
-
-  const auto &objects = scene.getObjects();
-
-  auto n = int(objects.size());
-
-  for (int i = 0; i < n; ++i) {
-    if (! objects[i]->getNodes().empty())
-      return objects[i];
-  }
-
-  return nullptr;
+  return canvas()->getBonesObject();
 }
 
 void
@@ -2466,7 +3878,7 @@ updateApp()
   if (app->isShowBone()) {
     auto *canvas = control_->canvas();
 
-    canvas->updateObjectData();
+    canvas->updateObjectsData();
     canvas->update();
   }
 }
@@ -2552,17 +3964,1474 @@ animTimeSlot(double t)
 
 //---
 
+CQNewGLTerrainControl::
+CQNewGLTerrainControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  //--
+
+  typeCombo_ = new QComboBox;
+  typeCombo_->addItems(QStringList() << "Noise" << "Water Surface");
+  addLabelEdit("Type", typeCombo_ );
+
+  widthEdit_ = new CQRealSpin;
+  addLabelEdit("Width", widthEdit_ );
+
+  heightEdit_ = new CQRealSpin;
+  addLabelEdit("Height", heightEdit_);
+
+  gridSizeEdit_ = new CQIntegerSpin;
+  addLabelEdit("Grid Size", gridSizeEdit_);
+
+  textureCheck_ = new QCheckBox;
+  addLabelEdit("Textured", textureCheck_);
+
+  gridCheck_ = new QCheckBox;
+  addLabelEdit("Show Grid", gridCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *generateButton = new QPushButton("Generate");
+
+  connect(generateButton, &QPushButton::clicked, this, &CQNewGLTerrainControl::generateSlot);
+
+  buttonsLayout->addWidget(generateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLTerrainControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(typeSlot(int)));
+    connect(widthEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLTerrainControl::widthSlot);
+    connect(heightEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLTerrainControl::heightSlot);
+    connect(gridSizeEdit_, SIGNAL(valueChanged(int)),
+            this, SLOT(gridSizeSlot(int)));
+    connect(textureCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(textureSlot(int)));
+    connect(gridCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(gridSlot(int)));
+  }
+  else {
+    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+               this, SLOT(typeSlot(int)));
+    disconnect(widthEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLTerrainControl::widthSlot);
+    disconnect(heightEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLTerrainControl::heightSlot);
+    disconnect(gridSizeEdit_, SIGNAL(valueChanged(int)),
+               this, SLOT(gridSizeSlot(int)));
+    disconnect(textureCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(textureSlot(int)));
+    disconnect(gridCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(gridSlot(int)));
+  }
+}
+
+void
+CQNewGLTerrainControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  widthEdit_ ->setValue(terrain->width ());
+  heightEdit_->setValue(terrain->height());
+
+  gridSizeEdit_->setValue(terrain->gridSize());
+
+  textureCheck_->setChecked(terrain->isTextured());
+
+  gridCheck_->setChecked(terrain->isWireframe());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLTerrainControl::
+typeSlot(int ind)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setType(ind == 0 ? CQNewGLTerrain::Type::NOISE : CQNewGLTerrain::Type::WATER_SURFACE);
+}
+
+void
+CQNewGLTerrainControl::
+widthSlot(double r)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setWidth(r);
+}
+
+void
+CQNewGLTerrainControl::
+heightSlot(double r)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setHeight(r);
+}
+
+void
+CQNewGLTerrainControl::
+gridSizeSlot(int i)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setGridSize(i);
+}
+
+void
+CQNewGLTerrainControl::
+textureSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setTextured(state);
+  canvas->update();
+}
+
+void
+CQNewGLTerrainControl::
+gridSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+
+  terrain->setWireframe(state);
+  canvas->update();
+}
+
+void
+CQNewGLTerrainControl::
+generateSlot()
+{
+  auto *canvas = this->canvas();
+
+  canvas->updateTerrain();
+  canvas->update();
+}
+
+//---
+
+CQNewGLMazeControl::
+CQNewGLMazeControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  widthEdit_ = new CQRealSpin;
+  addLabelEdit("Width", widthEdit_ );
+
+  heightEdit_ = new CQRealSpin;
+  addLabelEdit("Height", heightEdit_);
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *generateButton = new QPushButton("Generate");
+
+  connect(generateButton, &QPushButton::clicked, this, &CQNewGLMazeControl::generateSlot);
+
+  buttonsLayout->addWidget(generateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLMazeControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(widthEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLMazeControl::widthSlot);
+    connect(heightEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLMazeControl::heightSlot);
+  }
+  else {
+    disconnect(widthEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLMazeControl::widthSlot);
+    disconnect(heightEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLMazeControl::heightSlot);
+  }
+}
+
+void
+CQNewGLMazeControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *maze   = canvas->getMaze();
+
+  widthEdit_ ->setValue(maze->width ());
+  heightEdit_->setValue(maze->height());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLMazeControl::
+widthSlot(double r)
+{
+  auto *canvas = this->canvas();
+  auto *maze   = canvas->getMaze();
+
+  maze->setWidth(r);
+}
+
+void
+CQNewGLMazeControl::
+heightSlot(double r)
+{
+  auto *canvas = this->canvas();
+  auto *maze   = canvas->getMaze();
+
+  maze->setHeight(r);
+}
+
+void
+CQNewGLMazeControl::
+generateSlot()
+{
+  auto *canvas = this->canvas();
+
+  canvas->updateMaze();
+  canvas->update();
+}
+
+//---
+
+CQNewGLSkyboxControl::
+CQNewGLSkyboxControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  dirNameEdit_ = new QLineEdit;
+  addLabelEdit("Directory", dirNameEdit_);
+
+  widthEdit_ = new CQRealSpin;
+  addLabelEdit("Width", widthEdit_);
+
+  wireframeCheck_ = new QCheckBox;
+  addLabelEdit("Wireframe", wireframeCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *generateButton = new QPushButton("Generate");
+
+  connect(generateButton, &QPushButton::clicked, this, &CQNewGLSkyboxControl::generateSlot);
+
+  buttonsLayout->addWidget(generateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLSkyboxControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(dirNameEdit_, SIGNAL(editingFinished()),
+            this, SLOT(dirNameSlot()));
+    connect(widthEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLSkyboxControl::widthSlot);
+    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(wireframeSlot(int)));
+  }
+  else {
+    disconnect(dirNameEdit_, SIGNAL(editingFinished()),
+               this, SLOT(dirNameSlot()));
+    disconnect(widthEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLSkyboxControl::widthSlot);
+    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(wireframeSlot(int)));
+  }
+}
+
+void
+CQNewGLSkyboxControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *skybox = canvas->getSkybox();
+
+  dirNameEdit_   ->setText(skybox->dirName());
+  widthEdit_     ->setValue(skybox->width());
+  wireframeCheck_->setChecked(skybox->isWireframe());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLSkyboxControl::
+dirNameSlot()
+{
+  auto *canvas = this->canvas();
+  auto *skybox = canvas->getSkybox();
+
+  skybox->setDirName(dirNameEdit_->text());
+}
+
+void
+CQNewGLSkyboxControl::
+widthSlot(double w)
+{
+  auto *canvas = this->canvas();
+  auto *skybox = canvas->getSkybox();
+
+  skybox->setWidth(w);
+}
+
+void
+CQNewGLSkyboxControl::
+wireframeSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *skybox = canvas->getSkybox();
+
+  skybox->setWireframe(state);
+  canvas->update();
+}
+
+void
+CQNewGLSkyboxControl::
+generateSlot()
+{
+  auto *canvas = this->canvas();
+
+  canvas->updateSkybox();
+  canvas->update();
+}
+
+//---
+
+CQNewGLEmitterControl::
+CQNewGLEmitterControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  emitterList_ = new QListWidget;
+
+  emitterList_->setSelectionMode(QListWidget::SingleSelection);
+
+  layout->addWidget(emitterList_);
+
+  //--
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  //---
+
+  typeCombo_ = new QComboBox;
+  typeCombo_->addItems(QStringList() << "Generator" << "Flocking" << "Fireworks");
+  addLabelEdit("Type", typeCombo_ );
+
+  enabledCheck_ = new QCheckBox;
+  addLabelEdit("Enabled", enabledCheck_);
+
+  runningCheck_ = new QCheckBox;
+  addLabelEdit("Running", runningCheck_);
+
+  positionEdit_ = new CQPoint3DEdit;
+  positionEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Position", positionEdit_);
+
+  minVelocityEdit_ = new CQPoint3DEdit;
+  minVelocityEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Min Velocity", minVelocityEdit_);
+
+  maxVelocityEdit_ = new CQPoint3DEdit;
+  maxVelocityEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Max Velocity", maxVelocityEdit_);
+
+  intervalSpin_ = new CQIntegerSpin;
+  addLabelEdit("Interval", intervalSpin_);
+
+  sizeSpin_ = new CQRealSpin;
+  addLabelEdit("Size", sizeSpin_);
+
+  gravitySpin_ = new CQRealSpin;
+  addLabelEdit("Gravity", gravitySpin_);
+
+  maxParticlesSpin_ = new CQIntegerSpin;
+  addLabelEdit("Max Particles", maxParticlesSpin_);
+
+  colorEdit_ = new CQColorEdit;
+  addLabelEdit("Color", colorEdit_);
+
+  wireframeCheck_ = new QCheckBox;
+  addLabelEdit("Wireframe", wireframeCheck_);
+
+  imageEdit_ = new QLineEdit;
+  addLabelEdit("Image", imageEdit_);
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *addButton = new QPushButton("Add");
+
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLEmitterControl::addSlot);
+
+  buttonsLayout->addWidget(addButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLEmitterControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(emitterList_, &QListWidget::currentItemChanged,
+            this, &CQNewGLEmitterControl::emitterSelectedSlot);
+
+    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(typeSlot(int)));
+    connect(enabledCheck_, &QCheckBox::stateChanged,
+            this, &CQNewGLEmitterControl::enabledSlot);
+    connect(runningCheck_, &QCheckBox::stateChanged,
+            this, &CQNewGLEmitterControl::runningSlot);
+    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLEmitterControl::positionSlot);
+    connect(minVelocityEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLEmitterControl::minVelocitySlot);
+    connect(maxVelocityEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLEmitterControl::maxVelocitySlot);
+    connect(intervalSpin_, SIGNAL(valueChanged(int)),
+            this, SLOT(intervalSlot(int)));
+    connect(sizeSpin_, SIGNAL(realValueChanged(double)),
+            this, SLOT(sizeSlot(double)));
+    connect(gravitySpin_, SIGNAL(realValueChanged(double)),
+            this, SLOT(gravitySlot(double)));
+    connect(maxParticlesSpin_, SIGNAL(valueChanged(int)),
+            this, SLOT(maxParticlesSlot(int)));
+    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(colorSlot(const QColor &)));
+    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(wireframeSlot(int)));
+    connect(imageEdit_, SIGNAL(editingFinished()),
+            this, SLOT(imageSlot()));
+  }
+  else {
+    disconnect(emitterList_, &QListWidget::currentItemChanged,
+               this, &CQNewGLEmitterControl::emitterSelectedSlot);
+
+    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+               this, SLOT(typeSlot(int)));
+    disconnect(enabledCheck_, &QCheckBox::stateChanged,
+               this, &CQNewGLEmitterControl::enabledSlot);
+    disconnect(runningCheck_, &QCheckBox::stateChanged,
+               this, &CQNewGLEmitterControl::runningSlot);
+    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLEmitterControl::positionSlot);
+    disconnect(minVelocityEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLEmitterControl::minVelocitySlot);
+    disconnect(maxVelocityEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLEmitterControl::maxVelocitySlot);
+    disconnect(intervalSpin_, SIGNAL(valueChanged(int)),
+               this, SLOT(intervalSlot(int)));
+    disconnect(sizeSpin_, SIGNAL(realValueChanged(double)),
+               this, SLOT(sizeSlot(double)));
+    disconnect(gravitySpin_, SIGNAL(realValueChanged(double)),
+               this, SLOT(gravitySlot(double)));
+    disconnect(maxParticlesSpin_, SIGNAL(valueChanged(int)),
+               this, SLOT(maxParticlesSlot(int)));
+    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(colorSlot(const QColor &)));
+    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(wireframeSlot(int)));
+    disconnect(imageEdit_, SIGNAL(editingFinished()),
+               this, SLOT(imageSlot()));
+  }
+}
+
+void
+CQNewGLEmitterControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas  = this->canvas();
+
+  //---
+
+  if (listInvalid_) {
+    listInvalid_ = false;
+
+    //---
+
+    emitterList_->clear();
+
+    int ind = 0;
+
+    for (auto *emitter : canvas->getEmitters()) {
+      const auto &name = emitter->name();
+
+      auto *item = new QListWidgetItem(name);
+
+      emitterList_->addItem(item);
+
+      item->setData(Qt::UserRole, ind);
+
+      ++ind;
+    }
+  }
+
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  enabledCheck_    ->setChecked(emitter->isEnabled());
+  runningCheck_    ->setChecked(emitter->isRunning());
+  positionEdit_    ->setValue(emitter->position());
+  minVelocityEdit_ ->setValue(emitter->minVelocity().point());
+  maxVelocityEdit_ ->setValue(emitter->maxVelocity().point());
+  intervalSpin_    ->setValue(emitter->emitInterval());
+  gravitySpin_     ->setValue(emitter->gravity());
+  sizeSpin_        ->setValue(emitter->pointSize());
+  maxParticlesSpin_->setValue(emitter->maxParticles());
+
+  colorEdit_->setColor(RGBAToQColor(emitter->color()));
+
+  wireframeCheck_->setChecked(emitter->isWireframe());
+
+  imageEdit_->setText(emitter->imageName());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLEmitterControl::
+emitterSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+{
+  auto *canvas = this->canvas();
+
+  int ind = item->data(Qt::UserRole).toInt();
+
+  canvas->setCurrentEmitterNum(ind);
+
+  updateWidgets();
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+typeSlot(int ind)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  if      (ind == 0)
+    emitter->setType(CQNewGLEmitter::Type::GENERATOR);
+  else if (ind == 1)
+    emitter->setType(CQNewGLEmitter::Type::FLOCKING);
+  else if (ind == 2)
+    emitter->setType(CQNewGLEmitter::Type::FIREWORKS);
+}
+
+void
+CQNewGLEmitterControl::
+enabledSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setEnabled(state);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+runningSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setRunning(state);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+positionSlot()
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  auto p = positionEdit_->getValue();
+
+  emitter->setPosition(p);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+minVelocitySlot()
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  auto p = minVelocityEdit_->getValue();
+
+  emitter->setMinVelocity(CVector3D(p));
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+maxVelocitySlot()
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  auto p = maxVelocityEdit_->getValue();
+
+  emitter->setMaxVelocity(CVector3D(p));
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+intervalSlot(int i)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setEmitInterval(i);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+gravitySlot(double r)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setGravity(r);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+sizeSlot(double r)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setPointSize(r);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+maxParticlesSlot(int i)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setMaxParticles(i);
+
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+colorSlot(const QColor &c)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setColor(QColorToRGBA(c));
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+wireframeSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setWireframe(state);
+  canvas->update();
+}
+
+void
+CQNewGLEmitterControl::
+imageSlot()
+{
+  auto *canvas = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
+
+  emitter->setImageName(imageEdit_->text());
+}
+
+void
+CQNewGLEmitterControl::
+addSlot()
+{
+  auto *canvas = this->canvas();
+
+  canvas->addEmitter();
+
+  if (! canvas->isTimerRunning())
+    canvas->setTimerRunning(true);
+
+  listInvalid_ = true;
+
+  updateWidgets();
+
+  canvas->updateEmitters();
+  canvas->update();
+}
+
+//---
+
+CQNewGLFractalControl::
+CQNewGLFractalControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  //---
+
+  typeCombo_ = new QComboBox;
+  typeCombo_->addItems(QStringList() << "Lorenz");
+  addLabelEdit("Type", typeCombo_ );
+
+  wireframeCheck_ = new QCheckBox;
+  addLabelEdit("Wireframe", wireframeCheck_);
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *generateButton = new QPushButton("Generate");
+
+  connect(generateButton, &QPushButton::clicked, this, &CQNewGLFractalControl::generateSlot);
+
+  buttonsLayout->addWidget(generateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLFractalControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(typeSlot(int)));
+    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(wireframeSlot(int)));
+  }
+  else {
+    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+               this, SLOT(typeSlot(int)));
+    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(wireframeSlot(int)));
+  }
+}
+
+void
+CQNewGLFractalControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas  = this->canvas();
+  auto *fractal = canvas->getFractal();
+
+  wireframeCheck_->setChecked(fractal->isWireframe());
+
+  connectSlots(true);
+}
+
+void
+CQNewGLFractalControl::
+typeSlot(int ind)
+{
+  auto *canvas  = this->canvas();
+  auto *fractal = canvas->getFractal();
+
+  if (ind == 0)
+    fractal->setType(CQNewGLFractal::Type::LORENZ);
+}
+
+void
+CQNewGLFractalControl::
+wireframeSlot(int state)
+{
+  auto *canvas  = this->canvas();
+  auto *fractal = canvas->getFractal();
+
+  fractal->setWireframe(state);
+  canvas->update();
+}
+
+void
+CQNewGLFractalControl::
+generateSlot()
+{
+  auto *canvas  = this->canvas();
+  auto *fractal = canvas->getFractal();
+
+  fractal->setActive(true);
+
+  canvas->updateFractal();
+  canvas->update();
+}
+
+//---
+
+CQNewGLDrawTreeControl::
+CQNewGLDrawTreeControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+#if 0
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+#endif
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *generateButton = new QPushButton("Generate");
+
+  connect(generateButton, &QPushButton::clicked, this, &CQNewGLDrawTreeControl::generateSlot);
+
+  buttonsLayout->addWidget(generateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLDrawTreeControl::
+connectSlots(bool)
+{
+}
+
+void
+CQNewGLDrawTreeControl::
+updateWidgets()
+{
+#if 0
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+  auto *tree   = canvas->getDrawTree();
+
+  connectSlots(true);
+#endif
+}
+
+void
+CQNewGLDrawTreeControl::
+generateSlot()
+{
+  auto *canvas = this->canvas();
+  auto *tree   = canvas->getDrawTree();
+
+  tree->setActive(true);
+
+  canvas->updateDrawTree();
+  canvas->update();
+}
+
+//---
+
+CQNewGLShapeControl::
+CQNewGLShapeControl(CQNewGLControl *control) :
+ CQNewGLControlFrame(control)
+{
+  auto *layout = new QVBoxLayout(this);
+
+  //--
+
+  shapesList_ = new QListWidget;
+
+  shapesList_->setSelectionMode(QListWidget::SingleSelection);
+
+  layout->addWidget(shapesList_);
+
+  //---
+
+  auto addLabelEdit = [&](const QString &label, QWidget *w, bool vertical=false) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    layout->addWidget(frame);
+  };
+
+  //---
+
+  showCheck_ = new QCheckBox;
+  addLabelEdit("Show", showCheck_);
+
+  typeCombo_ = new QComboBox;
+  typeCombo_->addItems(QStringList() <<
+    "Box" << "Cone" << "Cube" << "Cylinder" << "Hyperboloid" << "Pyramid" << "Sphere" << "Torus");
+  addLabelEdit("Type", typeCombo_);
+
+  startEdit_ = new CQPoint3DEdit;
+  startEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("Start", startEdit_);
+
+  endEdit_ = new CQPoint3DEdit;
+  endEdit_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  addLabelEdit("End", endEdit_);
+
+  widthEdit_ = new CQRealSpin;
+  addLabelEdit("Width", widthEdit_);
+
+  colorEdit_ = new CQColorEdit;
+  addLabelEdit("Color", colorEdit_);
+
+  wireframeCheck_ = new QCheckBox;
+  addLabelEdit("Wireframe", wireframeCheck_);
+
+  solidCheck_ = new QCheckBox;
+  addLabelEdit("Solid", solidCheck_);
+
+  auto createTextureEdit = [&](const QString &label) {
+    auto *edit = new CQNewGLTextureChooser(control_);
+
+    addLabelEdit(label, edit);
+
+    edit->updateWidgets();
+
+    return edit;
+  };
+
+  textureEdit_ = createTextureEdit("Texture");
+
+  layout->addStretch(1);
+
+  //---
+
+  auto *buttonsFrame  = new QFrame;
+  auto *buttonsLayout = new QHBoxLayout(buttonsFrame);
+
+  layout->addWidget(buttonsFrame);
+
+  auto *addButton    = new QPushButton("Add");
+  auto *updateButton = new QPushButton("Update");
+
+  connect(addButton, &QPushButton::clicked, this, &CQNewGLShapeControl::addSlot);
+  connect(updateButton, &QPushButton::clicked, this, &CQNewGLShapeControl::updateSlot);
+
+  buttonsLayout->addWidget(addButton);
+  buttonsLayout->addWidget(updateButton);
+  buttonsLayout->addStretch(1);
+
+  //---
+
+  connectSlots(true);
+
+  updateWidgets();
+}
+
+void
+CQNewGLShapeControl::
+connectSlots(bool b)
+{
+  if (b) {
+    connect(shapesList_, &QListWidget::currentItemChanged,
+            this, &CQNewGLShapeControl::shapeSelectedSlot);
+
+    connect(showCheck_, &QCheckBox::stateChanged,
+            this, &CQNewGLShapeControl::showSlot);
+
+    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(typeSlot(int)));
+    connect(startEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLShapeControl::startSlot);
+    connect(endEdit_, &CQPoint3DEdit::editingFinished,
+            this, &CQNewGLShapeControl::endSlot);
+    connect(widthEdit_, &CQRealSpin::realValueChanged,
+            this, &CQNewGLShapeControl::widthSlot);
+    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+            this, SLOT(colorSlot(const QColor &)));
+    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(wireframeSlot(int)));
+    connect(solidCheck_, SIGNAL(stateChanged(int)),
+            this, SLOT(solidSlot(int)));
+
+    connect(textureEdit_, SIGNAL(textureChanged()), this, SLOT(textureSlot()));
+  }
+  else {
+    disconnect(shapesList_, &QListWidget::currentItemChanged,
+               this, &CQNewGLShapeControl::shapeSelectedSlot);
+
+    disconnect(showCheck_, &QCheckBox::stateChanged,
+               this, &CQNewGLShapeControl::showSlot);
+
+    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
+               this, SLOT(typeSlot(int)));
+    disconnect(startEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLShapeControl::startSlot);
+    disconnect(endEdit_, &CQPoint3DEdit::editingFinished,
+               this, &CQNewGLShapeControl::endSlot);
+    disconnect(widthEdit_, &CQRealSpin::realValueChanged,
+               this, &CQNewGLShapeControl::widthSlot);
+    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
+               this, SLOT(colorSlot(const QColor &)));
+    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(wireframeSlot(int)));
+    disconnect(solidCheck_, SIGNAL(stateChanged(int)),
+               this, SLOT(solidSlot(int)));
+
+    disconnect(textureEdit_, SIGNAL(textureChanged()), this, SLOT(textureSlot()));
+  }
+}
+
+void
+CQNewGLShapeControl::
+shapeSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+{
+  auto *canvas = this->canvas();
+
+  int ind = item->data(Qt::UserRole).toInt();
+
+  canvas->setCurrentShape(ind);
+
+  updateWidgets();
+
+  canvas->update();
+}
+
+void
+CQNewGLShapeControl::
+showSlot(int state)
+{
+  auto *canvas = this->canvas();
+  auto *shape  = canvas->getCurrentShape();
+  if (! shape) return;
+
+  shape->setVisible(state);
+
+  canvas->update();
+}
+
+void
+CQNewGLShapeControl::
+typeSlot(int ind)
+{
+  shapeData_.type = CQNewGLShape::Type::NONE;
+
+  if      (ind == 0) shapeData_.type = CQNewGLShape::Type::BOX;
+  else if (ind == 1) shapeData_.type = CQNewGLShape::Type::CONE;
+  else if (ind == 2) shapeData_.type = CQNewGLShape::Type::CUBE;
+  else if (ind == 3) shapeData_.type = CQNewGLShape::Type::CYLINDER;
+  else if (ind == 4) shapeData_.type = CQNewGLShape::Type::HYPERBOLOID;
+  else if (ind == 5) shapeData_.type = CQNewGLShape::Type::PYRAMID;
+  else if (ind == 6) shapeData_.type = CQNewGLShape::Type::SPHERE;
+  else if (ind == 7) shapeData_.type = CQNewGLShape::Type::TORUS;
+}
+
+void
+CQNewGLShapeControl::
+startSlot()
+{
+  shapeData_.start = startEdit_->getValue();
+}
+
+void
+CQNewGLShapeControl::
+endSlot()
+{
+  shapeData_.end = endEdit_->getValue();
+}
+
+void
+CQNewGLShapeControl::
+widthSlot(double r)
+{
+  shapeData_.width = r;
+}
+
+void
+CQNewGLShapeControl::
+colorSlot(const QColor &c)
+{
+  shapeData_.color = QColorToRGBA(c);
+}
+
+void
+CQNewGLShapeControl::
+wireframeSlot(int state)
+{
+  shapeData_.wireframe = state;
+}
+
+void
+CQNewGLShapeControl::
+solidSlot(int state)
+{
+  shapeData_.solid = state;
+}
+
+void
+CQNewGLShapeControl::
+textureSlot()
+{
+  shapeData_.textureName = textureEdit_->textureName();
+}
+
+void
+CQNewGLShapeControl::
+invalidateShapes()
+{
+  reload_ = true;
+
+  updateWidgets();
+}
+
+void
+CQNewGLShapeControl::
+updateWidgets()
+{
+  connectSlots(false);
+
+  auto *canvas = this->canvas();
+
+  //---
+
+  if (reload_) {
+    reload_ = false;
+
+    shapesList_->clear();
+
+    int ind = 0;
+
+    for (auto *shape : canvas->shapes()) {
+      const auto &name = shape->name();
+
+      auto *item = new QListWidgetItem(name);
+
+      shapesList_->addItem(item);
+
+      item->setData(Qt::UserRole, ind++);
+    }
+  }
+
+  //---
+
+  bool visible = true;
+
+  auto *shape = canvas->getCurrentShape();
+
+  if (shape) {
+    visible = shape->isVisible();
+
+    shapeData_.type      = shape->type();
+    shapeData_.start     = shape->start();
+    shapeData_.end       = shape->end();
+    shapeData_.width     = shape->width();
+    shapeData_.color     = shape->color();
+    shapeData_.wireframe = shape->isWireframe();
+    shapeData_.solid     = shape->isSolid();
+
+    if (shape->texture())
+      shapeData_.textureName = QString::fromStdString(shape->texture()->getName());
+    else
+      shapeData_.textureName = "";
+  }
+
+  int ind = 0;
+
+  if      (shapeData_.type == CQNewGLShape::Type::BOX        ) ind = 0;
+  else if (shapeData_.type == CQNewGLShape::Type::CONE       ) ind = 1;
+  else if (shapeData_.type == CQNewGLShape::Type::CUBE       ) ind = 2;
+  else if (shapeData_.type == CQNewGLShape::Type::CYLINDER   ) ind = 3;
+  else if (shapeData_.type == CQNewGLShape::Type::HYPERBOLOID) ind = 4;
+  else if (shapeData_.type == CQNewGLShape::Type::PYRAMID    ) ind = 5;
+  else if (shapeData_.type == CQNewGLShape::Type::SPHERE     ) ind = 6;
+  else if (shapeData_.type == CQNewGLShape::Type::TORUS      ) ind = 7;
+
+  typeCombo_     ->setCurrentIndex(ind);
+  showCheck_     ->setChecked(visible);
+  startEdit_     ->setValue(shapeData_.start);
+  endEdit_       ->setValue(shapeData_.end);
+  widthEdit_     ->setValue(shapeData_.width);
+  colorEdit_     ->setColor(RGBAToQColor(shapeData_.color));
+  wireframeCheck_->setChecked(shapeData_.wireframe);
+  solidCheck_    ->setChecked(shapeData_.solid);
+  textureEdit_   ->setTextureName(shapeData_.textureName);
+
+  showCheck_->setEnabled(shape);
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQNewGLShapeControl::
+addSlot()
+{
+  auto *canvas = this->canvas();
+
+  auto *shape = canvas->addShape();
+
+  shape->setType     (shapeData_.type);
+  shape->setColor    (shapeData_.color);
+  shape->setStart    (shapeData_.start);
+  shape->setEnd      (shapeData_.end);
+  shape->setWidth    (shapeData_.width);
+  shape->setWireframe(shapeData_.wireframe);
+  shape->setSolid    (shapeData_.solid);
+  shape->setTexture  (canvas->getTextureByName(shapeData_.textureName.toStdString()));
+
+  shape->invalidateGeometry();
+  shape->addGeometry();
+
+  canvas->update();
+
+  invalidateShapes();
+}
+
+void
+CQNewGLShapeControl::
+updateSlot()
+{
+  auto *canvas = this->canvas();
+  auto *shape  = canvas->getCurrentShape();
+  if (! shape) return;
+
+  shape->setType     (shapeData_.type);
+  shape->setColor    (shapeData_.color);
+  shape->setStart    (shapeData_.start);
+  shape->setEnd      (shapeData_.end);
+  shape->setWidth    (shapeData_.width);
+  shape->setWireframe(shapeData_.wireframe);
+  shape->setSolid    (shapeData_.solid);
+  shape->setTexture  (canvas->getTextureByName(shapeData_.textureName.toStdString()));
+
+  shape->invalidateGeometry();
+  shape->addGeometry();
+
+  canvas->update();
+}
+
+//---
+
 CQNewGLObjectsList::
 CQNewGLObjectsList(CQNewGLControl *control) :
  QFrame(nullptr), control_(control)
 {
   auto *layout = new QVBoxLayout(this);
 
-  list_ = new QListWidget;
+  tree_ = new QTreeWidget;
 
-  list_->setSelectionMode(QListWidget::SingleSelection);
+  tree_->setSelectionMode(QListWidget::SingleSelection);
 
-  layout->addWidget(list_);
+  layout->addWidget(tree_);
 
   //---
 
@@ -2573,48 +5442,93 @@ void
 CQNewGLObjectsList::
 updateObjects()
 {
+  connectSlots(false);
+
+  //---
+
   auto *canvas = control_->canvas();
 
-  auto &scene = canvas->importBase()->getScene();
+  tree_->clear();
 
-  list_->clear();
+  objectItem_.clear();
 
   int ind = -1;
 
-  auto *item = new QListWidgetItem("");
+  auto *item = new QTreeWidgetItem(tree_, QStringList());
 
-  list_->addItem(item);
+  tree_->addTopLevelItem(item);
 
-  item->setData(Qt::UserRole, ind++);
+  item->setData(0, Qt::UserRole, ind++);
 
-  for (auto *object : scene.getObjects()) {
-    auto objectName = QString::fromStdString(object->getName());
+  auto *scene = canvas->scene();
 
-    auto *item = new QListWidgetItem(objectName);
+  for (auto *object : scene->getObjects()) {
+    auto *item = createObjectItem(object);
 
-    list_->addItem(item);
+    if (! item->parent())
+      tree_->addTopLevelItem(item);
+    else
+      item->parent()->addChild(item);
 
-    item->setData(Qt::UserRole, ind++);
+    item->setData(0, Qt::UserRole, ind++);
   }
+
+  //---
+
+  connectSlots(true);
+}
+
+QTreeWidgetItem *
+CQNewGLObjectsList::
+createObjectItem(CGeomObject3D *object)
+{
+  auto pi = objectItem_.find(object);
+
+  if (pi != objectItem_.end())
+    return (*pi).second;
+
+  auto name = QString::fromStdString(object->getName());
+
+  auto *parent = object->parent();
+
+  QTreeWidgetItem *item;
+
+  if (parent) {
+    auto *parentItem = createObjectItem(parent);
+
+    item = new QTreeWidgetItem(parentItem, QStringList() << name);
+  }
+  else
+    item = new QTreeWidgetItem(tree_, QStringList() << name);
+
+  objectItem_[object] = item;
+
+  return item;
 }
 
 void
 CQNewGLObjectsList::
 connectSlots(bool b)
 {
-  if (b)
-    connect(list_, &QListWidget::currentItemChanged,
+  auto *canvas = control_->canvas();
+
+  if (b) {
+    connect(canvas, SIGNAL(modelAdded()), this, SLOT(updateObjects()));
+    connect(tree_, &QTreeWidget::currentItemChanged,
             this, &CQNewGLObjectsList::objectSelectedSlot);
-  else
-    disconnect(list_, &QListWidget::currentItemChanged,
+  }
+  else {
+    disconnect(canvas, SIGNAL(modelAdded()), this, SLOT(updateObjects()));
+    disconnect(tree_, &QTreeWidget::currentItemChanged,
                this, &CQNewGLObjectsList::objectSelectedSlot);
+  }
 }
 
 void
 CQNewGLObjectsList::
-objectSelectedSlot(QListWidgetItem *item, QListWidgetItem *)
+objectSelectedSlot(QTreeWidgetItem *item, QTreeWidgetItem *)
 {
-  selectedInd_ = (item ? item->data(Qt::UserRole).toInt() : -1);
+  selectedInd_ = (item ? item->data(0, Qt::UserRole).toInt() : -1);
 //std::cerr << selectedInd_ << "\n";
 
   Q_EMIT currentItemChanged();
@@ -2626,18 +5540,7 @@ getSelectedIndObject() const
 {
   auto *canvas = control_->canvas();
 
-  const auto &scene = canvas->importBase()->getScene();
-
-  const auto &objects = scene.getObjects();
-
-  auto n = int(objects.size());
-
-  for (int i = 0; i < n; ++i) {
-    if (i == selectedInd_)
-      return objects[i];
-  }
-
-  return nullptr;
+  return canvas->getObject(selectedInd_);
 }
 
 CGeomObject3D *
@@ -2646,28 +5549,17 @@ getObjectListSelected() const
 {
   auto *canvas = control_->canvas();
 
-  auto selectedItems = list_->selectedItems();
+  auto selectedItems = tree_->selectedItems();
 
   int ind = -1;
 
   for (const auto *item : selectedItems) {
-    int ind1 = item->data(Qt::UserRole).toInt();
+    int ind1 = item->data(0, Qt::UserRole).toInt();
     if (ind1 >= 0) {
       ind = ind1;
       break;
     }
   }
 
-  const auto &scene = canvas->importBase()->getScene();
-
-  const auto &objects = scene.getObjects();
-
-  auto n = int(objects.size());
-
-  for (int i = 0; i < n; ++i) {
-    if (i == ind)
-      return objects[i];
-  }
-
-  return nullptr;
+  return canvas->getObject(ind);
 }

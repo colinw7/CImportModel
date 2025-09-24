@@ -56,12 +56,14 @@ CImportFBX::
 CImportFBX(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
+  auto name1 = (name.size() ? name : "f3d");
+
   if (! scene_) {
     scene_  = CGeometryInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object_ = CGeometryInst->createObject3D(scene_, name1);
 
   scene_->addObject(object_);
 
@@ -1331,7 +1333,7 @@ readFileData(FileData &fileData)
     // set name and transform
     auto *modelData = geometryData->modelData;
 
-    if (modelData) {
+    if (modelData && geometryData->object) {
       geometryData->object->setName(modelData->name);
 
 #if 0
@@ -2668,10 +2670,14 @@ processDataTree(PropDataTree *tree)
               if (pm1 != idMaterialData_.end()) {
                 auto *materialData = (*pm1).second;
 
-                assert(! textureData->materialData);
+                if (textureData->materialData)
+                  std::cerr << "Duplicate material texture\n";
+
                 textureData->materialData = materialData;
 
-                assert(! materialData->textureData);
+                if (materialData->textureData)
+                  std::cerr << "Duplicate material texture\n";
+
                 materialData->textureData = textureData;
 
                 //connectInfo();
@@ -2930,7 +2936,9 @@ processDataTree(PropDataTree *tree)
               if (pt1 != idTextureData_.end()) {
                 auto *textureData1 = (*pt1).second;
 
-                assert(! videoData->textureData);
+                if (videoData->textureData)
+                  std::cerr << "Duplicate video/texture data\n";
+
                 videoData->textureData = textureData1;
 
                 //connectInfo();
@@ -3283,6 +3291,8 @@ processDataTree(PropDataTree *tree)
                     else if (propName3 == "Diffuse") {
                     }
                     else if (propName3 == "DiffuseColor") {
+                    }
+                    else if (propName3 == "DiffuseFactor") {
                     }
                     else if (propName3 == "Emissive") {
                     }
@@ -3820,7 +3830,11 @@ addGeometryObject(GeometryData *geometryData)
 
   geometryData->object = CGeometryInst->createObject3D(scene_, name);
 
+  //---
+
   scene_->addObject(geometryData->object);
+
+  object_->addChild(geometryData->object);
 
   //---
 

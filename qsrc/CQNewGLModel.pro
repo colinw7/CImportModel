@@ -18,15 +18,32 @@ CONFIG += c++17
 CONFIG += silent
 
 SOURCES += \
-CQNewGLModelMain.cpp \
-CQNewGLModel.cpp \
+CQNewGLAxes.cpp \
+CQNewGLBBox.cpp \
+CQNewGLCamera.cpp \
 CQNewGLCanvas.cpp \
 CQNewGLControl.cpp \
+CQNewGLDrawTree.cpp \
+CQNewGLEmitter.cpp \
+CQNewGLFont.cpp \
+CQNewGLFractal.cpp \
+CQNewGLHull.cpp \
+CQNewGLLight.cpp \
+CQNewGLMain.cpp \
+CQNewGLMaze.cpp \
+CQNewGLModel.cpp \
+CQNewGLNormals.cpp \
+CQNewGLObject.cpp \
+CQNewGLPath.cpp \
+CQNewGLShaderProgram.cpp \
+CQNewGLShape.cpp \
+CQNewGLSkybox.cpp \
+CQNewGLTerrain.cpp \
 CQNewGLToolbar.cpp \
 CQNewGLUVMap.cpp \
-CQNewGLShaderProgram.cpp \
-CQNewGLFont.cpp \
 \
+CQGLCubemap.cpp \
+CQGLTexture.cpp \
 CQGLUtil.cpp \
 CQPoint3DEdit.cpp \
 CQRotatedText.cpp \
@@ -34,16 +51,53 @@ CQMatrix3D.cpp \
 \
 CGLCamera.cpp \
 CGLTexture.cpp \
+\
+CFlocking.cpp \
+CFlock.cpp \
+CBoid.cpp \
+\
+CFireworks.cpp \
+\
+CDungeon.cpp \
+CDungeonXML.cpp \
+\
+CDrawTree3D.cpp \
+CTurtle3D.cpp \
+\
+CWaterSurface.cpp \
+\
+CLorenzCalc.cpp \
+\
+CSolidNoise.cpp \
 
 HEADERS += \
-CQNewGLModel.h \
+CQNewGLAxes.h \
+CQNewGLBBox.h \
+CQNewGLCamera.h \
 CQNewGLCanvas.h \
 CQNewGLControl.h \
-CQNewGLToolbar.h \
-CQNewGLUVMap.h \
-CQNewGLShaderProgram.h \
+CQNewGLDrawTree.h \
+CQNewGLEmitter.h \
+CQNewGLFaceData.h \
 CQNewGLFont.h \
+CQNewGLFractal.h \
+CQNewGLHull.h \
+CQNewGLLight.h \
+CQNewGLMaze.h \
+CQNewGLModel.h \
+CQNewGLNormals.h \
+CQNewGLObject.h \
+CQNewGLPath.h \
+CQNewGLShaderProgram.h \
+CQNewGLShape.h \
+CQNewGLSkybox.h \
+CQNewGLTerrain.h \
+CQNewGLToolbar.h \
+CQNewGLUtil.h \
+CQNewGLUVMap.h \
 \
+CQGLCubemap.h \
+CQGLTexture.h \
 CQGLUtil.h \
 CQPoint3DEdit.h \
 CQRotatedText.h \
@@ -64,6 +118,8 @@ INCLUDEPATH += \
 ../../CQColorEdit/include \
 ../../CImageLib/include \
 ../../CFont/include \
+../../CConfig/include \
+../../CXML/include \
 ../../CFile/include \
 ../../CFileType/include \
 ../../CMath/include \
@@ -79,8 +135,10 @@ $(LIB_DIR)/libCQUtil.a \
 unix:LIBS += \
 -L../lib \
 -L../../CImportModel/lib \
+-L../../CVoxel/lib \
 -L../../CGeometry3D/lib \
 -L../../CQUtil/lib \
+-L../../CXML/lib \
 -L../../CConfig/lib \
 -L../../CImageLib/lib \
 -L../../CFont/lib \
@@ -93,7 +151,7 @@ unix:LIBS += \
 -L../../CStrUtil/lib \
 -L../../CRegExp/lib \
 -L../../COS/lib \
--lCImportModel -lCGeometry3D -lCQUtil -lCConfig \
+-lCImportModel -lCVoxel -lCGeometry3D -lCQUtil -lCXML -lCConfig \
 -lCImageLib -lCFont -lCJson -lCFileUtil -lCFile -lCUtil \
 -lCMath -lCRGBName -lCStrUtil -lCRegExp -lCOS \
 -lglut -lGLU \
