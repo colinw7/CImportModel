@@ -1,20 +1,11 @@
 #include <CQNewGLBBox.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
-#include <CQNewGLShape.h>
 #include <CQNewGLUtil.h>
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
-#include <CGeomObject3D.h>
-#include <CBBox3D.h>
 
 CQNewGLShaderProgram* CQNewGLBBox::shaderProgram_;
-
-CQNewGLBBox::
-CQNewGLBBox(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
-{
-}
 
 void
 CQNewGLBBox::
@@ -25,6 +16,12 @@ initShader(CQNewGLCanvas *canvas)
   shaderProgram_->addShaders("bbox.vs", "bbox.fs");
 }
 
+CQNewGLBBox::
+CQNewGLBBox(CQNewGLCanvas *canvas) :
+ CQNewGLObject(canvas)
+{
+}
+
 void
 CQNewGLBBox::
 updateGeometry()
@@ -33,15 +30,12 @@ updateGeometry()
 
   //---
 
-  auto *objectData = canvas_->getCurrentObjectData();
+  auto objects = canvas_->getAnnotationObjects();
 
-  if (objectData)
-    addBufferBBox(objectData->modelData.buffer);
-
-  auto *shape = canvas_->getCurrentShape();
-
-  if (shape)
-    addBufferBBox(shape->buffer());
+  for (auto *object : objects) {
+    if (object->isVisible())
+      addBufferBBox(object);
+  }
 
   //---
 
@@ -50,23 +44,29 @@ updateGeometry()
 
 void
 CQNewGLBBox::
-addBufferBBox(CQGLBuffer *bboxBuffer)
+addBufferBBox(CQNewGLObject *object)
 {
-  int np = bboxBuffer->numPoints();
-
   CBBox3D bbox;
 
-  for (int ip = 0; ip < np; ++ip) {
-    CQGLBuffer::PointData pointData;
+  updateBufferBBox(object, bbox);
 
-    bboxBuffer->getPointData(ip, pointData);
+  for (auto *child : object->getChildren())
+    updateBufferBBox(child, bbox);
 
-    auto p = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
+  int pos = 0;
 
-    bbox.add(p);
-  }
+  CQNewGLCanvas::ShapeData shapeData;
 
-  canvas_->addCube(buffer_, bbox, QColorToRGBA(color_), faceDatas_);
+  shapeData.color = QColorToRGBA(color_);
+
+  canvas_->addCube(buffer_, bbox, shapeData, faceDatas_, pos);
+}
+
+void
+CQNewGLBBox::
+updateBufferBBox(CQNewGLObject *object, CBBox3D &bbox)
+{
+  bbox += object->getBBox();
 }
 
 void
@@ -80,13 +80,7 @@ drawGeometry()
   //---
 
   // model matrix
-  auto *object = canvas_->getCurrentObject();
-
   auto modelMatrix = CMatrix3D::identity();
-
-  if (object)
-    modelMatrix = object->getTransform();
-
   canvas_->addShaderMVP(shaderProgram_, modelMatrix);
 
   //---

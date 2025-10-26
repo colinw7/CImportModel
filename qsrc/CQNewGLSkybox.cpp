@@ -182,7 +182,15 @@ addGeometry()
 
   FaceDatas faceDatas;
 
-  canvas_->addCube(buffer_, CPoint3D(0, 0, 0), width_, CRGBA(1, 1, 1), faceDatas);
+  int pos = 0;
+
+  CQNewGLCanvas::ShapeData shapeData;
+
+  shapeData.color = CRGBA(1, 1, 1);
+
+  auto bbox = CBBox3D(CPoint3D(-width_/2, 0, 0), CPoint3D(width_/2, 0, 0));
+
+  canvas_->addCube(buffer_, bbox, shapeData, faceDatas, pos);
 
   setFaceDatas(faceDatas);
 

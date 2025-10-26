@@ -427,8 +427,11 @@ class CImportGLTF : public CImportBase {
     Node* parent { nullptr };
     int   depth  { -1 };
 
+    bool isJoint { false };
     bool added   { false };
     bool skinned { false };
+
+    CGeomObject3D *object { nullptr };
   };
 
   struct Sampler : IndData {
@@ -487,7 +490,7 @@ class CImportGLTF : public CImportBase {
     long        sampler { -1 };
   };
 
-  using AnimationInterpolation = CGeomObject3D::AnimationInterpolation;
+  using AnimationInterpolation = CGeomAnimationData::Interpolation;
 
   struct AnimationSampler : IndData {
     long                   input { -1 };
@@ -599,6 +602,9 @@ class CImportGLTF : public CImportBase {
 
   bool getSkin(const IndName &indName, Skin &skin) const;
 
+  void updateHier();
+  void addNodeChildren(Node *node);
+
   bool processAnim();
   bool updateAnim(const std::string &name, double t);
 
@@ -608,6 +614,7 @@ class CImportGLTF : public CImportBase {
   bool processNodeMesh(Node *node);
 
   bool createNodeObject(Node *node, const CMatrix3D &m1);
+  void createNodeObj(Node *node);
 
   CMatrix3D calcNodeTransform(Node *node) const;
 
@@ -641,6 +648,7 @@ class CImportGLTF : public CImportBase {
   void printMesh      (const Mesh       &mesh      , const IndName &indName) const;
   void printNode      (const Node       &node      , const IndName &indName) const;
   void printPrimitive (const Primitive  &primitive , int ia) const;
+  void printSkin      (const Skin       &skin      , const IndName &indName) const;
 
   bool writeFile(const std::string &filename, const unsigned char *data, long len) const;
 
@@ -652,8 +660,6 @@ class CImportGLTF : public CImportBase {
   CFile*         file_    { nullptr };
 
   CGeomObject3D *rootObject_ { nullptr };
-
-  bool isPsuedoObject_ { true };
 
   bool binary_ { false };
 

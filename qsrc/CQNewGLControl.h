@@ -6,19 +6,21 @@
 #include <CMatrix3D.h>
 
 #include <QFrame>
-#include <QComboBox>
 #include <QListWidget>
 #include <QTreeWidget>
+#include <QGroupBox>
+#include <QComboBox>
+#include <QLabel>
+#include <QHBoxLayout>
 
 class CQNewGLModel;
 class CQNewGLGeneralControl;
 class CQNewGLCameraControl;
 class CQNewGLLightsControl;
-class CQNewGLNormalsControl;
+class CQNewGLAnnotationsControl;
 class CQNewGLAxesControl;
-class CQNewGLBBoxControl;
-class CQNewGLHullControl;
-class CQNewGLBasisControl;
+//class CQNewGLBBoxControl;
+//class CQNewGLHullControl;
 class CQNewGLObjectsControl;
 class CQNewGLTexturesControl;
 class CQNewGLTextureImage;
@@ -37,9 +39,14 @@ class CQNewGLCanvas;
 class CQNewGLUVMap;
 class CQNewGLCamera;
 class CQNewGLObjectsList;
+class CQNewGLCamerasList;
+class CQNewGLLightsList;
+class CQNewGLBonesList;
+class CQNewGLShapesList;
 class CQIconButton;
 
-class CGeomObject3D;
+class  CGeomObject3D;
+struct CGeomNodeData;
 
 class CQMatrix3D;
 class CQPoint3DEdit;
@@ -72,10 +79,10 @@ class CQNewGLControl : public QFrame {
   void updateObjects();
   void updateCameras();
   void updateLights();
-  void updateNormals();
+  void updateAnnotations();
   void updateAxes();
-  void updateBBox();
-  void updateHull();
+//void updateBBox();
+//void updateHull();
   void updateUV();
   void updateAnim();
   void updateBones();
@@ -88,7 +95,7 @@ class CQNewGLControl : public QFrame {
   void updateDrawTree();
   void updateShape();
 
-  CGeomObject3D *getRootObject() const;
+//CGeomObject3D *getRootObject() const;
 
  public Q_SLOTS:
   void updateWidgets();
@@ -99,7 +106,6 @@ class CQNewGLControl : public QFrame {
   void invalidateCameras();
   void invalidateLights();
   void invalidateTextures();
-  void invalidateShapes();
 
   void updateTextures();
 
@@ -113,29 +119,28 @@ class CQNewGLControl : public QFrame {
   QTabWidget* modelTab_ { nullptr };
   TabName     modelTabName_;
 
-  QTabWidget* shapesTab_ { nullptr };
-  TabName     shapesTabName_;
+  QTabWidget* extrasTab_ { nullptr };
+  TabName     extrasTabName_;
 
-  CQNewGLGeneralControl*  generalControl_  { nullptr };
-  CQNewGLCameraControl*   cameraControl_   { nullptr };
-  CQNewGLLightsControl*   lightsControl_    { nullptr };
-  CQNewGLNormalsControl*  normalsControl_  { nullptr };
-  CQNewGLAxesControl*     axesControl_     { nullptr };
-  CQNewGLBBoxControl*     bboxControl_     { nullptr };
-  CQNewGLHullControl*     hullControl_     { nullptr };
-  CQNewGLBasisControl*    basisControl_    { nullptr };
-  CQNewGLObjectsControl*  objectsControl_  { nullptr };
-  CQNewGLTexturesControl* texturesControl_ { nullptr };
-  CQNewGLUVControl*       uvControl_       { nullptr };
-  CQNewGLAnimControl*     animControl_     { nullptr };
-  CQNewGLBonesControl*    bonesControl_    { nullptr };
-  CQNewGLTerrainControl*  terrainControl_  { nullptr };
-  CQNewGLMazeControl*     mazeControl_     { nullptr };
-  CQNewGLSkyboxControl*   skyboxControl_   { nullptr };
-  CQNewGLEmitterControl*  emitterControl_  { nullptr };
-  CQNewGLFractalControl*  fractalControl_  { nullptr };
-  CQNewGLDrawTreeControl* drawTreeControl_ { nullptr };
-  CQNewGLShapeControl*    shapeControl_    { nullptr };
+  CQNewGLGeneralControl*     generalControl_     { nullptr };
+  CQNewGLCameraControl*      cameraControl_      { nullptr };
+  CQNewGLLightsControl*      lightsControl_      { nullptr };
+  CQNewGLAnnotationsControl* annotationsControl_ { nullptr };
+  CQNewGLAxesControl*        axesControl_        { nullptr };
+//CQNewGLBBoxControl*        bboxControl_        { nullptr };
+//CQNewGLHullControl*        hullControl_        { nullptr };
+  CQNewGLObjectsControl*     objectsControl_     { nullptr };
+  CQNewGLTexturesControl*    texturesControl_    { nullptr };
+  CQNewGLUVControl*          uvControl_          { nullptr };
+  CQNewGLAnimControl*        animControl_        { nullptr };
+  CQNewGLBonesControl*       bonesControl_       { nullptr };
+  CQNewGLTerrainControl*     terrainControl_     { nullptr };
+  CQNewGLMazeControl*        mazeControl_        { nullptr };
+  CQNewGLSkyboxControl*      skyboxControl_      { nullptr };
+  CQNewGLEmitterControl*     emitterControl_     { nullptr };
+  CQNewGLFractalControl*     fractalControl_     { nullptr };
+  CQNewGLDrawTreeControl*    drawTreeControl_    { nullptr };
+  CQNewGLShapeControl*       shapeControl_       { nullptr };
 };
 
 //---
@@ -144,13 +149,89 @@ class CQNewGLControlFrame : public QFrame {
   Q_OBJECT
 
  public:
+  struct LayoutData {
+    LayoutData() { }
+
+    bool vertical { false };
+
+    LayoutData &setVertical(bool b=true) { vertical = b; return *this; }
+  };
+
+ public:
   CQNewGLControlFrame(CQNewGLControl *control);
 
   CQNewGLCanvas *canvas() const;
   CQNewGLUVMap*  uvMap() const;
 
+  template<typename WIDGET>
+  WIDGET *addLabelEdit(const QString &label, WIDGET *w, const LayoutData &data=LayoutData()) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (data.vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    addWidget(frame);
+
+    return w;
+  }
+
+  template<typename WIDGET>
+  WIDGET *addWidget(WIDGET *w) {
+    layout_->addWidget(w);
+
+    return w;
+  }
+
+  QGroupBox *startGroup(const QString &name) {
+    assert(! groupBox_);
+
+    groupBox_    = new QGroupBox(name);
+    groupLayout_ = new QVBoxLayout(groupBox_);
+
+    return addWidget(groupBox_);
+  }
+
+  void endGroup() {
+    assert(groupBox_);
+
+    groupBox_    = nullptr;
+    groupLayout_ = nullptr;
+  }
+
+  template<typename WIDGET>
+  WIDGET *addGroupLabelEdit(const QString &label, WIDGET *w) {
+    auto *frame   = new QFrame;
+    auto *layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    addGroupWidget(frame);
+
+    return w;
+  }
+
+  template<typename WIDGET>
+  WIDGET *addGroupWidget(WIDGET *w) {
+    assert(groupLayout_);
+
+    groupLayout_->addWidget(w);
+
+    return w;
+  }
+
  protected:
   CQNewGLControl* control_ { nullptr };
+  QVBoxLayout*    layout_  { nullptr };
+
+  QGroupBox*   groupBox_    { nullptr };
+  QVBoxLayout* groupLayout_ { nullptr };
 };
 
 //---
@@ -173,23 +254,15 @@ class CQNewGLGeneralControl : public CQNewGLControlFrame {
   void depthTestSlot(int);
   void cullSlot(int);
   void frontFaceSlot(int);
-  void polygonSolidSlot(int);
-  void polygonLineSlot(int);
-  void flipYZSlot(int);
-  void invertDepthSlot(int);
 
   void typeSlot(int type);
 
  private:
   CQColorEdit* colorEdit_ { nullptr };
 
-  QCheckBox* depthTestCheck_    { nullptr };
-  QCheckBox* cullCheck_         { nullptr };
-  QCheckBox* frontFaceCheck_    { nullptr };
-  QCheckBox* polygonSolidCheck_ { nullptr };
-  QCheckBox* polygonLineCheck_  { nullptr };
-  QCheckBox* flipYZCheck_       { nullptr };
-  QCheckBox* invertDepthCheck_  { nullptr };
+  QCheckBox* depthTestCheck_ { nullptr };
+  QCheckBox* cullCheck_      { nullptr };
+  QCheckBox* frontFaceCheck_ { nullptr };
 };
 
 //---
@@ -215,8 +288,6 @@ class CQNewGLCameraControl : public CQNewGLControlFrame {
   void eyelineSlot(int b);
 
   void orthoSlot(int);
-
-  void cameraSelectedSlot(QListWidgetItem *, QListWidgetItem *);
 
   void updateCurrentSlot(int b);
 
@@ -245,9 +316,6 @@ class CQNewGLCameraControl : public CQNewGLControlFrame {
   void initSlot();
 
  private:
-  int  currentCamera_ { 0 };
-  bool updateCurrent_ { true };
-
   bool camerasInvalid_ { true };
 
   QCheckBox* showCheck_    { nullptr };
@@ -256,7 +324,7 @@ class CQNewGLCameraControl : public CQNewGLControlFrame {
 
   QCheckBox* orthoCheck_ { nullptr };
 
-  QListWidget* camerasList_ { nullptr };
+  CQNewGLCamerasList* camerasList_ { nullptr };
 
   QCheckBox* updateCurrentCheck_ { nullptr };
 
@@ -285,11 +353,11 @@ class CQNewGLCameraControl : public CQNewGLControlFrame {
 
 //---
 
-class CQNewGLNormalsControl : public CQNewGLControlFrame {
+class CQNewGLAnnotationsControl : public CQNewGLControlFrame {
   Q_OBJECT
 
  public:
-  CQNewGLNormalsControl(CQNewGLControl *control);
+  CQNewGLAnnotationsControl(CQNewGLControl *control);
 
   void connectSlots(bool b);
 
@@ -297,18 +365,45 @@ class CQNewGLNormalsControl : public CQNewGLControlFrame {
   void updateWidgets();
 
  private Q_SLOTS:
-  void show1Slot(int);
-  void show2Slot(int);
-  void sizeSlot(double r);
-  void colorSlot(const QColor &c);
+  void showNormalsSlot(int);
+  void showNewNormalsSlot(int);
+  void normalsSizeSlot(double r);
+  void normalsColorSlot(const QColor &c);
   void tangentSpaceSlot(int);
 
+  void showBBoxSlot(int);
+
+  void showHullSlot(int);
+
+  void showBasisSlot(int b);
+  void basisSizeSlot(double r);
+  void basisWidthSlot(double r);
+
+  void basisUSlot();
+  void basisVSlot();
+  void basisWSlot();
+
+  void showWireframeSlot(int);
+
  private:
-  QCheckBox*   show1Check_        { nullptr };
-  QCheckBox*   show2Check_        { nullptr };
-  CQRealSpin*  sizeEdit_          { nullptr };
-  CQColorEdit* colorEdit_         { nullptr };
-  QCheckBox*   tangentSpaceCheck_ { nullptr };
+  QCheckBox*   showNormalsCheck_    { nullptr };
+  QCheckBox*   showNewNormalsCheck_ { nullptr };
+  CQRealSpin*  normalsSizeEdit_     { nullptr };
+  CQColorEdit* normalsColorEdit_    { nullptr };
+  QCheckBox*   tangentSpaceCheck_   { nullptr };
+
+  QCheckBox* showBBoxCheck_ { nullptr };
+
+  QCheckBox* showHullCheck_ { nullptr };
+
+  QCheckBox*     showBasisCheck_ { nullptr };
+  CQRealSpin*    basisSizeEdit_  { nullptr };
+  CQRealSpin*    basisWidthEdit_ { nullptr };
+  CQPoint3DEdit* basisUEdit_     { nullptr };
+  CQPoint3DEdit* basisVEdit_     { nullptr };
+  CQPoint3DEdit* basisWEdit_     { nullptr };
+
+  QCheckBox* showWireframeCheck_ { nullptr };
 };
 
 //---
@@ -337,8 +432,6 @@ class CQNewGLLightsControl : public CQNewGLControlFrame {
   void shininessFactorSlot(double v);
   void emissiveFactorSlot (double v);
 
-  void lightSelectedSlot(QListWidgetItem *, QListWidgetItem *);
-
   void showSlot(int);
   void typeSlot(int);
   void enabledSlot(int);
@@ -355,7 +448,7 @@ class CQNewGLLightsControl : public CQNewGLControlFrame {
   CQColorEdit* diffuseEdit_  { nullptr };
   CQColorEdit* emissionEdit_ { nullptr };
 
-  QListWidget* lightsList_ { nullptr };
+  CQNewGLLightsList* lightsList_ { nullptr };
 
   bool lightsInvalid_ { true };
 
@@ -391,6 +484,7 @@ class CQNewGLAxesControl : public CQNewGLControlFrame {
 
 //---
 
+#if 0
 class CQNewGLBBoxControl : public CQNewGLControlFrame {
   Q_OBJECT
 
@@ -408,9 +502,11 @@ class CQNewGLBBoxControl : public CQNewGLControlFrame {
  private:
   QCheckBox* showCheck_ { nullptr };
 };
+#endif
 
 //---
 
+#if 0
 class CQNewGLHullControl : public CQNewGLControlFrame {
   Q_OBJECT
 
@@ -428,38 +524,7 @@ class CQNewGLHullControl : public CQNewGLControlFrame {
  private:
   QCheckBox* showCheck_ { nullptr };
 };
-
-//---
-
-class CQNewGLBasisControl : public CQNewGLControlFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLBasisControl(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
- public Q_SLOTS:
-  void updateWidgets();
-
- private Q_SLOTS:
-  void showSlot(int b);
-  void sizeSlot(double r);
-  void widthSlot(double r);
-
-  void basisUSlot();
-  void basisVSlot();
-  void basisWSlot();
-
- private:
-  QCheckBox*  showCheck_ { nullptr };
-  CQRealSpin* sizeEdit_  { nullptr };
-  CQRealSpin* widthEdit_ { nullptr };
-
-  CQPoint3DEdit* basisUEdit_ { nullptr };
-  CQPoint3DEdit* basisVEdit_ { nullptr };
-  CQPoint3DEdit* basisWEdit_ { nullptr };
-};
+#endif
 
 //---
 
@@ -492,6 +557,12 @@ class CQNewGLObjectsControl : public CQNewGLControlFrame {
 
   void currentSlot();
 
+  void solidSlot(int);
+  void wireframeSlot(int);
+
+  void flipYZSlot(int);
+  void invertDepthSlot(int);
+
   void centerSlot();
   void sizeSlot();
 
@@ -514,10 +585,16 @@ class CQNewGLObjectsControl : public CQNewGLControlFrame {
   QPushButton*        hideButton_     { nullptr };
   QPushButton*        currentButton_  { nullptr };
 
-  CQPoint3DEdit* centerEdit_    { nullptr };
-  CQPoint3DEdit* sizeEdit_      { nullptr };
-//CQPoint3DEdit* translateEdit_ { nullptr };
-//CQPoint3DEdit* rotateEdit_    { nullptr };
+  QCheckBox* solidCheck_     { nullptr };
+  QCheckBox* wireframeCheck_ { nullptr };
+
+  QCheckBox* flipYZCheck_      { nullptr };
+  QCheckBox* invertDepthCheck_ { nullptr };
+
+  CQPoint3DEdit* centerEdit_     { nullptr };
+  CQPoint3DEdit* sizeEdit_       { nullptr };
+//CQPoint3DEdit* translateEdit_  { nullptr };
+//CQPoint3DEdit* rotateEdit_     { nullptr };
 
   CQNewGLTextureChooser* diffuseTextureEdit_  { nullptr };
   CQNewGLTextureChooser* normalTextureEdit_   { nullptr };
@@ -615,6 +692,10 @@ class CQNewGLAnimControl : public CQNewGLControlFrame {
  private Q_SLOTS:
   void enabledSlot(int);
   void bonesSlot(int);
+  void boneVerticesSlot(int);
+  void boneListSlot();
+  void boneSelectSlot();
+  void boneDeselectSlot();
   void showBonePointsSlot(int);
   void bonesTransformSlot(int);
 //void objectSelectedSlot();
@@ -629,14 +710,18 @@ class CQNewGLAnimControl : public CQNewGLControlFrame {
  private:
   bool running_ { false };
 
-  QCheckBox* enabledCheck_        { nullptr };
-  QCheckBox* bonesCheck_          { nullptr };
-  QCheckBox* showBonePointsCheck_ { nullptr };
+  QCheckBox*  enabledCheck_ { nullptr };
+  QComboBox*  nameCombo_    { nullptr };
+  CQRealSpin* timeEdit_     { nullptr };
 
-  QComboBox*          bonesTransform_ { nullptr };
-//CQNewGLObjectsList* objectsList_    { nullptr };
-  QComboBox*          nameCombo_      { nullptr };
-  CQRealSpin*         timeEdit_       { nullptr };
+  QCheckBox*          bonesCheck_          { nullptr };
+  QCheckBox*          boneVerticesCheck_   { nullptr };
+  QCheckBox*          showBonePointsCheck_ { nullptr };
+  CQNewGLBonesList*   bonesList_           { nullptr };
+  QPushButton*        boneSelectButton_    { nullptr };
+  QPushButton*        boneDeselectButton_  { nullptr };
+  QComboBox*          bonesTransform_      { nullptr };
+//CQNewGLObjectsList* objectsList_         { nullptr };
 
   CQIconButton* playButton_  { nullptr };
   CQIconButton* pauseButton_ { nullptr };
@@ -666,13 +751,13 @@ class CQNewGLBonesControl : public CQNewGLControlFrame {
 
   void connectSlots(bool b);
 
-  CGeomObject3D *getBonesObject() const;
+//CGeomObject3D *getBonesObject() const;
 
  public Q_SLOTS:
   void updateWidgets();
+  void bonesListSlot();
 
  private Q_SLOTS:
-  void boneSelectedSlot(QListWidgetItem *, QListWidgetItem *);
   void matrixTypeChanged(int);
   void inverseSlot(int);
 
@@ -680,17 +765,17 @@ class CQNewGLBonesControl : public CQNewGLControlFrame {
   void animTimeSlot(double t);
 
  private:
-  QListWidget* bonesList_     { nullptr };
-  QComboBox*   matrixCombo_   { nullptr };
-  QComboBox*   animNameCombo_ { nullptr };
-  CQRealSpin*  animTimeEdit_  { nullptr };
-  QCheckBox*   inverseCheck_  { nullptr };
-  CQMatrix3D*  matrixEdit_    { nullptr };
-  int          boneInd_       { -1 };
-  MatrixType   matrixType_    { MatrixType::INVERSE_BIND };
-  QString      boneAnimName_;
-  double       boneAnimTime_  { 0.0 };
-  bool         inverse_       { false };
+  CQNewGLBonesList* bonesList_     { nullptr };
+  QComboBox*        matrixCombo_   { nullptr };
+  QComboBox*        animNameCombo_ { nullptr };
+  CQRealSpin*       animTimeEdit_  { nullptr };
+  QCheckBox*        isJointCheck_  { nullptr };
+  QCheckBox*        inverseCheck_  { nullptr };
+  CQMatrix3D*       matrixEdit_    { nullptr };
+  MatrixType        matrixType_    { MatrixType::INVERSE_BIND };
+  QString           boneAnimName_;
+  double            boneAnimTime_  { 0.0 };
+  bool              inverse_       { false };
 };
 
 //---
@@ -711,6 +796,7 @@ class CQNewGLTerrainControl : public CQNewGLControlFrame {
   void widthSlot(double);
   void heightSlot(double);
   void gridSizeSlot(int);
+  void octavesSlot(int);
   void textureSlot(int);
   void gridSlot(int);
 
@@ -721,6 +807,7 @@ class CQNewGLTerrainControl : public CQNewGLControlFrame {
   CQRealSpin*    widthEdit_    { nullptr };
   CQRealSpin*    heightEdit_   { nullptr };
   CQIntegerSpin* gridSizeEdit_ { nullptr };
+  CQIntegerSpin* octavesEdit_  { nullptr };
   QCheckBox*     textureCheck_ { nullptr };
   QCheckBox*     gridCheck_    { nullptr };
 };
@@ -801,7 +888,9 @@ class CQNewGLEmitterControl : public CQNewGLControlFrame {
   void gravitySlot(double);
   void sizeSlot(double);
   void maxParticlesSlot(int);
-  void colorSlot(const QColor &c);
+  void maxAgeSlot(int);
+  void startColorSlot(const QColor &c);
+  void endColorSlot(const QColor &c);
   void wireframeSlot(int);
   void imageSlot();
 
@@ -819,7 +908,9 @@ class CQNewGLEmitterControl : public CQNewGLControlFrame {
   CQRealSpin*    gravitySpin_      { nullptr };
   CQRealSpin*    sizeSpin_         { nullptr };
   CQIntegerSpin* maxParticlesSpin_ { nullptr };
-  CQColorEdit*   colorEdit_        { nullptr };
+  CQIntegerSpin* maxAgeSpin_       { nullptr };
+  CQColorEdit*   startColorEdit_   { nullptr };
+  CQColorEdit*   endColorEdit_     { nullptr };
   QCheckBox*     wireframeCheck_   { nullptr };
   QLineEdit*     imageEdit_        { nullptr };
 
@@ -863,8 +954,33 @@ class CQNewGLDrawTreeControl : public CQNewGLControlFrame {
  public Q_SLOTS:
   void updateWidgets();
 
+  void widthSlot(double w);
+  void heightSlot(double h);
+  void leftDirectionSlot();
+  void rightDirectionSlot();
+  void leftAlphaSlot(double w);
+  void rightAlphaSlot(double h);
+  void depthSlot(int depth);
+
  private Q_SLOTS:
   void generateSlot();
+
+ private:
+  CQRealSpin*    widthEdit_          { nullptr };
+  CQRealSpin*    heightEdit_         { nullptr };
+  CQPoint3DEdit* leftDirectionEdit_  { nullptr };
+  CQPoint3DEdit* rightDirectionEdit_ { nullptr };
+  CQRealSpin*    leftAlphaEdit_      { nullptr };
+  CQRealSpin*    rightAlphaEdit_     { nullptr };
+  CQIntegerSpin* depthEdit_          { nullptr };
+
+  double    width_          { 0.2 };
+  double    height_         { 1.0 };
+  CVector3D leftDirection_  {  2.0, 1.0, 0.0 };
+  CVector3D rightDirection_ { -2.0, 1.0, 0.0 };
+  double    leftAlpha_      { 1.1 };
+  double    rightAlpha_     { 1.1 };
+  int       depth_          { 6 };
 };
 
 //---
@@ -877,50 +993,67 @@ class CQNewGLShapeControl : public CQNewGLControlFrame {
 
   void connectSlots(bool b);
 
-  void invalidateShapes();
-
  public Q_SLOTS:
   void updateWidgets();
 
  private Q_SLOTS:
   void shapeSelectedSlot(QListWidgetItem *, QListWidgetItem *);
 
-  void showSlot(int);
   void typeSlot(int);
+
+  void showSlot(int);
+  void wireframeSlot(int);
+  void solidSlot(int);
+
   void startSlot();
   void endSlot();
   void widthSlot(double);
   void colorSlot(const QColor &c);
-  void wireframeSlot(int);
-  void solidSlot(int);
+  void angleStartSlot(double);
+  void angleDeltaSlot(double);
+  void sizeSlot();
   void textureSlot();
 
   void addSlot();
   void updateSlot();
+  void deleteSlot();
 
  private:
-  QListWidget*   shapesList_     { nullptr };
-  QCheckBox*     showCheck_      { nullptr };
-  QComboBox*     typeCombo_      { nullptr };
-  CQPoint3DEdit* startEdit_      { nullptr };
-  CQPoint3DEdit* endEdit_        { nullptr };
-  CQRealSpin*    widthEdit_      { nullptr };
-  CQColorEdit*   colorEdit_      { nullptr };
-  QCheckBox*     wireframeCheck_ { nullptr };
-  QCheckBox*     solidCheck_     { nullptr };
+  void updateState();
 
-  CQNewGLTextureChooser* textureEdit_ { nullptr };
+  void updateShape(CQNewGLShape *shape);
 
-  bool reload_ { false };
+ private:
+  CQNewGLShapesList* shapesList_ { nullptr };
+
+  QComboBox*             typeCombo_      { nullptr };
+  QCheckBox*             showCheck_      { nullptr };
+  QCheckBox*             wireframeCheck_ { nullptr };
+  QCheckBox*             solidCheck_     { nullptr };
+  CQPoint3DEdit*         startEdit_      { nullptr };
+  CQPoint3DEdit*         endEdit_        { nullptr };
+  CQRealSpin*            widthEdit_      { nullptr };
+  CQColorEdit*           colorEdit_      { nullptr };
+  CQRealSpin*            angleStartEdit_ { nullptr };
+  CQRealSpin*            angleDeltaEdit_ { nullptr };
+  CQPoint3DEdit*         sizeEdit_       { nullptr };
+  CQNewGLTextureChooser* textureEdit_    { nullptr };
+
+  QPushButton* addButton_    { nullptr };
+  QPushButton* updateButton_ { nullptr };
+  QPushButton* deleteButton_ { nullptr };
 
   struct ShapeData {
-    CQNewGLShape::Type type      { CQNewGLShape::Type::SPHERE };
-    CPoint3D           start     { 0, 0, 0 };
-    CPoint3D           end       { 1, 1, 1 };
-    double             width     { 1 };
-    CRGBA              color     { 0.2, 0.2, 0.8 };
-    bool               wireframe { false };
-    bool               solid     { true };
+    CQNewGLShape::Type type       { CQNewGLShape::Type::SPHERE };
+    CPoint3D           start      { 0, 0, 0 };
+    CPoint3D           end        { 1, 1, 1 };
+    double             width      { 1 };
+    CRGBA              color      { 0.2, 0.2, 0.8 };
+    double             angleStart { 0.0 };
+    double             angleDelta { 2.0*M_PI };
+    bool               wireframe  { false };
+    bool               solid      { true };
+    CPoint3D           size       { 1, 1, 1 };
     QString            textureName;
   };
 
@@ -965,6 +1098,96 @@ class CQNewGLObjectsList : public QFrame {
 
 //---
 
+class CQNewGLCamerasList : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLCamerasList(CQNewGLControl *control);
+
+  bool isUpdateCurrent() const { return updateCurrent_; }
+  void setUpdateCurrent(bool b) { updateCurrent_ = b; }
+
+  void connectSlots(bool b);
+
+  void updateWidgets();
+
+  CQNewGLCamera *getCurrentCamera() const;
+
+ private Q_SLOTS:
+  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
+
+ Q_SIGNALS:
+  void currentItemChanged();
+
+ private:
+  CQNewGLControl* control_ { nullptr };
+  QListWidget*    list_    { nullptr };
+
+  int  currentCamera_ { 0 };
+  bool updateCurrent_ { true };
+};
+
+//---
+
+class CQNewGLLightsList : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLLightsList(CQNewGLControl *control);
+
+  void connectSlots(bool b);
+
+  void updateWidgets();
+
+ private Q_SLOTS:
+  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
+
+ Q_SIGNALS:
+  void currentItemChanged();
+
+ private:
+  CQNewGLControl* control_ { nullptr };
+  QListWidget*    list_    { nullptr };
+};
+
+//---
+
+class CQNewGLBonesList : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLBonesList(CQNewGLControl *control);
+
+  int boneInd() const { return boneInd_; }
+
+  void connectSlots(bool b);
+
+  void updateWidgets();
+
+  CGeomNodeData *getBoneNode(int boneInd) const;
+
+ private Q_SLOTS:
+  void currentItemSlot(QTreeWidgetItem *, QTreeWidgetItem *);
+
+ Q_SIGNALS:
+  void currentItemChanged();
+
+ private:
+  QTreeWidgetItem *createNodeItem(CGeomObject3D *object, int nodeId);
+
+ private:
+  using NodeItems = std::map<int, QTreeWidgetItem *>;
+
+  CQNewGLControl* control_ { nullptr };
+  QTreeWidget*    tree_    { nullptr };
+
+  int boneInd_ { -1 };
+
+  NodeItems nodeItems_;
+};
+
+//---
+
 class CQNewGLTextureChooser : public QComboBox {
   Q_OBJECT
 
@@ -991,5 +1214,34 @@ class CQNewGLTextureChooser : public QComboBox {
   QString         textureName_;
   bool            needsUpdate_ { true };
 };
+
+//---
+
+class CQNewGLShapesList : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLShapesList(CQNewGLControl *control);
+
+  void connectSlots(bool b);
+
+  void updateWidgets();
+
+ private Q_SLOTS:
+  void invalidateShapes();
+
+  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
+
+ Q_SIGNALS:
+  void currentItemChanged();
+
+ private:
+  CQNewGLControl* control_ { nullptr };
+  QListWidget*    list_    { nullptr };
+
+  bool reload_ { false };
+};
+
+//---
 
 #endif

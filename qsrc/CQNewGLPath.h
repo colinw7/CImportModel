@@ -13,9 +13,13 @@ class CQNewGLPath : public CQNewGLObject {
   const CGLPath3D &path() const { return path_; }
   void setPath(const CGLPath3D &v) { path_ = v; }
 
-  void updateGeometry();
+  //---
 
-  void drawGeometry();
+  void updateGeometry() override;
+
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 

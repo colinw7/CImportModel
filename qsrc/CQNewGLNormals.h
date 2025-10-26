@@ -16,14 +16,18 @@ class CQNewGLNormals : public CQNewGLObject {
   const QColor &lineColor() const { return lineColor_; }
   void setLineColor(const QColor &c) { lineColor_ = c; }
 
-  void updateGeometry();
+  //---
 
-  void drawGeometry();
+  void updateGeometry() override;
+
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
  private:
-  void addBufferNormals(CQGLBuffer *normalBuffer);
+  void addBufferNormals(CQNewGLObject *object);
 
  protected:
   static CQNewGLShaderProgram* shaderProgram_;

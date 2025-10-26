@@ -29,7 +29,14 @@ addGeometry()
 
   FaceDatas faceDatas;
 
-  canvas_->addCube(buffer(), CPoint3D(0, 0, 0), 1.0, QColorToRGBA(color()), faceDatas);
+  int pos = 0;
+
+  CQNewGLCanvas::ShapeData shapeData;
+
+  shapeData.color = QColorToRGBA(color());
+
+  canvas_->addCube(buffer(), CPoint3D(-0.5, 0, 0), CPoint3D(0.5, 0, 0),
+                   shapeData, faceDatas, pos);
 
   setFaceDatas(faceDatas);
 

@@ -1,5 +1,6 @@
 #include <CQNewGLModel.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModelObject.h>
 
 #include <CImportBase.h>
 #include <CGeomScene3D.h>
@@ -153,10 +154,8 @@ main(int argc, char **argv)
 
   auto *canvas = modelApp->canvas();
 
-  canvas->setFlipYZ     (flipYZ);
-  canvas->setInvertDepth(invertDepth);
-  canvas->setTime       (time);
-  canvas->setAnimName   (animName);
+  canvas->setTime    (time);
+  canvas->setAnimName(animName);
 
   CQNewGLCanvas::LoadData loadData;
 
@@ -167,6 +166,13 @@ main(int argc, char **argv)
   if (modelName != "") {
     if (! canvas->loadModel(modelName, format, loadData))
       std::cerr << "Failed to load model '" << modelName.toStdString() << "'\n";
+
+    for (auto *object : loadData.objects) {
+      auto *objectData = canvas->getObjectData(object);
+
+      objectData->setFlipYZ     (flipYZ);
+      objectData->setInvertDepth(invertDepth);
+    }
   }
 
   modelApp->resize(modelApp->windowWidth(), modelApp->windowHeight());

@@ -2,6 +2,7 @@
 #include <CTurtle3D.h>
 #include <CFile.h>
 #include <CStrUtil.h>
+#include <CMathRand.h>
 
 CDrawTree3D::
 CDrawTree3D()
@@ -14,18 +15,18 @@ CDrawTree3D()
   treeHeight_ = 10.0;
   treeWidth_  = 1.0;
 
-  treeLeftAlpha_  = 1.1;
-  treeRightAlpha_ = 1.1;
+  leftAlpha_  = 1.1;
+  rightAlpha_ = 1.1;
 
-  treeLeftDirection_  = CVector3D( 1.0, 2.0, 0.0).normalized();
-  treeRightDirection_ = CVector3D(-1.0, 2.0, 0.0).normalized();
+  leftDirection_  = CVector3D( 1.0, 2.0, 0.0).normalized();
+  rightDirection_ = CVector3D(-1.0, 2.0, 0.0).normalized();
 
   treeDepth_ = 6;
 
-  treeLeftWidthFactor_   = 1.0;
-  treeLeftHeightFactor_  = 1.0;
-  treeRightWidthFactor_  = 1.0;
-  treeRightHeightFactor_ = 1.0;
+  leftWidthFactor_   = 1.0;
+  leftHeightFactor_  = 1.0;
+  rightWidthFactor_  = 1.0;
+  rightHeightFactor_ = 1.0;
 }
 
 #if 0
@@ -66,11 +67,11 @@ read(const std::string &filename)
   treeHeight_ = height;
   treeWidth_  = width;
 
-  treeLeftAlpha_      = lalpha;
-  treeRightAlpha_     = ralpha;
-  treeLeftDirection_  = langle;
-  treeRightDirection_ = rangle;
-  treeDepth_          = depth;
+  leftAlpha_      = lalpha;
+  rightAlpha_     = ralpha;
+  leftDirection_  = langle;
+  rightDirection_ = rangle;
+  treeDepth_      = depth;
 
   return true;
 }
@@ -83,10 +84,10 @@ generate()
   canvasXMin_ = 0.0; canvasYMin_ = 0.0; canvasZMin_ = 0.0;
   canvasXMax_ = 0.0; canvasYMax_ = 0.0; canvasZMax_ = 0.0;
 
-  treeLeftWidthFactor_   = std::pow(2.0, -1.0/     treeLeftAlpha_  );
-  treeLeftHeightFactor_  = std::pow(2.0, -2.0/(3.0*treeLeftAlpha_ ));
-  treeRightWidthFactor_  = std::pow(2.0, -1.0/     treeRightAlpha_ );
-  treeRightHeightFactor_ = std::pow(2.0, -2.0/(3.0*treeRightAlpha_));
+  leftWidthFactor_   = std::pow(2.0, -1.0/     leftAlpha_  );
+  leftHeightFactor_  = std::pow(2.0, -2.0/(3.0*leftAlpha_ ));
+  rightWidthFactor_  = std::pow(2.0, -1.0/     rightAlpha_ );
+  rightHeightFactor_ = std::pow(2.0, -2.0/(3.0*rightAlpha_));
 
   turtle_ = new CTurtle3D;
 
@@ -103,23 +104,17 @@ generate()
 
   updateRange(root_);
 
-  turtle_->setDirection(lineDirection(root_) + treeLeftDirection_);
+  turtle_->setDirection(lineDirection(root_) + perturb(leftDirection_));
 
-  root_->left = addLine(root_->p2, root_->width*treeLeftWidthFactor_, depth + 1);
+  root_->left = addLine(root_->p2, root_->width*leftWidthFactor_, depth + 1);
 
-  addBranch(root_->left,
-            treeLeftHeightFactor_*treeHeight_,
-            treeLeftDirection_,
-            depth + 1);
+  addBranch(root_->left, leftHeightFactor_*treeHeight_, leftDirection_, depth + 1);
 
-  turtle_->setDirection(lineDirection(root_) + treeRightDirection_);
+  turtle_->setDirection(lineDirection(root_) + perturb(rightDirection_));
 
-  root_->right = addLine(root_->p2, root_->width*treeRightWidthFactor_, depth + 1);
+  root_->right = addLine(root_->p2, root_->width*rightWidthFactor_, depth + 1);
 
-  addBranch(root_->right,
-            treeRightHeightFactor_*treeHeight_,
-            treeRightDirection_,
-            depth + 1);
+  addBranch(root_->right, rightHeightFactor_*treeHeight_, rightDirection_, depth + 1);
 
   delete turtle_;
 
@@ -141,23 +136,17 @@ addBranch(Line *line, double height, const CVector3D & /*angle*/, int depth)
   if (depth >= treeDepth_)
     return;
 
-  turtle_->setDirection(lineDirection(line) + treeLeftDirection_);
+  turtle_->setDirection(lineDirection(line) + perturb(leftDirection_));
 
-  line->left = addLine(line->p2, line->width*treeLeftWidthFactor_, depth);
+  line->left = addLine(line->p2, line->width*leftWidthFactor_, depth);
 
-  addBranch(line->left,
-            treeLeftHeightFactor_*height,
-            treeLeftDirection_,
-            depth + 1);
+  addBranch(line->left, leftHeightFactor_*height, leftDirection_, depth + 1);
 
-  turtle_->setDirection(lineDirection(line) + treeRightDirection_);
+  turtle_->setDirection(lineDirection(line) + perturb(rightDirection_));
 
-  line->right = addLine(line->p2, line->width*treeRightWidthFactor_, depth);
+  line->right = addLine(line->p2, line->width*rightWidthFactor_, depth);
 
-  addBranch(line->right,
-            treeRightHeightFactor_*height,
-            treeRightDirection_,
-            depth + 1);
+  addBranch(line->right, rightHeightFactor_*height, rightDirection_, depth + 1);
 }
 
 CDrawTree3D::Line *
@@ -192,4 +181,15 @@ CDrawTree3D::
 lineDirection(Line *line) const
 {
   return CVector3D(line->p2.x - line->p1.x, line->p2.y - line->p1.y, line->p2.z - line->p1.z);
+}
+
+CVector3D
+CDrawTree3D::
+perturb(const CVector3D &v) const
+{
+  double xp = CMathRand::randInRange(-0.1, 0.1);
+  double yp = CMathRand::randInRange(-0.1, 0.1);
+  double zp = CMathRand::randInRange(-0.1, 0.1);
+
+  return (v + CVector3D(xp, yp, zp)).normalize();
 }

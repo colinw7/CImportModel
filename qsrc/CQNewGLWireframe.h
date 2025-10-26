@@ -1,16 +1,19 @@
-#ifndef CQNewGLHull_H
-#define CQNewGLHull_H
+#ifndef CQNewGLWireframe_H
+#define CQNewGLWireframe_H
 
 #include <CQNewGLObject.h>
 #include <QColor>
 
-class CHull3D;
+class CGeomObject3D;
 
-class CQNewGLHull : public CQNewGLObject {
+class CQNewGLWireframe : public CQNewGLObject {
  public:
   static void initShader(CQNewGLCanvas *canvas);
 
-  CQNewGLHull(CQNewGLCanvas *canvas);
+  CQNewGLWireframe(CQNewGLCanvas *canvas);
+
+  const QColor &color() const { return color_; }
+  void setColor(const QColor &c) { color_ = c; }
 
   //---
 
@@ -23,9 +26,7 @@ class CQNewGLHull : public CQNewGLObject {
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
  private:
-  void addBufferHull(CQNewGLObject *object);
-
-  void updateBufferHull(CQNewGLObject *object, CHull3D &hull);
+  void addBufferWireframe(CQNewGLObject *object, int &offset);
 
  protected:
   static CQNewGLShaderProgram* shaderProgram_;

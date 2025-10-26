@@ -6,6 +6,7 @@
 #include <QFrame>
 
 class CQNewGLToolbar;
+class CQNewGLStatusBar;
 class CQNewGLCanvas;
 class CQNewGLControl;
 class CQNewGLUVMap;
@@ -26,10 +27,11 @@ class CQNewGLModel : public QFrame {
 
   const QString &buildDir() const { return buildDir_; }
 
-  CQNewGLToolbar *toolbar() const { return toolbar_; }
-  CQNewGLCanvas  *canvas () const { return canvas_; }
-  CQNewGLControl *control() const { return control_; }
-  CQNewGLUVMap   *uvMap  () const { return uvMap_; }
+  CQNewGLToolbar   *toolbar  () const { return toolbar_; }
+  CQNewGLStatusBar *statusBar() const { return statusBar_; }
+  CQNewGLCanvas    *canvas   () const { return canvas_; }
+  CQNewGLControl   *control  () const { return control_; }
+  CQNewGLUVMap     *uvMap    () const { return uvMap_; }
 
   int windowWidth() const { return windowWidth_; }
   void setWindowWidth(int i) { windowWidth_ = i; }
@@ -58,20 +60,25 @@ class CQNewGLModel : public QFrame {
   bool isShowUVMap() const { return showUVMap_; }
   void setShowUVMap(bool b);
 
+  //---
+
+  // current bone
   bool isShowBone() const { return showBone_; }
   void setShowBone(bool b);
 
-  int boneInd() const { return boneInd_; }
-  void setBoneInd(int i) { boneInd_ = i; }
+  int boneInd() const { return boneData_.ind; }
+  void setBoneInd(int i) { boneData_.ind = i; }
 
-  const QString &boneAnimName() const { return boneAnimName_; }
-  void setBoneAnimName(const QString &s) { boneAnimName_ = s; }
+  const QString &boneAnimName() const { return boneData_.animName; }
+  void setBoneAnimName(const QString &s) { boneData_.animName = s; }
 
-  double boneAnimTime() const { return boneAnimTime_; }
-  void setBoneAnimTime(double r) { boneAnimTime_ = r; }
+  double boneAnimTime() const { return boneData_.animTime; }
+  void setBoneAnimTime(double r) { boneData_.animTime = r; }
 
-  const CMatrix3D &boneMatrix() const { return boneMatrix_; }
-  void setBoneMatrix(const CMatrix3D &m) { boneMatrix_ = m; }
+  const CMatrix3D &boneMatrix() const { return boneData_.matrix; }
+  void setBoneMatrix(const CMatrix3D &m) { boneData_.matrix = m; }
+
+  //---
 
   void update();
   void updateCamera();
@@ -80,10 +87,11 @@ class CQNewGLModel : public QFrame {
  private:
   QString buildDir_;
 
-  CQNewGLToolbar* toolbar_ { nullptr };
-  CQNewGLCanvas*  canvas_  { nullptr };
-  CQNewGLControl* control_ { nullptr };
-  CQNewGLUVMap*   uvMap_   { nullptr };
+  CQNewGLToolbar*   toolbar_   { nullptr };
+  CQNewGLStatusBar* statusBar_ { nullptr };
+  CQNewGLCanvas*    canvas_    { nullptr };
+  CQNewGLControl*   control_   { nullptr };
+  CQNewGLUVMap*     uvMap_     { nullptr };
 
   QStackedWidget* stack_ { nullptr };
 
@@ -102,10 +110,14 @@ class CQNewGLModel : public QFrame {
   bool showUVMap_ { false };
   bool showBone_  { false };
 
-  int       boneInd_      { -1 };
-  QString   boneAnimName_;
-  double    boneAnimTime_ { 0.0 };
-  CMatrix3D boneMatrix_   { CMatrix3D::identity() };
+  struct BoneData {
+    int       ind      { -1 };
+    QString   animName;
+    double    animTime { 0.0 };
+    CMatrix3D matrix   { CMatrix3D::identity() };
+  };
+
+  BoneData boneData_;
 };
 
 #endif

@@ -7,6 +7,14 @@
 class CQGLTexture;
 
 struct CQNewGLFaceData {
+  enum class Type {
+    NONE,
+    CUBE,
+    LINE
+  };
+
+  Type         type            { Type::NONE };
+  bool         selected        { false };
   int          boneId          { -1 };
   int          parentBoneId    { -1 };
   int          pos             { 0 };

@@ -52,8 +52,11 @@ class CQNewGLLight : public CQNewGLObject {
 
   //---
 
-  void addGeometry ();
-  void drawGeometry();
+  void updateGeometry() override { }
+
+  void addGeometry();
+
+  void drawGeometry() override;
 
   //---
 

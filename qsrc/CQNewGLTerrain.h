@@ -41,6 +41,23 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
   int gridSize() const { return gridSize_; }
   void setGridSize(int i) { gridSize_ = i; }
 
+  int octaves() const { return octaves_; }
+  void setOctaves(int i) { octaves_ = i; }
+
+  double xmin() const { return xmin_; }
+  void setXMin(double r) { xmin_ = r; }
+
+  double ymin() const { return ymin_; }
+  void setYMin(double r) { ymin_ = r; }
+
+  double xmax() const { return xmax_; }
+  void setXMax(double r) { xmax_ = r; }
+
+  double ymax() const { return ymax_; }
+  void setYMax(double r) { ymax_ = r; }
+
+  //---
+
   bool isTextured() const { return textured_; }
   void setTextured(bool b) { textured_ = b; }
 
@@ -48,9 +65,15 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
 
   void initBuffer() override;
 
+  //---
+
+  void updateGeometry() override { }
+
   void addGeometry();
 
-  void drawGeometry();
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
@@ -65,10 +88,15 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
  private:
   static CQNewGLShaderProgram* shaderProgram_;
 
-  double width_    { 100.0 };
-  double height_   { 5.0 };
+  double width_    { 10.0 };
+  double height_   { 1.0 };
   int    gridSize_ { 100 };
-  bool   textured_ { false };
+  int    octaves_  { 8 };
+
+  double xmin_ { -1 };
+  double ymin_ { -1 };
+  double xmax_ {  1 };
+  double ymax_ {  1 };
 
   QColor color_ { 50, 50, 255 };
 
@@ -76,7 +104,8 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
 
   CWaterSurface* waterSurface_ { nullptr };
 
-  CQGLTexture* texture_ { nullptr };
+  bool         textured_ { false };
+  CQGLTexture* texture_  { nullptr };
 };
 
 #endif

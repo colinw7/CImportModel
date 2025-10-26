@@ -93,8 +93,6 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
   scene_->addObject(object_);
 
   rootObject_ = object_;
-
-  isPsuedoObject_ = true;
 }
 
 CImportGLTF::
@@ -412,6 +410,10 @@ processData()
 //    rootObject_->setNodeGlobalTransform(nodeInd, calcNodeGlobalTransform(&node));
     }
   }
+
+  //---
+
+  //updateHier();
 
   //---
 
@@ -961,6 +963,7 @@ processSkins()
       if (im >= nm)
         continue;
 
+      node->isJoint           = true;
       node->inverseBindMatrix = meshData->mat4[im];
 
       ++im;
@@ -980,6 +983,51 @@ getSkin(const IndName &indName, Skin &skin) const
   return true;
 }
 
+void
+CImportGLTF::
+updateHier()
+{
+  for (const auto &ps : jsonData_.skins) {
+    const auto &skin = ps.second;
+
+    for (const auto &joint : skin.joints) {
+      Node *node;
+      if (! getNode(joint, node))
+        continue;
+
+      if (! node->object)
+        createNodeObj(node);
+
+      addNodeChildren(node);
+    }
+  }
+}
+
+void
+CImportGLTF::
+addNodeChildren(Node *node)
+{
+  auto *object = (node ? node->object : nullptr);
+  if (! object) return;
+
+  object->resetChildren();
+
+  for (const auto &pc : node->children) {
+    Node *childNode;
+    if (! getNode(pc, childNode))
+      continue;
+
+    if (! childNode->object)
+      createNodeObj(childNode);
+
+    object->addChild(childNode->object);
+
+    //---
+
+    addNodeChildren(childNode);
+  }
+}
+
 bool
 CImportGLTF::
 processAnim()
@@ -993,7 +1041,7 @@ processAnim()
         debugMsg(" Channels");
 
       for (const auto &channel : channels) {
-        CGeomObject3D::AnimationData animationData;
+        CGeomAnimationData animationData;
 
         if (isDebug())
           debugMsg("  Channel: " + std::to_string(channel.sampler) + " " +
@@ -1189,7 +1237,6 @@ processNodeTransform(Node *node, int depth)
 
   for (const auto &pc : node->children) {
     Node *node1;
-
     if (! getNode(pc, node1))
       continue;
 
@@ -1246,27 +1293,9 @@ CImportGLTF::
 createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 {
   // create object
-  auto name = node->name;
+  createNodeObj(node);
 
-  if (name == "")
-    name = "node" + node->name;
-
-  auto *object = CGeometryInst->createObject3D(scene_, name);
-
-  if (isPsuedoObject_) {
-    scene_->removeObject(object_, /*force*/true);
-
-    object_  = object;
-    pobject_ = ObjectP(object_);
-
-    rootObject_ = object_;
-
-    isPsuedoObject_ = false;
-  }
-  else
-    rootObject_->addChild(object);
-
-  scene_->addObject(object);
+  rootObject_->addChild(node->object);
 
   //---
 
@@ -1276,10 +1305,10 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
   if (! getMesh(node->mesh, mesh))
     return false;
 
-  if (! processMesh(object, mesh))
+  if (! processMesh(node->object, mesh))
     return false;
 
-//object->transform(hierTranslate);
+//node->object->transform(hierTranslate);
 
   //---
 
@@ -1295,9 +1324,11 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
         auto ind = node1->indName.ind;
 
-        CGeomObject3D::NodeData nodeData;
+        CGeomNodeData nodeData;
 
         nodeData.parent = (node1->parent ? int(node1->parent->indName.ind) : -1);
+
+        nodeData.isJoint = node1->isJoint;
 
         if (node1->inverseBindMatrix)
           nodeData.inverseBindMatrix = node1->inverseBindMatrix->matrix().toCMatrix();
@@ -1325,7 +1356,7 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       auto ind = pn.first.ind;
 
-      CGeomObject3D::NodeData nodeData;
+      CGeomNodeData nodeData;
 
       nodeData.parent = (node1.parent ? int(node1.parent->indName.ind) : -1);
 
@@ -1362,7 +1393,7 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       if (node1->added) continue;
 
-      CGeomObject3D::NodeData nodeData;
+      CGeomNodeData nodeData;
 
       nodeData.parent = (node1->parent ? int(node1->parent->indName.ind) : -1);
 
@@ -1392,9 +1423,11 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       auto ind = pn.first.ind;
 
-      CGeomObject3D::NodeData nodeData;
+      CGeomNodeData nodeData;
 
       nodeData.parent = (node1.parent ? int(node1.parent->indName.ind) : -1);
+
+      nodeData.isJoint = node1.isJoint;
 
       if (node1.inverseBindMatrix)
         nodeData.inverseBindMatrix = node1.inverseBindMatrix->matrix().toCMatrix();
@@ -1412,11 +1445,27 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
     }
   }
 
-  object->setMeshNode(int(node->indName.ind));
-
-//object->transform(node->hierTransform.inverse());
-
   return true;
+}
+
+void
+CImportGLTF::
+createNodeObj(Node *node)
+{
+  assert(! node->object);
+
+  auto name = node->name;
+
+  if (name == "")
+    name = "node" + node->indName.to_string();
+
+  node->object = CGeometryInst->createObject3D(scene_, node->name);
+
+  scene_->addObject(node->object);
+
+  node->object->setMeshNode(int(node->indName.ind));
+
+//node->object->transform(node->hierTransform.inverse());
 }
 
 CMatrix3D
@@ -5003,6 +5052,15 @@ printJsonData(const JsonData &jsonData) const
     for (const auto &pt : jsonData.textures)
       printTexture(pt.second, pt.first);
   }
+
+  //---
+
+  if (! jsonData.skins.isEmpty()) {
+    std::cerr << "skins\n";
+
+    for (const auto &ps : jsonData.skins)
+      printSkin(ps.second, ps.first);
+  }
 }
 
 void
@@ -5281,18 +5339,29 @@ printNode(const Node &node, const IndName &indName) const
 {
   std::cerr << " node[" << indName << "]\n";
 
-  if (! node.mesh.isEmpty())
-    std::cerr << "  mesh: " << node.mesh << "\n";
   if (node.name != "")
     std::cerr << "  name: " << node.name << "\n";
+  if (! node.mesh.isEmpty())
+    std::cerr << "  mesh: " << node.mesh << "\n";
   if (node.matrix)
     std::cerr << "  matrix: " << *node.matrix << "\n";
+  if (! node.skin.isEmpty())
+    std::cerr << "  skin: " << node.skin << "\n";
   if (node.rotation)
     std::cerr << "  rotation: " << *node.rotation << "\n";
   if (node.scale)
     std::cerr << "  scale: " << *node.scale << "\n";
   if (node.translation)
     std::cerr << "  translation: " << *node.translation << "\n";
+  if (node.camera >= 0)
+    std::cerr << "  camera: " << node.camera << "\n";
+
+  if (! node.children.empty()) {
+    std::cerr << "  children: ";
+    for (const auto &c : node.children)
+      std::cerr << "  " << c;
+    std::cerr << "\n";
+  }
 }
 
 void
@@ -5316,4 +5385,22 @@ printPrimitive(const Primitive &primitive, int ia) const
     std::cerr << "    TEXCOORD_2: " << primitive.texCoord2 << "\n";
   if (! primitive.material.isEmpty())
     std::cerr << "    material: " << primitive.material << "\n";
+}
+
+void
+CImportGLTF::
+printSkin(const Skin &skin, const IndName &indName) const
+{
+  std::cerr << " skin[" << indName << "]\n";
+
+  std::cerr << "  inverseBindMatrices: " << skin.inverseBindMatrices << "\n";
+
+  if (! skin.joints.empty()) {
+    std::cerr << "  joints:";
+    for (auto i : skin.joints)
+      std::cerr << " " << i;
+    std::cerr << "\n";
+  }
+
+  std::cerr << " name" << skin.name << "]\n";
 }

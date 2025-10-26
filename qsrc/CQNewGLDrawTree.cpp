@@ -68,9 +68,13 @@ addGeometry()
   draw.setWidth (width_);
   draw.setHeight(height_);
 
+  draw.setLeftAlpha (leftAlpha_);
+  draw.setRightAlpha(rightAlpha_);
+
+  draw.setLeftDirection (leftDirection_);
+  draw.setRightDirection(rightDirection_);
+
   draw.setTreeDepth(depth_);
-  draw.setTreeLeftDirection (leftDirection_);
-  draw.setTreeRightDirection(rightDirection_);
 
   draw.generate();
 
@@ -105,8 +109,12 @@ addGeometry()
 #else
     auto color = color1_.blended(color2_, CMathUtil::map(depth, 0.0, depth_ - 1.0, 1.0, 0.0));
 
+    CQNewGLCanvas::ShapeData shapeData;
+
+    shapeData.color = color;
+
     canvas_->addCylinder(buffer_, p1 + CPoint3D(0, -h/2.0, 0), p2 + CPoint3D(0, -h/2.0, 0),
-                         r, color, faceDatas_, pos);
+                         r, shapeData, faceDatas_, pos);
 #endif
   };
 

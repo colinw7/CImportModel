@@ -40,21 +40,45 @@ setActive(bool b)
 
 void
 CQNewGLShape::
+updateGeometry()
+{
+  if (! active_)
+    return;
+
+  updateGeometry_ = true;
+
+  addGeometry();
+}
+
+void
+CQNewGLShape::
 addGeometry()
 {
   if (! updateGeometry_)
     return;
 
+  updateGeometry_ = false;
+
+  //---
+
   initBuffer();
 
   //---
 
+  CQNewGLCanvas::ShapeData shapeData;
+
+  shapeData.color = color_;
+  shapeData.size  = size_;
+
+  //---
+
+  // cone: from start -> end, with base width
   if      (type_ == Type::CONE) {
     int pos = 0;
 
     auto addCone = [&](const CPoint3D &p1, const CPoint3D &p2, double w) {
       FaceDatas faceDatas;
-      canvas_->addCone(buffer_, p1, p2, w, color_, faceDatas, pos);
+      canvas_->addCone(buffer_, p1, p2, w, shapeData, faceDatas, pos);
 
       for (const auto &faceData : faceDatas)
         faceDatas_.push_back(faceData);
@@ -63,17 +87,37 @@ addGeometry()
     //---
 
     auto p1 = start();
-    auto p2 = end();
+    auto p2 = end  ();
     auto w  = width();
 
     addCone(p1, p2, w);
   }
+  // cube: bbox from start -> end
+  else if (type_ == Type::CUBE) {
+    int pos = 0;
+
+    auto addCube = [&](const CPoint3D &p1, const CPoint3D &p2) {
+      FaceDatas faceDatas;
+      canvas_->addCube(buffer_, p1, p2, shapeData, faceDatas, pos);
+
+      for (const auto &faceData : faceDatas)
+        faceDatas_.push_back(faceData);
+    };
+
+    //---
+
+    auto p1 = start();
+    auto p2 = end  ();
+
+    addCube(p1, p2);
+  }
+  // cylinder: from start -> end, with base width
   else if (type_ == Type::CYLINDER) {
     int pos = 0;
 
     auto addCylinder = [&](const CPoint3D &p1, const CPoint3D &p2, double r) {
       FaceDatas faceDatas;
-      canvas_->addCylinder(buffer_, p1, p2, r, color_, faceDatas, pos);
+      canvas_->addCylinder(buffer_, p1, p2, r, shapeData, faceDatas, pos);
 
       for (const auto &faceData : faceDatas)
         faceDatas_.push_back(faceData);
@@ -87,12 +131,16 @@ addGeometry()
 
     addCylinder(p1, p2, w/2.0);
   }
-  else if (type_ == Type::SPHERE) {
+  else if (type_ == Type::HYPERBOLOID) {
+    std::cerr << "Unimplemented\n";
+  }
+  // pyramid: from start -> end, with base width
+  else if (type_ == Type::PYRAMID) {
     int pos = 0;
 
-    auto addSphere = [&](const CPoint3D &c, double r) {
+    auto addPyramid = [&](const CPoint3D &p1, const CPoint3D &p2, double w) {
       FaceDatas faceDatas;
-      canvas_->addSphere(buffer_, c, r, color_, faceDatas, pos);
+      canvas_->addPyramid(buffer_, p1, p2, w, shapeData, faceDatas, pos);
 
       for (const auto &faceData : faceDatas)
         faceDatas_.push_back(faceData);
@@ -100,12 +148,57 @@ addGeometry()
 
     //---
 
-    auto c = start();
-    auto w = width();
+    auto p1 = start();
+    auto p2 = end();
+    auto w  = width();
 
-    addSphere(c, w/2.0);
+    addPyramid(p1, p2, w);
+  }
+  // sphere: centered at start and radius from width
+  else if (type_ == Type::SPHERE) {
+    int pos = 0;
+
+    auto addSphere = [&](const CPoint3D &p1, const CPoint3D &p2) {
+      FaceDatas faceDatas;
+      canvas_->addSphere(buffer_, p1, p2, shapeData, angleStart_, angleDelta_, faceDatas, pos);
+
+      for (const auto &faceData : faceDatas)
+        faceDatas_.push_back(faceData);
+    };
+
+    //---
+
+    auto p1 = start();
+    auto p2 = end  ();
+
+    addSphere(p1, p2);
+  }
+  // torus: centered at start width orbit radius from width and default circle radius
+  else if (type_ == Type::TORUS) {
+    int pos = 0;
+
+    auto addTorus = [&](const CPoint3D &p1, const CPoint3D &p2, double rfactor,
+                        double power1, double power2) {
+      FaceDatas faceDatas;
+      canvas_->addTorus(buffer_, p1, p2, rfactor, power1, power2, shapeData, faceDatas, pos);
+
+      for (const auto &faceData : faceDatas)
+        faceDatas_.push_back(faceData);
+    };
+
+    //---
+
+    auto p1 = start();
+    auto p2 = end();
+
+    auto rfactor = 0.25;
+    auto power1  = 1.0;
+    auto power2  = 1.0;
+
+    addTorus(p1, p2, rfactor, power1, power2);
   }
   else {
+    std::cerr << "Unimplemented\n";
   }
 
   buffer_->load();
@@ -118,11 +211,7 @@ drawGeometry()
   if (! active_)
     return;
 
-  if (updateGeometry_) {
-    addGeometry();
-
-    updateGeometry_ = false;
-  }
+  addGeometry();
 
   //---
 

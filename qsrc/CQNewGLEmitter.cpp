@@ -194,6 +194,8 @@ stepSlot()
 
   //--
 
+  auto emitInterval = std::max(this->emitInterval(), 1);
+
   if      (type_ == Type::GENERATOR) {
     particleSystem_->setGravity(gravity());
 
@@ -202,8 +204,9 @@ stepSlot()
 
     //---
 
-    if ((steps_ % emitInterval()) == 0) {
+    if ((steps_ % emitInterval) == 0) {
       particleSystem_->setMaxParticles(maxParticles());
+      particleSystem_->setMaxAge(maxAge());
 
       auto *particle = particleSystem_->addParticle();
 
@@ -217,7 +220,7 @@ stepSlot()
 
       particle->setVelocity(vx, vy, vz);
 
-      particle->setColor(color());
+      particle->setColor(startColor_);
 
       updateGeometry_ = true;
     }
@@ -242,10 +245,14 @@ stepSlot()
 
 void
 CQNewGLEmitter::
-addGeometry()
+updateGeometry()
 {
   if (! updateGeometry_)
     return;
+
+  updateGeometry_ = false;
+
+  //---
 
   initBuffer();
 
@@ -297,6 +304,9 @@ addGeometry()
 
       auto pos = particle1->getPosition();
 
+      auto color = startColor_.blended(endColor_,
+        CMathUtil::map(particle->getAge(), 0.0, maxAge() - 1.0, 1.0, 0.0));
+
       FaceDatas faceDatas;
 #if 0
       canvas_->addCube(buffer_, CPoint3D(0, 0, 0), 1.0, color(), faceDatas);
@@ -305,7 +315,7 @@ addGeometry()
 
       addRect(CPoint3D(-0.5, -0.5, 0.0), CPoint3D( 0.5, -0.5, 0.0),
               CPoint3D( 0.5,  0.5, 0.0), CPoint3D(-0.5,  0.5, 0.0),
-              particle1->getColor(), faceData);
+              color, faceData);
 
       faceDatas.push_back(faceData);
 #endif
@@ -386,11 +396,7 @@ drawGeometry()
   if (! isRunning())
     return;
 
-  if (updateGeometry_) {
-    addGeometry();
-
-    updateGeometry_ = false;
-  }
+  updateGeometry();
 
   //---
 
@@ -443,6 +449,9 @@ drawGeometry()
     for (auto *particle : particleSystem_->getParticles()) {
       auto *particle1 = dynamic_cast<CQNewGLParticle *>(particle);
 
+      if (particle1->isDead())
+        continue;
+
       auto pos  = particle1->getPosition();
       auto pos1 = camera->getViewMatrix()*vectorToGLVector(pos);
 
@@ -452,6 +461,8 @@ drawGeometry()
     //---
 
     // draw particles
+    program->setUniformValue("maxAge", particleSystem_->maxAge());
+
     for (const auto &ps : sortedParticles) {
       for (auto *particle1 : ps.second) {
         auto pos = particle1->getPosition();
@@ -472,6 +483,8 @@ drawGeometry()
     }
   }
   else if (type_ == Type::FLOCKING) {
+    program->setUniformValue("maxAge", 100);
+
     for (const auto &faceData : faceDatas_) {
       program->setUniformValue("position", pointToQVector(faceData.position));
       program->setUniformValue("size"    , float(pointSize()));
@@ -486,6 +499,8 @@ drawGeometry()
     }
   }
   else if (type_ == Type::FIREWORKS) {
+    program->setUniformValue("maxAge", 100);
+
     for (const auto &faceData : faceDatas_) {
       program->setUniformValue("position", pointToQVector(faceData.position));
       program->setUniformValue("size"    , float(pointSize()));

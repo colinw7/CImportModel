@@ -52,29 +52,33 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = CQNewGLAxes.cpp \
-		CQNewGLBBox.cpp \
-		CQNewGLCamera.cpp \
-		CQNewGLCanvas.cpp \
-		CQNewGLControl.cpp \
-		CQNewGLDrawTree.cpp \
-		CQNewGLEmitter.cpp \
-		CQNewGLFont.cpp \
-		CQNewGLFractal.cpp \
-		CQNewGLHull.cpp \
-		CQNewGLLight.cpp \
-		CQNewGLMain.cpp \
-		CQNewGLMaze.cpp \
+SOURCES       = CQNewGLMain.cpp \
 		CQNewGLModel.cpp \
-		CQNewGLNormals.cpp \
-		CQNewGLObject.cpp \
-		CQNewGLPath.cpp \
+		CQNewGLModelObject.cpp \
+		CQNewGLCanvas.cpp \
+		CQNewGLFont.cpp \
 		CQNewGLShaderProgram.cpp \
-		CQNewGLShape.cpp \
-		CQNewGLSkybox.cpp \
-		CQNewGLTerrain.cpp \
 		CQNewGLToolbar.cpp \
+		CQNewGLStatusBar.cpp \
+		CQNewGLControl.cpp \
 		CQNewGLUVMap.cpp \
+		CQNewGLCamera.cpp \
+		CQNewGLLight.cpp \
+		CQNewGLAxes.cpp \
+		CQNewGLNormals.cpp \
+		CQNewGLWireframe.cpp \
+		CQNewGLBBox.cpp \
+		CQNewGLHull.cpp \
+		CQNewGLBasis.cpp \
+		CQNewGLTerrain.cpp \
+		CQNewGLMaze.cpp \
+		CQNewGLSkybox.cpp \
+		CQNewGLEmitter.cpp \
+		CQNewGLFractal.cpp \
+		CQNewGLDrawTree.cpp \
+		CQNewGLShape.cpp \
+		CQNewGLPath.cpp \
+		CQNewGLObject.cpp \
 		CQGLCubemap.cpp \
 		CQGLTexture.cpp \
 		CQGLUtil.cpp \
@@ -93,40 +97,45 @@ SOURCES       = CQNewGLAxes.cpp \
 		CTurtle3D.cpp \
 		CWaterSurface.cpp \
 		CLorenzCalc.cpp \
-		CSolidNoise.cpp .moc/moc_CQNewGLCanvas.cpp \
+		CSolidNoise.cpp .moc/moc_CQNewGLModel.cpp \
+		.moc/moc_CQNewGLCanvas.cpp \
+		.moc/moc_CQNewGLToolbar.cpp \
+		.moc/moc_CQNewGLStatusBar.cpp \
 		.moc/moc_CQNewGLControl.cpp \
-		.moc/moc_CQNewGLDrawTree.cpp \
+		.moc/moc_CQNewGLTerrain.cpp \
 		.moc/moc_CQNewGLEmitter.cpp \
 		.moc/moc_CQNewGLFractal.cpp \
-		.moc/moc_CQNewGLModel.cpp \
+		.moc/moc_CQNewGLDrawTree.cpp \
 		.moc/moc_CQNewGLShape.cpp \
-		.moc/moc_CQNewGLTerrain.cpp \
-		.moc/moc_CQNewGLToolbar.cpp \
 		.moc/moc_CQPoint3DEdit.cpp \
 		.moc/moc_CQMatrix3D.cpp
-OBJECTS       = CQNewGLAxes.o \
-		CQNewGLBBox.o \
-		CQNewGLCamera.o \
-		CQNewGLCanvas.o \
-		CQNewGLControl.o \
-		CQNewGLDrawTree.o \
-		CQNewGLEmitter.o \
-		CQNewGLFont.o \
-		CQNewGLFractal.o \
-		CQNewGLHull.o \
-		CQNewGLLight.o \
-		CQNewGLMain.o \
-		CQNewGLMaze.o \
+OBJECTS       = CQNewGLMain.o \
 		CQNewGLModel.o \
-		CQNewGLNormals.o \
-		CQNewGLObject.o \
-		CQNewGLPath.o \
+		CQNewGLModelObject.o \
+		CQNewGLCanvas.o \
+		CQNewGLFont.o \
 		CQNewGLShaderProgram.o \
-		CQNewGLShape.o \
-		CQNewGLSkybox.o \
-		CQNewGLTerrain.o \
 		CQNewGLToolbar.o \
+		CQNewGLStatusBar.o \
+		CQNewGLControl.o \
 		CQNewGLUVMap.o \
+		CQNewGLCamera.o \
+		CQNewGLLight.o \
+		CQNewGLAxes.o \
+		CQNewGLNormals.o \
+		CQNewGLWireframe.o \
+		CQNewGLBBox.o \
+		CQNewGLHull.o \
+		CQNewGLBasis.o \
+		CQNewGLTerrain.o \
+		CQNewGLMaze.o \
+		CQNewGLSkybox.o \
+		CQNewGLEmitter.o \
+		CQNewGLFractal.o \
+		CQNewGLDrawTree.o \
+		CQNewGLShape.o \
+		CQNewGLPath.o \
+		CQNewGLObject.o \
 		CQGLCubemap.o \
 		CQGLTexture.o \
 		CQGLUtil.o \
@@ -146,15 +155,16 @@ OBJECTS       = CQNewGLAxes.o \
 		CWaterSurface.o \
 		CLorenzCalc.o \
 		CSolidNoise.o \
+		moc_CQNewGLModel.o \
 		moc_CQNewGLCanvas.o \
+		moc_CQNewGLToolbar.o \
+		moc_CQNewGLStatusBar.o \
 		moc_CQNewGLControl.o \
-		moc_CQNewGLDrawTree.o \
+		moc_CQNewGLTerrain.o \
 		moc_CQNewGLEmitter.o \
 		moc_CQNewGLFractal.o \
-		moc_CQNewGLModel.o \
+		moc_CQNewGLDrawTree.o \
 		moc_CQNewGLShape.o \
-		moc_CQNewGLTerrain.o \
-		moc_CQNewGLToolbar.o \
 		moc_CQPoint3DEdit.o \
 		moc_CQMatrix3D.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -251,30 +261,32 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/silent.prf \
-		CQNewGLModel.pro CQNewGLAxes.h \
-		CQNewGLBBox.h \
-		CQNewGLCamera.h \
+		CQNewGLModel.pro CQNewGLModel.h \
+		CQNewGLModelObject.h \
 		CQNewGLCanvas.h \
-		CQNewGLControl.h \
-		CQNewGLDrawTree.h \
-		CQNewGLEmitter.h \
-		CQNewGLFaceData.h \
 		CQNewGLFont.h \
-		CQNewGLFractal.h \
-		CQNewGLHull.h \
-		CQNewGLLight.h \
-		CQNewGLMaze.h \
-		CQNewGLModel.h \
-		CQNewGLNormals.h \
-		CQNewGLObject.h \
-		CQNewGLPath.h \
 		CQNewGLShaderProgram.h \
-		CQNewGLShape.h \
-		CQNewGLSkybox.h \
-		CQNewGLTerrain.h \
 		CQNewGLToolbar.h \
-		CQNewGLUtil.h \
+		CQNewGLStatusBar.h \
+		CQNewGLControl.h \
 		CQNewGLUVMap.h \
+		CQNewGLCamera.h \
+		CQNewGLLight.h \
+		CQNewGLAxes.h \
+		CQNewGLNormals.h \
+		CQNewGLWireframe.h \
+		CQNewGLBBox.h \
+		CQNewGLHull.h \
+		CQNewGLBasis.h \
+		CQNewGLTerrain.h \
+		CQNewGLMaze.h \
+		CQNewGLSkybox.h \
+		CQNewGLEmitter.h \
+		CQNewGLFractal.h \
+		CQNewGLDrawTree.h \
+		CQNewGLShape.h \
+		CQNewGLPath.h \
+		CQNewGLObject.h \
 		CQGLCubemap.h \
 		CQGLTexture.h \
 		CQGLUtil.h \
@@ -282,29 +294,33 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQRotatedText.h \
 		CQMatrix3D.h \
 		CGLCamera.h \
-		CGLTexture.h CQNewGLAxes.cpp \
-		CQNewGLBBox.cpp \
-		CQNewGLCamera.cpp \
-		CQNewGLCanvas.cpp \
-		CQNewGLControl.cpp \
-		CQNewGLDrawTree.cpp \
-		CQNewGLEmitter.cpp \
-		CQNewGLFont.cpp \
-		CQNewGLFractal.cpp \
-		CQNewGLHull.cpp \
-		CQNewGLLight.cpp \
-		CQNewGLMain.cpp \
-		CQNewGLMaze.cpp \
+		CGLTexture.h CQNewGLMain.cpp \
 		CQNewGLModel.cpp \
-		CQNewGLNormals.cpp \
-		CQNewGLObject.cpp \
-		CQNewGLPath.cpp \
+		CQNewGLModelObject.cpp \
+		CQNewGLCanvas.cpp \
+		CQNewGLFont.cpp \
 		CQNewGLShaderProgram.cpp \
-		CQNewGLShape.cpp \
-		CQNewGLSkybox.cpp \
-		CQNewGLTerrain.cpp \
 		CQNewGLToolbar.cpp \
+		CQNewGLStatusBar.cpp \
+		CQNewGLControl.cpp \
 		CQNewGLUVMap.cpp \
+		CQNewGLCamera.cpp \
+		CQNewGLLight.cpp \
+		CQNewGLAxes.cpp \
+		CQNewGLNormals.cpp \
+		CQNewGLWireframe.cpp \
+		CQNewGLBBox.cpp \
+		CQNewGLHull.cpp \
+		CQNewGLBasis.cpp \
+		CQNewGLTerrain.cpp \
+		CQNewGLMaze.cpp \
+		CQNewGLSkybox.cpp \
+		CQNewGLEmitter.cpp \
+		CQNewGLFractal.cpp \
+		CQNewGLDrawTree.cpp \
+		CQNewGLShape.cpp \
+		CQNewGLPath.cpp \
+		CQNewGLObject.cpp \
 		CQGLCubemap.cpp \
 		CQGLTexture.cpp \
 		CQGLUtil.cpp \
@@ -541,8 +557,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents CQNewGLAxes.h CQNewGLBBox.h CQNewGLCamera.h CQNewGLCanvas.h CQNewGLControl.h CQNewGLDrawTree.h CQNewGLEmitter.h CQNewGLFaceData.h CQNewGLFont.h CQNewGLFractal.h CQNewGLHull.h CQNewGLLight.h CQNewGLMaze.h CQNewGLModel.h CQNewGLNormals.h CQNewGLObject.h CQNewGLPath.h CQNewGLShaderProgram.h CQNewGLShape.h CQNewGLSkybox.h CQNewGLTerrain.h CQNewGLToolbar.h CQNewGLUtil.h CQNewGLUVMap.h CQGLCubemap.h CQGLTexture.h CQGLUtil.h CQPoint3DEdit.h CQRotatedText.h CQMatrix3D.h CGLCamera.h CGLTexture.h $(DISTDIR)/
-	$(COPY_FILE) --parents CQNewGLAxes.cpp CQNewGLBBox.cpp CQNewGLCamera.cpp CQNewGLCanvas.cpp CQNewGLControl.cpp CQNewGLDrawTree.cpp CQNewGLEmitter.cpp CQNewGLFont.cpp CQNewGLFractal.cpp CQNewGLHull.cpp CQNewGLLight.cpp CQNewGLMain.cpp CQNewGLMaze.cpp CQNewGLModel.cpp CQNewGLNormals.cpp CQNewGLObject.cpp CQNewGLPath.cpp CQNewGLShaderProgram.cpp CQNewGLShape.cpp CQNewGLSkybox.cpp CQNewGLTerrain.cpp CQNewGLToolbar.cpp CQNewGLUVMap.cpp CQGLCubemap.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQRotatedText.cpp CQMatrix3D.cpp CGLCamera.cpp CGLTexture.cpp CFlocking.cpp CFlock.cpp CBoid.cpp CFireworks.cpp CDungeon.cpp CDungeonXML.cpp CDrawTree3D.cpp CTurtle3D.cpp CWaterSurface.cpp CLorenzCalc.cpp CSolidNoise.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents CQNewGLModel.h CQNewGLModelObject.h CQNewGLCanvas.h CQNewGLFont.h CQNewGLShaderProgram.h CQNewGLToolbar.h CQNewGLStatusBar.h CQNewGLControl.h CQNewGLUVMap.h CQNewGLCamera.h CQNewGLLight.h CQNewGLAxes.h CQNewGLNormals.h CQNewGLWireframe.h CQNewGLBBox.h CQNewGLHull.h CQNewGLBasis.h CQNewGLTerrain.h CQNewGLMaze.h CQNewGLSkybox.h CQNewGLEmitter.h CQNewGLFractal.h CQNewGLDrawTree.h CQNewGLShape.h CQNewGLPath.h CQNewGLObject.h CQGLCubemap.h CQGLTexture.h CQGLUtil.h CQPoint3DEdit.h CQRotatedText.h CQMatrix3D.h CGLCamera.h CGLTexture.h $(DISTDIR)/
+	$(COPY_FILE) --parents CQNewGLMain.cpp CQNewGLModel.cpp CQNewGLModelObject.cpp CQNewGLCanvas.cpp CQNewGLFont.cpp CQNewGLShaderProgram.cpp CQNewGLToolbar.cpp CQNewGLStatusBar.cpp CQNewGLControl.cpp CQNewGLUVMap.cpp CQNewGLCamera.cpp CQNewGLLight.cpp CQNewGLAxes.cpp CQNewGLNormals.cpp CQNewGLWireframe.cpp CQNewGLBBox.cpp CQNewGLHull.cpp CQNewGLBasis.cpp CQNewGLTerrain.cpp CQNewGLMaze.cpp CQNewGLSkybox.cpp CQNewGLEmitter.cpp CQNewGLFractal.cpp CQNewGLDrawTree.cpp CQNewGLShape.cpp CQNewGLPath.cpp CQNewGLObject.cpp CQGLCubemap.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQRotatedText.cpp CQMatrix3D.cpp CGLCamera.cpp CGLTexture.cpp CFlocking.cpp CFlock.cpp CBoid.cpp CFireworks.cpp CDungeon.cpp CDungeonXML.cpp CDrawTree3D.cpp CTurtle3D.cpp CWaterSurface.cpp CLorenzCalc.cpp CSolidNoise.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -575,9 +591,25 @@ compiler_moc_predefs_clean:
 	@echo generating .moc/moc_predefs.h
 	@g++ -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qsrc" -O2 -std=gnu++1z -Wall -Wextra -dM -E -o .moc/moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
+compiler_moc_header_make_all: .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
+	-$(DEL_FILE) .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
+.moc/moc_CQNewGLModel.cpp: CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		.moc/moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	@echo moc CQNewGLModel.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLModel.h -o .moc/moc_CQNewGLModel.cpp
+
 .moc/moc_CQNewGLCanvas.cpp: CQNewGLCanvas.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLFaceData.h \
@@ -600,10 +632,26 @@ compiler_moc_header_clean:
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImagePtr.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLCanvas.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLCanvas.h -o .moc/moc_CQNewGLCanvas.cpp
+
+.moc/moc_CQNewGLToolbar.cpp: CQNewGLToolbar.h \
+		.moc/moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	@echo moc CQNewGLToolbar.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLToolbar.h -o .moc/moc_CQNewGLToolbar.cpp
+
+.moc/moc_CQNewGLStatusBar.cpp: CQNewGLStatusBar.h \
+		.moc/moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	@echo moc CQNewGLStatusBar.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLStatusBar.h -o .moc/moc_CQNewGLStatusBar.cpp
 
 .moc/moc_CQNewGLControl.cpp: CQNewGLControl.h \
 		CQNewGLShape.h \
@@ -615,19 +663,24 @@ compiler_moc_header_clean:
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLControl.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLControl.h -o .moc/moc_CQNewGLControl.cpp
 
-.moc/moc_CQNewGLDrawTree.cpp: CQNewGLDrawTree.h \
+.moc/moc_CQNewGLTerrain.cpp: CQNewGLTerrain.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -636,15 +689,20 @@ compiler_moc_header_clean:
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	@echo moc CQNewGLDrawTree.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLDrawTree.h -o .moc/moc_CQNewGLDrawTree.cpp
+	@echo moc CQNewGLTerrain.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLTerrain.h -o .moc/moc_CQNewGLTerrain.cpp
 
 .moc/moc_CQNewGLEmitter.cpp: CQNewGLEmitter.h \
 		CQNewGLObject.h \
@@ -655,18 +713,22 @@ compiler_moc_header_clean:
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CFile/include/CFileType.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImagePtr.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLEmitter.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLEmitter.h -o .moc/moc_CQNewGLEmitter.cpp
@@ -680,37 +742,49 @@ compiler_moc_header_clean:
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CFile/include/CFileType.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImagePtr.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLFractal.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLFractal.h -o .moc/moc_CQNewGLFractal.cpp
 
-.moc/moc_CQNewGLModel.cpp: CQNewGLModel.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
+.moc/moc_CQNewGLDrawTree.cpp: CQNewGLDrawTree.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	@echo moc CQNewGLModel.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLModel.h -o .moc/moc_CQNewGLModel.cpp
+	@echo moc CQNewGLDrawTree.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLDrawTree.h -o .moc/moc_CQNewGLDrawTree.cpp
 
 .moc/moc_CQNewGLShape.cpp: CQNewGLShape.h \
 		CQNewGLObject.h \
@@ -721,27 +795,20 @@ compiler_moc_header_clean:
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLShape.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLShape.h -o .moc/moc_CQNewGLShape.cpp
-
-.moc/moc_CQNewGLTerrain.cpp: CQNewGLTerrain.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		.moc/moc_predefs.h \
-		/usr/lib/qt5/bin/moc
-	@echo moc CQNewGLTerrain.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLTerrain.h -o .moc/moc_CQNewGLTerrain.cpp
-
-.moc/moc_CQNewGLToolbar.cpp: CQNewGLToolbar.h \
-		.moc/moc_predefs.h \
-		/usr/lib/qt5/bin/moc
-	@echo moc CQNewGLToolbar.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLToolbar.h -o .moc/moc_CQNewGLToolbar.cpp
 
 .moc/moc_CQPoint3DEdit.cpp: CQPoint3DEdit.h \
 		../../CMath/include/CPoint3D.h \
@@ -783,67 +850,40 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-CQNewGLAxes.o: CQNewGLAxes.cpp CQNewGLAxes.h \
-		CQNewGLObject.h \
+CQNewGLMain.o: CQNewGLMain.cpp CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
 		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
 		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
 		CGLCamera.h \
 		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLFont.h \
-		../../CMath/include/CGLVector2D.h \
 		CQGLBuffer.h \
-		CQGLUtil.h \
-		../../CUtil/include/CInterval.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLAxes.o CQNewGLAxes.cpp
-
-CQNewGLBBox.o: CQNewGLBBox.cpp CQNewGLBBox.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModelObject.h \
 		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLShape.h \
-		CQNewGLUtil.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
+		../../CImportModel/include/CImportBase.h \
+		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
 		../../CGeometry3D/include/CGeomFace3D.h \
 		../../CGeometry3D/include/CGeomVertex3D.h \
@@ -857,15 +897,132 @@ CQNewGLBBox.o: CQNewGLBBox.cpp CQNewGLBBox.h \
 		../../CUtil/include/CLineDash.h \
 		../../CUtil/include/CILineDash.h \
 		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h \
+		../../CGeometry3D/include/CGeomLight3D.h \
+		../../CGeometry3D/include/CGeomAxes3D.h \
+		../../CGeometry3D/include/CGeomZBuffer.h \
+		../../CMath/include/CBresenham.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CUtil/include/CAlignType.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CFile/include/CFileType.h \
+		../../CImageLib/include/CImageResizeType.h \
+		../../CImageLib/include/CImageConvolveData.h \
+		../../CImageLib/include/CImageTileData.h \
+		../../CFont/include/CFont.h \
+		../../CFont/include/CFontPtr.h \
+		../../CFont/include/CFontStyle.h \
+		../../CUtil/include/CFlags.h \
+		../../CGeometry3D/include/CGeom3DRenderer.h \
+		../../CMath/include/CMathGeom2D.h \
+		../../CUtil/include/CLineJoinType.h \
+		../../CMath/include/CLine2D.h \
+		../../CMath/include/CShape2D.h \
+		../../CMath/include/C3Bezier2D.h \
+		../../CMath/include/C2Bezier2D.h \
+		../../CGeometry3D/include/CGeomCamera3D.h \
+		../../CMath/include/CMatrix3DH.h \
+		../../CGeometry3D/include/CGeometry3D.h \
+		../../CGeometry3D/include/CGeomTexture.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CGeometry3D/include/CGeomMask.h \
+		../../CImageLib/include/CImageLib.h \
+		../../CImageLib/include/CImageState.h \
+		../../CImageLib/include/CImageAnim.h \
+		../../CImageLib/include/CImageFile.h \
+		../../CQUtil/include/CQApp.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLMain.o CQNewGLMain.cpp
+
+CQNewGLModel.o: CQNewGLModel.cpp CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLToolbar.h \
+		CQNewGLStatusBar.h \
+		CQNewGLControl.h \
+		CQNewGLShape.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLBBox.o CQNewGLBBox.cpp
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLUVMap.h \
+		../../CGeometry3D/include/CGeometry3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CGeometry3D/include/CGeomScene3D.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CMath/include/CVector4D.h \
+		../../CGeometry3D/include/CGeomLight3D.h \
+		../../CGeometry3D/include/CGeomAxes3D.h \
+		../../CGeometry3D/include/CGeomZBuffer.h \
+		../../CMath/include/CBresenham.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CUtil/include/CAlignType.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CFile/include/CFileType.h \
+		../../CImageLib/include/CImageResizeType.h \
+		../../CImageLib/include/CImageConvolveData.h \
+		../../CImageLib/include/CImageTileData.h \
+		../../CFont/include/CFont.h \
+		../../CFont/include/CFontPtr.h \
+		../../CFont/include/CFontStyle.h \
+		../../CUtil/include/CFlags.h \
+		../../CGeometry3D/include/CGeom3DRenderer.h \
+		../../CMath/include/CMathGeom2D.h \
+		../../CUtil/include/CLineJoinType.h \
+		../../CMath/include/CLine2D.h \
+		../../CMath/include/CShape2D.h \
+		../../CMath/include/C3Bezier2D.h \
+		../../CMath/include/C2Bezier2D.h \
+		../../CGeometry3D/include/CGeomCamera3D.h \
+		../../CMath/include/CMatrix3DH.h \
+		../../CGeometry3D/include/CGeomTexture.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CGeometry3D/include/CGeomMask.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLModel.o CQNewGLModel.cpp
 
-CQNewGLCamera.o: CQNewGLCamera.cpp CQNewGLCamera.h \
+CQNewGLModelObject.o: CQNewGLModelObject.cpp CQNewGLModelObject.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -874,26 +1031,43 @@ CQNewGLCamera.o: CQNewGLCamera.cpp CQNewGLCamera.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CQuaternion.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		CQNewGLShaderProgram.h \
+		CQGLBuffer.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
 		../../CImageLib/include/CImagePtr.h \
-		CQNewGLModel.h \
-		CQGLBuffer.h \
-		CQGLUtil.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLCamera.o CQNewGLCamera.cpp
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLModelObject.o CQNewGLModelObject.cpp
 
 CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		CQNewGLShaderProgram.h \
@@ -917,17 +1091,26 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImagePtr.h \
 		CQNewGLModel.h \
+		CQNewGLModelObject.h \
+		CQNewGLObject.h \
 		CQNewGLFont.h \
 		../../CMath/include/CGLVector2D.h \
 		CQNewGLCamera.h \
-		CQNewGLObject.h \
 		CQNewGLLight.h \
 		CQNewGLAxes.h \
 		CQNewGLBBox.h \
 		CQNewGLNormals.h \
+		CQNewGLWireframe.h \
 		CQNewGLHull.h \
+		CQNewGLBasis.h \
 		CQNewGLTerrain.h \
 		CQNewGLMaze.h \
 		CQNewGLSkybox.h \
@@ -935,7 +1118,6 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CFile/include/CFileType.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
 		CQNewGLEmitter.h \
 		CQNewGLFractal.h \
 		CQNewGLDrawTree.h \
@@ -943,9 +1125,9 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		CQNewGLPath.h \
 		CGLPath3D.h \
 		CQNewGLToolbar.h \
+		CQNewGLStatusBar.h \
 		CQNewGLUtil.h \
 		../../CImportModel/include/CImportBase.h \
-		CQGLBuffer.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
 		../../CGeometry3D/include/CGeomVertex3D.h \
@@ -962,10 +1144,6 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -996,13 +1174,163 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		../../CGeometry3D/include/CGeomCone3D.h \
 		../../CGeometry3D/include/CGeomCylinder3D.h \
+		../../CGeometry3D/include/CGeomPyramid3D.h \
 		../../CGeometry3D/include/CGeomSphere3D.h \
 		../../CMath/include/CSphere3D.h \
 		../../CMath/include/CShape3D.h \
 		../../CMath/include/CLine3D.h \
+		../../CGeometry3D/include/CGeomTorus3D.h \
 		CQGLUtil.h \
 		../../CStrUtil/include/CStrUtil.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLCanvas.o CQNewGLCanvas.cpp
+
+CQNewGLFont.o: CQNewGLFont.cpp CQNewGLFont.h \
+		../../CMath/include/CGLVector2D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CUtil/include/CGeom3DType.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModel.h \
+		CQNewGLUtil.h \
+		CQGLUtil.h \
+		stb_truetype.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLFont.o CQNewGLFont.cpp
+
+CQNewGLShaderProgram.o: CQNewGLShaderProgram.cpp CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathMacros.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModel.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLShaderProgram.o CQNewGLShaderProgram.cpp
+
+CQNewGLToolbar.o: CQNewGLToolbar.cpp CQNewGLToolbar.h \
+		CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLControl.h \
+		CQNewGLShape.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		../../CQUtil/include/CQIconButton.h \
+		../../CQUtil/include/CQApp.h \
+		svg/camera_svg.h \
+		../../CQUtil/include/CQPixmapCache.h \
+		svg/model_svg.h \
+		svg/light_svg.h \
+		svg/settings_svg.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLToolbar.o CQNewGLToolbar.cpp
+
+CQNewGLStatusBar.o: CQNewGLStatusBar.cpp CQNewGLStatusBar.h \
+		CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLControl.h \
+		CQNewGLShape.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLStatusBar.o CQNewGLStatusBar.cpp
 
 CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		CQNewGLShape.h \
@@ -1014,17 +1342,24 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		CQNewGLModel.h \
-		CQNewGLCanvas.h \
+		CQNewGLModelObject.h \
 		CQNewGLShaderProgram.h \
+		CQGLBuffer.h \
+		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
 		../../CMath/include/CGLVector3D.h \
 		CGLCamera.h \
@@ -1037,7 +1372,9 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		CQNewGLAxes.h \
 		CQNewGLBBox.h \
 		CQNewGLNormals.h \
+		CQNewGLWireframe.h \
 		CQNewGLHull.h \
+		CQNewGLBasis.h \
 		CQNewGLTerrain.h \
 		CQNewGLMaze.h \
 		CQNewGLSkybox.h \
@@ -1045,7 +1382,6 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		../../CFile/include/CFileType.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
 		CQNewGLEmitter.h \
 		CQNewGLFractal.h \
 		CQNewGLDrawTree.h \
@@ -1066,10 +1402,6 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1115,7 +1447,89 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		svg/play_one_svg.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLControl.o CQNewGLControl.cpp
 
-CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
+CQNewGLUVMap.o: CQNewGLUVMap.cpp CQNewGLUVMap.h \
+		CQNewGLModel.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLShape.h \
+		CQNewGLObject.h \
+		../../CImportModel/include/CImportBase.h \
+		../../CGeometry3D/include/CGeomScene3D.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h \
+		../../CGeometry3D/include/CGeomLight3D.h \
+		../../CGeometry3D/include/CGeomAxes3D.h \
+		../../CGeometry3D/include/CGeomZBuffer.h \
+		../../CMath/include/CBresenham.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CUtil/include/CAlignType.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CFile/include/CFileType.h \
+		../../CImageLib/include/CImageResizeType.h \
+		../../CImageLib/include/CImageConvolveData.h \
+		../../CImageLib/include/CImageTileData.h \
+		../../CFont/include/CFont.h \
+		../../CFont/include/CFontPtr.h \
+		../../CFont/include/CFontStyle.h \
+		../../CUtil/include/CFlags.h \
+		../../CGeometry3D/include/CGeom3DRenderer.h \
+		../../CMath/include/CMathGeom2D.h \
+		../../CUtil/include/CLineJoinType.h \
+		../../CMath/include/CLine2D.h \
+		../../CMath/include/CShape2D.h \
+		../../CMath/include/C3Bezier2D.h \
+		../../CMath/include/C2Bezier2D.h \
+		../../CGeometry3D/include/CGeomCamera3D.h \
+		../../CMath/include/CMatrix3DH.h \
+		../../CGeometry3D/include/CGeomTexture.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CQUtil/include/CQImage.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLUVMap.o CQNewGLUVMap.cpp
+
+CQNewGLCamera.o: CQNewGLCamera.cpp CQNewGLCamera.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -1124,12 +1538,87 @@ CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CQuaternion.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModel.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLCamera.o CQNewGLCamera.cpp
+
+CQNewGLLight.o: CQNewGLLight.cpp CQNewGLLight.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CMath/include/CGLVector3D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLUtil.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLLight.o CQNewGLLight.cpp
+
+CQNewGLAxes.o: CQNewGLAxes.cpp CQNewGLAxes.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
@@ -1139,10 +1628,254 @@ CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLFont.h \
+		../../CMath/include/CGLVector2D.h \
+		CQGLUtil.h \
+		../../CUtil/include/CInterval.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLAxes.o CQNewGLAxes.cpp
+
+CQNewGLNormals.o: CQNewGLNormals.cpp CQNewGLNormals.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLNormals.o CQNewGLNormals.cpp
+
+CQNewGLWireframe.o: CQNewGLWireframe.cpp CQNewGLWireframe.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLWireframe.o CQNewGLWireframe.cpp
+
+CQNewGLBBox.o: CQNewGLBBox.cpp CQNewGLBBox.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLUtil.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLBBox.o CQNewGLBBox.cpp
+
+CQNewGLHull.o: CQNewGLHull.cpp CQNewGLHull.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModelObject.h \
+		CQNewGLShape.h \
+		CQGLUtil.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h \
+		../../CMath/include/CHull3D.h \
+		../../CUtil/include/CListLink.h \
+		../../CUtil/include/CStateIterator.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLHull.o CQNewGLHull.cpp
+
+CQNewGLBasis.o: CQNewGLBasis.cpp CQNewGLBasis.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModelObject.h \
+		CQNewGLFont.h \
+		../../CMath/include/CGLVector2D.h \
+		CQNewGLUtil.h \
+		CQGLUtil.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLBasis.o CQNewGLBasis.cpp
+
+CQNewGLTerrain.o: CQNewGLTerrain.cpp CQNewGLTerrain.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
 		../../CImageLib/include/CImagePtr.h \
 		CQNewGLModel.h \
-		CQNewGLUtil.h \
-		CQGLBuffer.h \
 		CQGLUtil.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
@@ -1160,11 +1893,6 @@ CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1197,10 +1925,11 @@ CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		../../CFile/include/CFileBase.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CGeometry3D/include/CGeomMask.h \
-		CDrawTree3D.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLDrawTree.o CQNewGLDrawTree.cpp
+		CSolidNoise.h \
+		CWaterSurface.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLTerrain.o CQNewGLTerrain.cpp
 
-CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
+CQNewGLMaze.o: CQNewGLMaze.cpp CQNewGLMaze.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -1209,18 +1938,17 @@ CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CFile/include/CFileType.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
-		../../CImageLib/include/CImagePtr.h \
-		../../CMath/include/CVector3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
@@ -1230,10 +1958,9 @@ CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
-		CQNewGLModel.h \
-		CQNewGLCamera.h \
-		CQNewGLUtil.h \
 		CQGLBuffer.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLModel.h \
 		CQGLUtil.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
@@ -1251,10 +1978,152 @@ CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CMath/include/CVector4D.h \
+		../../CGeometry3D/include/CGeomLight3D.h \
+		../../CGeometry3D/include/CGeomAxes3D.h \
+		../../CGeometry3D/include/CGeomZBuffer.h \
+		../../CMath/include/CBresenham.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CUtil/include/CAlignType.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CFile/include/CFileType.h \
+		../../CImageLib/include/CImageResizeType.h \
+		../../CImageLib/include/CImageConvolveData.h \
+		../../CImageLib/include/CImageTileData.h \
+		../../CFont/include/CFont.h \
+		../../CFont/include/CFontPtr.h \
+		../../CFont/include/CFontStyle.h \
+		../../CUtil/include/CFlags.h \
+		../../CGeometry3D/include/CGeom3DRenderer.h \
+		../../CMath/include/CMathGeom2D.h \
+		../../CUtil/include/CLineJoinType.h \
+		../../CMath/include/CLine2D.h \
+		../../CMath/include/CShape2D.h \
+		../../CMath/include/C3Bezier2D.h \
+		../../CMath/include/C2Bezier2D.h \
+		../../CGeometry3D/include/CGeomCamera3D.h \
+		../../CMath/include/CMatrix3DH.h \
+		../../CGeometry3D/include/CGeomTexture.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CGeometry3D/include/CGeomMask.h \
+		CDungeon.h \
+		../../CUtil/include/CFuncs.h \
+		../../CUtil/include/CCompassType.h \
+		../../CImageLib/include/CImageLib.h \
+		../../CImageLib/include/CImageState.h \
+		../../CImageLib/include/CImageAnim.h \
+		../../CImageLib/include/CImageFile.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLMaze.o CQNewGLMaze.cpp
+
+CQNewGLSkybox.o: CQNewGLSkybox.cpp CQNewGLSkybox.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
 		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CFile/include/CFileType.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		CQNewGLModel.h \
+		CQGLCubemap.h \
+		CQGLTexture.h \
+		CQGLUtil.h \
+		../../CQUtil/include/CQImage.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CUtil/include/CAlignType.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CImageLib/include/CImageResizeType.h \
+		../../CImageLib/include/CImageConvolveData.h \
+		../../CImageLib/include/CImageTileData.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLSkybox.o CQNewGLSkybox.cpp
+
+CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
+		CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CFile/include/CFileType.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
+		CGLCamera.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		CQNewGLModel.h \
+		CQNewGLCamera.h \
+		CQNewGLUtil.h \
+		CQGLUtil.h \
+		CQGLTexture.h \
+		../../CGeometry3D/include/CGeometry3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CUtil/include/accessor.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CGeometry3D/include/CGeomScene3D.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1297,38 +2166,6 @@ CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
 		../../COS/include/COSRand.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLEmitter.o CQNewGLEmitter.cpp
 
-CQNewGLFont.o: CQNewGLFont.cpp CQNewGLFont.h \
-		../../CMath/include/CGLVector2D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLCanvas.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CUtil/include/CGeom3DType.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLModel.h \
-		CQNewGLUtil.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
-		stb_truetype.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLFont.o CQNewGLFont.cpp
-
 CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
@@ -1338,18 +2175,22 @@ CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CFile/include/CFileType.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
 		../../CImageLib/include/CImagePtr.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
@@ -1359,10 +2200,10 @@ CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
 		CQNewGLModel.h \
 		CQNewGLCamera.h \
 		CQNewGLUtil.h \
-		CQGLBuffer.h \
 		CQGLUtil.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
@@ -1380,10 +2221,6 @@ CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1420,7 +2257,7 @@ CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		../../CImageLib/include/CImageFile.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLFractal.o CQNewGLFractal.cpp
 
-CQNewGLHull.o: CQNewGLHull.cpp CQNewGLHull.h \
+CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -1429,190 +2266,30 @@ CQNewGLHull.o: CQNewGLHull.cpp CQNewGLHull.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLShape.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CMath/include/CPolygonOrientation.h \
-		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h \
-		../../CMath/include/CHull3D.h \
-		../../CUtil/include/CListLink.h \
-		../../CUtil/include/CStateIterator.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLHull.o CQNewGLHull.cpp
-
-CQNewGLLight.o: CQNewGLLight.cpp CQNewGLLight.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CGLVector3D.h \
 		CGLCamera.h \
 		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLUtil.h \
 		CQGLBuffer.h \
-		CQGLUtil.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLLight.o CQNewGLLight.cpp
-
-CQNewGLMain.o: CQNewGLMain.cpp CQNewGLModel.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLCanvas.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		../../CImportModel/include/CImportBase.h \
-		../../CGeometry3D/include/CGeomScene3D.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CMath/include/CPolygonOrientation.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h \
-		../../CGeometry3D/include/CGeomLight3D.h \
-		../../CGeometry3D/include/CGeomAxes3D.h \
-		../../CGeometry3D/include/CGeomZBuffer.h \
-		../../CMath/include/CBresenham.h \
-		../../CImageLib/include/CImage.h \
-		../../CUtil/include/CRGBACombineDef.h \
-		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
-		../../CFile/include/CFileType.h \
-		../../CImageLib/include/CImageResizeType.h \
-		../../CImageLib/include/CImageConvolveData.h \
-		../../CImageLib/include/CImageTileData.h \
-		../../CFont/include/CFont.h \
-		../../CFont/include/CFontPtr.h \
-		../../CFont/include/CFontStyle.h \
-		../../CUtil/include/CFlags.h \
-		../../CGeometry3D/include/CGeom3DRenderer.h \
-		../../CMath/include/CMathGeom2D.h \
-		../../CUtil/include/CLineJoinType.h \
-		../../CMath/include/CLine2D.h \
-		../../CMath/include/CShape2D.h \
-		../../CMath/include/C3Bezier2D.h \
-		../../CMath/include/C2Bezier2D.h \
-		../../CGeometry3D/include/CGeomCamera3D.h \
-		../../CMath/include/CMatrix3DH.h \
-		../../CGeometry3D/include/CGeometry3D.h \
-		../../CGeometry3D/include/CGeomTexture.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CGeometry3D/include/CGeomMask.h \
-		../../CImageLib/include/CImageLib.h \
-		../../CImageLib/include/CImageState.h \
-		../../CImageLib/include/CImageAnim.h \
-		../../CImageLib/include/CImageFile.h \
-		../../CQUtil/include/CQApp.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLMain.o CQNewGLMain.cpp
-
-CQNewGLMaze.o: CQNewGLMaze.cpp CQNewGLMaze.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
 		../../CImageLib/include/CImagePtr.h \
 		CQNewGLModel.h \
-		CQGLBuffer.h \
+		CQNewGLUtil.h \
 		CQGLUtil.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
@@ -1630,11 +2307,6 @@ CQNewGLMaze.o: CQNewGLMaze.cpp CQNewGLMaze.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1667,221 +2339,8 @@ CQNewGLMaze.o: CQNewGLMaze.cpp CQNewGLMaze.h \
 		../../CFile/include/CFileBase.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CGeometry3D/include/CGeomMask.h \
-		CDungeon.h \
-		../../CUtil/include/CFuncs.h \
-		../../CUtil/include/CCompassType.h \
-		../../CImageLib/include/CImageLib.h \
-		../../CImageLib/include/CImageState.h \
-		../../CImageLib/include/CImageAnim.h \
-		../../CImageLib/include/CImageFile.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLMaze.o CQNewGLMaze.cpp
-
-CQNewGLModel.o: CQNewGLModel.cpp CQNewGLModel.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLToolbar.h \
-		CQNewGLControl.h \
-		CQNewGLShape.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		CQNewGLCanvas.h \
-		CQNewGLShaderProgram.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLUVMap.h \
-		../../CGeometry3D/include/CGeometry3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CMath/include/CPolygonOrientation.h \
-		../../CGeometry3D/include/CGeomScene3D.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h \
-		../../CGeometry3D/include/CGeomLight3D.h \
-		../../CGeometry3D/include/CGeomAxes3D.h \
-		../../CGeometry3D/include/CGeomZBuffer.h \
-		../../CMath/include/CBresenham.h \
-		../../CImageLib/include/CImage.h \
-		../../CUtil/include/CRGBACombineDef.h \
-		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
-		../../CFile/include/CFileType.h \
-		../../CImageLib/include/CImageResizeType.h \
-		../../CImageLib/include/CImageConvolveData.h \
-		../../CImageLib/include/CImageTileData.h \
-		../../CFont/include/CFont.h \
-		../../CFont/include/CFontPtr.h \
-		../../CFont/include/CFontStyle.h \
-		../../CUtil/include/CFlags.h \
-		../../CGeometry3D/include/CGeom3DRenderer.h \
-		../../CMath/include/CMathGeom2D.h \
-		../../CUtil/include/CLineJoinType.h \
-		../../CMath/include/CLine2D.h \
-		../../CMath/include/CShape2D.h \
-		../../CMath/include/C3Bezier2D.h \
-		../../CMath/include/C2Bezier2D.h \
-		../../CGeometry3D/include/CGeomCamera3D.h \
-		../../CMath/include/CMatrix3DH.h \
-		../../CGeometry3D/include/CGeomTexture.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CGeometry3D/include/CGeomMask.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLModel.o CQNewGLModel.cpp
-
-CQNewGLNormals.o: CQNewGLNormals.cpp CQNewGLNormals.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLShape.h \
-		CQNewGLTerrain.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CMath/include/CPolygonOrientation.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLNormals.o CQNewGLNormals.cpp
-
-CQNewGLObject.o: CQNewGLObject.cpp CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQGLBuffer.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLObject.o CQNewGLObject.cpp
-
-CQNewGLPath.o: CQNewGLPath.cpp CQNewGLPath.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CGLPath3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLPath.o CQNewGLPath.cpp
-
-CQNewGLShaderProgram.o: CQNewGLShaderProgram.cpp CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLModel.h \
-		CQGLBuffer.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLShaderProgram.o CQNewGLShaderProgram.cpp
+		CDrawTree3D.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLDrawTree.o CQNewGLDrawTree.cpp
 
 CQNewGLShape.o: CQNewGLShape.cpp CQNewGLShape.h \
 		CQNewGLObject.h \
@@ -1892,26 +2351,31 @@ CQNewGLShape.o: CQNewGLShape.cpp CQNewGLShape.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
 		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
 		CGLCamera.h \
 		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
 		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
 		../../CImageLib/include/CImagePtr.h \
 		CQNewGLModel.h \
 		CQNewGLLight.h \
 		CQNewGLUtil.h \
-		CQGLBuffer.h \
 		CQGLUtil.h \
 		CQGLTexture.h \
 		../../CGeometry3D/include/CGeometry3D.h \
@@ -1929,11 +2393,6 @@ CQNewGLShape.o: CQNewGLShape.cpp CQNewGLShape.h \
 		../../CMath/include/CPolygonOrientation.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CMath/include/CBBox3D.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
 		../../CMath/include/CVector4D.h \
 		../../CGeometry3D/include/CGeomLight3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
@@ -1968,7 +2427,7 @@ CQNewGLShape.o: CQNewGLShape.cpp CQNewGLShape.h \
 		../../CGeometry3D/include/CGeomMask.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLShape.o CQNewGLShape.cpp
 
-CQNewGLSkybox.o: CQNewGLSkybox.cpp CQNewGLSkybox.h \
+CQNewGLPath.o: CQNewGLPath.cpp CQNewGLPath.h \
 		CQNewGLObject.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
@@ -1977,245 +2436,59 @@ CQNewGLSkybox.o: CQNewGLSkybox.cpp CQNewGLSkybox.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CFile/include/CFileType.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CMath/include/CISize2D.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		CQNewGLModel.h \
-		CQGLCubemap.h \
-		CQGLBuffer.h \
-		CQGLTexture.h \
-		CQGLUtil.h \
-		../../CQUtil/include/CQImage.h \
-		../../CImageLib/include/CImage.h \
-		../../CUtil/include/CRGBACombineDef.h \
-		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
-		../../CImageLib/include/CImageResizeType.h \
-		../../CImageLib/include/CImageConvolveData.h \
-		../../CImageLib/include/CImageTileData.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLSkybox.o CQNewGLSkybox.cpp
-
-CQNewGLTerrain.o: CQNewGLTerrain.cpp CQNewGLTerrain.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLCanvas.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLModel.h \
-		CQGLBuffer.h \
-		CQGLUtil.h \
-		CQGLTexture.h \
-		../../CGeometry3D/include/CGeometry3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CMath/include/CPolygonOrientation.h \
-		../../CGeometry3D/include/CGeomScene3D.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
 		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h \
-		../../CGeometry3D/include/CGeomLight3D.h \
-		../../CGeometry3D/include/CGeomAxes3D.h \
-		../../CGeometry3D/include/CGeomZBuffer.h \
-		../../CMath/include/CBresenham.h \
-		../../CImageLib/include/CImage.h \
-		../../CUtil/include/CRGBACombineDef.h \
-		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
-		../../CFile/include/CFileType.h \
-		../../CImageLib/include/CImageResizeType.h \
-		../../CImageLib/include/CImageConvolveData.h \
-		../../CImageLib/include/CImageTileData.h \
-		../../CFont/include/CFont.h \
-		../../CFont/include/CFontPtr.h \
-		../../CFont/include/CFontStyle.h \
-		../../CUtil/include/CFlags.h \
-		../../CGeometry3D/include/CGeom3DRenderer.h \
-		../../CMath/include/CMathGeom2D.h \
-		../../CUtil/include/CLineJoinType.h \
-		../../CMath/include/CLine2D.h \
-		../../CMath/include/CShape2D.h \
-		../../CMath/include/C3Bezier2D.h \
-		../../CMath/include/C2Bezier2D.h \
-		../../CGeometry3D/include/CGeomCamera3D.h \
-		../../CMath/include/CMatrix3DH.h \
-		../../CGeometry3D/include/CGeomTexture.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CGeometry3D/include/CGeomMask.h \
-		CSolidNoise.h \
-		CWaterSurface.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLTerrain.o CQNewGLTerrain.cpp
-
-CQNewGLToolbar.o: CQNewGLToolbar.cpp CQNewGLToolbar.h \
-		CQNewGLModel.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLControl.h \
-		CQNewGLShape.h \
-		CQNewGLObject.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		CQNewGLCanvas.h \
+		CGLPath3D.h \
 		CQNewGLShaderProgram.h \
+		CQNewGLCanvas.h \
 		../../CUtil/include/CGeom3DType.h \
 		../../CMath/include/CGLVector3D.h \
 		CGLCamera.h \
 		../../CMath/include/CGLMatrix3D.h \
-		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		../../CQUtil/include/CQIconButton.h \
-		svg/camera_svg.h \
-		../../CQUtil/include/CQPixmapCache.h \
-		svg/model_svg.h \
-		svg/light_svg.h \
-		svg/settings_svg.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLToolbar.o CQNewGLToolbar.cpp
-
-CQNewGLUVMap.o: CQNewGLUVMap.cpp CQNewGLUVMap.h \
-		CQNewGLModel.h \
 		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CPoint2D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
-		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLCanvas.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLFaceData.h \
-		../../CUtil/include/CRGBA.h \
-		../../CUtil/include/CRGB.h \
-		../../CUtil/include/CRGBName.h \
-		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLVector3D.h \
-		CGLCamera.h \
-		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CQuaternion.h \
-		../../CImageLib/include/CImagePtr.h \
-		CQNewGLShape.h \
-		CQNewGLObject.h \
 		CQGLBuffer.h \
-		../../CImportModel/include/CImportBase.h \
-		../../CGeometry3D/include/CGeomScene3D.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
-		../../CUtil/include/CClipSide.h \
-		../../CGeometry3D/include/CGeomPoint3D.h \
-		../../CUtil/include/accessor.h \
-		../../CMath/include/CCoordFrame3D.h \
-		../../CMath/include/COrthonormalBasis3D.h \
-		../../CGeometry3D/include/CGeomLine3D.h \
-		../../CImportModel/include/CMaterial.h \
-		../../CUtil/include/CLineDash.h \
-		../../CUtil/include/CILineDash.h \
-		../../CMath/include/CPolygonOrientation.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQGLUtil.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLPath.o CQNewGLPath.cpp
+
+CQNewGLObject.o: CQNewGLObject.cpp CQNewGLObject.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
 		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
-		../../CMath/include/CVector4D.h \
-		../../CGeometry3D/include/CGeomLight3D.h \
-		../../CGeometry3D/include/CGeomAxes3D.h \
-		../../CGeometry3D/include/CGeomZBuffer.h \
-		../../CMath/include/CBresenham.h \
-		../../CImageLib/include/CImage.h \
-		../../CUtil/include/CRGBACombineDef.h \
-		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
-		../../CFile/include/CFileType.h \
-		../../CImageLib/include/CImageResizeType.h \
-		../../CImageLib/include/CImageConvolveData.h \
-		../../CImageLib/include/CImageTileData.h \
-		../../CFont/include/CFont.h \
-		../../CFont/include/CFontPtr.h \
-		../../CFont/include/CFontStyle.h \
-		../../CUtil/include/CFlags.h \
-		../../CGeometry3D/include/CGeom3DRenderer.h \
-		../../CMath/include/CMathGeom2D.h \
-		../../CUtil/include/CLineJoinType.h \
-		../../CMath/include/CLine2D.h \
-		../../CMath/include/CShape2D.h \
-		../../CMath/include/C3Bezier2D.h \
-		../../CMath/include/C2Bezier2D.h \
-		../../CGeometry3D/include/CGeomCamera3D.h \
-		../../CMath/include/CMatrix3DH.h \
-		../../CGeometry3D/include/CGeomTexture.h \
-		../../CFile/include/CFile.h \
-		../../CFile/include/CFileBase.h \
-		../../CImageLib/include/CImageMgr.h \
-		../../CQUtil/include/CQImage.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLUVMap.o CQNewGLUVMap.cpp
+		CQNewGLShaderProgram.h \
+		CQNewGLFont.h \
+		../../CMath/include/CGLVector2D.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQGLBuffer.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLObject.o CQNewGLObject.cpp
 
 CQGLCubemap.o: CQGLCubemap.cpp CQGLCubemap.h \
 		../../CMath/include/CMathGen.h \
@@ -2639,7 +2912,8 @@ CDrawTree3D.o: CDrawTree3D.cpp CDrawTree3D.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
 		../../CFile/include/CFileType.h \
-		../../CStrUtil/include/CStrUtil.h
+		../../CStrUtil/include/CStrUtil.h \
+		../../CMath/include/CMathRand.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CDrawTree3D.o CDrawTree3D.cpp
 
 CTurtle3D.o: CTurtle3D.cpp CTurtle3D.h \
@@ -2744,14 +3018,23 @@ CSolidNoise.o: CSolidNoise.cpp CSolidNoise.h \
 		../../CMath/include/CRand.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CSolidNoise.o CSolidNoise.cpp
 
+moc_CQNewGLModel.o: .moc/moc_CQNewGLModel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLModel.o .moc/moc_CQNewGLModel.cpp
+
 moc_CQNewGLCanvas.o: .moc/moc_CQNewGLCanvas.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLCanvas.o .moc/moc_CQNewGLCanvas.cpp
+
+moc_CQNewGLToolbar.o: .moc/moc_CQNewGLToolbar.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLToolbar.o .moc/moc_CQNewGLToolbar.cpp
+
+moc_CQNewGLStatusBar.o: .moc/moc_CQNewGLStatusBar.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLStatusBar.o .moc/moc_CQNewGLStatusBar.cpp
 
 moc_CQNewGLControl.o: .moc/moc_CQNewGLControl.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLControl.o .moc/moc_CQNewGLControl.cpp
 
-moc_CQNewGLDrawTree.o: .moc/moc_CQNewGLDrawTree.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLDrawTree.o .moc/moc_CQNewGLDrawTree.cpp
+moc_CQNewGLTerrain.o: .moc/moc_CQNewGLTerrain.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLTerrain.o .moc/moc_CQNewGLTerrain.cpp
 
 moc_CQNewGLEmitter.o: .moc/moc_CQNewGLEmitter.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLEmitter.o .moc/moc_CQNewGLEmitter.cpp
@@ -2759,17 +3042,11 @@ moc_CQNewGLEmitter.o: .moc/moc_CQNewGLEmitter.cpp
 moc_CQNewGLFractal.o: .moc/moc_CQNewGLFractal.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLFractal.o .moc/moc_CQNewGLFractal.cpp
 
-moc_CQNewGLModel.o: .moc/moc_CQNewGLModel.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLModel.o .moc/moc_CQNewGLModel.cpp
+moc_CQNewGLDrawTree.o: .moc/moc_CQNewGLDrawTree.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLDrawTree.o .moc/moc_CQNewGLDrawTree.cpp
 
 moc_CQNewGLShape.o: .moc/moc_CQNewGLShape.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLShape.o .moc/moc_CQNewGLShape.cpp
-
-moc_CQNewGLTerrain.o: .moc/moc_CQNewGLTerrain.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLTerrain.o .moc/moc_CQNewGLTerrain.cpp
-
-moc_CQNewGLToolbar.o: .moc/moc_CQNewGLToolbar.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLToolbar.o .moc/moc_CQNewGLToolbar.cpp
 
 moc_CQPoint3DEdit.o: .moc/moc_CQPoint3DEdit.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQPoint3DEdit.o .moc/moc_CQPoint3DEdit.cpp

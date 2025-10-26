@@ -93,11 +93,13 @@ addNoiseGeometry()
   double width  = this->width ();
   double height = this->height();
 
-  int n       = this->gridSize();
-  int octaves = 8;
+  xmin_ = -width/2.0;
+  ymin_ = -width/2.0;
+  xmax_ =  width/2.0;
+  ymax_ =  width/2.0;
 
-  auto n1 = n*1.0;
-  auto n2 = n1/2.0;
+  int n       = this->gridSize();
+  int octaves = this->octaves();
 
   std::vector<double> x, y, z;
 
@@ -106,10 +108,10 @@ addNoiseGeometry()
   z.resize(n*n);
 
   for (int iy = 0, iz = 0; iy < n; ++iy) {
-    y[iy] = (iy - n2)/n1;
+    y[iy] = CMathUtil::map(iy, 0, n - 1, ymin_, ymax_);
 
     for (int ix = 0; ix < n; ++ix, ++iz) {
-      x[ix] = (ix - n2)/n1;
+      x[ix] = CMathUtil::map(ix, 0, n - 1, xmin_, xmax_);
 
       z[iz] = noise.turbulence(CVector2D(x[ix], y[iy]), octaves);
     }

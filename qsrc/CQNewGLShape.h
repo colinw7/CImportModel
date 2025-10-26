@@ -14,7 +14,6 @@ class CQNewGLShape : public QObject, public CQNewGLObject {
  public:
   enum class Type {
     NONE,
-    BOX,
     CONE,
     CUBE,
     CYLINDER,
@@ -51,16 +50,27 @@ class CQNewGLShape : public QObject, public CQNewGLObject {
   const CRGBA &color() const { return color_; }
   void setColor(const CRGBA &v) { color_ = v; }
 
+  double angleStart() const { return angleStart_; }
+  void setAngleStart(double r) { angleStart_ = r; }
+
+  double angleDelta() const { return angleDelta_; }
+  void setAngleDelta(double r) { angleDelta_ = r; }
+
+  const CPoint3D &size() const { return size_; }
+  void setSize(const CPoint3D &p) { size_ = p; }
+
   const CQGLTexture *texture() const { return texture_; }
   void setTexture(CQGLTexture *t) { texture_ = t; }
 
-  void invalidateGeometry() { updateGeometry_ = true; }
-
   //---
+
+  void updateGeometry() override;
 
   void addGeometry();
 
-  void drawGeometry();
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
@@ -70,10 +80,13 @@ class CQNewGLShape : public QObject, public CQNewGLObject {
   bool active_ { false };
   Type type_   { Type::SPHERE };
 
-  CPoint3D start_ { 0.0, 0.0, 0.0 };
-  CPoint3D end_   { 1.0, 1.0, 1.0 };
-  double   width_ { 1.0 };
-  CRGBA    color_ { 0.4, 0.4, 0.9 };
+  CPoint3D start_      { 0.0, 0.0, 0.0 };
+  CPoint3D end_        { 1.0, 1.0, 1.0 };
+  double   width_      { 1.0 };
+  CRGBA    color_      { 0.4, 0.4, 0.9 };
+  double   angleStart_ { 0.0 };
+  double   angleDelta_ { 2.0*M_PI };
+  CPoint3D size_       { 1.0, 1.0, 1.0 };
 
   CQGLTexture *texture_  { nullptr };
 

@@ -1,5 +1,6 @@
 #include <CQNewGLModel.h>
 #include <CQNewGLToolbar.h>
+#include <CQNewGLStatusBar.h>
 #include <CQNewGLControl.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLUVMap.h>
@@ -54,6 +55,12 @@ CQNewGLModel() :
   splitter->addWidget(control_);
 
   control_->setVisible(false);
+
+  //---
+
+  statusBar_ = new CQNewGLStatusBar(this);
+
+  layout->addWidget(statusBar_);
 }
 
 void

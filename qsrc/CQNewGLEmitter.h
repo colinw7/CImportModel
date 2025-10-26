@@ -45,14 +45,20 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
   const CVector3D &maxVelocity() const { return maxVelocity_; }
   void setMaxVelocity(const CVector3D &v);
 
-  const CRGBA &color() const { return color_; }
-  void setColor(const CRGBA &v) { color_ = v; }
+  const CRGBA &startColor() const { return startColor_; }
+  void setStartColor(const CRGBA &v) { startColor_ = v; }
+
+  const CRGBA &endColor() const { return endColor_; }
+  void setEndColor(const CRGBA &v) { endColor_ = v; }
 
   int emitInterval() const { return emitInterval_; }
   void setEmitInterval(int i);
 
   int maxParticles() const { return maxParticles_; }
   void setMaxParticles(int i) { maxParticles_ = i; }
+
+  int maxAge() const { return maxAge_; }
+  void setMaxAge(int i) { maxAge_ = i; }
 
   double pointSize() const { return pointSize_; }
   void setPointSize(double r) { pointSize_ = r; }
@@ -77,9 +83,11 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
 
   //---
 
-  void addGeometry();
+  void updateGeometry() override;
 
-  void drawGeometry();
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
@@ -99,7 +107,8 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
   CVector3D minVelocity_ { -1.0, -1.0, -1.0 };
   CVector3D maxVelocity_ {  1.0,  1.0,  1.0 };
 
-  CRGBA color_ { 0.0, 1.0, 0.0 };
+  CRGBA startColor_ { 0.0, 1.0, 0.0 };
+  CRGBA endColor_   { 1.0, 1.0, 1.0 };
 
   double gravity_ { 0.0 };
 
@@ -115,6 +124,7 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
   int emitInterval_ { 10 };
 
   int maxParticles_ { 100 };
+  int maxAge_       { 10 };
 
   QString imageName_ { "particle.png" };
 

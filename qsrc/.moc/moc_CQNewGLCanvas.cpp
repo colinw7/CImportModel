@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQNewGLCanvas_t {
-    QByteArrayData data[20];
-    char stringdata0[256];
+    QByteArrayData data[19];
+    char stringdata0[244];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -45,13 +45,12 @@ QT_MOC_LITERAL(9, 137, 12), // "textureAdded"
 QT_MOC_LITERAL(10, 150, 11), // "cameraAdded"
 QT_MOC_LITERAL(11, 162, 10), // "lightAdded"
 QT_MOC_LITERAL(12, 173, 10), // "shapeAdded"
-QT_MOC_LITERAL(13, 184, 9), // "timerSlot"
-QT_MOC_LITERAL(14, 194, 7), // "bgColor"
-QT_MOC_LITERAL(15, 202, 9), // "depthTest"
-QT_MOC_LITERAL(16, 212, 8), // "cullFace"
-QT_MOC_LITERAL(17, 221, 9), // "frontFace"
-QT_MOC_LITERAL(18, 231, 12), // "polygonSolid"
-QT_MOC_LITERAL(19, 244, 11) // "polygonLine"
+QT_MOC_LITERAL(13, 184, 12), // "shapeDeleted"
+QT_MOC_LITERAL(14, 197, 9), // "timerSlot"
+QT_MOC_LITERAL(15, 207, 7), // "bgColor"
+QT_MOC_LITERAL(16, 215, 9), // "depthTest"
+QT_MOC_LITERAL(17, 225, 8), // "cullFace"
+QT_MOC_LITERAL(18, 234, 9) // "frontFace"
 
     },
     "CQNewGLCanvas\0modelMatrixChanged\0\0"
@@ -59,9 +58,8 @@ QT_MOC_LITERAL(19, 244, 11) // "polygonLine"
     "currentCameraChanged\0currentLightChanged\0"
     "currentShapeChanged\0modelAdded\0"
     "textureAdded\0cameraAdded\0lightAdded\0"
-    "shapeAdded\0timerSlot\0bgColor\0depthTest\0"
-    "cullFace\0frontFace\0polygonSolid\0"
-    "polygonLine"
+    "shapeAdded\0shapeDeleted\0timerSlot\0"
+    "bgColor\0depthTest\0cullFace\0frontFace"
 };
 #undef QT_MOC_LITERAL
 
@@ -71,30 +69,32 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      12,   14, // methods
-       6,   86, // properties
+      13,   14, // methods
+       4,   92, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      11,       // signalCount
+      12,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   74,    2, 0x06 /* Public */,
-       3,    0,   75,    2, 0x06 /* Public */,
-       4,    0,   76,    2, 0x06 /* Public */,
-       5,    0,   77,    2, 0x06 /* Public */,
-       6,    0,   78,    2, 0x06 /* Public */,
-       7,    0,   79,    2, 0x06 /* Public */,
-       8,    0,   80,    2, 0x06 /* Public */,
-       9,    0,   81,    2, 0x06 /* Public */,
-      10,    0,   82,    2, 0x06 /* Public */,
-      11,    0,   83,    2, 0x06 /* Public */,
-      12,    0,   84,    2, 0x06 /* Public */,
+       1,    0,   79,    2, 0x06 /* Public */,
+       3,    0,   80,    2, 0x06 /* Public */,
+       4,    0,   81,    2, 0x06 /* Public */,
+       5,    0,   82,    2, 0x06 /* Public */,
+       6,    0,   83,    2, 0x06 /* Public */,
+       7,    0,   84,    2, 0x06 /* Public */,
+       8,    0,   85,    2, 0x06 /* Public */,
+       9,    0,   86,    2, 0x06 /* Public */,
+      10,    0,   87,    2, 0x06 /* Public */,
+      11,    0,   88,    2, 0x06 /* Public */,
+      12,    0,   89,    2, 0x06 /* Public */,
+      13,    0,   90,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      13,    0,   85,    2, 0x0a /* Public */,
+      14,    0,   91,    2, 0x0a /* Public */,
 
  // signals: parameters
+    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -111,12 +111,10 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
     QMetaType::Void,
 
  // properties: name, type, flags
-      14, QMetaType::QColor, 0x00095103,
-      15, QMetaType::Bool, 0x00095103,
+      15, QMetaType::QColor, 0x00095103,
       16, QMetaType::Bool, 0x00095103,
       17, QMetaType::Bool, 0x00095103,
       18, QMetaType::Bool, 0x00095103,
-      19, QMetaType::Bool, 0x00095103,
 
        0        // eod
 };
@@ -138,7 +136,8 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 8: _t->cameraAdded(); break;
         case 9: _t->lightAdded(); break;
         case 10: _t->shapeAdded(); break;
-        case 11: _t->timerSlot(); break;
+        case 11: _t->shapeDeleted(); break;
+        case 12: _t->timerSlot(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -220,6 +219,13 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
                 return;
             }
         }
+        {
+            using _t = void (CQNewGLCanvas::*)();
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::shapeDeleted)) {
+                *result = 11;
+                return;
+            }
+        }
     }
 #ifndef QT_NO_PROPERTIES
     else if (_c == QMetaObject::ReadProperty) {
@@ -231,8 +237,6 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 1: *reinterpret_cast< bool*>(_v) = _t->isDepthTest(); break;
         case 2: *reinterpret_cast< bool*>(_v) = _t->isCullFace(); break;
         case 3: *reinterpret_cast< bool*>(_v) = _t->isFrontFace(); break;
-        case 4: *reinterpret_cast< bool*>(_v) = _t->isPolygonSolid(); break;
-        case 5: *reinterpret_cast< bool*>(_v) = _t->isPolygonLine(); break;
         default: break;
         }
     } else if (_c == QMetaObject::WriteProperty) {
@@ -244,8 +248,6 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 1: _t->setDepthTest(*reinterpret_cast< bool*>(_v)); break;
         case 2: _t->setCullFace(*reinterpret_cast< bool*>(_v)); break;
         case 3: _t->setFrontFace(*reinterpret_cast< bool*>(_v)); break;
-        case 4: _t->setPolygonSolid(*reinterpret_cast< bool*>(_v)); break;
-        case 5: _t->setPolygonLine(*reinterpret_cast< bool*>(_v)); break;
         default: break;
         }
     } else if (_c == QMetaObject::ResetProperty) {
@@ -285,29 +287,29 @@ int CQNewGLCanvas::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 12)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 12;
+        _id -= 13;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 12)
+        if (_id < 13)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 12;
+        _id -= 13;
     }
 #ifndef QT_NO_PROPERTIES
     else if (_c == QMetaObject::ReadProperty || _c == QMetaObject::WriteProperty
             || _c == QMetaObject::ResetProperty || _c == QMetaObject::RegisterPropertyMetaType) {
         qt_static_metacall(this, _c, _id, _a);
-        _id -= 6;
+        _id -= 4;
     } else if (_c == QMetaObject::QueryPropertyDesignable) {
-        _id -= 6;
+        _id -= 4;
     } else if (_c == QMetaObject::QueryPropertyScriptable) {
-        _id -= 6;
+        _id -= 4;
     } else if (_c == QMetaObject::QueryPropertyStored) {
-        _id -= 6;
+        _id -= 4;
     } else if (_c == QMetaObject::QueryPropertyEditable) {
-        _id -= 6;
+        _id -= 4;
     } else if (_c == QMetaObject::QueryPropertyUser) {
-        _id -= 6;
+        _id -= 4;
     }
 #endif // QT_NO_PROPERTIES
     return _id;
@@ -377,6 +379,12 @@ void CQNewGLCanvas::lightAdded()
 void CQNewGLCanvas::shapeAdded()
 {
     QMetaObject::activate(this, &staticMetaObject, 10, nullptr);
+}
+
+// SIGNAL 11
+void CQNewGLCanvas::shapeDeleted()
+{
+    QMetaObject::activate(this, &staticMetaObject, 11, nullptr);
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

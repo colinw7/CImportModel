@@ -59,12 +59,19 @@ initBuffer()
   };
 
   if (! nwallTexture_) {
-    nwallTexture_ = addTexture("textures/wall2.jpg");
-    swallTexture_ = addTexture("textures/wall2.jpg");
-    wwallTexture_ = addTexture("textures/wall2.jpg");
-    ewallTexture_ = addTexture("textures/wall2.jpg");
+    nwallTexture_ = addTexture("textures/brickwall.jpg");
+    swallTexture_ = nwallTexture_;
+    wwallTexture_ = nwallTexture_;
+    ewallTexture_ = nwallTexture_;
 
-    floorTexture_   = addTexture("textures/floor1.gif");
+    nwallNormalTexture_ = addTexture("textures/brickwall_normal.jpg");
+    swallNormalTexture_ = nwallNormalTexture_;
+    wwallNormalTexture_ = nwallNormalTexture_;
+    ewallNormalTexture_ = nwallNormalTexture_;
+
+    floorTexture_       = addTexture("textures/brick_floor_texture.jpg");
+    floorNormalTexture_ = addTexture("textures/brick_floor_normal.png");
+
     doorTexture_    = addTexture("textures/door1.jpg");
     outsideTexture_ = addTexture("textures/wall1.jpg");
   }
@@ -72,7 +79,7 @@ initBuffer()
 
 void
 CQNewGLMaze::
-addGeometry()
+updateGeometry()
 {
   initBuffer();
 
@@ -97,13 +104,14 @@ addGeometry()
 
   auto addRect = [&](const CPoint3D &p1, const CPoint3D &p2,
                      const CPoint3D &p3, const CPoint3D &p4,
-                     CQGLTexture *texture) {
+                     CQGLTexture *diffuseTexture, CQGLTexture *normalTexture=nullptr) {
     CQNewGLFaceData faceData;
 
     faceData.pos = pos;
     faceData.len = 4;
 
-    faceData.diffuseTexture = texture;
+    faceData.diffuseTexture = diffuseTexture;
+    faceData.normalTexture  = normalTexture;
 
     CVector3D diff1(p1, p2);
     CVector3D diff2(p2, p3);
@@ -125,25 +133,27 @@ addGeometry()
 
   const auto &dbbox = dungeon->getBBox();
 
-  auto xs = size/dbbox.getWidth ();
-  auto ys = size/dbbox.getHeight();
-
-  auto dx = -size/2.0;
-//auto dy = 0.0;
-  auto dz = -size/2.0;
+  auto dx = size/100000.0;
+  auto dy = size/100000.0;
+  auto dz = size/100000.0;
 
   const auto &rooms = dungeon->getRooms();
 
   for (auto *room : rooms) {
     const auto &bbox = room->getBBox();
 
-    double x1 = bbox.getXMin()*xs + dx, y1 = ymin, z1 = bbox.getYMin()*ys + dz;
-    double x2 = bbox.getXMax()*xs + dx, y2 = ymax, z2 = bbox.getYMax()*ys + dz;
+    auto x1 = CMathUtil::map(bbox.getXMin(), 0, dbbox.getWidth (), -size/2.0, size/2.0) + dx;
+    auto z1 = CMathUtil::map(bbox.getYMin(), 0, dbbox.getHeight(), -size/2.0, size/2.0) + dz;
+    auto x2 = CMathUtil::map(bbox.getXMax(), 0, dbbox.getWidth (), -size/2.0, size/2.0) - dx;
+    auto z2 = CMathUtil::map(bbox.getYMax(), 0, dbbox.getHeight(), -size/2.0, size/2.0) - dz;
+
+    double y1 = ymin + dy;
+    double y2 = ymax - dy;
 
     // floor
     addRect(CPoint3D(x1, ymin, z2), CPoint3D(x2, ymin, z2),
             CPoint3D(x2, ymin, z1), CPoint3D(x1, ymin, z1),
-            floorTexture_);
+            floorTexture_, floorNormalTexture_);
 
     auto *nwall = room->getWall(CCompassType::NORTH);
     auto *swall = room->getWall(CCompassType::SOUTH);
@@ -163,7 +173,7 @@ addGeometry()
     if (nvis)
       addRect(CPoint3D(x1, y1, z2), CPoint3D(x2, y1, z2),
               CPoint3D(x2, y2, z2), CPoint3D(x1, y2, z2),
-              nwallTexture_);
+              nwallTexture_, nwallNormalTexture_);
 
     if (! nroom) {
       if (! nvis)
@@ -179,7 +189,7 @@ addGeometry()
     if (svis)
       addRect(CPoint3D(x2, y1, z1), CPoint3D(x1, y1, z1),
               CPoint3D(x1, y2, z1), CPoint3D(x2, y2, z1),
-              swallTexture_);
+              swallTexture_, swallNormalTexture_);
 
     if (! sroom) {
       if (! svis)
@@ -195,7 +205,7 @@ addGeometry()
     if (wvis)
       addRect(CPoint3D(x1, y1, z1), CPoint3D(x1, y1, z2),
               CPoint3D(x1, y2, z2), CPoint3D(x1, y2, z1),
-              wwallTexture_);
+              wwallTexture_, wwallNormalTexture_);
 
     if (! wroom) {
       if (! wvis)
@@ -211,7 +221,7 @@ addGeometry()
     if (evis)
       addRect(CPoint3D(x2, y1, z1), CPoint3D(x2, y2, z1),
               CPoint3D(x2, y2, z2), CPoint3D(x2, y1, z2),
-              ewallTexture_);
+              ewallTexture_, ewallNormalTexture_);
 
     if (! eroom) {
       if (! evis)
@@ -247,13 +257,30 @@ drawGeometry()
   auto modelMatrix = CMatrix3D::identity();
   canvas_->addShaderMVP(program, modelMatrix);
 
+  canvas_->addShaderCurrentLight(program);
+
+  program->setUniformValue("viewPos", CQGLUtil::toVector(canvas_->viewPos()));
+
   //---
 
   for (const auto &faceData : this->faceDatas()) {
-    glActiveTexture(GL_TEXTURE0);
-    faceData.diffuseTexture->bind();
-
     program->setUniformValue("textureId", 0);
+    program->setUniformValue("useTexture", bool(faceData.diffuseTexture));
+
+    if (faceData.diffuseTexture) {
+      glActiveTexture(GL_TEXTURE0);
+
+      faceData.diffuseTexture->bind();
+    }
+
+    program->setUniformValue("normalTextureId", 1);
+    program->setUniformValue("useNormalTexture", bool(faceData.normalTexture));
+
+    if (faceData.normalTexture) {
+      glActiveTexture(GL_TEXTURE1);
+
+      faceData.normalTexture->bind();
+    }
 
     // draw quad
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

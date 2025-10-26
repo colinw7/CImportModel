@@ -7,6 +7,8 @@
 #include <CGeom3DType.h>
 #include <CGLVector3D.h>
 #include <CGLCamera.h>
+#include <CQGLBuffer.h>
+
 #include <CPoint3D.h>
 #include <CRGBA.h>
 #include <CImagePtr.h>
@@ -16,6 +18,7 @@
 #include <QOpenGLFunctions_3_3_Core>
 #include <QMatrix4x4>
 
+class CQNewGLModelObject;
 class CQNewGLModel;
 class CQNewGLCamera;
 class CQNewGLLight;
@@ -24,7 +27,9 @@ class CQNewGLText;
 class CQNewGLAxes;
 class CQNewGLBBox;
 class CQNewGLNormals;
+class CQNewGLWireframe;
 class CQNewGLHull;
+class CQNewGLBasis;
 class CQNewGLTerrain;
 class CQNewGLMaze;
 class CQNewGLSkybox;
@@ -33,6 +38,7 @@ class CQNewGLFractal;
 class CQNewGLDrawTree;
 class CQNewGLShape;
 class CQNewGLPath;
+class CQNewGLObject;
 
 class CQGLBuffer;
 class CQGLTexture;
@@ -51,11 +57,9 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   Q_PROPERTY(QColor bgColor READ bgColor WRITE setBgColor)
 
-  Q_PROPERTY(bool depthTest    READ isDepthTest    WRITE setDepthTest   )
-  Q_PROPERTY(bool cullFace     READ isCullFace     WRITE setCullFace    )
-  Q_PROPERTY(bool frontFace    READ isFrontFace    WRITE setFrontFace   )
-  Q_PROPERTY(bool polygonSolid READ isPolygonSolid WRITE setPolygonSolid)
-  Q_PROPERTY(bool polygonLine  READ isPolygonLine  WRITE setPolygonLine )
+  Q_PROPERTY(bool depthTest READ isDepthTest WRITE setDepthTest)
+  Q_PROPERTY(bool cullFace  READ isCullFace  WRITE setCullFace )
+  Q_PROPERTY(bool frontFace READ isFrontFace WRITE setFrontFace)
 
  public:
   enum class BonesTransform {
@@ -80,24 +84,7 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  using FaceDatas = std::vector<CQNewGLFaceData>;
-
-  //---
-
-  struct ObjectDrawData {
-    CQGLBuffer *buffer { nullptr };
-    FaceDatas   faceDatas;
-  };
-
-  struct ObjectData {
-    CGeomObject3D* object { nullptr };
-    ObjectDrawData modelData;
-    ObjectDrawData normalData;
-    ObjectDrawData bonesData;
-    ObjectDrawData boneData;
-  };
-
-  //---
+  using ObjectDatas = std::map<CGeomObject3D *, CQNewGLModelObject *>;
 
   using Cameras = std::vector<CQNewGLCamera *>;
   using Lights  = std::vector<CQNewGLLight  *>;
@@ -105,29 +92,12 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  using Texts = std::vector<CQNewGLText *>;
-
-  //---
-
-  struct BasisData {
-    CQNewGLShaderProgram* shaderProgram { nullptr };
-    CQGLBuffer*           buffer        { nullptr };
-    CGeomObject3D*        object        { nullptr };
-    FaceDatas             faceDatas;
-    Texts                 texts;
-    bool                  needsUpdate   { false };
-    bool                  show          { false };
-    double                lineWidth     { -1.0 };
-    double                lineSize      { -1.0 };
-    CRGBA                 color         { 0.8, 0.8, 0.8 };
-  };
-
-  //---
-
   struct LoadData {
     bool invertX { false };
     bool invertY { false };
     bool invertZ { false };
+
+    std::vector<CGeomObject3D *> objects;
 
     LoadData() { }
   };
@@ -143,12 +113,6 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   CQNewGLModel* app() const { return app_; }
 
   CGeomScene3D* scene() const { return scene_; }
-
-  bool isFlipYZ() const { return flipYZ_; }
-  void setFlipYZ(bool b);
-
-  bool isInvertDepth() const { return invertDepth_; }
-  void setInvertDepth(bool b);
 
   bool isOrtho() const { return ortho_; }
   void setOrtho(bool b);
@@ -178,12 +142,6 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   bool isFrontFace() const { return frontFace_; }
   void setFrontFace(bool b);
-
-  bool isPolygonSolid() const { return polygonSolid_; }
-  void setPolygonSolid(bool b);
-
-  bool isPolygonLine() const { return polygonLine_; }
-  void setPolygonLine(bool b);
 
   //---
 
@@ -236,36 +194,39 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   CGeomObject3D *getCurrentObject() const;
   CGeomObject3D *getObject(int ind) const;
 
-  CQNewGLCanvas::ObjectData *getCurrentObjectData() const;
-  CQNewGLCanvas::ObjectData *getObjectData(int ind) const;
+  CQNewGLModelObject *getCurrentObjectData() const;
+  CQNewGLModelObject *getObjectData(int ind) const;
+  CQNewGLModelObject *getObjectData(CGeomObject3D *object);
 
   CGeomObject3D *getSelectedObject() const;
+
+  const ObjectDatas &getObjectDatas() { return objectDatas_; }
 
   //--
 
   // bones
-  CGeomObject3D *getBonesObject() const;
+//CGeomObject3D *getBonesObject() const;
 
-  bool isShowBonePoints() const { return showBonePoints_; }
+  bool isShowBonePoints() const { return bonesData_.showPoints; }
   void setShowBonePoints(bool b);
 
-  bool isBonesEnabled() const { return bonesEnabled_; }
-  void setBonesEnabled(bool b) { bonesEnabled_ = b; }
+  bool isShowBoneVertices() const { return bonesData_.showVertices; }
+  void setShowBoneVertices(bool b);
 
-  const BonesTransform &bonesTransform() const { return bonesTransform_; }
-  void setBonesTransform(BonesTransform t) { bonesTransform_ = t; }
+  bool isBonesEnabled() const { return bonesData_.enabled; }
+  void setBonesEnabled(bool b) { bonesData_.enabled = b; }
 
-  //---
+  const BonesTransform &bonesTransform() const { return bonesData_.transform; }
+  void setBonesTransform(BonesTransform t) { bonesData_.transform = t; }
 
-  // basis
-  bool isShowBasis() const { return basisData_.show; }
-  void setShowBasis(bool b);
+  const CRGBA &bonesColor() const { return bonesData_.color; }
+  void setBonesColor(const CRGBA &c) { bonesData_.color = c; }
 
-  double basisLineWidth() const { return basisData_.lineWidth; }
-  void setBasisLineWidth(double s) { basisData_.lineWidth = s; }
+  const CRGBA &bonesSelectedColor() const { return bonesData_.selectedColor; }
+  void setBonesSelectedColor(const CRGBA &c) { bonesData_.selectedColor = c; }
 
-  double basisLineSize() const { return basisData_.lineSize; }
-  void setBasisLineSize(double s) { basisData_.lineSize = s; }
+  int currentBone() const { return currentBone_; }
+  void setCurrentBone(int i) { currentBone_ = i; }
 
   //---
 
@@ -319,8 +280,18 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
+  // normal
+  CQNewGLWireframe *getWireframe() const { return wireframe_; }
+
+  //---
+
   // hull
   CQNewGLHull *getHull() const { return hull_; }
+
+  //---
+
+  // basis
+  CQNewGLBasis *getBasis() const { return basis_; }
 
   //---
 
@@ -373,6 +344,17 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
+  struct BoneData {
+    std::string           name;
+    int                   ind { 0 };
+    std::vector<CPoint3D> vertices;
+  };
+
+  void getBoneData(CGeomObject3D *object, int boneId, BoneData &boneData) const;
+  void getNodeVertices(CGeomObject3D *object, int nodeId, BoneData &boneData) const;
+
+  //---
+
   const CGLMatrix3D &projectionMatrix() const { return paintData_.projection; }
   const CGLMatrix3D &viewMatrix() const { return paintData_.view; }
 
@@ -384,8 +366,7 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  bool loadModel(const QString &modelName, CGeom3DType format,
-                 const LoadData &loadData=LoadData());
+  bool loadModel(const QString &modelName, CGeom3DType format, LoadData &loadData);
 
   void setInitTextures(const InitTextureDatas &textures);
   void setTextureMap(const std::string &map);
@@ -428,11 +409,21 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   void updateObjectsData();
   void updateObjectData(CGeomObject3D *object);
 
-  void updateModelData();
+  void updateModelData(CBBox3D &bbox);
+
+  //---
 
   // bones
-  void updateBonesData();
-  void updateBoneData();
+  void updateObjectBones(CBBox3D &bbox);
+  void drawObjectsBones();
+  void drawObjectBones(CQNewGLModelObject *objectData);
+
+  void updateObjectBone(CBBox3D &bbox);
+  void drawObjectBone(CQNewGLModelObject *objectData);
+
+  void drawObjectAnnotation(CQNewGLModelObject *objectData);
+
+  //---
 
   void updateCameraBuffer();
 
@@ -456,6 +447,12 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
+  // wireframe
+  void updateWireframe();
+  void drawWireframe();
+
+  //---
+
   // hull
   void updateHull();
   void drawHull();
@@ -469,7 +466,7 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   //---
 
   // maze
-  void updateMaze();
+  void updateMaze(CBBox3D &bbox);
   void drawMaze();
 
   //---
@@ -507,6 +504,7 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   // shape
   CQNewGLShape *addShape();
+  void deleteShape(CQNewGLShape *shape);
 
   void drawShapes();
 
@@ -526,19 +524,17 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  void updateBasis();
-
   void updateLightBuffer();
 
   //---
 
   // bones
-  void addBonesCube(ObjectData *objectData, const CPoint3D &c, int nodeId,
-                    const CRGBA &color, int &pos) const;
-  void addBonesLine(ObjectData *objectData, const CPoint3D &c1, const CPoint3D &c2,
-                    int boneId, int parentBoneId, const CRGBA &color, int &pos) const;
+  void addBonesCube(CQNewGLModelObject *objectData, const CMatrix3D &m, double cubeSize, int nodeId,
+                    const CRGBA &color, bool selected, int &pos, CBBox3D &bbox) const;
+  void addBonesLine(CQNewGLModelObject *objectData, const CPoint3D &c1, const CPoint3D &c2,
+                    double size, int boneId, int parentBoneId, const CRGBA &color, int &pos) const;
 
-  void addBoneCube(ObjectData *objectData, const CMatrix3D &m, int nodeId, double cubeSize,
+  void addBoneCube(CQNewGLModelObject *objectData, const CMatrix3D &m, double cubeSize, int nodeId,
                    const CRGBA &color, int &pos, CBBox3D &bbox) const;
 
   CPoint3D applyBonePointTransform(const CPoint3D &p, int *boneIds, double *boneWeights) const;
@@ -547,6 +543,8 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   //---
 
   void setSceneBBox(const CBBox3D &bbox);
+
+  //---
 
   const GLTextures &glTextures() const { return glTextures_; }
 
@@ -563,18 +561,28 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  void addCube(CQGLBuffer *buffer, const CPoint3D &center, double size, const CRGBA &color,
-               std::vector<CQNewGLFaceData> &faceDatas) const;
-  void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const CRGBA &color,
-               std::vector<CQNewGLFaceData> &faceDatas) const;
+  struct ShapeData {
+    CRGBA    color { 1, 1, 1};
+    CPoint3D size  { 1, 1, 1};
+  };
 
+  void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const ShapeData &data,
+               std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+  void addCube(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const ShapeData &data,
+               std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
   void addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
-               const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+               const ShapeData &data, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
   void addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r,
-                   const CRGBA &color, std::vector<CQNewGLFaceData> &faceDatas,
+                   const ShapeData &data, std::vector<CQNewGLFaceData> &faceDatas,
                    int &pos) const;
-  void addSphere(CQGLBuffer *buffer, const CPoint3D &c, double r, const CRGBA &color,
+  void addSphere(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const ShapeData &data,
+                 double angleStart, double angleDelta,
                  std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+  void addPyramid(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
+                  const ShapeData &data, std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
+  void addTorus(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r1,
+                double power1, double power2, const ShapeData &data,
+                std::vector<CQNewGLFaceData> &faceDatas, int &pos) const;
 
   CMatrix3D getShapeRotationMatrix(const CPoint3D &p1, const CPoint3D &p2) const;
 
@@ -582,6 +590,20 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   CBBox3D getObjectBBox(CGeomObject3D *object) const;
   CBBox3D getModelBBox(CGeomObject3D *object) const;
+
+  //---
+
+  void addAnnotationObject(CQNewGLObject *);
+  std::vector<CQNewGLObject *> getAnnotationObjects() const;
+  void updateAnnotationObjects();
+
+  //---
+
+  std::vector<CGeomObject3D *> getRootObjects() const;
+
+  //---
+
+  void getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const;
 
  Q_SIGNALS:
   void modelMatrixChanged();
@@ -597,34 +619,28 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   void textureAdded();
   void cameraAdded();
   void lightAdded();
+
   void shapeAdded();
+  void shapeDeleted();
 
  private:
   void loadInitTextures();
 
   GLuint loadTexture(const std::string &name);
 
-  void drawObjectModel(ObjectData *objectData);
-
-  // bones
-  void drawObjectBones(ObjectData *objectData);
-  void drawObjectBone (ObjectData *objectData);
+  void drawObjectModel(CQNewGLModelObject *objectData);
 
   void drawBasis();
 
   void drawCameras();
   void drawLights();
 
-  void drawObjectNormals(ObjectData *objectData);
+  void drawObjectNormals(CQNewGLModelObject *objectData);
 
-  CMatrix3D getMeshGlobalTransform(ObjectData *objectData, bool invert) const;
-  CMatrix3D getMeshLocalTransform (ObjectData *objectData, bool invert) const;
+  CMatrix3D getMeshGlobalTransform(CGeomObject3D *object, bool invert) const;
+//CMatrix3D getMeshLocalTransform (CGeomObject3D *object, bool invert) const;
 
-  void updateNodeMatrices(ObjectData *objectData);
-
-  CGeomObject3D *getRootObject(CGeomObject3D *object) const;
-
-  void getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const;
+  void updateNodeMatrices(CQNewGLModelObject *objectData);
 
  public Q_SLOTS:
   void timerSlot();
@@ -647,8 +663,7 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
     std::string emissive;
   };
 
-  using ObjectDatas = std::map<CGeomObject3D*, ObjectData *>;
-  using TextureMap  = std::map<std::string, TextureMapData>;
+  using TextureMap = std::map<std::string, TextureMapData>;
 
   CQNewGLModel* app_            { nullptr };
   bool          initialized_    { false };
@@ -662,8 +677,6 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   bool          frontFace_      { true };
   bool          polygonSolid_   { true };
   bool          polygonLine_    { false };
-  bool          flipYZ_         { false };
-  bool          invertDepth_    { false };
   bool          ortho_          { false };
   double        time_           { 0.0 };
 
@@ -688,7 +701,6 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 //CVector3D modelScale_     { 1.0, 1.0, 1.0 };
 //CVector3D modelTranslate_ { 0.0, 0.0, 0.0 };
 
-  CQNewGLShaderProgram* modelShaderProgram_  { nullptr };
   CQNewGLShaderProgram* normalShaderProgram_ { nullptr };
 
   // camera
@@ -715,15 +727,24 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   QString animName_;
 
   // bones
-  bool           showBonePoints_ { false };
-  bool           bonesEnabled_   { false };
-  BonesTransform bonesTransform_ { BonesTransform::INVERSE_BIND };
+  struct BonesData {
+    bool           enabled       { false };
+    bool           showPoints    { false };
+    bool           showVertices  { false };
+    BonesTransform transform     { BonesTransform::INVERSE_BIND };
+    CRGBA          color         { 1.0, 0.0, 0.0 };
+    CRGBA          selectedColor { 1.0, 1.0, 1.0 };
+  };
+
+  BonesData bonesData_;
 
   CQNewGLShaderProgram* bonesShaderProgram_ { nullptr };
   CQNewGLShaderProgram* boneShaderProgram_  { nullptr };
 
+  int currentBone_ { -1 };
+
   // basis
-  BasisData basisData_;
+  CQNewGLBasis *basis_ { nullptr };
 
   // textures
   InitTextureDatas initTextures_;
@@ -735,14 +756,16 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 //CQNewGLText* text_ { nullptr };
 
   // axes
-  CQNewGLAxes* axes_            { nullptr };
-  bool         axesNeedsUpdate_ { false };
+  CQNewGLAxes* axes_ { nullptr };
 
   // bbox
   CQNewGLBBox* bbox_ { nullptr };
 
   // normal
   CQNewGLNormals* normals_ { nullptr };
+
+  // wireframe
+  CQNewGLWireframe* wireframe_ { nullptr };
 
   // hull
   CQNewGLHull* hull_ { nullptr };
@@ -765,6 +788,12 @@ class CQNewGLCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   // draw tree
   CQNewGLDrawTree* drawTree_ { nullptr };
+
+  //---
+
+  using AnnotationObjects = std::vector<CQNewGLObject *>;
+
+  AnnotationObjects annotationObjects_;
 
   // shapes
   Shapes shapes_;

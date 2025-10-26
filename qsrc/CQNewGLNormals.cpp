@@ -1,19 +1,10 @@
 #include <CQNewGLNormals.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
-#include <CQNewGLShape.h>
-#include <CQNewGLTerrain.h>
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
-#include <CGeomObject3D.h>
 
 CQNewGLShaderProgram* CQNewGLNormals::shaderProgram_;
-
-CQNewGLNormals::
-CQNewGLNormals(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
-{
-}
 
 void
 CQNewGLNormals::
@@ -24,28 +15,29 @@ initShader(CQNewGLCanvas *canvas)
   shaderProgram_->addShaders("normal.vs", "normal.fs");
 }
 
+CQNewGLNormals::
+CQNewGLNormals(CQNewGLCanvas *canvas) :
+ CQNewGLObject(canvas)
+{
+}
+
 void
 CQNewGLNormals::
 updateGeometry()
 {
+  if (! shaderProgram_)
+    initShader(canvas_);
+
+  //---
+
   initBuffer();
 
   //---
 
-  auto *objectData = canvas_->getCurrentObjectData();
+  auto objects = canvas_->getAnnotationObjects();
 
-  if (objectData)
-    addBufferNormals(objectData->modelData.buffer);
-
-  auto *shape = canvas_->getCurrentShape();
-
-  if (shape)
-    addBufferNormals(shape->buffer());
-
-  auto *terrain = canvas_->getTerrain();
-
-  if (terrain)
-    addBufferNormals(terrain->buffer());
+  for (auto *object : objects)
+    addBufferNormals(object);
 
   //---
 
@@ -54,7 +46,7 @@ updateGeometry()
 
 void
 CQNewGLNormals::
-addBufferNormals(CQGLBuffer *normalBuffer)
+addBufferNormals(CQNewGLObject *object)
 {
   auto lineSize = this->lineSize();
 
@@ -65,12 +57,15 @@ addBufferNormals(CQGLBuffer *normalBuffer)
 
   //---
 
-  int np = normalBuffer->numPoints();
+  auto *srcBuffer = object->buffer();
+  if (! srcBuffer) return;
+
+  int np = srcBuffer->numPoints();
 
   for (int ip = 0; ip < np; ++ip) {
     CQGLBuffer::PointData pointData;
 
-    normalBuffer->getPointData(ip, pointData);
+    srcBuffer->getPointData(ip, pointData);
 
     auto n = CVector3D(pointData.normal.x, pointData.normal.y, pointData.normal.z);
 
@@ -83,6 +78,9 @@ addBufferNormals(CQGLBuffer *normalBuffer)
     buffer_->addPoint(float(p2.x), float(p2.y), float(p2.z));
     buffer_->addColor(lineColor);
   }
+
+  for (auto *child : object->getChildren())
+    addBufferNormals(child);
 }
 
 void
@@ -96,13 +94,7 @@ drawGeometry()
   //---
 
   // model matrix
-  auto *object = canvas_->getCurrentObject();
-
   auto modelMatrix = CMatrix3D::identity();
-
-  if (object)
-    modelMatrix = object->getTransform();
-
   canvas_->addShaderMVP(shaderProgram_, modelMatrix);
 
   //---

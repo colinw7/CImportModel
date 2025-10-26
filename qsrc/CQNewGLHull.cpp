@@ -1,6 +1,7 @@
 #include <CQNewGLHull.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModelObject.h>
 #include <CQNewGLShape.h>
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
@@ -8,12 +9,6 @@
 #include <CHull3D.h>
 
 CQNewGLShaderProgram* CQNewGLHull::shaderProgram_;
-
-CQNewGLHull::
-CQNewGLHull(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
-{
-}
 
 void
 CQNewGLHull::
@@ -24,23 +19,29 @@ initShader(CQNewGLCanvas *canvas)
   shaderProgram_->addShaders("normal.vs", "normal.fs");
 }
 
+CQNewGLHull::
+CQNewGLHull(CQNewGLCanvas *canvas) :
+ CQNewGLObject(canvas)
+{
+}
+
 void
 CQNewGLHull::
 updateGeometry()
 {
+  if (! isVisible())
+    return;
+
+  //---
+
   initBuffer();
 
   //---
 
-  auto *objectData = canvas_->getCurrentObjectData();
+  auto objects = canvas_->getAnnotationObjects();
 
-  if (objectData)
-    addBufferHull(objectData->modelData.buffer);
-
-  auto *shape = canvas_->getCurrentShape();
-
-  if (shape)
-    addBufferHull(shape->buffer());
+  for (auto *object : objects)
+    addBufferHull(object);
 
   //---
 
@@ -49,21 +50,14 @@ updateGeometry()
 
 void
 CQNewGLHull::
-addBufferHull(CQGLBuffer *hullBuffer)
+addBufferHull(CQNewGLObject *object)
 {
   CHull3D hull;
 
-  int np = hullBuffer->numPoints();
+  updateBufferHull(object, hull);
 
-  for (int ip = 0; ip < np; ++ip) {
-    CQGLBuffer::PointData pointData;
-
-    hullBuffer->getPointData(ip, pointData);
-
-    auto p = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
-
-    hull.addVertex(p.x, p.y, p.z);
-  }
+  for (auto *child : object->getChildren())
+    updateBufferHull(child, hull);
 
   hull.calc();
 
@@ -93,6 +87,28 @@ addBufferHull(CQGLBuffer *hullBuffer)
     faceDatas_.push_back(faceData);
 
     pos += faceData.len;
+  }
+}
+
+void
+CQNewGLHull::
+updateBufferHull(CQNewGLObject *object, CHull3D &hull)
+{
+  auto *srcBuffer = object->buffer();
+  if (! srcBuffer) return;
+
+  //---
+
+  int np = srcBuffer->numPoints();
+
+  for (int ip = 0; ip < np; ++ip) {
+    CQGLBuffer::PointData pointData;
+
+    srcBuffer->getPointData(ip, pointData);
+
+    auto p = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
+
+    hull.addVertex(p.x, p.y, p.z);
   }
 }
 

@@ -74,7 +74,11 @@ updateGeometry()
 
     pos += faceData.len;
 #else
-    canvas_->addCylinder(buffer_, c1, c2, lineWidth, color, faceDatas_, pos);
+    CQNewGLCanvas::ShapeData shapeData;
+
+    shapeData.color = color;
+
+    canvas_->addCylinder(buffer_, c1, c2, lineWidth, shapeData, faceDatas_, pos);
 #endif
   };
 
@@ -110,10 +114,7 @@ updateGeometry()
   //---
 
   // add text labels
-  for (auto *text : texts_)
-    delete text;
-
-  texts_.clear();
+  clearTexts();
 
   auto *font = canvas_->getFont();
 
@@ -125,7 +126,7 @@ updateGeometry()
     text->setPosition(CGLVector3D(pos.x, pos.y, pos.z));
     text->setSize(size);
 
-    texts_.push_back(text);
+    addText(text);
 
     return text;
   };
@@ -149,8 +150,7 @@ updateGeometry()
     (void) createText(label, CPoint3D(0, 0, x - d), ts2);
   }
 
-  for (auto *text : texts_)
-    text->updateText();
+  updateTexts();
 }
 
 void
@@ -183,6 +183,5 @@ drawGeometry()
 
   //---
 
-  for (auto *text : texts_)
-    text->render();
+  drawTexts();
 }

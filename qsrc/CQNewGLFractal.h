@@ -43,9 +43,15 @@ class CQNewGLFractal : public QObject, public CQNewGLObject {
 
   void initBuffer() override;
 
+  //---
+
+  void updateGeometry() override { }
+
   void addGeometry();
 
-  void drawGeometry();
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 

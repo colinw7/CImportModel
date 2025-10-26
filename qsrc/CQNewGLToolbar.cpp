@@ -3,6 +3,7 @@
 #include <CQNewGLControl.h>
 #include <CQNewGLCanvas.h>
 #include <CQIconButton.h>
+#include <CQApp.h>
 
 #include <QLabel>
 #include <QHBoxLayout>
@@ -91,6 +92,10 @@ CQNewGLToolbar(CQNewGLModel *app) :
   posLabel_ = new QLabel;
 
   layout->addWidget(posLabel_);
+
+  //---
+
+  layout->addWidget(CQAppInst->createDebugButton());
 
   //---
 

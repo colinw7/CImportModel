@@ -37,17 +37,17 @@ class CDrawTree3D {
   double height() const { return treeHeight_; }
   void setHeight(double r) { treeHeight_ = r; }
 
-  double treeLeftAlpha() const { return treeLeftAlpha_; }
-  void setTreeLeftAlpha(double r) { treeLeftAlpha_ = r; }
+  double leftAlpha() const { return leftAlpha_; }
+  void setLeftAlpha(double r) { leftAlpha_ = r; }
 
-  double treeRightAlpha() const { return treeRightAlpha_; }
-  void setTreeRightAlpha(double r) { treeRightAlpha_ = r; }
+  double rightAlpha() const { return rightAlpha_; }
+  void setRightAlpha(double r) { rightAlpha_ = r; }
 
-  const CVector3D &treeLeftDirection() const { return treeLeftDirection_; }
-  void setTreeLeftDirection(const CVector3D &v) { treeLeftDirection_ = v; }
+  const CVector3D &leftDirection() const { return leftDirection_; }
+  void setLeftDirection(const CVector3D &v) { leftDirection_ = v.normalized(); }
 
-  const CVector3D &treeRightDirection() const { return treeRightDirection_; }
-  void setTreeRightDirection(const CVector3D &v) { treeRightDirection_ = v; }
+  const CVector3D &rightDirection() const { return rightDirection_; }
+  void setRightDirection(const CVector3D &v) { rightDirection_ = v.normalized(); }
 
   int treeDepth() const { return treeDepth_; }
   void setTreeDepth(int i) { treeDepth_ = i; }
@@ -64,9 +64,9 @@ class CDrawTree3D {
 
   CVector3D lineDirection(Line *line) const;
 
- protected:
-  static const char *colors_[];
+  CVector3D perturb(const CVector3D &v) const;
 
+ protected:
   CTurtle3D *turtle_ { nullptr };
 
   Line *root_ { nullptr };
@@ -76,12 +76,12 @@ class CDrawTree3D {
   double treeWidth_  { 1.0 };
 
   // tree branch reduction factor
-  double treeLeftAlpha_  { 1.1 };
-  double treeRightAlpha_ { 1.1 };
+  double leftAlpha_  { 1.1 };
+  double rightAlpha_ { 1.1 };
 
   // tree branch direction
-  CVector3D treeLeftDirection_  { 1.0, 2.0, 0.0 };
-  CVector3D treeRightDirection_ { 1.0, 2.0, 0.0 };
+  CVector3D leftDirection_  { 1.0, 2.0, 0.0 };
+  CVector3D rightDirection_ { 1.0, 2.0, 0.0 };
 
   // tree branching depth
   int treeDepth_ { 0 };
@@ -94,10 +94,10 @@ class CDrawTree3D {
   double canvasYMax_ { 1.0 };
   double canvasZMax_ { 1.0 };
 
-  double treeLeftWidthFactor_   { 1.0 };
-  double treeLeftHeightFactor_  { 1.0 };
-  double treeRightWidthFactor_  { 1.0 };
-  double treeRightHeightFactor_ { 1.0 };
+  double leftWidthFactor_   { 1.0 };
+  double leftHeightFactor_  { 1.0 };
+  double rightWidthFactor_  { 1.0 };
+  double rightHeightFactor_ { 1.0 };
 };
 
 #endif

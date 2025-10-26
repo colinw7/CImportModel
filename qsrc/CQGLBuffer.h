@@ -6,6 +6,8 @@
 #include <QOpenGLVertexArrayObject>
 #include <QColor>
 
+#include <CBBox3D.h>
+
 #include <vector>
 #include <cassert>
 
@@ -369,6 +371,17 @@ class CQGLBuffer {
 
   void drawTriangles() {
     glDrawArrays(GL_TRIANGLES, 0, int(numPoints()));
+  }
+
+  //---
+
+  CBBox3D getBBox() const {
+    CBBox3D bbox;
+
+    for (const auto &p : data_.points)
+      bbox.add(CPoint3D(p.x, p.y, p.z));
+
+    return bbox;
   }
 
  private:

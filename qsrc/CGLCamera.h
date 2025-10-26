@@ -216,7 +216,7 @@ class CGLCamera {
   float mouseSensitivity_ { SENSITIVITY };
 
   float zoom_ { ZOOM };
-  float near_ { 0.1 };
+  float near_ { 0.001 };
   float far_  { 1000.0 };
 
   bool     rotate_   { true };

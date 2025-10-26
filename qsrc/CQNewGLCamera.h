@@ -30,8 +30,16 @@ class CQNewGLCamera : public CQNewGLObject, public CGLCamera {
 
   void reset();
 
+  //---
+
+  void updateGeometry() override { }
+
+  // TODO: rename
   void addGeometry();
-  void drawGeometry();
+
+  void drawGeometry() override;
+
+  //---
 
   CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
 
