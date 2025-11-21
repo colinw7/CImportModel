@@ -60,7 +60,8 @@ readBinary()
 
   header[80] = '\0';
 
-  std::cerr << "Header: " << header << "\n";
+  if (isDebug())
+    std::cerr << "Header: " << header << "\n";
 
   //---
 
@@ -166,7 +167,8 @@ readBinary()
   if (! readInteger(&n))
     return false;
 
-  std::cerr << "Num Objects: " << n << "\n";
+  if (isDebug())
+    std::cerr << "Num Objects: " << n << "\n";
 
   triangles_.resize(n);
 
@@ -215,9 +217,11 @@ readBinary()
     ++i;
   }
 
-  std::cerr << "X Range: " << minV_.x << " " << maxV_.x << "\n";
-  std::cerr << "Y Range: " << minV_.y << " " << maxV_.y << "\n";
-  std::cerr << "Z Range: " << minV_.z << " " << maxV_.z << "\n";
+  if (isDebug()) {
+    std::cerr << "X Range: " << minV_.x << " " << maxV_.x << "\n";
+    std::cerr << "Y Range: " << minV_.y << " " << maxV_.y << "\n";
+    std::cerr << "Z Range: " << minV_.z << " " << maxV_.z << "\n";
+  }
 
   for (const auto &t : triangles_) {
     int i1 = object_->addVertex(CPoint3D(t.p1.x, t.p1.y, t.p1.z));
@@ -289,7 +293,8 @@ readAscii()
   std::vector<int> vertices;
 
   while (readLine(line)) {
-    std::cerr << line << "\n";
+    if (isDebug())
+      std::cerr << line << "\n";
 
     CStrParse parse(line);
 

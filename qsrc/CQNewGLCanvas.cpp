@@ -1081,7 +1081,7 @@ drawLights()
   CQNewGLLight *light = nullptr;
 
   for (auto *light1 : lights()) {
-    if (! light1) {
+    if (! light) {
       light = light1;
 
       light->bindShader();

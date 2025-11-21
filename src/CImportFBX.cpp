@@ -2623,7 +2623,11 @@ processDataTree(PropDataTree *tree)
 
                 materialData->modelData.push_back(modelData1);
 
-                assert(! modelData1->materialData);
+                if (modelData1->materialData) {
+                  std::cerr << "Duplicate Model->Material\n";
+                  //assert(false);
+                }
+
                 modelData1->materialData = materialData;
 
                 //connectInfo();

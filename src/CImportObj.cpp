@@ -697,15 +697,36 @@ readMaterialFile(const std::string &filename)
       else
         error("Invalid file for map_Bump");
     }
+    // map_Pm - physical based rendering (PBR) metallic map
+    else if (len > 6 && line1.substr(0, 6) == "map_Pm" && line1[6] == ' ') {
+      // TODO
+    }
+    // map_Pm - physical based rendering (PBR) roughness map
+    else if (len > 6 && line1.substr(0, 6) == "map_Pr" && line1[6] == ' ') {
+      // TODO
+    }
     // map d ?
     else if (len > 5 && line1.substr(0, 5) == "map_d" && line1[5] == ' ') {
+      // TODO
     }
-    // bump
-    else if (len > 8 && (line1.substr(0, 4) == "bump") && line1[4] == ' ') {
+    // normal map
+    else if (len > 4 && (line1.substr(0, 4) == "norm") && line1[4] == ' ') {
+      // TODO
+    }
+    // bump map ?
+    else if (len > 4 && (line1.substr(0, 4) == "bump") && line1[4] == ' ') {
+      // TODO
+    }
+    // Pm - physical based rendering (PBR) metallic value
+    else if (len > 2 && (line1.substr(0, 2) == "Pm") && line1[2] == ' ') {
+      // TODO
+    }
+    // Pm - physical based rendering (PBR) roughness value
+    else if (len > 2 && (line1.substr(0, 2) == "Pr") && line1[2] == ' ') {
       // TODO
     }
     else {
-      // TODO: map_Ns, map_d, bump, disp, decal
+      // TODO: map_Ns, map_d, disp, decal
       error("Unrecognised line");
     }
   }

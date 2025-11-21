@@ -744,18 +744,26 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, rotateAtCombo_, SIGNAL(currentIndexChanged(int)),
                             this, SLOT(rotateAtSlot(int)));
 
+  CQUtil::connectDisconnect(b, strafeCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(strafeSlot(int)));
+
+  CQUtil::connectDisconnect(b, zoomEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(zoomSlot(double)));
+  CQUtil::connectDisconnect(b, nearEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(nearSlot(double)));
+  CQUtil::connectDisconnect(b, farEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(farSlot(double)));
+  CQUtil::connectDisconnect(b, yawEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(yawSlot(double)));
+  CQUtil::connectDisconnect(b, pitchEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(pitchSlot(double)));
+  CQUtil::connectDisconnect(b, rollEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(rollSlot(double)));
+
+  CQUtil::connectDisconnect(b, speedEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(speedSlot(double)));
+
   if (b) {
-    connect(strafeCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::strafeSlot);
-
-    connect(zoomEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::zoomSlot);
-    connect(nearEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::nearSlot);
-    connect(farEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::farSlot);
-    connect(yawEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::yawSlot);
-    connect(pitchEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::pitchSlot);
-    connect(rollEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::rollSlot);
-
-    connect(speedEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::speedSlot);
-
     connect(originEdit_, &CQPoint3DEdit::editingFinished,
             this, &CQNewGLCameraControl::originSlot);
     connect(positionEdit_, &CQPoint3DEdit::editingFinished,
@@ -769,17 +777,6 @@ connectSlots(bool b)
             this, SLOT(colorSlot(const QColor &)));
   }
   else {
-    disconnect(strafeCheck_, &QCheckBox::stateChanged, this, &CQNewGLCameraControl::strafeSlot);
-
-    disconnect(zoomEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::zoomSlot);
-    disconnect(nearEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::nearSlot);
-    disconnect(farEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::farSlot);
-    disconnect(yawEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::yawSlot);
-    disconnect(pitchEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::pitchSlot);
-    disconnect(rollEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::rollSlot);
-
-    disconnect(speedEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLCameraControl::speedSlot);
-
     disconnect(originEdit_, &CQPoint3DEdit::editingFinished,
                this, &CQNewGLCameraControl::originSlot);
     disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
