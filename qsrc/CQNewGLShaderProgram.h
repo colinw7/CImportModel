@@ -4,24 +4,22 @@
 #include <QOpenGLShaderProgram>
 #include <QString>
 
-class CQNewGLCanvas;
+class CQNewGLModel;
 class CQGLBuffer;
 
 class CQNewGLShaderProgram : public QOpenGLShaderProgram {
  public:
-  CQNewGLShaderProgram(CQNewGLCanvas *canvas);
+  CQNewGLShaderProgram(CQNewGLModel *app);
 
   void addShaders(const QString &vertex, const QString &fragment);
 
   void addVertexShader  (const QString &name);
   void addFragmentShader(const QString &name);
 
-//CQGLBuffer *getBuffer();
   CQGLBuffer *createBuffer();
 
  private:
-  CQNewGLCanvas* canvas_ { nullptr };
-//CQGLBuffer*    buffer_ { nullptr };
+  CQNewGLModel* app_ { nullptr };
 };
 
 #endif

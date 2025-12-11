@@ -9,14 +9,13 @@
 #include <vector>
 
 class CQNewGLShaderProgram;
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CQGLCubemap;
 
 class CQNewGLSkybox : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLSkybox(CQNewGLCanvas *canvas);
 
   //---
@@ -29,7 +28,7 @@ class CQNewGLSkybox : public CQNewGLObject {
 
   //---
 
-  void initBuffer() override;
+  CQGLBuffer *initBuffer() override;
 
   //---
 
@@ -41,13 +40,13 @@ class CQNewGLSkybox : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
   void loadCubeMap();
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   QString dirName_ { "beach" };
   double  width_   { 1000.0 };

@@ -2,9 +2,11 @@
 #include <CQNewGLModel.h>
 #include <CQNewGLControl.h>
 #include <CQNewGLCanvas.h>
+
 #include <CQIconButton.h>
 #include <CQApp.h>
 
+#include <QStackedWidget>
 #include <QLabel>
 #include <QHBoxLayout>
 
@@ -136,27 +138,21 @@ void
 CQNewGLToolbar::
 playSlot()
 {
-  auto *canvas = app_->canvas();
-
-  canvas->setTimerRunning(true);
+  app_->setTimerRunning(true);
 }
 
 void
 CQNewGLToolbar::
 pauseSlot()
 {
-  auto *canvas = app_->canvas();
-
-  canvas->setTimerRunning(false);
+  app_->setTimerRunning(false);
 }
 
 void
 CQNewGLToolbar::
 stepSlot()
 {
-  auto *canvas = app_->canvas();
-
-  canvas->timerSlot();
+  app_->timerSlot();
 }
 
 void
@@ -166,7 +162,7 @@ settingsSlot()
   auto *button = qobject_cast<CQIconButton *>(sender());
 
   auto *app     = this->app();
-  auto *control = app->control();
+  auto *control = app->controlStack();
 
   auto geom = app->geometry();
 

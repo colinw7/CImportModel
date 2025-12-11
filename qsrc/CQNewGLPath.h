@@ -4,10 +4,11 @@
 #include <CQNewGLObject.h>
 #include <CGLPath3D.h>
 
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CQNewGLPath : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
   CQNewGLPath(CQNewGLCanvas *canvas);
 
   const CGLPath3D &path() const { return path_; }
@@ -21,10 +22,10 @@ class CQNewGLPath : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  protected:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   CGLPath3D path_;
 };

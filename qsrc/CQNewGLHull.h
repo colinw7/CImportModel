@@ -4,12 +4,13 @@
 #include <CQNewGLObject.h>
 #include <QColor>
 
+class CQNewGLModel;
+class CQNewGLCanvas;
+
 class CHull3D;
 
 class CQNewGLHull : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
   CQNewGLHull(CQNewGLCanvas *canvas);
 
   //---
@@ -20,7 +21,7 @@ class CQNewGLHull : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
   void addBufferHull(CQNewGLObject *object);
@@ -28,7 +29,7 @@ class CQNewGLHull : public CQNewGLObject {
   void updateBufferHull(CQNewGLObject *object, CHull3D &hull);
 
  protected:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   QColor color_ { 255, 255, 255 };
 };

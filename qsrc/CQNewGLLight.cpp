@@ -1,24 +1,24 @@
 #include <CQNewGLLight.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModel.h>
+#include <CQNewGLShapes.h>
 #include <CQNewGLUtil.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 
-CQNewGLShaderProgram *CQNewGLLight::shaderProgram_;
-
-void
-CQNewGLLight::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("light.vs", "light.fs");
-}
-
 CQNewGLLight::
 CQNewGLLight(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLLight::
+shaderProgram()
+{
+  return widget_->getShader("light.vs", "light.fs");
 }
 
 void
@@ -27,18 +27,15 @@ addGeometry()
 {
   initBuffer();
 
-  FaceDatas faceDatas;
-
-  int pos = 0;
-
-  CQNewGLCanvas::ShapeData shapeData;
-
+  CQNewGLShapes::ShapeData shapeData;
   shapeData.color = QColorToRGBA(color());
 
-  canvas_->addCube(buffer(), CPoint3D(-0.5, 0, 0), CPoint3D(0.5, 0, 0),
-                   shapeData, faceDatas, pos);
+  CQNewGLFaceDataList faceDataList;
 
-  setFaceDatas(faceDatas);
+  CQNewGLShapes::addCube(buffer(), CPoint3D(-0.5, 0, 0), CPoint3D(0.5, 0, 0),
+                         shapeData, faceDataList);
+
+  setFaceDatas(faceDataList.faceDatas);
 
   buffer()->load();
 }

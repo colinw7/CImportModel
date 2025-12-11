@@ -4,12 +4,12 @@
 #include <CQNewGLObject.h>
 #include <QColor>
 
+class CQNewGLCanvas;
+class CQNewGLModel;
 class CGeomObject3D;
 
 class CQNewGLWireframe : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
   CQNewGLWireframe(CQNewGLCanvas *canvas);
 
   const QColor &color() const { return color_; }
@@ -23,13 +23,13 @@ class CQNewGLWireframe : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
   void addBufferWireframe(CQNewGLObject *object, int &offset);
 
  protected:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   QColor color_ { 255, 255, 255 };
 };

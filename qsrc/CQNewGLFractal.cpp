@@ -74,23 +74,20 @@ class CQNewGLFractalParticleSystem : public CParticleSystem3D {
 
 //---
 
-CQNewGLShaderProgram *CQNewGLFractal::shaderProgram_;
-
-void
 CQNewGLFractal::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("particle.vs", "particle.fs");
-}
-
-CQNewGLFractal::
-CQNewGLFractal(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+CQNewGLFractal(CQNewGLWidget *widget) :
+ CQNewGLObject(widget)
 {
   particleSystem_ = new CQNewGLFractalParticleSystem;
 
   setType(Type::LORENZ);
+}
+
+CQNewGLShaderProgram *
+CQNewGLFractal::
+shaderProgram()
+{
+  return widget_->getShader("particle.vs", "particle.fs");
 }
 
 void
@@ -101,7 +98,7 @@ setActive(bool b)
 
   updateGeometry_ = true;
 
-  canvas_->update();
+  widget_->update();
 }
 
 void
@@ -119,14 +116,25 @@ setType(const Type &t)
 
 void
 CQNewGLFractal::
+setTextured(bool b)
+{
+  textured_ = b;
+
+  widget_->update();
+}
+
+CQGLBuffer *
+CQNewGLFractal::
 initBuffer()
 {
-  CQNewGLObject::initBuffer();
+  auto *buffer = CQNewGLObject::initBuffer();
 
   //---
 
+  auto *app = widget_->app();
+
   auto addTexture = [&](const QString &name, bool flipV=false) {
-    auto filename = canvas_->app()->buildDir() + "/" + name;
+    auto filename = app->buildDir() + "/" + name;
 
     CImageFileSrc src(filename.toStdString());
     auto image = CImageMgrInst->createImage(src);
@@ -138,11 +146,15 @@ initBuffer()
 
     texture->setName(filename.toStdString());
 
-    return canvas_->getTexture(texture, /*add*/true);
+    return widget_->getTexture(texture, /*add*/true);
   };
 
   if (! texture_)
     texture_ = addTexture("textures/particle.png");
+
+  //---
+
+  return buffer;
 }
 
 void
@@ -155,6 +167,8 @@ addGeometry()
   initBuffer();
 
   //---
+
+  // TODO: buffer only needs single rect
 
   int pos = 0;
 
@@ -193,6 +207,8 @@ addGeometry()
 
   //---
 
+  bbox_ = CBBox3D();
+
   if      (type_ == Type::LORENZ) {
     CRGBA color(1, 1, 1);
 
@@ -208,7 +224,9 @@ addGeometry()
               CPoint3D( 0.5,  0.5, 0.0), CPoint3D(-0.5,  0.5, 0.0),
               color, faceData);
 
-      faceDatas_.push_back(faceData);
+      faceDataList_.faceDatas.push_back(faceData);
+
+      bbox_.add(p);
     }
   }
 
@@ -230,12 +248,7 @@ drawGeometry()
 
   //---
 
-  glDepthFunc(GL_LEQUAL);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//glBlendFunc(GL_ONE, GL_ONE);
+  widget_->enableBlend();
 
   //---
 
@@ -248,21 +261,24 @@ drawGeometry()
   //---
 
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(program, modelMatrix);
+  widget_->addShaderMVP(program, modelMatrix);
 
   //---
 
   // set texture
   glActiveTexture(GL_TEXTURE0);
-  texture_->bind();
+  (void) checkError("glActiveTexture");
 
-  program->setUniformValue("useTexture", true);
+  if (isTextured())
+    texture_->bind();
+
+  program->setUniformValue("useTexture", isTextured());
   program->setUniformValue("textureId", 0);
 
   //---
 
   // set camera (for billboard)
-  auto *camera = canvas_->getCurrentCamera();
+  auto *camera = widget_->getCurrentCamera();
 
   program->setUniformValue("cameraUp"   , CQGLUtil::toVector(camera->up()));
   program->setUniformValue("cameraRight", CQGLUtil::toVector(camera->right()));
@@ -294,5 +310,5 @@ drawGeometry()
 
   //---
 
-  glDisable(GL_BLEND);
+  widget_->disableBlend();
 }

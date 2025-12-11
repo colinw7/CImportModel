@@ -5,17 +5,15 @@
 #include <CGLCamera.h>
 #include <QColor>
 
-class CQNewGLCanvas;
+class CQNewGLModel;
 class CQNewGLShaderProgram;
 
 class CQNewGLCamera : public CQNewGLObject, public CGLCamera {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
-  CQNewGLCamera(CQNewGLCanvas *canvas, const CGLVector3D &origin,
+  CQNewGLCamera(CQNewGLWidget *widget, int ind, const CGLVector3D &origin,
                 const CGLVector3D &position, const CGLVector3D &up);
+
+  int ind() const { return ind_; }
 
   const QString &name() const { return name_; }
   void setName(const QString &s) { name_ = s; }
@@ -41,14 +39,10 @@ class CQNewGLCamera : public CQNewGLObject, public CGLCamera {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
-
-  CGLVector3D initOrigin_;
-  CGLVector3D initPosition_;
-  CGLVector3D initUp_;
+  int ind_ { -1 };
 
   QString name_;
 

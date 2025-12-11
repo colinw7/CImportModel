@@ -10,10 +10,12 @@
 #include <vector>
 #include <cstdint>
 
-class  CQNewGLCanvas;
+class  CQNewGLModel;
 struct CQNewGLFontData;
-class  TextShaderProgram;
-class  CQGLBuffer;
+struct CQNewGLWidget;
+struct CQNewGLShaderProgram;
+
+class CQGLBuffer;
 
 class CQNewGLFont {
  public:
@@ -47,9 +49,7 @@ class CQNewGLFont {
   };
 
  public:
-  CQNewGLFont(CQNewGLCanvas *canvas);
-
-  void init();
+  CQNewGLFont(CQNewGLWidget *widget);
 
   const QString &fontName() { return name_; }
   bool setFontName(const QString &name);
@@ -59,9 +59,9 @@ class CQNewGLFont {
 
   GlyphInfo makeGlyphInfo(uint32_t character, float offsetX, float offsetY) const;
 
-  CQNewGLCanvas *canvas() const { return canvas_; }
+  CQNewGLWidget *widget() const { return widget_; }
 
-  TextShaderProgram *shaderProgram() const { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() const;
 
   bool bindTexture();
 
@@ -73,11 +73,10 @@ class CQNewGLFont {
   bool readFile(const char *path, std::vector<uint8_t> &bytes) const;
 
  private:
-  CQNewGLCanvas*     canvas_        { nullptr };
-  QString            name_;
-  int                size_          { 40 };
-  TextShaderProgram* shaderProgram_ { nullptr };
-  CQNewGLFontData*   fontData_      { nullptr };
+  CQNewGLWidget*   widget_   { nullptr };
+  QString          name_;
+  int              size_     { 40 };
+  CQNewGLFontData* fontData_ { nullptr };
 };
 
 //---
@@ -109,7 +108,7 @@ class CQNewGLText {
 
   void updateText();
 
-  void render();
+  void render(CQNewGLWidget *widget);
 
  private:
   void initBuffer();

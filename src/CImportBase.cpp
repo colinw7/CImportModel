@@ -16,6 +16,9 @@
 #include <CImportVoxel.h>
 #include <CImportX3D.h>
 
+#include <CStrParse.h>
+#include <CStrUtil.h>
+
 CImportBase *
 CImportBase::
 createModel(CGeom3DType type, const std::string &name)
@@ -42,4 +45,77 @@ createModel(CGeom3DType type, const std::string &name)
   }
 
   return import;
+}
+
+bool
+CImportBase::
+readFileMap(const std::string &fileName)
+{
+  CFile file(fileName);
+  if (! file.exists())
+    return false;
+
+  while (! file.eof()) {
+    std::string line;
+    file.readLine(line);
+
+    CStrParse parse(line);
+
+    parse.skipSpace();
+
+    if (parse.eof())
+      continue;
+
+    auto readString = [&]() {
+      std::string str;
+
+      if (parse.isChar('"')) {
+        parse.skipChar();
+
+        while (! parse.eof() && ! parse.isChar('"'))
+          str += parse.readChar();
+
+        if (parse.isChar('"'))
+          parse.skipChar();
+      }
+      else {
+        while (! parse.eof() && ! parse.isSpace())
+          str += parse.readChar();
+      }
+
+      return str;
+    };
+
+    auto fromStr = readString();
+
+    while (! parse.eof() && parse.isSpace())
+      parse.skipChar();
+
+    auto toStr = readString();
+
+    //---
+
+    addFileMap(fromStr, toStr);
+  }
+
+  return true;
+}
+
+void
+CImportBase::
+addFileMap(const std::string &oldName, const std::string &newName)
+{
+  fileNameMap_[oldName] = newName;
+}
+
+std::string
+CImportBase::
+remapFile(const std::string &oldName) const
+{
+  auto pf = fileNameMap_.find(oldName);
+
+  if (pf != fileNameMap_.end())
+    return (*pf).second;
+
+  return oldName;
 }

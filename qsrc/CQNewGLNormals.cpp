@@ -1,43 +1,38 @@
 #include <CQNewGLNormals.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModel.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 
-CQNewGLShaderProgram* CQNewGLNormals::shaderProgram_;
-
-void
-CQNewGLNormals::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-
-  shaderProgram_->addShaders("normal.vs", "normal.fs");
-}
-
 CQNewGLNormals::
 CQNewGLNormals(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLNormals::
+shaderProgram()
+{
+  return canvas_->getShader("normal.vs", "normal.fs");
 }
 
 void
 CQNewGLNormals::
 updateGeometry()
 {
-  if (! shaderProgram_)
-    initShader(canvas_);
-
-  //---
-
   initBuffer();
 
   //---
 
   auto objects = canvas_->getAnnotationObjects();
 
-  for (auto *object : objects)
-    addBufferNormals(object);
+  for (auto *object : objects) {
+    if (object->isVisible())
+      addBufferNormals(object);
+  }
 
   //---
 
@@ -48,18 +43,30 @@ void
 CQNewGLNormals::
 addBufferNormals(CQNewGLObject *object)
 {
+  auto *srcBuffer = object->buffer();
+  if (! srcBuffer) return;
+
+  //---
+
   auto lineSize = this->lineSize();
 
-  if (lineSize <= 0)
-    lineSize = canvas_->sceneScale()/100.0;
+  if (lineSize <= 0) {
+    auto bbox = object->getBBox();
+
+    auto sceneScale = bbox.getMaxSize();
+
+    lineSize = sceneScale/100.0;
+  }
 
   auto lineColor = this->lineColor();
 
   //---
 
-  auto *srcBuffer = object->buffer();
-  if (! srcBuffer) return;
+  auto modelMatrix = object->getTransform();
 
+  //---
+
+  // add normal lines
   int np = srcBuffer->numPoints();
 
   for (int ip = 0; ip < np; ++ip) {
@@ -72,10 +79,13 @@ addBufferNormals(CQNewGLObject *object)
     auto p1 = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
     auto p2 = p1 + lineSize*n.normalize();
 
-    buffer_->addPoint(float(p1.x), float(p1.y), float(p1.z));
+    auto pm1 = modelMatrix*p1;
+    auto pm2 = modelMatrix*p2;
+
+    buffer_->addPoint(float(pm1.x), float(pm1.y), float(pm1.z));
     buffer_->addColor(lineColor);
 
-    buffer_->addPoint(float(p2.x), float(p2.y), float(p2.z));
+    buffer_->addPoint(float(pm2.x), float(pm2.y), float(pm2.z));
     buffer_->addColor(lineColor);
   }
 
@@ -87,15 +97,17 @@ void
 CQNewGLNormals::
 drawGeometry()
 {
+  auto *program = shaderProgram();
+
   buffer_->bind();
 
-  shaderProgram_->bind();
+  program->bind();
 
   //---
 
   // model matrix
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 
@@ -109,5 +121,5 @@ drawGeometry()
 
   //---
 
-  shaderProgram_->release();
+  program->release();
 }

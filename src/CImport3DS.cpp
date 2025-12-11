@@ -75,6 +75,13 @@ CImport3DS(CGeomScene3D *scene, const std::string &) :
   }
 }
 
+CImport3DS::
+~CImport3DS()
+{
+  for (auto *material : materials_)
+    delete material;
+}
+
 bool
 CImport3DS::
 read(CFile &file)

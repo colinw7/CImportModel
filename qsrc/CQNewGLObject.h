@@ -3,11 +3,13 @@
 
 #include <CQNewGLFaceData.h>
 #include <CBBox3D.h>
+#include <CMatrix3D.h>
 
 #include <QString>
 #include <vector>
 
-class CQNewGLCanvas;
+class CQNewGLWidget;
+class CQNewGLModel;
 class CQNewGLShaderProgram;
 class CQNewGLText;
 
@@ -20,9 +22,15 @@ class CQNewGLObject {
   using Texts     = std::vector<CQNewGLText *>;
 
  public:
-  CQNewGLObject(CQNewGLCanvas *canvas);
+  CQNewGLObject(CQNewGLWidget *widget);
 
   virtual ~CQNewGLObject() { }
+
+  //---
+
+  CQNewGLModel* app() const;
+
+  CQNewGLWidget* widget() const { return widget_; }
 
   //---
 
@@ -53,9 +61,9 @@ class CQNewGLObject {
 
   void addFaceData(const CQNewGLFaceData &faceData);
 
-  const FaceDatas &faceDatas() const { return faceDatas_; }
+  const FaceDatas &faceDatas() const { return faceDataList_.faceDatas; }
 
-  void setFaceDatas(const FaceDatas &faceDatas) { faceDatas_ = faceDatas; }
+  void setFaceDatas(const FaceDatas &faceDatas) { faceDataList_.faceDatas = faceDatas; }
 
   //---
 
@@ -66,7 +74,7 @@ class CQNewGLObject {
 
   //---
 
-  virtual void initBuffer();
+  virtual CQGLBuffer *initBuffer();
 
   CQGLBuffer *buffer() const { return buffer_; }
 
@@ -91,10 +99,12 @@ class CQNewGLObject {
 
   //---
 
-  CBBox3D getBBox() const;
+  virtual CBBox3D getBBox() const;
+
+  virtual CMatrix3D getTransform() const;
 
  protected:
-  CQNewGLCanvas* canvas_ { nullptr };
+  CQNewGLWidget* widget_ { nullptr };
 
   QString name_;
   bool    visible_   { true };
@@ -103,7 +113,7 @@ class CQNewGLObject {
   bool    wireframe_ { false };
   bool    solid_     { true };
 
-  FaceDatas faceDatas_;
+  CQNewGLFaceDataList faceDataList_;
 
   CQGLBuffer* buffer_ { nullptr };
 

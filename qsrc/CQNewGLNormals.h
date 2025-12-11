@@ -4,10 +4,11 @@
 #include <CQNewGLObject.h>
 #include <QColor>
 
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CQNewGLNormals : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
   CQNewGLNormals(CQNewGLCanvas *canvas);
 
   double lineSize() const { return lineSize_; }
@@ -24,13 +25,13 @@ class CQNewGLNormals : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
   void addBufferNormals(CQNewGLObject *object);
 
  protected:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   double lineSize_  { -1 };
   QColor lineColor_ { 255, 255, 255 };

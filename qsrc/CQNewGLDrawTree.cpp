@@ -2,6 +2,7 @@
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
+#include <CQNewGLShapes.h>
 #include <CQNewGLUtil.h>
 
 #include <CQGLBuffer.h>
@@ -24,20 +25,17 @@ class CQNewGLDrawTreeImpl  : public CDrawTree3D {
 
 //---
 
-CQNewGLShaderProgram *CQNewGLDrawTree::shaderProgram_;
-
-void
-CQNewGLDrawTree::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("tree.vs", "tree.fs");
-}
-
 CQNewGLDrawTree::
 CQNewGLDrawTree(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLDrawTree::
+shaderProgram()
+{
+  return canvas_->getShader("tree.vs", "tree.fs");
 }
 
 void
@@ -84,38 +82,17 @@ addGeometry()
 
   // add geometry
 
-  int pos = 0;
-
-#if 0
-  auto addPoint = [&](const CPoint3D &p, const CRGBA &c) {
-    buffer_->addPoint(p.x, p.y, p.z);
-    buffer_->addColor(c);
-  };
-#endif
+  faceDataList_.clear();
 
   auto addLine = [&](const CPoint3D &p1, const CPoint3D &p2, double r, int depth) {
-#if 0
-    CQNewGLFaceData faceData;
-
-    faceData.pos = pos;
-    faceData.len = 2;
-
-    addPoint(p1, color_);
-    addPoint(p2, color_);
-
-    faceDatas_.push_back(faceData);
-
-    pos += faceData.len;
-#else
     auto color = color1_.blended(color2_, CMathUtil::map(depth, 0.0, depth_ - 1.0, 1.0, 0.0));
 
-    CQNewGLCanvas::ShapeData shapeData;
+    CQNewGLShapes::ShapeData shapeData;
 
     shapeData.color = color;
 
-    canvas_->addCylinder(buffer_, p1 + CPoint3D(0, -h/2.0, 0), p2 + CPoint3D(0, -h/2.0, 0),
-                         r, shapeData, faceDatas_, pos);
-#endif
+    CQNewGLShapes::addCylinder(buffer_, p1 + CPoint3D(0, -h/2.0, 0), p2 + CPoint3D(0, -h/2.0, 0),
+                               r, shapeData, faceDataList_);
   };
 
   //---

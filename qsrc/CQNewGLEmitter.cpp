@@ -48,23 +48,22 @@ class CQNewGLEmitterParticleSystem : public CParticleSystem3D {
 
 //---
 
-CQNewGLShaderProgram *CQNewGLEmitter::shaderProgram_;
-
-void
-CQNewGLEmitter::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("particle.vs", "particle.fs");
-}
-
 CQNewGLEmitter::
 CQNewGLEmitter(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+  auto *app = canvas_->app();
+
   particleSystem_ = new CQNewGLEmitterParticleSystem;
 
-  connect(canvas, SIGNAL(timerStep()), this, SLOT(stepSlot()));
+  connect(app, SIGNAL(timerStep()), this, SLOT(stepSlot()));
+}
+
+CQNewGLShaderProgram *
+CQNewGLEmitter::
+shaderProgram()
+{
+  return canvas_->getShader("particle.vs", "particle.fs");
 }
 
 void
@@ -161,8 +160,10 @@ void
 CQNewGLEmitter::
 updateTexture()
 {
+  auto *app = canvas_->app();
+
   auto addTexture = [&](const QString &name, bool flipV=false) {
-    auto filename = canvas_->app()->buildDir() + "/textures/" + name;
+    auto filename = app->buildDir() + "/textures/" + name;
 
     CImageFileSrc src(filename.toStdString());
     auto image = CImageMgrInst->createImage(src);
@@ -350,7 +351,7 @@ updateGeometry()
               CPoint3D( 0.5,  0.5, 0.0), CPoint3D(-0.5,  0.5, 0.0),
               color, faceData);
 
-      faceDatas_.push_back(faceData);
+      faceDataList_.faceDatas.push_back(faceData);
     }
   }
   else if (type_ == Type::FIREWORKS) {
@@ -382,7 +383,7 @@ updateGeometry()
               CPoint3D( 0.5,  0.5, 0.0), CPoint3D(-0.5,  0.5, 0.0),
               color, faceData);
 
-      faceDatas_.push_back(faceData);
+      faceDataList_.faceDatas.push_back(faceData);
     }
   }
 
@@ -400,12 +401,7 @@ drawGeometry()
 
   //---
 
-  glDepthFunc(GL_LEQUAL);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//glBlendFunc(GL_ONE, GL_ONE);
+  canvas_->enableBlend();
 
   //---
 
@@ -485,7 +481,7 @@ drawGeometry()
   else if (type_ == Type::FLOCKING) {
     program->setUniformValue("maxAge", 100);
 
-    for (const auto &faceData : faceDatas_) {
+    for (const auto &faceData : faceDataList_.faceDatas) {
       program->setUniformValue("position", pointToQVector(faceData.position));
       program->setUniformValue("size"    , float(pointSize()));
       program->setUniformValue("age"     , 0);
@@ -501,7 +497,7 @@ drawGeometry()
   else if (type_ == Type::FIREWORKS) {
     program->setUniformValue("maxAge", 100);
 
-    for (const auto &faceData : faceDatas_) {
+    for (const auto &faceData : faceDataList_.faceDatas) {
       program->setUniformValue("position", pointToQVector(faceData.position));
       program->setUniformValue("size"    , float(pointSize()));
       program->setUniformValue("age"     , faceData.boneId);
@@ -523,5 +519,5 @@ drawGeometry()
 
   //---
 
-  glDisable(GL_BLEND);
+  canvas_->disableBlend();
 }

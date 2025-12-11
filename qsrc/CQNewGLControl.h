@@ -25,24 +25,24 @@ class CQNewGLObjectsControl;
 class CQNewGLTexturesControl;
 class CQNewGLTextureImage;
 class CQNewGLTextureChooser;
-class CQNewGLUVControl;
 class CQNewGLAnimControl;
 class CQNewGLBonesControl;
 class CQNewGLTerrainControl;
 class CQNewGLMazeControl;
 class CQNewGLSkyboxControl;
 class CQNewGLEmitterControl;
-class CQNewGLFractalControl;
 class CQNewGLDrawTreeControl;
 class CQNewGLShapeControl;
 class CQNewGLCanvas;
 class CQNewGLUVMap;
 class CQNewGLCamera;
+
 class CQNewGLObjectsList;
 class CQNewGLCamerasList;
 class CQNewGLLightsList;
 class CQNewGLBonesList;
 class CQNewGLShapesList;
+
 class CQIconButton;
 
 class  CGeomObject3D;
@@ -83,7 +83,7 @@ class CQNewGLControl : public QFrame {
   void updateAxes();
 //void updateBBox();
 //void updateHull();
-  void updateUV();
+//void updateUV();
   void updateAnim();
   void updateBones();
 
@@ -91,7 +91,6 @@ class CQNewGLControl : public QFrame {
   void updateMaze();
   void updateSkybox();
   void updateEmitter();
-  void updateFractal();
   void updateDrawTree();
   void updateShape();
 
@@ -131,16 +130,82 @@ class CQNewGLControl : public QFrame {
 //CQNewGLHullControl*        hullControl_        { nullptr };
   CQNewGLObjectsControl*     objectsControl_     { nullptr };
   CQNewGLTexturesControl*    texturesControl_    { nullptr };
-  CQNewGLUVControl*          uvControl_          { nullptr };
   CQNewGLAnimControl*        animControl_        { nullptr };
   CQNewGLBonesControl*       bonesControl_       { nullptr };
   CQNewGLTerrainControl*     terrainControl_     { nullptr };
   CQNewGLMazeControl*        mazeControl_        { nullptr };
   CQNewGLSkyboxControl*      skyboxControl_      { nullptr };
   CQNewGLEmitterControl*     emitterControl_     { nullptr };
-  CQNewGLFractalControl*     fractalControl_     { nullptr };
   CQNewGLDrawTreeControl*    drawTreeControl_    { nullptr };
   CQNewGLShapeControl*       shapeControl_       { nullptr };
+};
+
+//---
+
+class CQNewGLFractalControl : public QFrame {
+  Q_OBJECT
+
+ public:
+  CQNewGLFractalControl(CQNewGLModel *app);
+
+  CQNewGLModel *app() const { return app_; }
+
+  void connectSlots(bool b);
+
+ private:
+  struct LayoutData {
+    LayoutData() { }
+
+    bool vertical { false };
+
+    LayoutData &setVertical(bool b=true) { vertical = b; return *this; }
+  };
+
+  template<typename WIDGET>
+  WIDGET *addLabelEdit(const QString &label, WIDGET *w, const LayoutData &data=LayoutData()) {
+    auto *frame = new QFrame;
+
+    QBoxLayout *layout1 = nullptr;
+    if (data.vertical)
+      layout1 = new QVBoxLayout(frame);
+    else
+      layout1 = new QHBoxLayout(frame);
+
+    layout1->addWidget(new QLabel(label));
+    layout1->addWidget(w);
+
+    addWidget(frame);
+
+    return w;
+  }
+
+  template<typename WIDGET>
+  WIDGET *addWidget(WIDGET *w) {
+    layout_->addWidget(w);
+
+    return w;
+  }
+
+ public Q_SLOTS:
+  void updateWidgets();
+
+ private Q_SLOTS:
+  void typeSlot(int);
+  void wireframeSlot(int);
+  void textureSlot(int);
+  void axesSlot(int);
+  void pointSizeSlot(double);
+
+  void generateSlot();
+
+ private:
+  CQNewGLModel* app_            { nullptr };
+  QVBoxLayout*  layout_         { nullptr };
+  QComboBox*    typeCombo_      { nullptr };
+  QCheckBox*    wireframeCheck_ { nullptr };
+  QCheckBox*    textureCheck_   { nullptr };
+  QCheckBox*    axesCheck_      { nullptr };
+  CQRealSpin*   pointSizeEdit_  { nullptr };
 };
 
 //---
@@ -254,15 +319,17 @@ class CQNewGLGeneralControl : public CQNewGLControlFrame {
   void depthTestSlot(int);
   void cullSlot(int);
   void frontFaceSlot(int);
+  void showOrientSlot(int);
 
   void typeSlot(int type);
 
  private:
   CQColorEdit* colorEdit_ { nullptr };
 
-  QCheckBox* depthTestCheck_ { nullptr };
-  QCheckBox* cullCheck_      { nullptr };
-  QCheckBox* frontFaceCheck_ { nullptr };
+  QCheckBox* depthTestCheck_  { nullptr };
+  QCheckBox* cullCheck_       { nullptr };
+  QCheckBox* frontFaceCheck_  { nullptr };
+  QCheckBox* showOrientCheck_ { nullptr };
 };
 
 //---
@@ -652,21 +719,30 @@ class CQNewGLTextureImage : public QFrame {
 
 //---
 
-class CQNewGLUVControl : public CQNewGLControlFrame {
+class CQNewGLUVControl : public QFrame {
   Q_OBJECT
 
  public:
-  CQNewGLUVControl(CQNewGLControl *control);
+  CQNewGLUVControl(CQNewGLModel *app);
+
+  CQNewGLModel *app() const { return app_; }
 
   void updateObjects();
 
   void connectSlots(bool b);
+
+ public Q_SLOTS:
+  void updateWidgets();
 
  private Q_SLOTS:
   void objectSelectedSlot();
   void typeChanged(int);
 
  private:
+  CQNewGLModel* app_ { nullptr };
+
+  QVBoxLayout* layout_ { nullptr };
+
   CQNewGLObjectsList* objectsList_ { nullptr };
   QComboBox*          typeCombo_   { nullptr };
 };
@@ -919,30 +995,6 @@ class CQNewGLEmitterControl : public CQNewGLControlFrame {
 
 //---
 
-class CQNewGLFractalControl : public CQNewGLControlFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLFractalControl(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
- public Q_SLOTS:
-  void updateWidgets();
-
- private Q_SLOTS:
-  void typeSlot(int);
-  void wireframeSlot(int);
-
-  void generateSlot();
-
- private:
-  QComboBox* typeCombo_      { nullptr };
-  QCheckBox* wireframeCheck_ { nullptr };
-};
-
-//---
-
 class CQNewGLDrawTreeControl : public CQNewGLControlFrame {
   Q_OBJECT
 
@@ -1066,7 +1118,7 @@ class CQNewGLObjectsList : public QFrame {
   Q_OBJECT
 
  public:
-  CQNewGLObjectsList(CQNewGLControl *control);
+  CQNewGLObjectsList(CQNewGLCanvas *canvas);
 
   void connectSlots(bool b);
 
@@ -1090,10 +1142,10 @@ class CQNewGLObjectsList : public QFrame {
  private:
   using ObjectItem = std::map<CGeomObject3D *, QTreeWidgetItem *>;
 
-  CQNewGLControl* control_     { nullptr };
-  QTreeWidget*    tree_        { nullptr };
-  ObjectItem      objectItem_;
-  int             selectedInd_ { -1 };
+  CQNewGLCanvas* canvas_      { nullptr };
+  QTreeWidget*   tree_        { nullptr };
+  ObjectItem     objectItem_;
+  int            selectedInd_ { -1 };
 };
 
 //---
@@ -1188,6 +1240,7 @@ class CQNewGLBonesList : public QFrame {
 
 //---
 
+#if 0
 class CQNewGLTextureChooser : public QComboBox {
   Q_OBJECT
 
@@ -1214,6 +1267,7 @@ class CQNewGLTextureChooser : public QComboBox {
   QString         textureName_;
   bool            needsUpdate_ { true };
 };
+#endif
 
 //---
 

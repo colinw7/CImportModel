@@ -11,6 +11,9 @@
 #include <QImage>
 
 class CQNewGLEmitterParticleSystem;
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CFlocking;
 class CFireworks;
 
@@ -25,10 +28,6 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
   };
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLEmitter(CQNewGLCanvas *canvas);
 
   //---
@@ -89,7 +88,7 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private Q_SLOTS:
   void stepSlot();
@@ -98,7 +97,7 @@ class CQNewGLEmitter : public QObject, public CQNewGLObject {
   void updateTexture();
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   Type type_ { Type::GENERATOR };
 

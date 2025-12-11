@@ -129,23 +129,40 @@ readBinary()
 #endif
   };
 
-  auto readVector = [&](Vector &v) {
-    if (! readFloat(&v.x) || ! readFloat(&v.y) || ! readFloat(&v.z))
+  auto readPoint = [&](Vector &v) {
+    float x, y, z;
+    if (! readFloat(&x) || ! readFloat(&y) || ! readFloat(&z))
       return false;
 
-//  v.x = std::abs(v.x);
-//  v.y = std::abs(v.y);
-//  v.z = std::abs(v.z);
+    auto p = adjustPoint(CPoint3D(x, y, z));
+
+    v.x = float(p.x);
+    v.y = float(p.y);
+    v.z = float(p.z);
+
+    return true;
+  };
+
+  auto readNormal = [&](Vector &v) {
+    float x, y, z;
+    if (! readFloat(&x) || ! readFloat(&y) || ! readFloat(&z))
+      return false;
+
+    auto p = adjustNormal(CVector3D(x, y, z));
+
+    v.x = float(p.x());
+    v.y = float(p.y());
+    v.z = float(p.z());
 
     return true;
   };
 
   auto readTriangle = [&](Triangle &t) {
-    if (! readVector(t.normal)) return false;
+    if (! readNormal(t.normal)) return false;
 
-    if (! readVector(t.p1)) return false;
-    if (! readVector(t.p2)) return false;
-    if (! readVector(t.p3)) return false;
+    if (! readPoint(t.p1)) return false;
+    if (! readPoint(t.p2)) return false;
+    if (! readPoint(t.p3)) return false;
 
     return true;
   };
@@ -163,16 +180,16 @@ readBinary()
   };
 #endif
 
-  uint n = 0;
-  if (! readInteger(&n))
+  uint nt = 0;
+  if (! readInteger(&nt))
     return false;
 
   if (isDebug())
-    std::cerr << "Num Objects: " << n << "\n";
+    std::cerr << "Num Objects: " << nt << "\n";
 
-  triangles_.resize(n);
+  triangles_.resize(nt);
 
-  for (uint i = 0; i < n; ++i) {
+  for (uint i = 0; i < nt; ++i) {
     if (! readTriangle(triangles_[i]))
       return false;
 
@@ -223,16 +240,28 @@ readBinary()
     std::cerr << "Z Range: " << minV_.z << " " << maxV_.z << "\n";
   }
 
-  for (const auto &t : triangles_) {
-    int i1 = object_->addVertex(CPoint3D(t.p1.x, t.p1.y, t.p1.z));
-    int i2 = object_->addVertex(CPoint3D(t.p2.x, t.p2.y, t.p2.z));
-    int i3 = object_->addVertex(CPoint3D(t.p3.x, t.p3.y, t.p3.z));
-
+  auto addFace = [&](int i1, int i2, int i3, const CVector3D &n) {
     auto faceId = object_->addITriangle(i1, i2, i3);
 
     auto &face = object_->getFace(faceId);
 
-    face.setNormal(CVector3D(t.normal.x, t.normal.y, t.normal.z));
+    face.setNormal(n);
+  };
+
+  for (const auto &t : triangles_) {
+    auto p1 = CPoint3D(t.p1.x, t.p1.y, t.p1.z);
+    auto p2 = CPoint3D(t.p2.x, t.p2.y, t.p2.z);
+    auto p3 = CPoint3D(t.p3.x, t.p3.y, t.p3.z);
+
+    auto n1 = CVector3D( t.normal.x,  t.normal.y,  t.normal.z);
+//  auto n2 = CVector3D(-t.normal.x, -t.normal.y, -t.normal.z);
+
+    int i1 = object_->addVertex(p1);
+    int i2 = object_->addVertex(p2);
+    int i3 = object_->addVertex(p3);
+
+    addFace(i1, i2, i3, n1);
+//  addFace(i3, i2, i1, n2);
   }
 
   return true;

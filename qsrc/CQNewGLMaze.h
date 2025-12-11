@@ -3,14 +3,13 @@
 
 #include <CQNewGLObject.h>
 
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CDungeon;
 
 class CQNewGLMaze : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLMaze(CQNewGLCanvas *canvas);
 
   //---
@@ -25,7 +24,7 @@ class CQNewGLMaze : public CQNewGLObject {
 
   //---
 
-  void initBuffer() override;
+  CQGLBuffer *initBuffer() override;
 
   //---
 
@@ -35,10 +34,10 @@ class CQNewGLMaze : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   CDungeon* dungeon_ { nullptr };
 

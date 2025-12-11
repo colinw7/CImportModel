@@ -5,12 +5,13 @@
 #include <QColor>
 
 class CQNewGLModelObject;
+class CQNewGLModel;
+class CQNewGLCanvas;
+
 class CBasis3D;
 
 class CQNewGLBasis : public CQNewGLObject {
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
   CQNewGLBasis(CQNewGLCanvas *canvas);
 
   bool isShow() const { return show_; }
@@ -33,10 +34,10 @@ class CQNewGLBasis : public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  protected:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   bool show_ { false };
 

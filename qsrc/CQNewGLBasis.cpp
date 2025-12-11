@@ -3,26 +3,25 @@
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModelObject.h>
 #include <CQNewGLFont.h>
+#include <CQNewGLShapes.h>
+#include <CQNewGLModel.h>
 #include <CQNewGLUtil.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 #include <CGeomObject3D.h>
 
-CQNewGLShaderProgram* CQNewGLBasis::shaderProgram_;
-
-void
-CQNewGLBasis::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-
-  shaderProgram_->addShaders("basis.vs", "basis.fs");
-}
-
 CQNewGLBasis::
 CQNewGLBasis(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLBasis::
+shaderProgram()
+{
+  return canvas_->getShader("basis.vs", "basis.fs");
 }
 
 void
@@ -40,11 +39,13 @@ updateGeometry()
 
   //---
 
+  auto *app = canvas_->app();
+
   auto lineWidth = this->lineWidth();
   auto lineSize  = this->lineSize();
 
   if (lineWidth < 0) {
-    auto bbox = canvas_->getModelBBox(object);
+    auto bbox = app->getModelBBox(object);
 
     lineWidth = bbox.getMaxSize()/250.0;
   }
@@ -56,46 +57,14 @@ updateGeometry()
 
   //---
 
-  int pos = 0;
-
-#if 0
-  auto addPoint = [&](const CPoint3D &p, const CPoint3D &n, const CRGBA &c) {
-    buffer_->addPoint(p.x, p.y, p.z);
-    buffer_->addNormal(n.x, n.y, n.z);
-    buffer_->addColor(c);
-  };
-#endif
+  faceDataList_.clear();
 
   auto addLine = [&](const CPoint3D &c1, const CPoint3D &c2, const CPoint3D & /*dp*/) {
-#if 0
-    CQNewGLFaceData faceData;
-
-    faceData.pos = pos;
-    faceData.len = 4;
-
-    auto dp1 = lineWidth*dp;
-
-    auto p1 = c1 - dp1;
-    auto p2 = c1 + dp1;
-    auto p3 = c2 + dp1;
-    auto p4 = c2 - dp1;
-    auto n  = CPoint3D(0, 0, 1);
-
-    addPoint(p1, n, color);
-    addPoint(p2, n, color);
-    addPoint(p3, n, color);
-    addPoint(p4, n, color);
-
-    addFaceData(faceData);
-
-    pos += faceData.len;
-#else
-    CQNewGLCanvas::ShapeData shapeData;
+    CQNewGLShapes::ShapeData shapeData;
 
     shapeData.color = color;
 
-    canvas_->addCylinder(buffer_, c1, c2, lineWidth, shapeData, faceDatas_, pos);
-#endif
+    CQNewGLShapes::addCylinder(buffer_, c1, c2, lineWidth, shapeData, faceDataList_);
   };
 
   //---
@@ -106,7 +75,7 @@ updateGeometry()
     CVector3D u, v, w;
     canvas_->getBasis(object, u, v, w);
 
-    auto bbox = canvas_->getModelBBox(object);
+    auto bbox = app->getModelBBox(object);
 
     auto c = bbox.getCenter();
     auto s = lineSize*bbox.getRadius();
@@ -177,20 +146,22 @@ drawGeometry()
 
   //---
 
+  auto *program = shaderProgram();
+
   buffer_->bind();
 
-  shaderProgram_->bind();
+  program->bind();
 
   //---
 
   // model matrix
 //auto modelMatrix = canvas_->getModelMatrix();
   auto modelMatrix = object->getHierTransform();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 
-  for (const auto &faceData : faceDatas_) {
+  for (const auto &faceData : faceDataList_.faceDatas) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
@@ -200,7 +171,7 @@ drawGeometry()
 
   //---
 
-  shaderProgram_->release();
+  program->release();
 
   //---
 

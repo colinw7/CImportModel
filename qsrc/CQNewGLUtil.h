@@ -1,6 +1,9 @@
 #ifndef CQNewGLUtil_H
 #define CQNewGLUtil_H
 
+#include <CRGBA.h>
+
+#include <QVector3D>
 #include <GL/glu.h>
 
 namespace {

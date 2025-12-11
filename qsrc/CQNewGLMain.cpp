@@ -6,6 +6,7 @@
 #include <CGeomScene3D.h>
 #include <CGeometry3D.h>
 #include <CImageLib.h>
+#include <CStrUtil.h>
 
 #include <CQApp.h>
 
@@ -17,18 +18,19 @@ main(int argc, char **argv)
   //---
 
   QString     modelName;
-  CGeom3DType format    = CGEOM_3D_TYPE_V3D;
+  CGeom3DType format = CGEOM_3D_TYPE_V3D;
 
   using InitTextureData = CQNewGLCanvas::InitTextureData;
 
   std::vector<InitTextureData> initTextures;
-  std::string                  texture_map;
+  std::string                  textureMap;
+  std::string                  fileNameMap;
   std::vector<std::string>     args;
 
   double  time = 0.0;
   QString animName;
 
-  bool flipYZ      = false;
+  bool swapYZ      = false;
   bool invertDepth = false;
   bool invertX     = false;
   bool invertY     = false;
@@ -50,8 +52,8 @@ main(int argc, char **argv)
         else
           std::cerr << "Missing filename for " << argv[i] << "\n";
       }
-      else if (arg == "flip_yz") {
-        flipYZ = true;
+      else if (arg == "swap_yz") {
+        swapYZ = true;
       }
       else if (arg == "invert_depth") {
         invertDepth = true;
@@ -99,12 +101,20 @@ main(int argc, char **argv)
         ++i;
 
         if (i < argc)
-          texture_map = argv[i];
+          textureMap = argv[i];
+        else
+          std::cerr << "Missing value for " << argv[i] << "\n";
+      }
+      else if (arg == "filename_map") {
+        ++i;
+
+        if (i < argc)
+          fileNameMap = argv[i];
         else
           std::cerr << "Missing value for " << argv[i] << "\n";
       }
       else if (arg == "h" || arg == "help") {
-        std::cout << "CGLNewModel [-flip_yz] [-invert_depth] [[-3ds|-3drw|-asc|-cob|-dxf|-fbx|"
+        std::cout << "CGLNewModel [-swap_yz] [-invert_depth] [[-3ds|-3drw|-asc|-cob|-dxf|-fbx|"
                      "-gltf|-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] <filename>]\n";
         return 0;
       }
@@ -154,32 +164,33 @@ main(int argc, char **argv)
 
   auto *canvas = modelApp->canvas();
 
-  canvas->setTime    (time);
-  canvas->setAnimName(animName);
+  modelApp->setTime    (time);
+  modelApp->setAnimName(animName);
 
-  CQNewGLCanvas::LoadData loadData;
+  CQNewGLModel::LoadData loadData;
 
-  loadData.invertX = invertX;
-  loadData.invertY = invertY;
-  loadData.invertZ = invertZ;
+  loadData.invertX     = invertX;
+  loadData.invertY     = invertY;
+  loadData.invertZ     = invertZ;
+  loadData.swapYZ      = swapYZ;
+  loadData.fileNameMap = fileNameMap;
 
   if (modelName != "") {
-    if (! canvas->loadModel(modelName, format, loadData))
+    if (! modelApp->loadModel(modelName, format, loadData))
       std::cerr << "Failed to load model '" << modelName.toStdString() << "'\n";
 
     for (auto *object : loadData.objects) {
       auto *objectData = canvas->getObjectData(object);
 
-      objectData->setFlipYZ     (flipYZ);
       objectData->setInvertDepth(invertDepth);
     }
   }
 
-  modelApp->resize(modelApp->windowWidth(), modelApp->windowHeight());
+  modelApp->resize(canvas->windowWidth(), canvas->windowHeight());
 
   canvas->setInitTextures(initTextures);
 
-  canvas->setTextureMap(texture_map);
+  canvas->setTextureMap(textureMap);
 
   //---
 

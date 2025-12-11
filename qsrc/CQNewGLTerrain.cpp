@@ -12,21 +12,20 @@
 #include <CSolidNoise.h>
 #include <CWaterSurface.h>
 
-CQNewGLShaderProgram *CQNewGLTerrain::shaderProgram_;
-
-void
-CQNewGLTerrain::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("terrain.vs", "terrain.fs");
-}
-
 CQNewGLTerrain::
 CQNewGLTerrain(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
-  connect(canvas, SIGNAL(timerStep()), this, SLOT(stepSlot()));
+  auto *app = canvas_->app();
+
+  connect(app, SIGNAL(timerStep()), this, SLOT(stepSlot()));
+}
+
+CQNewGLShaderProgram *
+CQNewGLTerrain::
+shaderProgram()
+{
+  return canvas_->getShader("terrain.vs", "terrain.fs");
 }
 
 void
@@ -45,16 +44,18 @@ stepSlot()
   }
 }
 
-void
+CQGLBuffer *
 CQNewGLTerrain::
 initBuffer()
 {
-  CQNewGLObject::initBuffer();
+  auto *buffer = CQNewGLObject::initBuffer();
 
   //---
 
+  auto *app = canvas_->app();
+
   auto addTexture = [&](const QString &name, bool flipV=false) {
-    auto filename = canvas_->app()->buildDir() + "/" + name;
+    auto filename = app->buildDir() + "/" + name;
 
     CImageFileSrc src(filename.toStdString());
     auto image = CImageMgrInst->createImage(src);
@@ -71,6 +72,10 @@ initBuffer()
 
   if (! texture_)
     texture_ = addTexture("textures/terrain.jpg");
+
+  //---
+
+  return buffer;
 }
 
 void
@@ -407,7 +412,7 @@ drawGeometry()
   program->setUniformValue("viewPos", CQGLUtil::toVector(canvas_->viewPos()));
 
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 

@@ -8,6 +8,9 @@
 #include <vector>
 
 class CQNewGLShaderProgram;
+class CQNewGLModel;
+class CQNewGLCanvas;
+
 class CQGLTexture;
 class CWaterSurface;
 
@@ -21,10 +24,6 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
   };
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLTerrain(CQNewGLCanvas *canvas);
 
   //---
@@ -63,7 +62,7 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
 
   //---
 
-  void initBuffer() override;
+  CQGLBuffer *initBuffer() override;
 
   //---
 
@@ -75,7 +74,7 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private Q_SLOTS:
   void stepSlot();
@@ -86,7 +85,7 @@ class CQNewGLTerrain : public QObject, public CQNewGLObject {
   void updateWaterSurfaceGeometry();
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   double width_    { 10.0 };
   double height_   { 1.0 };

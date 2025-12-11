@@ -1,12 +1,24 @@
 #include <CQNewGLObject.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLFont.h>
+#include <CQNewGLWidget.h>
+#include <CQNewGLUtil.h>
+
 #include <CQGLBuffer.h>
 
 CQNewGLObject::
-CQNewGLObject(CQNewGLCanvas *canvas) :
- canvas_(canvas)
+CQNewGLObject(CQNewGLWidget *widget) :
+ widget_(widget)
 {
+}
+
+//---
+
+CQNewGLModel *
+CQNewGLObject::
+app() const
+{
+  return widget_->app();
 }
 
 //---
@@ -27,7 +39,7 @@ unbindShader()
 
 //---
 
-void
+CQGLBuffer *
 CQNewGLObject::
 initBuffer()
 {
@@ -38,8 +50,12 @@ initBuffer()
 
   buffer_->clearBuffers();
 
-  faceDatas_.clear();
+  faceDataList_.faceDatas.clear();
+
+  return buffer_;
 }
+
+//---
 
 void
 CQNewGLObject::
@@ -61,12 +77,16 @@ setHierWireframe(bool b)
     child->setHierWireframe(b);
 }
 
+//---
+
 void
 CQNewGLObject::
 addFaceData(const CQNewGLFaceData &faceData)
 {
-  faceDatas_.push_back(faceData);
+  faceDataList_.faceDatas.push_back(faceData);
 }
+
+//---
 
 CBBox3D
 CQNewGLObject::
@@ -91,6 +111,15 @@ getBBox() const
 
   return bbox;
 }
+
+CMatrix3D
+CQNewGLObject::
+getTransform() const
+{
+  return CMatrix3D::identity();
+}
+
+//---
 
 void
 CQNewGLObject::
@@ -121,6 +150,8 @@ void
 CQNewGLObject::
 drawTexts()
 {
+  //checkError("drawTexts");
+
   for (auto *text : texts_)
-    text->render();
+    text->render(widget_);
 }

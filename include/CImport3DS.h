@@ -36,7 +36,7 @@ class CImport3DS : public CImportBase {
  public:
   CImport3DS(CGeomScene3D *scene=nullptr, const std::string &name="3ds");
 
- ~CImport3DS() { }
+ ~CImport3DS() override;
 
   bool read(CFile &file) override;
 

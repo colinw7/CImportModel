@@ -25,8 +25,11 @@ CQNewGLStatusBar(CQNewGLModel *app) :
   //---
 
   scaleLabel_ = new QLabel;
+  modelLabel_ = new QLabel;
 
   layout->addWidget(scaleLabel_);
+  layout->addStretch(1);
+  layout->addWidget(modelLabel_);
 }
 
 void
@@ -34,4 +37,11 @@ CQNewGLStatusBar::
 setScaleLabel(const QString &label)
 {
   scaleLabel_->setText(label);
+}
+
+void
+CQNewGLStatusBar::
+setModelLabel(const QString &label)
+{
+  modelLabel_->setText(label);
 }

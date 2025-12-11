@@ -1,6 +1,7 @@
 #include <CQNewGLFont.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
+#include <CQNewGLShaderProgram.h>
 #include <CQNewGLUtil.h>
 
 #include <CQGLBuffer.h>
@@ -32,28 +33,19 @@ struct CQNewGLFontData {
   GLuint                              texture = 0;
 };
 
-class TextShaderProgram : public CQNewGLShaderProgram {
- public:
-  TextShaderProgram(CQNewGLCanvas *canvas) :
-   CQNewGLShaderProgram(canvas) {
-  }
-};
-
 //----
 
 CQNewGLFont::
-CQNewGLFont(CQNewGLCanvas *canvas) :
- canvas_(canvas)
+CQNewGLFont(CQNewGLWidget *widget) :
+ widget_(widget)
 {
 }
 
-void
+CQNewGLShaderProgram *
 CQNewGLFont::
-init()
+shaderProgram() const
 {
-  shaderProgram_ = new TextShaderProgram(canvas_);
-
-  shaderProgram_->addShaders("font.vs", "font.fs");
+  return widget_->getShader("font.vs", "font.fs");
 }
 
 bool
@@ -82,8 +74,10 @@ updateFontData()
 
   //---
 
+  auto *app = widget_->app();
+
   // get true type font data
-  auto path = canvas_->app()->buildDir() + "/fonts/" + name_;
+  auto path = app->buildDir() + "/fonts/" + name_;
 
   std::vector<uint8_t> fontData;
 
@@ -145,10 +139,10 @@ updateFontData()
                GL_RED, GL_UNSIGNED_BYTE, atlasData.get());
   if (! checkError("glTexImage2D")) return false;
 
-  canvas_->glGenerateMipmap(GL_TEXTURE_2D);
+  canvas->glGenerateMipmap(GL_TEXTURE_2D);
   if (! checkError("glGenerateMipmap")) return false;
 #else
-  if (! canvas_->createFontTexture(&fontData_->texture,
+  if (! widget_->createFontTexture(&fontData_->texture,
                                    fontData_->atlasWidth, fontData_->atlasHeight,
                                    atlasData.get()))
     return false;
@@ -228,11 +222,13 @@ bool
 CQNewGLFont::
 bindTexture()
 {
+  (void) checkError("bindTexture");
+
   glEnable(GL_TEXTURE_2D);
-  if (! checkError("glEnable")) return false;
+  (void) checkError("glEnable GL_TEXTURE_2D");
 
   glBindTexture(GL_TEXTURE_2D, textureId());
-  if (! checkError("glBindTexture")) return false;
+  (void) checkError("glBindTexture GL_TEXTURE_2D");
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
@@ -241,17 +237,17 @@ bindTexture()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
-  if (! checkError("glTexParameteri")) return false;
+  (void) checkError("glTexParameteri GL_TEXTURE_2D");
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  if (! checkError("glTexParameteri")) return false;
+  (void) checkError("glTexParameteri GL_TEXTURE_2D");
 
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
-  if (! checkError("glTexParameterf")) return false;
+  (void) checkError("glTexParameterf GL_TEXTURE_2D");
 
   glActiveTexture(GL_TEXTURE0);
-  if (! checkError("glActiveTexture")) return false;
+  (void) checkError("glActiveTexture GL_TEXTURE0");
 
   return true;
 }
@@ -357,26 +353,25 @@ initBuffer()
 
 void
 CQNewGLText::
-render()
+render(CQNewGLWidget *widget)
 {
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-  if (! checkError("glBlendFunc")) return;
-
-  auto *program = font_->shaderProgram();
-  auto *canvas  = font_->canvas();
-
-  buffer_->bind();
-
-  program->bind();
+  widget->enableBlend();
 
   //---
 
-//auto mm1 = canvas->getModelMatrix();
+  auto *program = font_->shaderProgram();
+
+  program->bind();
+
+  buffer_->bind();
+
+  //---
+
+//auto mm1 = widget->getModelMatrix();
   auto mm1 = CMatrix3D::identity();
   auto mm2 = getModelMatrix();
 
-  canvas->addShaderMVP(program, mm1*mm2);
+  widget->addShaderMVP(program, mm1*mm2);
 
   //---
 
@@ -395,7 +390,9 @@ render()
 
   buffer_->unbind();
 
-  glDisable(GL_BLEND);
+  program->release();
+
+  widget->disableBlend();
 }
 
 CMatrix3D

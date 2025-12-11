@@ -12,6 +12,8 @@
 
 class CQNewGLFractalParticleSystem;
 class CQNewGLLorenzCalc;
+class CQNewGLWidget;
+class CQNewGLModel;
 
 class CQNewGLFractal : public QObject, public CQNewGLObject {
   Q_OBJECT
@@ -22,11 +24,7 @@ class CQNewGLFractal : public QObject, public CQNewGLObject {
   };
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
-  CQNewGLFractal(CQNewGLCanvas *canvas);
+  CQNewGLFractal(CQNewGLWidget *widget);
 
   //---
 
@@ -36,12 +34,18 @@ class CQNewGLFractal : public QObject, public CQNewGLObject {
   const Type &type() const { return type_; }
   void setType(const Type &t);
 
+  bool isTextured() const { return textured_; }
+  void setTextured(bool b);
+
   double pointSize() const { return pointSize_; }
   void setPointSize(double r) { pointSize_ = r; }
 
+  const CBBox3D &bbox() const { return bbox_; }
+  void setBBox(const CBBox3D &v) { bbox_ = v; }
+
   //---
 
-  void initBuffer() override;
+  CQGLBuffer *initBuffer() override;
 
   //---
 
@@ -53,24 +57,19 @@ class CQNewGLFractal : public QObject, public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
-
-  bool active_ { false };
-
-  Type type_ { Type::LORENZ };
-
-  double pointSize_ { 1.0 };
+  bool    active_         { false };
+  bool    textured_       { false };
+  bool    updateGeometry_ { true };
+  Type    type_           { Type::LORENZ };
+  double  pointSize_      { 1.0 };
+  CBBox3D bbox_;
 
   CQNewGLFractalParticleSystem *particleSystem_ { nullptr };
-
-  CQGLTexture* texture_ { nullptr };
-
-  bool updateGeometry_ { true };
-
-  CQNewGLLorenzCalc* lorenz_ { nullptr };
+  CQNewGLLorenzCalc*            lorenz_         { nullptr };
+  CQGLTexture*                  texture_        { nullptr };
 };
 
 #endif

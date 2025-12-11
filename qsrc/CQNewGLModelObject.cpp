@@ -1,43 +1,47 @@
 #include <CQNewGLModelObject.h>
 #include <CQNewGLCanvas.h>
+
 #include <CGeomObject3D.h>
 
-CQNewGLShaderProgram* CQNewGLModelObject::shaderProgram_;
-CQNewGLShaderProgram* CQNewGLModelObject::normalShaderProgram_;
-CQNewGLShaderProgram* CQNewGLModelObject::bonesShaderProgram_;
-CQNewGLShaderProgram* CQNewGLModelObject::boneShaderProgram_;
-CQNewGLShaderProgram* CQNewGLModelObject::annotationShaderProgram_;
-
-void
 CQNewGLModelObject::
-initShader(CQNewGLCanvas *canvas)
+CQNewGLModelObject(CQNewGLWidget *widget) :
+ CQNewGLObject(widget)
 {
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("model.vs", "model.fs");
-
-  //---
-
-  normalShaderProgram_ = new CQNewGLShaderProgram(canvas);
-  normalShaderProgram_->addShaders("normal.vs", "normal.fs");
-
-  //---
-
-  bonesShaderProgram_ = new CQNewGLShaderProgram(canvas);
-  bonesShaderProgram_->addShaders("bones.vs", "bones.fs");
-
-  boneShaderProgram_ = new CQNewGLShaderProgram(canvas);
-  boneShaderProgram_->addShaders("bone.vs", "bone.fs");
-
-  //---
-
-  annotationShaderProgram_ = new CQNewGLShaderProgram(canvas);
-  annotationShaderProgram_->addShaders("annotation.vs", "annotation.fs");
 }
 
+CQNewGLShaderProgram *
 CQNewGLModelObject::
-CQNewGLModelObject(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+shaderProgram()
 {
+  return widget_->getShader("model.vs", "model.fs");
+}
+
+CQNewGLShaderProgram *
+CQNewGLModelObject::
+normalShaderProgram()
+{
+  return widget_->getShader("normal.vs", "normal.fs");
+}
+
+CQNewGLShaderProgram *
+CQNewGLModelObject::
+bonesShaderProgram()
+{
+  return widget_->getShader("bones.vs", "bones.fs");
+}
+
+CQNewGLShaderProgram *
+CQNewGLModelObject::
+boneShaderProgram()
+{
+  return widget_->getShader("bone.vs", "bone.fs");
+}
+
+CQNewGLShaderProgram *
+CQNewGLModelObject::
+annotationShaderProgram()
+{
+  return widget_->getShader("annotation.vs", "annotation.fs");
 }
 
 const CQNewGLModelObject::Children &
@@ -51,10 +55,19 @@ getChildren() const
   th->children_.clear();
 
   for (auto *child : object_->children()) {
-    auto *objectData = canvas_->getObjectData(child);
+    auto *objectData = widget_->getObjectData(child);
 
     th->children_.push_back(objectData);
   }
 
   return children_;
+}
+
+CMatrix3D
+CQNewGLModelObject::
+getTransform() const
+{
+  assert(object_);
+
+  return object_->getHierTransform();
 }

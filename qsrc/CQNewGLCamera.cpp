@@ -2,34 +2,30 @@
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 
-CQNewGLShaderProgram *CQNewGLCamera::shaderProgram_;
-
-void
 CQNewGLCamera::
-initShader(CQNewGLCanvas *canvas)
+CQNewGLCamera(CQNewGLWidget *widget, int ind, const CGLVector3D &origin,
+              const CGLVector3D &position, const CGLVector3D &up) :
+ CQNewGLObject(widget), CGLCamera(origin, position, up)
 {
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("camera.vs", "camera.fs");
+  ind_ = ind;
 }
 
+CQNewGLShaderProgram *
 CQNewGLCamera::
-CQNewGLCamera(CQNewGLCanvas *canvas, const CGLVector3D &origin, const CGLVector3D &position,
-              const CGLVector3D &up) :
- CQNewGLObject(canvas), CGLCamera(origin, position, up)
+shaderProgram()
 {
-  initOrigin_   = origin;
-  initPosition_ = position;
-  initUp_       = up;
+  return widget_->getShader("camera.vs", "camera.fs");
 }
 
 void
 CQNewGLCamera::
 viewChanged()
 {
-  canvas_->app()->updateCamera();
+  widget_->app()->updateCamera();
 }
 
 void
@@ -41,14 +37,17 @@ reset()
 
   // origin, position, up
   //init(origin(), position(), up());
-  init(initOrigin_, initPosition_, initUp_);
+  CQNewGLWidget::CameraData cameraData;
+  widget_->calcCameraData(ind_, cameraData);
+
+  init(cameraData.origin, cameraData.position, cameraData.up);
 }
 
 void
 CQNewGLCamera::
 addGeometry()
 {
-  auto pointSize = canvas_->sceneScale()/100.0;
+  auto pointSize = widget_->sceneScale()/100.0;
 
   // set up vertex data (and buffer(s)) and configure vertex attributes
   initBuffer();
@@ -131,7 +130,7 @@ drawGeometry()
 
   auto modelMatrix = CMatrix3D::identity();
 //auto modelMatrix = getModelMatrix();
-  canvas_->addShaderMVP(program, modelMatrix);
+  widget_->addShaderMVP(program, modelMatrix);
 
   //---
 

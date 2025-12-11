@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQNewGLCanvas_t {
-    QByteArrayData data[19];
-    char stringdata0[244];
+    QByteArrayData data[15];
+    char stringdata0[204];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -35,31 +35,26 @@ static const qt_meta_stringdata_CQNewGLCanvas_t qt_meta_stringdata_CQNewGLCanvas
 QT_MOC_LITERAL(0, 0, 13), // "CQNewGLCanvas"
 QT_MOC_LITERAL(1, 14, 18), // "modelMatrixChanged"
 QT_MOC_LITERAL(2, 33, 0), // ""
-QT_MOC_LITERAL(3, 34, 9), // "timerStep"
-QT_MOC_LITERAL(4, 44, 20), // "currentObjectChanged"
-QT_MOC_LITERAL(5, 65, 20), // "currentCameraChanged"
-QT_MOC_LITERAL(6, 86, 19), // "currentLightChanged"
-QT_MOC_LITERAL(7, 106, 19), // "currentShapeChanged"
-QT_MOC_LITERAL(8, 126, 10), // "modelAdded"
-QT_MOC_LITERAL(9, 137, 12), // "textureAdded"
-QT_MOC_LITERAL(10, 150, 11), // "cameraAdded"
-QT_MOC_LITERAL(11, 162, 10), // "lightAdded"
-QT_MOC_LITERAL(12, 173, 10), // "shapeAdded"
-QT_MOC_LITERAL(13, 184, 12), // "shapeDeleted"
-QT_MOC_LITERAL(14, 197, 9), // "timerSlot"
-QT_MOC_LITERAL(15, 207, 7), // "bgColor"
-QT_MOC_LITERAL(16, 215, 9), // "depthTest"
-QT_MOC_LITERAL(17, 225, 8), // "cullFace"
-QT_MOC_LITERAL(18, 234, 9) // "frontFace"
+QT_MOC_LITERAL(3, 34, 20), // "currentObjectChanged"
+QT_MOC_LITERAL(4, 55, 20), // "currentCameraChanged"
+QT_MOC_LITERAL(5, 76, 19), // "currentLightChanged"
+QT_MOC_LITERAL(6, 96, 19), // "currentShapeChanged"
+QT_MOC_LITERAL(7, 116, 11), // "cameraAdded"
+QT_MOC_LITERAL(8, 128, 10), // "lightAdded"
+QT_MOC_LITERAL(9, 139, 10), // "shapeAdded"
+QT_MOC_LITERAL(10, 150, 12), // "shapeDeleted"
+QT_MOC_LITERAL(11, 163, 9), // "depthTest"
+QT_MOC_LITERAL(12, 173, 8), // "cullFace"
+QT_MOC_LITERAL(13, 182, 9), // "frontFace"
+QT_MOC_LITERAL(14, 192, 11) // "orientColor"
 
     },
     "CQNewGLCanvas\0modelMatrixChanged\0\0"
-    "timerStep\0currentObjectChanged\0"
-    "currentCameraChanged\0currentLightChanged\0"
-    "currentShapeChanged\0modelAdded\0"
-    "textureAdded\0cameraAdded\0lightAdded\0"
-    "shapeAdded\0shapeDeleted\0timerSlot\0"
-    "bgColor\0depthTest\0cullFace\0frontFace"
+    "currentObjectChanged\0currentCameraChanged\0"
+    "currentLightChanged\0currentShapeChanged\0"
+    "cameraAdded\0lightAdded\0shapeAdded\0"
+    "shapeDeleted\0depthTest\0cullFace\0"
+    "frontFace\0orientColor"
 };
 #undef QT_MOC_LITERAL
 
@@ -69,29 +64,23 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      13,   14, // methods
-       4,   92, // properties
+       9,   14, // methods
+       4,   68, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      12,       // signalCount
+       9,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   79,    2, 0x06 /* Public */,
-       3,    0,   80,    2, 0x06 /* Public */,
-       4,    0,   81,    2, 0x06 /* Public */,
-       5,    0,   82,    2, 0x06 /* Public */,
-       6,    0,   83,    2, 0x06 /* Public */,
-       7,    0,   84,    2, 0x06 /* Public */,
-       8,    0,   85,    2, 0x06 /* Public */,
-       9,    0,   86,    2, 0x06 /* Public */,
-      10,    0,   87,    2, 0x06 /* Public */,
-      11,    0,   88,    2, 0x06 /* Public */,
-      12,    0,   89,    2, 0x06 /* Public */,
-      13,    0,   90,    2, 0x06 /* Public */,
-
- // slots: name, argc, parameters, tag, flags
-      14,    0,   91,    2, 0x0a /* Public */,
+       1,    0,   59,    2, 0x06 /* Public */,
+       3,    0,   60,    2, 0x06 /* Public */,
+       4,    0,   61,    2, 0x06 /* Public */,
+       5,    0,   62,    2, 0x06 /* Public */,
+       6,    0,   63,    2, 0x06 /* Public */,
+       7,    0,   64,    2, 0x06 /* Public */,
+       8,    0,   65,    2, 0x06 /* Public */,
+       9,    0,   66,    2, 0x06 /* Public */,
+      10,    0,   67,    2, 0x06 /* Public */,
 
  // signals: parameters
     QMetaType::Void,
@@ -103,18 +92,12 @@ static const uint qt_meta_data_CQNewGLCanvas[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void,
-    QMetaType::Void,
-    QMetaType::Void,
-
- // slots: parameters
-    QMetaType::Void,
 
  // properties: name, type, flags
-      15, QMetaType::QColor, 0x00095103,
-      16, QMetaType::Bool, 0x00095103,
-      17, QMetaType::Bool, 0x00095103,
-      18, QMetaType::Bool, 0x00095103,
+      11, QMetaType::Bool, 0x00095103,
+      12, QMetaType::Bool, 0x00095103,
+      13, QMetaType::Bool, 0x00095103,
+      14, QMetaType::Bool, 0x00095103,
 
        0        // eod
 };
@@ -126,18 +109,14 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         (void)_t;
         switch (_id) {
         case 0: _t->modelMatrixChanged(); break;
-        case 1: _t->timerStep(); break;
-        case 2: _t->currentObjectChanged(); break;
-        case 3: _t->currentCameraChanged(); break;
-        case 4: _t->currentLightChanged(); break;
-        case 5: _t->currentShapeChanged(); break;
-        case 6: _t->modelAdded(); break;
-        case 7: _t->textureAdded(); break;
-        case 8: _t->cameraAdded(); break;
-        case 9: _t->lightAdded(); break;
-        case 10: _t->shapeAdded(); break;
-        case 11: _t->shapeDeleted(); break;
-        case 12: _t->timerSlot(); break;
+        case 1: _t->currentObjectChanged(); break;
+        case 2: _t->currentCameraChanged(); break;
+        case 3: _t->currentLightChanged(); break;
+        case 4: _t->currentShapeChanged(); break;
+        case 5: _t->cameraAdded(); break;
+        case 6: _t->lightAdded(); break;
+        case 7: _t->shapeAdded(); break;
+        case 8: _t->shapeDeleted(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -151,78 +130,57 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::timerStep)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentObjectChanged)) {
                 *result = 1;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentObjectChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentCameraChanged)) {
                 *result = 2;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentCameraChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentLightChanged)) {
                 *result = 3;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentLightChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentShapeChanged)) {
                 *result = 4;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::currentShapeChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::cameraAdded)) {
                 *result = 5;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::modelAdded)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::lightAdded)) {
                 *result = 6;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::textureAdded)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::shapeAdded)) {
                 *result = 7;
                 return;
             }
         }
         {
             using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::cameraAdded)) {
-                *result = 8;
-                return;
-            }
-        }
-        {
-            using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::lightAdded)) {
-                *result = 9;
-                return;
-            }
-        }
-        {
-            using _t = void (CQNewGLCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::shapeAdded)) {
-                *result = 10;
-                return;
-            }
-        }
-        {
-            using _t = void (CQNewGLCanvas::*)();
             if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQNewGLCanvas::shapeDeleted)) {
-                *result = 11;
+                *result = 8;
                 return;
             }
         }
@@ -233,10 +191,10 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         (void)_t;
         void *_v = _a[0];
         switch (_id) {
-        case 0: *reinterpret_cast< QColor*>(_v) = _t->bgColor(); break;
-        case 1: *reinterpret_cast< bool*>(_v) = _t->isDepthTest(); break;
-        case 2: *reinterpret_cast< bool*>(_v) = _t->isCullFace(); break;
-        case 3: *reinterpret_cast< bool*>(_v) = _t->isFrontFace(); break;
+        case 0: *reinterpret_cast< bool*>(_v) = _t->isDepthTest(); break;
+        case 1: *reinterpret_cast< bool*>(_v) = _t->isCullFace(); break;
+        case 2: *reinterpret_cast< bool*>(_v) = _t->isFrontFace(); break;
+        case 3: *reinterpret_cast< bool*>(_v) = _t->isOrientColor(); break;
         default: break;
         }
     } else if (_c == QMetaObject::WriteProperty) {
@@ -244,10 +202,10 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         (void)_t;
         void *_v = _a[0];
         switch (_id) {
-        case 0: _t->setBgColor(*reinterpret_cast< QColor*>(_v)); break;
-        case 1: _t->setDepthTest(*reinterpret_cast< bool*>(_v)); break;
-        case 2: _t->setCullFace(*reinterpret_cast< bool*>(_v)); break;
-        case 3: _t->setFrontFace(*reinterpret_cast< bool*>(_v)); break;
+        case 0: _t->setDepthTest(*reinterpret_cast< bool*>(_v)); break;
+        case 1: _t->setCullFace(*reinterpret_cast< bool*>(_v)); break;
+        case 2: _t->setFrontFace(*reinterpret_cast< bool*>(_v)); break;
+        case 3: _t->setOrientColor(*reinterpret_cast< bool*>(_v)); break;
         default: break;
         }
     } else if (_c == QMetaObject::ResetProperty) {
@@ -257,7 +215,7 @@ void CQNewGLCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
 }
 
 QT_INIT_METAOBJECT const QMetaObject CQNewGLCanvas::staticMetaObject = { {
-    QMetaObject::SuperData::link<QGLWidget::staticMetaObject>(),
+    QMetaObject::SuperData::link<CQNewGLWidget::staticMetaObject>(),
     qt_meta_stringdata_CQNewGLCanvas.data,
     qt_meta_data_CQNewGLCanvas,
     qt_static_metacall,
@@ -276,24 +234,22 @@ void *CQNewGLCanvas::qt_metacast(const char *_clname)
     if (!_clname) return nullptr;
     if (!strcmp(_clname, qt_meta_stringdata_CQNewGLCanvas.stringdata0))
         return static_cast<void*>(this);
-    if (!strcmp(_clname, "QOpenGLExtraFunctions"))
-        return static_cast< QOpenGLExtraFunctions*>(this);
-    return QGLWidget::qt_metacast(_clname);
+    return CQNewGLWidget::qt_metacast(_clname);
 }
 
 int CQNewGLCanvas::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QGLWidget::qt_metacall(_c, _id, _a);
+    _id = CQNewGLWidget::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 13)
+        if (_id < 9)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 13;
+        _id -= 9;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 13)
+        if (_id < 9)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 13;
+        _id -= 9;
     }
 #ifndef QT_NO_PROPERTIES
     else if (_c == QMetaObject::ReadProperty || _c == QMetaObject::WriteProperty
@@ -322,69 +278,51 @@ void CQNewGLCanvas::modelMatrixChanged()
 }
 
 // SIGNAL 1
-void CQNewGLCanvas::timerStep()
+void CQNewGLCanvas::currentObjectChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
 }
 
 // SIGNAL 2
-void CQNewGLCanvas::currentObjectChanged()
+void CQNewGLCanvas::currentCameraChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 2, nullptr);
 }
 
 // SIGNAL 3
-void CQNewGLCanvas::currentCameraChanged()
+void CQNewGLCanvas::currentLightChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 3, nullptr);
 }
 
 // SIGNAL 4
-void CQNewGLCanvas::currentLightChanged()
+void CQNewGLCanvas::currentShapeChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 4, nullptr);
 }
 
 // SIGNAL 5
-void CQNewGLCanvas::currentShapeChanged()
+void CQNewGLCanvas::cameraAdded()
 {
     QMetaObject::activate(this, &staticMetaObject, 5, nullptr);
 }
 
 // SIGNAL 6
-void CQNewGLCanvas::modelAdded()
+void CQNewGLCanvas::lightAdded()
 {
     QMetaObject::activate(this, &staticMetaObject, 6, nullptr);
 }
 
 // SIGNAL 7
-void CQNewGLCanvas::textureAdded()
+void CQNewGLCanvas::shapeAdded()
 {
     QMetaObject::activate(this, &staticMetaObject, 7, nullptr);
 }
 
 // SIGNAL 8
-void CQNewGLCanvas::cameraAdded()
-{
-    QMetaObject::activate(this, &staticMetaObject, 8, nullptr);
-}
-
-// SIGNAL 9
-void CQNewGLCanvas::lightAdded()
-{
-    QMetaObject::activate(this, &staticMetaObject, 9, nullptr);
-}
-
-// SIGNAL 10
-void CQNewGLCanvas::shapeAdded()
-{
-    QMetaObject::activate(this, &staticMetaObject, 10, nullptr);
-}
-
-// SIGNAL 11
 void CQNewGLCanvas::shapeDeleted()
 {
-    QMetaObject::activate(this, &staticMetaObject, 11, nullptr);
+    QMetaObject::activate(this, &staticMetaObject, 8, nullptr);
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

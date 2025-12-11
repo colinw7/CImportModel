@@ -1,25 +1,23 @@
 #include <CQNewGLPath.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModel.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 #include <CBBox3D.h>
 
-CQNewGLShaderProgram* CQNewGLPath::shaderProgram_;
-
 CQNewGLPath::
 CQNewGLPath(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
 }
 
-void
+CQNewGLShaderProgram *
 CQNewGLPath::
-initShader(CQNewGLCanvas *canvas)
+shaderProgram()
 {
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-
-  shaderProgram_->addShaders("path.vs", "path.fs");
+  return canvas_->getShader("path.vs", "path.fs");
 }
 
 void
@@ -48,7 +46,7 @@ updateGeometry()
     addPoint(p1, color);
     addPoint(p2, color);
 
-    faceDatas_.push_back(faceData);
+    faceDataList_.faceDatas.push_back(faceData);
 
     pos += faceData.len;
   };
@@ -78,14 +76,16 @@ drawGeometry()
   if (! buffer_)
     return;
 
+  auto *program = shaderProgram();
+
   buffer_->bind();
 
-  shaderProgram_->bind();
+  program->bind();
 
   //---
 
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 
@@ -94,11 +94,11 @@ drawGeometry()
   glPointSize(8.0);
   glLineWidth(4.0);
 
-  for (const auto &faceData : faceDatas_) {
+  for (const auto &faceData : faceDataList_.faceDatas) {
     glDrawArrays(GL_LINES, faceData.pos, faceData.len);
   }
 
-  for (const auto &faceData : faceDatas_) {
+  for (const auto &faceData : faceDataList_.faceDatas) {
     glDrawArrays(GL_POINTS, faceData.pos, faceData.len);
   }
 
@@ -106,5 +106,5 @@ drawGeometry()
 
   //---
 
-  shaderProgram_->release();
+  program->release();
 }

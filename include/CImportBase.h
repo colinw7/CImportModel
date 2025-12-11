@@ -2,8 +2,12 @@
 #define CImportBase_H
 
 #include <CGeom3DType.h>
+#include <CVector3D.h>
+#include <CPoint3D.h>
+
 #include <string>
 #include <memory>
+#include <map>
 
 class CGeomScene3D;
 class CGeomObject3D;
@@ -11,34 +15,6 @@ class CFile;
 
 class CImportBase {
  public:
-  CImportBase() { }
-
-  virtual ~CImportBase() { }
-
-  //---
-
-  bool isDebug() const { return debug_; }
-  void setDebug(bool b=true) { debug_ = b; }
-
-  bool isInvertX() const { return invertX_; }
-  void setInvertX(bool b) { invertX_ = b; }
-
-  bool isInvertY() const { return invertY_; }
-  void setInvertY(bool b) { invertY_ = b; }
-
-  bool isInvertZ() const { return invertZ_; }
-  void setInvertZ(bool b) { invertZ_ = b; }
-
-  //---
-
-  virtual bool read(CFile &file) = 0;
-
-  virtual CGeomScene3D &getScene() = 0;
-
-  virtual CGeomScene3D *releaseScene() { return nullptr; }
-
-  //---
-
   static CGeom3DType filenameToType(const std::string &filename) {
     auto pos = filename.rfind('.');
     if (pos == std::string::npos)
@@ -75,6 +51,81 @@ class CImportBase {
 
   static CImportBase *createModel(CGeom3DType type, const std::string &name="");
 
+ public:
+  CImportBase() { }
+
+  virtual ~CImportBase() { }
+
+  //---
+
+  bool isDebug() const { return debug_; }
+  void setDebug(bool b=true) { debug_ = b; }
+
+  //---
+
+  bool isInvertX() const { return invertX_; }
+  void setInvertX(bool b) { invertX_ = b; }
+
+  bool isInvertY() const { return invertY_; }
+  void setInvertY(bool b) { invertY_ = b; }
+
+  bool isInvertZ() const { return invertZ_; }
+  void setInvertZ(bool b) { invertZ_ = b; }
+
+  //---
+
+  bool isSwapXY() const { return swapXY_; }
+  void setSwapXY(bool b) { swapXY_ = b; }
+
+  bool isSwapYZ() const { return swapYZ_; }
+  void setSwapYZ(bool b) { swapYZ_ = b; }
+
+  bool isSwapZX() const { return swapZX_; }
+  void setSwapZX(bool b) { swapZX_ = b; }
+
+  //---
+
+  virtual bool read(CFile &file) = 0;
+
+  virtual CGeomScene3D &getScene() = 0;
+
+  virtual CGeomScene3D *releaseScene() { return nullptr; }
+
+  bool readFileMap(const std::string &fileName);
+
+  void addFileMap(const std::string &oldName, const std::string &newName);
+
+  std::string remapFile(const std::string &oldName) const;
+
+ protected:
+  CPoint3D adjustPoint(const CPoint3D &p) const {
+    auto x = p.x, y = p.y, z = p.z;
+
+    if (isSwapXY()) std::swap(x, y);
+    if (isSwapYZ()) std::swap(y, z);
+    if (isSwapZX()) std::swap(z, x);
+
+    if (isInvertX()) x = -x;
+    if (isInvertY()) y = -y;
+    if (isInvertZ()) z = -z;
+
+    return CPoint3D(x, y, z);
+  }
+
+  CVector3D adjustNormal(const CVector3D &v) const {
+    auto x = v.x(), y = v.y(), z = v.z();
+
+    if (isSwapXY()) std::swap(x, y);
+    if (isSwapYZ()) std::swap(y, z);
+    if (isSwapZX()) std::swap(z, x);
+
+    if (isInvertX()) x = -x;
+    if (isInvertY()) y = -y;
+    if (isInvertZ()) z = -z;
+
+    return CVector3D(x, y, z);
+  }
+
  protected:
   using SceneP  = std::unique_ptr<CGeomScene3D>;
   using ObjectP = std::unique_ptr<CGeomObject3D>;
@@ -84,6 +135,14 @@ class CImportBase {
   bool invertX_ { false };
   bool invertY_ { false };
   bool invertZ_ { false };
+
+  bool swapXY_ { false };
+  bool swapYZ_ { false };
+  bool swapZX_ { false };
+
+  using FileNameMap = std::map<std::string, std::string>;
+
+  FileNameMap fileNameMap_;
 };
 
 #endif

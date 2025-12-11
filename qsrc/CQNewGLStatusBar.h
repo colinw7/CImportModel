@@ -15,11 +15,13 @@ class CQNewGLStatusBar : public QFrame {
   CQNewGLModel *app() const { return app_; }
 
   void setScaleLabel(const QString &label);
+  void setModelLabel(const QString &label);
 
  private:
   CQNewGLModel* app_ { nullptr };
 
   QLabel* scaleLabel_ { nullptr };
+  QLabel* modelLabel_ { nullptr };
 };
 
 #endif

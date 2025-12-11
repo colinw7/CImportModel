@@ -7,6 +7,8 @@
 #include <QColor>
 
 class CQNewGLShaderProgram;
+class CQNewGLCanvas;
+class CQNewGLModel;
 
 class CQNewGLLight : public CQNewGLObject {
  public:
@@ -17,10 +19,6 @@ class CQNewGLLight : public CQNewGLObject {
   };
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLLight(CQNewGLCanvas *canvas);
 
   //---
@@ -62,10 +60,10 @@ class CQNewGLLight : public CQNewGLObject {
 
   void setShaderData(CQNewGLShaderProgram *program, const QString &lightName) const;
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   Type        type_      { Type::POINT };
   bool        enabled_   { true };

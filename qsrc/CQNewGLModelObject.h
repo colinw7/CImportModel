@@ -6,7 +6,10 @@
 #include <CQNewGLShaderProgram.h>
 #include <CQGLBuffer.h>
 
+class CQNewGLWidget;
+class CQNewGLModel;
 class CQNewGLText;
+
 class CGeomObject3D;
 
 struct CQNewGLModelObjectDrawData {
@@ -25,16 +28,12 @@ class CQNewGLModelObject : public CQNewGLObject {
   using ObjectDrawData = CQNewGLModelObjectDrawData;
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
-  CQNewGLModelObject(CQNewGLCanvas *canvas);
+  CQNewGLModelObject(CQNewGLWidget *widget);
 
   int ind() const { return ind_; }
   void setInd(int i) { ind_ = i; }
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
   //---
 
@@ -44,6 +43,8 @@ class CQNewGLModelObject : public CQNewGLObject {
   //---
 
   const Children &getChildren() const override;
+
+  CMatrix3D getTransform() const override;
 
   //---
 
@@ -56,14 +57,14 @@ class CQNewGLModelObject : public CQNewGLObject {
   //---
 
   // normals (TODO: remove ?)
-  CQNewGLShaderProgram *normalShaderProgram() { return normalShaderProgram_; }
+  CQNewGLShaderProgram *normalShaderProgram();
 
   const ObjectDrawData &normalData() const { return normalData_; }
   void setNormalData(const ObjectDrawData &v) { normalData_ = v; }
 
   void initNormalBuffer() {
     if (! normalData_.buffer)
-      normalData_.buffer = normalShaderProgram_->createBuffer();
+      normalData_.buffer = normalShaderProgram()->createBuffer();
   }
 
   void clearNormalData() {
@@ -75,26 +76,26 @@ class CQNewGLModelObject : public CQNewGLObject {
   void bindNormalData() {
     normalData_.buffer->bind();
 
-    normalShaderProgram_->bind();
+    normalShaderProgram()->bind();
   }
 
   void unbindNormalData() {
     normalData_.buffer->unbind();
 
-    normalShaderProgram_->release();
+    normalShaderProgram()->release();
   }
 
   //---
 
   // bones
-  CQNewGLShaderProgram *bonesShaderProgram() { return bonesShaderProgram_; }
+  CQNewGLShaderProgram *bonesShaderProgram();
 
   const ObjectDrawData &bonesData() const { return bonesData_; }
   void setBonesData(const ObjectDrawData &v) { bonesData_ = v; }
 
   void initBonesBuffer() {
     if (! bonesData_.buffer)
-      bonesData_.buffer = bonesShaderProgram_->createBuffer();
+      bonesData_.buffer = bonesShaderProgram()->createBuffer();
   }
 
   void clearBonesData() {
@@ -116,26 +117,26 @@ class CQNewGLModelObject : public CQNewGLObject {
   void bindBonesData() {
     bonesData_.buffer->bind();
 
-    bonesShaderProgram_->bind();
+    bonesShaderProgram()->bind();
   }
 
   void unbindBonesData() {
     bonesData_.buffer->unbind();
 
-    bonesShaderProgram_->release();
+    bonesShaderProgram()->release();
   }
 
   //---
 
   // bone
-  CQNewGLShaderProgram *boneShaderProgram() { return boneShaderProgram_; }
+  CQNewGLShaderProgram *boneShaderProgram();
 
   const ObjectDrawData &boneData() const { return boneData_; }
   void setBoneData(const ObjectDrawData &v) { boneData_ = v; }
 
   void initBoneBuffer() {
     if (! boneData_.buffer)
-      boneData_.buffer = boneShaderProgram_->createBuffer();
+      boneData_.buffer = boneShaderProgram()->createBuffer();
   }
 
   void clearBoneData() {
@@ -153,26 +154,26 @@ class CQNewGLModelObject : public CQNewGLObject {
   void bindBoneData() {
     boneData_.buffer->bind();
 
-    boneShaderProgram_->bind();
+    boneShaderProgram()->bind();
   }
 
   void unbindBoneData() {
     boneData_.buffer->unbind();
 
-    boneShaderProgram_->release();
+    boneShaderProgram()->release();
   }
 
   //---
 
   // annotation
-  CQNewGLShaderProgram *annotationShaderProgram() { return annotationShaderProgram_; }
+  CQNewGLShaderProgram *annotationShaderProgram();
 
   const ObjectDrawData &annotationData() const { return annotationData_; }
   void setAnnotationData(const ObjectDrawData &v) { annotationData_ = v; }
 
   void initAnnotationBuffer() {
     if (! annotationData_.buffer)
-      annotationData_.buffer = annotationShaderProgram_->createBuffer();
+      annotationData_.buffer = annotationShaderProgram()->createBuffer();
   }
 
   void clearAnnotationData() {
@@ -190,13 +191,13 @@ class CQNewGLModelObject : public CQNewGLObject {
   void bindAnnotationData() {
     annotationData_.buffer->bind();
 
-    annotationShaderProgram_->bind();
+    annotationShaderProgram()->bind();
   }
 
   void unbindAnnotationData() {
     annotationData_.buffer->unbind();
 
-    annotationShaderProgram_->release();
+    annotationShaderProgram()->release();
   }
 
   //---
@@ -206,12 +207,6 @@ class CQNewGLModelObject : public CQNewGLObject {
   void drawGeometry() override { }
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
-  static CQNewGLShaderProgram* normalShaderProgram_;
-  static CQNewGLShaderProgram* bonesShaderProgram_;
-  static CQNewGLShaderProgram* boneShaderProgram_;
-  static CQNewGLShaderProgram* annotationShaderProgram_;
-
   int ind_ { 0 };
 
   CGeomObject3D* object_ { nullptr };

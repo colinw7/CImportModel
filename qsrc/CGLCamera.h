@@ -83,16 +83,25 @@ class CGLCamera {
 
   //---
 
-  float zoom() const { return zoom_; }
-  void setZoom(float z);
+  // field of view
+  double fov() const { return fov_; }
+  void setFov(double z);
 
+  // pixel aspect
+  double aspect() const { return aspect_; }
+  void setAspect(double r) { aspect_ = r; }
+
+  // near z
   double near() const { return near_; }
   void setNear(double r) { near_ = r; }
 
+  // far z
   double far() const { return far_; }
   void setFar(double r) { far_ = r; }
 
-  CGLMatrix3D getPerspectiveMatrix(float aspect=1.0) const;
+  //---
+
+  CGLMatrix3D getPerspectiveMatrix() const;
   CGLMatrix3D getOrthoMatrix() const;
 
   //---
@@ -168,7 +177,8 @@ class CGLCamera {
 
   //---
 
-  CQuaternion trackBall(CVector3D &cop, CVector3D &cor, CVector3D &dir1, CVector3D &dir2) const;
+  CQuaternion trackBall(const CVector3D &cop, const CVector3D &cor,
+                        const CVector3D &dir1, const CVector3D &dir2) const;
 
  protected:
   virtual void viewChanged() { }
@@ -188,12 +198,13 @@ class CGLCamera {
 
  private:
   // Default camera values
-  static constexpr float YAW         = -90.0f;
-  static constexpr float PITCH       =   0.0f;
-  static constexpr float SPEED       =   2.5f;
-  static constexpr float ROLL        =  90.0f;
-  static constexpr float SENSITIVITY =   0.1f;
-  static constexpr float ZOOM        =  45.0f;
+  static constexpr float YAW         = -90.0;
+  static constexpr float PITCH       =   0.0;
+  static constexpr float SPEED       =   2.5;
+  static constexpr float ROLL        =  90.0;
+  static constexpr float SENSITIVITY =   0.1;
+  static constexpr float FOV         =  45.0;
+  static constexpr float ZOOM        =   2.0;
 
   // camera look at, position, and up vector
   CGLVector3D origin_   { 0.0f, 0.0f, 0.0f };
@@ -207,33 +218,34 @@ class CGLCamera {
   CGLVector3D right_ { 0.0f, 1.0f, 0.0f };
 
   // euler Angles
-  float yaw_   { YAW };   // camera look at x angle
-  float pitch_ { PITCH }; // camera look at y angle
-  float roll_  { ROLL };  // camera spin (perp to look vector)
+  double yaw_   { YAW };   // camera look at x angle
+  double pitch_ { PITCH }; // camera look at y angle
+  double roll_  { ROLL };  // camera spin (perp to look vector)
 
   // camera options
-  float movementSpeed_    { SPEED };
-  float mouseSensitivity_ { SENSITIVITY };
+  double movementSpeed_    { SPEED };
+  double mouseSensitivity_ { SENSITIVITY };
 
-  float zoom_ { ZOOM };
-  float near_ { 0.001 };
-  float far_  { 1000.0 };
+  double fov_    { FOV };       // field of view
+  double aspect_ { 1.0 };       // pixel aspect
+  double near_   { 1.0 };       // near z (too small get z fighting)
+  double far_    { 1000000.0 }; // far z
 
   bool     rotate_   { true };
   RotateAt rotateAt_ { RotateAt::ORIGIN };
   bool     strafe_   { false };
 
   // movement data
-  float lastX_ { 0.0 };
-  float lastY_ { 0.0 };
+  double lastX_ { 0.0 };
+  double lastY_ { 0.0 };
 
   bool firstPos_ { true };
 
   // timing
   QDateTime startTime_;
 
-  float deltaTime_ { 0.1f }; // time between current frame and last frame
-  float lastFrame_ { 0.0f };
+  double deltaTime_ { 0.1 }; // time between current frame and last frame
+  double lastFrame_ { 0.0 };
 
   CGLMatrix3D viewMatrix_;
 };

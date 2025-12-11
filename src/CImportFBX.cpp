@@ -74,6 +74,8 @@ CImportFBX(CGeomScene3D *scene, const std::string &name) :
 CImportFBX::
 ~CImportFBX()
 {
+  for (auto &pa : animationStackData_)
+    delete pa.second;
 }
 
 bool
@@ -2526,7 +2528,12 @@ processDataTree(PropDataTree *tree)
                 //connectInfo();
                 //std::cerr << " " << geometryData->name << " -> " << modelData1->name << "\n";
 
-                assert(! geometryData->modelData);
+                if (geometryData->modelData && geometryData->modelData->id != id2) {
+                  std::cerr << "Duplicate Geometry->Model (" << id1 << "->" << id2 << ") "
+                               "(already associated with " << geometryData->modelData->id << ")\n";
+                  //assert(false);
+                }
+
                 geometryData->modelData = modelData1;
 
                 modelData1->geometryDataList.push_back(geometryData);
@@ -2623,8 +2630,9 @@ processDataTree(PropDataTree *tree)
 
                 materialData->modelData.push_back(modelData1);
 
-                if (modelData1->materialData) {
-                  std::cerr << "Duplicate Model->Material\n";
+                if (modelData1->materialData && modelData1->materialData->id != id1) {
+                  std::cerr << "Duplicate Material->Model (" << id1 << "->" << id2 << ") "
+                               "(already associated with " << modelData1->materialData->id << ")\n";
                   //assert(false);
                 }
 
@@ -2674,13 +2682,19 @@ processDataTree(PropDataTree *tree)
               if (pm1 != idMaterialData_.end()) {
                 auto *materialData = (*pm1).second;
 
-                if (textureData->materialData)
-                  std::cerr << "Duplicate material texture\n";
+                if (textureData->materialData && textureData->materialData->id != id2) {
+                  std::cerr << "Duplicate Texture->Material (" << id1 << "->" << id2 << ") "
+                             "(already associated with " << textureData->materialData->id << ")\n";
+                  //assert(false);
+                }
 
                 textureData->materialData = materialData;
 
-                if (materialData->textureData)
-                  std::cerr << "Duplicate material texture\n";
+                if (materialData->textureData && materialData->textureData->id != id1) {
+                  std::cerr << "Duplicate Material->Texture (" << id1 << "->" << id2 << ") "
+                             "(already associated with " << materialData->textureData->id << ")\n";
+                  //assert(false);
+                }
 
                 materialData->textureData = textureData;
 
@@ -2703,30 +2717,9 @@ processDataTree(PropDataTree *tree)
                       //             (*po1).second << "\n";
 
                       if (! textureData->texture) {
-                        auto fileName = textureData->fileName;
-
-                        if (fileName != "") {
-                          if (! CFile::exists(fileName) && textureData->media != "") {
-                            fileName = textureData->media;
-
-                            if (! CFile::exists(fileName)) {
-                              errorMsg("Invalid texture file name '" + fileName + "'");
-                              fileName = "";
-                            }
-                          }
-                        }
-
-                        if (fileName != "") {
-                          CImageFileSrc src(fileName);
-
-                          auto image = CImageMgrInst->createImage(src);
-
-                          image->flipH();
-
-                          textureData->texture = CGeometryInst->createTexture(image);
-
-                          textureData->texture->setName(fileName);
-                        }
+                        std::string fileName;
+                        if (! loadTexture(textureData, fileName))
+                          errorMsg("Invalid texture file name '" + fileName + "'");
                       }
 
 #if 0
@@ -2940,8 +2933,11 @@ processDataTree(PropDataTree *tree)
               if (pt1 != idTextureData_.end()) {
                 auto *textureData1 = (*pt1).second;
 
-                if (videoData->textureData)
-                  std::cerr << "Duplicate video/texture data\n";
+                if (videoData->textureData && videoData->textureData->id != id2) {
+                  std::cerr << "Duplicate video/texture data (" << id1 << "->" << id2 << ") "
+                               "(already associated with " << videoData->textureData->id << ")\n";
+                  //assert(false);
+                }
 
                 videoData->textureData = textureData1;
 
@@ -3348,6 +3344,8 @@ processDataTree(PropDataTree *tree)
               unhandledTree(treeName3);
           }
 
+          materialData->id = blockData.id;
+
           idMaterialData_[blockData.id] = materialData;
         }
         else if (treeName2 == "Objects/Model") {
@@ -3549,6 +3547,8 @@ processDataTree(PropDataTree *tree)
               unhandledTree(treeName3);
           }
 
+          modelData->id = blockData.id;
+
           idModelData_[blockData.id] = modelData;
         }
         else if (treeName2 == "Objects/NodeAttribute") {
@@ -3696,6 +3696,8 @@ processDataTree(PropDataTree *tree)
             else
               unhandledTree(treeName3);
           }
+
+          textureData->id = blockData.id;
 
           idTextureData_[blockData.id] = textureData;
         }
@@ -3872,13 +3874,13 @@ addGeometryObject(GeometryData *geometryData)
 
   auto nci  = uint(geometryData->colorIndex.size());
   auto ncv  = uint(geometryData->colors    .size());
-  auto ncv1 = ncv/3;
+  auto ncv1 = (colorAlpha_ ? ncv/4 : ncv/3);
 
   auto hasColorIndex = (nci == ni && ncv > 0);
   auto hasColorVert  = (nci == 0 && ncv1 == nv1);
 
   if (! hasColorIndex && ! hasColorVert && ncv > 0)
-    std::cerr << "Ignored texture data\n";
+    std::cerr << "Ignored color data\n";
 
   auto nti  = uint(geometryData->uvIndex.size());
   auto ntv  = uint(geometryData->uv     .size());
@@ -3949,41 +3951,45 @@ addGeometryObject(GeometryData *geometryData)
   if (! polygon.empty())
     polygons.push_back(polygon);
 
-  auto getPoint = [&](int v) {
-    auto x = geometryData->vertices[v*3    ];
-    auto y = geometryData->vertices[v*3 + 1];
-    auto z = geometryData->vertices[v*3 + 2];
+  auto getPoint = [&](int iv) {
+    auto p = CPoint3D(geometryData->vertices[iv*3    ],
+                      geometryData->vertices[iv*3 + 1],
+                      geometryData->vertices[iv*3 + 2]);
 
-    if (isInvertX()) x = -x;
-    if (isInvertY()) y = -y;
-    if (isInvertZ()) z = -z;
-
-    return CPoint3D(x, y, z);
+    return adjustPoint(p);
   };
 
-  auto getNormal = [&](int v) {
-    auto x = geometryData->normals[v*3    ];
-    auto y = geometryData->normals[v*3 + 1];
-    auto z = geometryData->normals[v*3 + 2];
+  auto getNormal = [&](int iv) {
+    auto v = CVector3D(geometryData->normals[iv*3    ],
+                       geometryData->normals[iv*3 + 1],
+                       geometryData->normals[iv*3 + 2]);
 
-    if (isInvertX()) x = -x;
-    if (isInvertY()) y = -y;
-    if (isInvertZ()) z = -z;
-
-    return CVector3D(x, y, z);
+    return adjustNormal(v);
   };
 
-  auto getColor = [&](int v) {
-    auto r = geometryData->colors[v*3    ];
-    auto g = geometryData->colors[v*3 + 1];
-    auto b = geometryData->colors[v*3 + 2];
+  auto getColor = [&](int iv) {
+    if (colorAlpha_) {
+      auto r = geometryData->colors[iv*4    ];
+      auto g = geometryData->colors[iv*4 + 1];
+      auto b = geometryData->colors[iv*4 + 2];
+      auto a = geometryData->colors[iv*4 + 3];
 
-    return CRGBA(r, g, b);
+      return CRGBA(r, g, b, a);
+    }
+    else {
+      auto r = geometryData->colors[iv*3    ];
+      auto g = geometryData->colors[iv*3 + 1];
+      auto b = geometryData->colors[iv*3 + 2];
+
+      return CRGBA(r, g, b);
+    }
   };
 
-  auto getTexturePoint = [&](int v) {
-    auto u1 = geometryData->uv[v*2    ];
-    auto v1 = geometryData->uv[v*2 + 1];
+  auto getTexturePoint = [&](int iv) {
+    auto u1 = geometryData->uv[iv*2    ];
+    auto v1 = geometryData->uv[iv*2 + 1];
+
+    // swap ?
 
     return CPoint2D(u1, v1);
   };
@@ -4688,6 +4694,55 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
     std::cerr << " " << name << "=" << propData->toString() << "\n";
   }
 #endif
+
+  return true;
+}
+
+bool
+CImportFBX::
+loadTexture(TextureData *textureData, std::string &fileName)
+{
+  std::vector<std::string> fileNames;
+
+  auto addFileName = [&](const std::string &fname) {
+    if (fname == "")
+      return;
+
+    auto fname1 = remapFile(fname);
+
+    if (fname1 != fname)
+      fileNames.push_back(fname1);
+
+    fileNames.push_back(fname);
+  };
+
+  addFileName(textureData->fileName);
+  addFileName(textureData->media);
+
+  if (fileNames.empty())
+    return true;
+
+  for (const auto &fileName1 : fileNames) {
+    if (CFile::exists(fileName1)) {
+      fileName = fileName1;
+      break;
+    }
+  }
+
+  if (fileName == "") {
+    fileName = fileNames.front();
+    return false;
+  }
+
+  CImageFileSrc src(fileName);
+
+  auto image = CImageMgrInst->createImage(src);
+
+  image->flipH();
+
+  textureData->texture = CGeometryInst->createTexture(image);
+
+  textureData->texture->setName(fileName);
 
   return true;
 }

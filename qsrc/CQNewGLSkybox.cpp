@@ -2,6 +2,8 @@
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
+#include <CQNewGLShapes.h>
+
 #include <CQGLCubemap.h>
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
@@ -9,20 +11,17 @@
 #include <CQImage.h>
 #include <QFileInfo>
 
-CQNewGLShaderProgram *CQNewGLSkybox::shaderProgram_;
-
-void
-CQNewGLSkybox::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("skybox.vs", "skybox.fs");
-}
-
 CQNewGLSkybox::
 CQNewGLSkybox(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLSkybox::
+shaderProgram()
+{
+  return canvas_->getShader("skybox.vs", "skybox.fs");
 }
 
 void
@@ -34,14 +33,16 @@ setDirName(const QString &s)
   loadCubeMap();
 }
 
-void
+CQGLBuffer *
 CQNewGLSkybox::
 initBuffer()
 {
-  CQNewGLObject::initBuffer();
+  auto *buffer = CQNewGLObject::initBuffer();
 
   if (! cubemap_)
     loadCubeMap();
+
+  return buffer;
 }
 
 void
@@ -180,19 +181,16 @@ addGeometry()
   }
 #endif
 
-  FaceDatas faceDatas;
-
-  int pos = 0;
-
-  CQNewGLCanvas::ShapeData shapeData;
-
+  CQNewGLShapes::ShapeData shapeData;
   shapeData.color = CRGBA(1, 1, 1);
+
+  CQNewGLFaceDataList faceDataList;
 
   auto bbox = CBBox3D(CPoint3D(-width_/2, 0, 0), CPoint3D(width_/2, 0, 0));
 
-  canvas_->addCube(buffer_, bbox, shapeData, faceDatas, pos);
+  CQNewGLShapes::addCube(buffer_, bbox, shapeData, faceDataList);
 
-  setFaceDatas(faceDatas);
+  setFaceDatas(faceDataList.faceDatas);
 
   //---
 
@@ -219,7 +217,7 @@ drawGeometry()
 
 //auto modelMatrix = getModelMatrix();
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 

@@ -9,14 +9,13 @@
 #include <QObject>
 #include <QImage>
 
+class CQNewGLCanvas;
+class CQNewGLModel;
+
 class CQNewGLDrawTree : public QObject, public CQNewGLObject {
   Q_OBJECT
 
  public:
-  static void initShader(CQNewGLCanvas *canvas);
-
-  //---
-
   CQNewGLDrawTree(CQNewGLCanvas *canvas);
 
   //---
@@ -56,10 +55,10 @@ class CQNewGLDrawTree : public QObject, public CQNewGLObject {
 
   //---
 
-  CQNewGLShaderProgram *shaderProgram() override { return shaderProgram_; }
+  CQNewGLShaderProgram *shaderProgram() override;
 
  private:
-  static CQNewGLShaderProgram* shaderProgram_;
+  CQNewGLCanvas* canvas_ { nullptr };
 
   bool active_ { false };
 

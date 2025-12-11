@@ -3,6 +3,7 @@
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
 #include <CQNewGLLight.h>
+#include <CQNewGLShapes.h>
 #include <CQNewGLUtil.h>
 
 #include <CQGLBuffer.h>
@@ -11,20 +12,17 @@
 #include <CGeometry3D.h>
 #include <CGeomTexture.h>
 
-CQNewGLShaderProgram *CQNewGLShape::shaderProgram_;
-
-void
-CQNewGLShape::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("shape.vs", "shape.fs");
-}
-
 CQNewGLShape::
 CQNewGLShape(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLShape::
+shaderProgram()
+{
+  return canvas_->getShader("shape.vs", "shape.fs");
 }
 
 void
@@ -65,7 +63,7 @@ addGeometry()
 
   //---
 
-  CQNewGLCanvas::ShapeData shapeData;
+  CQNewGLShapes::ShapeData shapeData;
 
   shapeData.color = color_;
   shapeData.size  = size_;
@@ -74,14 +72,10 @@ addGeometry()
 
   // cone: from start -> end, with base width
   if      (type_ == Type::CONE) {
-    int pos = 0;
-
     auto addCone = [&](const CPoint3D &p1, const CPoint3D &p2, double w) {
-      FaceDatas faceDatas;
-      canvas_->addCone(buffer_, p1, p2, w, shapeData, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addCone(buffer_, p1, p2, w, shapeData, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---
@@ -94,14 +88,10 @@ addGeometry()
   }
   // cube: bbox from start -> end
   else if (type_ == Type::CUBE) {
-    int pos = 0;
-
     auto addCube = [&](const CPoint3D &p1, const CPoint3D &p2) {
-      FaceDatas faceDatas;
-      canvas_->addCube(buffer_, p1, p2, shapeData, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addCube(buffer_, p1, p2, shapeData, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---
@@ -113,14 +103,10 @@ addGeometry()
   }
   // cylinder: from start -> end, with base width
   else if (type_ == Type::CYLINDER) {
-    int pos = 0;
-
     auto addCylinder = [&](const CPoint3D &p1, const CPoint3D &p2, double r) {
-      FaceDatas faceDatas;
-      canvas_->addCylinder(buffer_, p1, p2, r, shapeData, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addCylinder(buffer_, p1, p2, r, shapeData, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---
@@ -136,14 +122,10 @@ addGeometry()
   }
   // pyramid: from start -> end, with base width
   else if (type_ == Type::PYRAMID) {
-    int pos = 0;
-
     auto addPyramid = [&](const CPoint3D &p1, const CPoint3D &p2, double w) {
-      FaceDatas faceDatas;
-      canvas_->addPyramid(buffer_, p1, p2, w, shapeData, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addPyramid(buffer_, p1, p2, w, shapeData, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---
@@ -156,14 +138,10 @@ addGeometry()
   }
   // sphere: centered at start and radius from width
   else if (type_ == Type::SPHERE) {
-    int pos = 0;
-
     auto addSphere = [&](const CPoint3D &p1, const CPoint3D &p2) {
-      FaceDatas faceDatas;
-      canvas_->addSphere(buffer_, p1, p2, shapeData, angleStart_, angleDelta_, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addSphere(buffer_, p1, p2, shapeData, angleStart_, angleDelta_, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---
@@ -175,15 +153,11 @@ addGeometry()
   }
   // torus: centered at start width orbit radius from width and default circle radius
   else if (type_ == Type::TORUS) {
-    int pos = 0;
-
     auto addTorus = [&](const CPoint3D &p1, const CPoint3D &p2, double rfactor,
                         double power1, double power2) {
-      FaceDatas faceDatas;
-      canvas_->addTorus(buffer_, p1, p2, rfactor, power1, power2, shapeData, faceDatas, pos);
-
-      for (const auto &faceData : faceDatas)
-        faceDatas_.push_back(faceData);
+      CQNewGLFaceDataList faceDataList;
+      CQNewGLShapes::addTorus(buffer_, p1, p2, rfactor, power1, power2, shapeData, faceDataList);
+      faceDataList_.add(faceDataList);
     };
 
     //---

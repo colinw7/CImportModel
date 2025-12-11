@@ -3,6 +3,7 @@
 
 #include <CRGBA.h>
 #include <CPoint3D.h>
+#include <vector>
 
 class CQGLTexture;
 
@@ -29,6 +30,18 @@ struct CQNewGLFaceData {
   CRGBA        specular        { 0, 0, 0 };
   CRGBA        emission        { 0, 0, 0, 0 };
   double       shininess       { 1.0 };
+};
+
+struct CQNewGLFaceDataList {
+  void clear() { faceDatas.clear(); pos = 0; }
+
+  void add(const CQNewGLFaceDataList &faceDataList) {
+    for (const auto &faceData : faceDataList.faceDatas)
+      faceDatas.push_back(faceData);
+  }
+
+  int                          pos { 0 };
+  std::vector<CQNewGLFaceData> faceDatas;
 };
 
 #endif

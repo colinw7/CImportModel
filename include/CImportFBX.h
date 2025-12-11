@@ -377,6 +377,14 @@ class CImportFBX : public CImportBase {
       return (lhs.ind >= 0);
     }
 
+    friend bool operator==(const IndName &lhs, const IndName &rhs) {
+      return (lhs.ind == rhs.ind && lhs.name == rhs.name);
+    }
+
+    friend bool operator!=(const IndName &lhs, const IndName &rhs) {
+      return ! operator==(lhs, rhs);
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const IndName &i) {
       if      (i.ind  >= 0 ) os << i.ind;
       else if (i.name != "") os << i.name;
@@ -658,6 +666,8 @@ class CImportFBX : public CImportBase {
   bool isHierName() const { return hierName_; }
   void setHierName(bool b) { hierName_ = b; }
 
+  void addFileMap(const std::string &oldName, const std::string &newName);
+
  private:
   struct ModelData;
   struct TextureData;
@@ -690,6 +700,8 @@ class CImportFBX : public CImportBase {
 
   // Geometry Instance
   struct ModelData {
+    IndName id;
+
     std::string name;
     std::string type;
     OptPoint3   localTranslation;
@@ -711,6 +723,8 @@ class CImportFBX : public CImportBase {
   struct MaterialData;
 
   struct TextureData {
+    IndName id;
+
     std::string   name;
     std::string   type;
     std::string   fileName;
@@ -722,6 +736,8 @@ class CImportFBX : public CImportBase {
   };
 
   struct MaterialData {
+    IndName id;
+
     std::string name;
     OptColor    ambientColor;
     OptReal     ambientFactor;
@@ -775,6 +791,8 @@ class CImportFBX : public CImportBase {
 
   std::string hierName(PropDataTree *tree) const;
   std::string hierName(TextBlock *block) const;
+
+  bool loadTexture(TextureData *textureData, std::string &fileName);
 
   std::string getObjectName();
 
@@ -916,6 +934,8 @@ class CImportFBX : public CImportBase {
   IdNodeAttributeData      idNodeAttributeData_;
   IdVideoData              videoData_;
   IdConstraintData         constraintData_;
+
+  bool colorAlpha_ { true };
 };
 
 #endif

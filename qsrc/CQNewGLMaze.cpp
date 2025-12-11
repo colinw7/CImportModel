@@ -12,19 +12,9 @@
 #include <CDungeon.h>
 #include <CImageLib.h>
 
-CQNewGLShaderProgram *CQNewGLMaze::shaderProgram_;
-
-void
-CQNewGLMaze::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-  shaderProgram_->addShaders("maze.vs", "maze.fs");
-}
-
 CQNewGLMaze::
 CQNewGLMaze(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
   auto filename = canvas_->app()->buildDir() + "/data/maze.xml";
 
@@ -34,16 +24,25 @@ CQNewGLMaze(CQNewGLCanvas *canvas) :
   dungeon_->load(filename.toStdString());
 }
 
-void
+CQNewGLShaderProgram *
+CQNewGLMaze::
+shaderProgram()
+{
+  return canvas_->getShader("maze.vs", "maze.fs");
+}
+
+CQGLBuffer *
 CQNewGLMaze::
 initBuffer()
 {
-  CQNewGLObject::initBuffer();
+  auto *buffer = CQNewGLObject::initBuffer();
 
   //---
 
+  auto *app = canvas_->app();
+
   auto addTexture = [&](const QString &name, bool flipV=false) {
-    auto filename = canvas_->app()->buildDir() + "/" + name;
+    auto filename = app->buildDir() + "/" + name;
 
     CImageFileSrc src(filename.toStdString());
     auto image = CImageMgrInst->createImage(src);
@@ -75,6 +74,10 @@ initBuffer()
     doorTexture_    = addTexture("textures/door1.jpg");
     outsideTexture_ = addTexture("textures/wall1.jpg");
   }
+
+  //---
+
+  return buffer;
 }
 
 void

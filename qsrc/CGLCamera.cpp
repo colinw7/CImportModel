@@ -73,8 +73,8 @@ init(const CGLVector3D &origin, const CGLVector3D &position, const CGLVector3D &
 //auto dy = position.y() - origin.y();
   auto dz = position.z() - origin.z();
 
-  yaw   = std::atan2(l, dx);
-  pitch = -std::atan2(l, -dz);
+  yaw   =  std::atan2(l, dx);
+  pitch = 2*M_PI - std::atan2(l, -dz);
   roll  = M_PI/2.0;
 #endif
 
@@ -82,7 +82,11 @@ init(const CGLVector3D &origin, const CGLVector3D &position, const CGLVector3D &
   yaw_   = CMathGen::RadToDeg(yaw);
   roll_  = CMathGen::RadToDeg(roll);
 
-  init();
+  startTime_ = QDateTime::currentDateTime();
+
+  updateCameraVectors(/*rotate*/true);
+
+  //init();
 }
 
 void
@@ -136,16 +140,18 @@ setRight(const CGLVector3D &p)
 
 void
 CGLCamera::
-setZoom(float z)
+setFov(double z)
 {
-  zoom_ = z;
+  fov_ = z;
+
+  viewChanged();
 }
 
 CGLMatrix3D
 CGLCamera::
-getPerspectiveMatrix(float aspect) const
+getPerspectiveMatrix() const
 {
-  return CGLMatrix3D::perspective(zoom(), aspect, near(), far());
+  return CGLMatrix3D::perspective(fov(), aspect_, near(), far());
 }
 
 CGLMatrix3D
@@ -481,12 +487,17 @@ processMouseMovement(float xoffset, float yoffset, bool constrainPitch)
   yaw_   += xoffset;
   pitch_ += yoffset;
 
+#if 0
+  while (yaw_   > 360.0f) yaw_   -= 360.0f;
+  while (yaw_   <   0.0f) yaw_   += 360.0f;
+  while (pitch_ > 360.0f) pitch_ -= 360.0f;
+  while (pitch_ <   0.0f) pitch_ += 360.0f;
+#endif
+
   // make sure that when pitch is out of bounds, screen doesn't get flipped
   if (constrainPitch) {
-    if (pitch_ > 89.0f)
-      pitch_ = 89.0f;
-    if (pitch_ < -89.0f)
-      pitch_ = -89.0f;
+    if (pitch_ >  89.0f) pitch_ =  89.0f;
+    if (pitch_ < -89.0f) pitch_ = -89.0f;
   }
 
   // update front, right and up Vectors using the updated Euler angles
@@ -497,12 +508,14 @@ void
 CGLCamera::
 processMouseScroll(float yoffset)
 {
-  zoom_ -= float(yoffset);
+  fov_ -= float(yoffset);
 
-  if (zoom_ < 1.0f)
-    zoom_ = 1.0f;
-  if (zoom_ > 90.0f)
-    zoom_ = 90.0f;
+  if (fov_ < 1.0f)
+    fov_ = 1.0f;
+  if (fov_ > 90.0f)
+    fov_ = 90.0f;
+
+  viewChanged();
 }
 
 void
@@ -654,7 +667,8 @@ updateViewMatrix(bool rotate)
 
 CQuaternion
 CGLCamera::
-trackBall(CVector3D &cop, CVector3D &cor, CVector3D &dir1, CVector3D &dir2) const
+trackBall(const CVector3D &cop, const CVector3D &cor,
+          const CVector3D &dir1, const CVector3D &dir2) const
 {
   // Implement track ball functionality to spin stuff on the screen
   //  cop   center of projection

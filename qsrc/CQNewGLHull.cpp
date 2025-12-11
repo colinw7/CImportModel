@@ -3,26 +3,24 @@
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModelObject.h>
 #include <CQNewGLShape.h>
+#include <CQNewGLModel.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 #include <CGeomObject3D.h>
 #include <CHull3D.h>
 
-CQNewGLShaderProgram* CQNewGLHull::shaderProgram_;
-
-void
-CQNewGLHull::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-
-  shaderProgram_->addShaders("normal.vs", "normal.fs");
-}
-
 CQNewGLHull::
 CQNewGLHull(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLHull::
+shaderProgram()
+{
+  return canvas_->getShader("normal.vs", "normal.fs");
 }
 
 void
@@ -84,7 +82,7 @@ addBufferHull(CQNewGLObject *object)
     faceData.pos = pos;
     faceData.len = 3;
 
-    faceDatas_.push_back(faceData);
+    faceDataList_.faceDatas.push_back(faceData);
 
     pos += faceData.len;
   }
@@ -116,9 +114,11 @@ void
 CQNewGLHull::
 drawGeometry()
 {
+  auto *program = shaderProgram();
+
   buffer_->bind();
 
-  shaderProgram_->bind();
+  program->bind();
 
   //---
 
@@ -130,11 +130,11 @@ drawGeometry()
   if (object)
     modelMatrix = object->getTransform();
 
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 
-  for (const auto &faceData : faceDatas_) {
+  for (const auto &faceData : faceDataList_.faceDatas) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
@@ -144,5 +144,5 @@ drawGeometry()
 
   //---
 
-  shaderProgram_->release();
+  program->release();
 }

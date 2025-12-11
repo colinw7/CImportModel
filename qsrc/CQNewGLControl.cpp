@@ -15,9 +15,11 @@
 #include <CQNewGLMaze.h>
 #include <CQNewGLSkybox.h>
 #include <CQNewGLEmitter.h>
+#include <CQNewGLFractalWidget.h>
 #include <CQNewGLFractal.h>
 #include <CQNewGLDrawTree.h>
 #include <CQNewGLShape.h>
+#include <CQNewGLTextureChooser.h>
 #include <CQNewGLUtil.h>
 
 #include <CImportBase.h>
@@ -33,7 +35,6 @@
 #include <CQSlider.h>
 #include <CQPoint3DEdit.h>
 #include <CQMatrix3D.h>
-#include <CQImage.h>
 #include <CQIconButton.h>
 
 #include <QTabWidget>
@@ -145,10 +146,6 @@ CQNewGLControl(CQNewGLModel *app) :
 
   addModelTab(texturesControl_, "Textures");
 
-  uvControl_ = new CQNewGLUVControl(this);
-
-  addModelTab(uvControl_, "UV");
-
   animControl_ = new CQNewGLAnimControl(this);
 
   addModelTab(animControl_, "Animation");
@@ -191,10 +188,6 @@ CQNewGLControl(CQNewGLModel *app) :
 
   addExtrasTab(emitterControl_, "Emitter");
 
-  fractalControl_ = new CQNewGLFractalControl(this);
-
-  addExtrasTab(fractalControl_, "Fractal");
-
   drawTreeControl_ = new CQNewGLDrawTreeControl(this);
 
   addExtrasTab(drawTreeControl_, "Draw Tree");
@@ -212,6 +205,7 @@ CQNewGLControl(CQNewGLModel *app) :
   connect(modelTab_, SIGNAL(currentChanged(int)), this, SLOT(modelTabSlot(int)));
 
   connect(canvas(), SIGNAL(textureAdded()), this, SLOT(invalidateTextures()));
+
   connect(canvas(), SIGNAL(cameraAdded()), this, SLOT(invalidateCameras()));
   connect(canvas(), SIGNAL(lightAdded()), this, SLOT(invalidateLights()));
 }
@@ -238,8 +232,7 @@ modelTabSlot(int ind)
 
   bool isShowBone = app_->isShowBone();
 
-  app_->setShowUVMap(tabName == "UV");
-  app_->setShowBone (tabName == "Bones");
+  app_->setShowBone(tabName == "Bones");
 
   if (app_->isShowBone() != isShowBone) {
     canvas()->updateObjectsData();
@@ -265,7 +258,7 @@ updateWidgets()
 //updateHull();
 
   updateTextures();
-  updateUV();
+//updateUV();
   updateAnim();
   updateBones();
 
@@ -275,8 +268,6 @@ updateWidgets()
   updateSkybox();
 
   updateEmitter();
-
-  updateFractal();
 
   updateDrawTree();
 
@@ -370,12 +361,14 @@ updateTextures()
   texturesControl_->updateWidgets();
 }
 
+#if 0
 void
 CQNewGLControl::
 updateUV()
 {
   uvControl_->updateObjects();
 }
+#endif
 
 void
 CQNewGLControl::
@@ -418,13 +411,6 @@ CQNewGLControl::
 updateEmitter()
 {
   emitterControl_->updateWidgets();
-}
-
-void
-CQNewGLControl::
-updateFractal()
-{
-  fractalControl_->updateWidgets();
 }
 
 void
@@ -473,9 +459,12 @@ CQNewGLGeneralControl(CQNewGLControl *control) :
 
   startGroup("GL Options");
 
-  depthTestCheck_ = addGroupLabelEdit("Depth Test", new QCheckBox);
-  cullCheck_      = addGroupLabelEdit("Cull Face" , new QCheckBox);
-  frontFaceCheck_ = addGroupLabelEdit("Front Face", new QCheckBox);
+  depthTestCheck_  = addGroupLabelEdit("Depth Test" , new QCheckBox);
+  cullCheck_       = addGroupLabelEdit("Cull Face"  , new QCheckBox);
+  frontFaceCheck_  = addGroupLabelEdit("Front Face" , new QCheckBox);
+  showOrientCheck_ = addGroupLabelEdit("Show Orient", new QCheckBox);
+
+  frontFaceCheck_->setToolTip("Front Face (Clockwise=1, Counter Clockwise=0)");
 
   endGroup();
 
@@ -529,23 +518,28 @@ connectSlots(bool b)
                             this, SLOT(cullSlot(int)));
   CQUtil::connectDisconnect(b, frontFaceCheck_, SIGNAL(stateChanged(int)),
                             this, SLOT(frontFaceSlot(int)));
+  CQUtil::connectDisconnect(b, showOrientCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(showOrientSlot(int)));
 }
 
 void
 CQNewGLGeneralControl::
 updateWidgets()
 {
+  auto *canvas = this->canvas();
+
+  //---
+
   connectSlots(false);
 
   //---
 
-  auto *canvas = this->canvas();
-
   colorEdit_->setColor(canvas->bgColor());
 
-  depthTestCheck_->setChecked(canvas->isDepthTest());
-  cullCheck_     ->setChecked(canvas->isCullFace());
-  frontFaceCheck_->setChecked(canvas->isFrontFace());
+  depthTestCheck_ ->setChecked(canvas->isDepthTest());
+  cullCheck_      ->setChecked(canvas->isCullFace());
+  frontFaceCheck_ ->setChecked(canvas->isFrontFace());
+  showOrientCheck_->setChecked(canvas->isOrientColor());
 
   //---
 
@@ -589,6 +583,24 @@ frontFaceSlot(int state)
   auto *canvas = this->canvas();
 
   canvas->setFrontFace(state);
+
+  CBBox3D bbox;
+  canvas->updateModelData(bbox);
+
+  canvas->update();
+}
+
+void
+CQNewGLGeneralControl::
+showOrientSlot(int state)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setOrientColor(state);
+
+  CBBox3D bbox;
+  canvas->updateModelData(bbox);
+
   canvas->update();
 }
 
@@ -707,9 +719,9 @@ CQNewGLCameraControl(CQNewGLControl *control) :
   auto *resetButton = new QPushButton("Reset");
   auto *initButton  = new QPushButton("Init");
 
-  connect(addButton, &QPushButton::clicked, this, &CQNewGLCameraControl::addSlot);
-  connect(resetButton, &QPushButton::clicked, this, &CQNewGLCameraControl::resetSlot);
-  connect(initButton, &QPushButton::clicked, this, &CQNewGLCameraControl::initSlot);
+  connect(addButton  , SIGNAL(clicked()), this, SLOT(addSlot()));
+  connect(resetButton, SIGNAL(clicked()), this, SLOT(resetSlot()));
+  connect(initButton , SIGNAL(clicked()), this, SLOT(initSlot()));
 
   buttonsLayout->addWidget(addButton);
   buttonsLayout->addWidget(resetButton);
@@ -725,6 +737,9 @@ void
 CQNewGLCameraControl::
 connectSlots(bool b)
 {
+  CQUtil::connectDisconnect(b, camerasList_, SIGNAL(currentItemChanged()),
+                            this, SLOT(updateWidgets()));
+
   CQUtil::connectDisconnect(b, showCheck_, SIGNAL(stateChanged(int)),
                             this, SLOT(showSlot(int)));
 
@@ -763,32 +778,17 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, speedEdit_, SIGNAL(realValueChanged(double)),
                             this, SLOT(speedSlot(double)));
 
-  if (b) {
-    connect(originEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLCameraControl::originSlot);
-    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLCameraControl::positionSlot);
-    connect(upEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLCameraControl::upSlot);
-    connect(rightEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLCameraControl::rightSlot);
+  CQUtil::connectDisconnect(b, originEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(originSlot()));
+  CQUtil::connectDisconnect(b, positionEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(positionSlot()));
+  CQUtil::connectDisconnect(b, upEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(upSlot()));
+  CQUtil::connectDisconnect(b, rightEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(rightSlot()));
 
-    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(colorSlot(const QColor &)));
-  }
-  else {
-    disconnect(originEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLCameraControl::originSlot);
-    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLCameraControl::positionSlot);
-    disconnect(upEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLCameraControl::upSlot);
-    disconnect(rightEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLCameraControl::rightSlot);
-
-    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(colorSlot(const QColor &)));
-  }
+  CQUtil::connectDisconnect(b, colorEdit_, SIGNAL(colorChanged(const QColor &)),
+                            this, SLOT(colorSlot(const QColor &)));
 }
 
 CQNewGLCamera *
@@ -850,7 +850,7 @@ void
 CQNewGLCameraControl::
 zoomSlot(double r)
 {
-  camera()->setZoom(r);
+  camera()->setFov(r);
   canvas()->update();
 }
 
@@ -1025,12 +1025,15 @@ void
 CQNewGLCameraControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas = this->canvas();
+  auto *camera = this->camera();
+  if (! camera) return;
 
   //---
 
-  auto *canvas = this->canvas();
-  auto *camera = this->camera();
+  connectSlots(false);
+
+  //---
 
   if (camerasInvalid_) {
     camerasInvalid_ = false;
@@ -1056,7 +1059,7 @@ updateWidgets()
 
   strafeCheck_->setChecked(camera->isStrafe());
 
-  zoomEdit_->setValue(camera->zoom());
+  zoomEdit_->setValue(camera->fov());
 
   nearEdit_->setValue(camera->near());
   farEdit_ ->setValue(camera->far());
@@ -1211,18 +1214,18 @@ void
 CQNewGLAnnotationsControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas = this->canvas();
 
   //---
 
-  auto *canvas = this->canvas();
+  connectSlots(false);
 
   //---
 
   auto *normals = canvas->getNormals();
 
   showNormalsCheck_->setChecked(canvas->isShowNormals());
-  showNewNormalsCheck_->setChecked(normals->isVisible());
+  showNewNormalsCheck_->setChecked(normals ? normals->isVisible() : false);
 
   normalsSizeEdit_ ->setValue(canvas->normalsSize());
   normalsColorEdit_->setColor(canvas->normalsColor());
@@ -1233,21 +1236,21 @@ updateWidgets()
 
   auto *bbox = canvas->getBBox();
 
-  showBBoxCheck_->setChecked(bbox->isVisible());
+  showBBoxCheck_->setChecked(bbox ? bbox->isVisible() : false);
 
   //---
 
   auto *hull = canvas->getHull();
 
-  showHullCheck_->setChecked(hull->isVisible());
+  showHullCheck_->setChecked(hull ? hull->isVisible() : false);
 
   //---
 
   auto *basis = canvas->getBasis();
 
-  showBasisCheck_->setChecked(basis->isShow());
-  basisSizeEdit_ ->setValue(basis->lineSize());
-  basisWidthEdit_->setValue(basis->lineWidth());
+  showBasisCheck_->setChecked(basis ? basis->isShow() : false);
+  basisSizeEdit_ ->setValue(basis ? basis->lineSize() : 0.0);
+  basisWidthEdit_->setValue(basis ? basis->lineWidth() : 0.0);
 
   auto *object = canvas->getCurrentObject();
 
@@ -1269,7 +1272,7 @@ updateWidgets()
 
   auto *wireframe = canvas->getWireframe();
 
-  showWireframeCheck_->setChecked(wireframe->isVisible());
+  showWireframeCheck_->setChecked(wireframe ? wireframe->isVisible() : false);
 
   //---
 
@@ -1294,6 +1297,7 @@ showNewNormalsSlot(int state)
 {
   auto *canvas  = this->canvas();
   auto *normals = canvas->getNormals();
+  if (! normals) return;
 
   normals->setVisible(state);
 
@@ -1307,6 +1311,7 @@ normalsSizeSlot(double s)
 {
   auto *canvas  = this->canvas();
   auto *normals = canvas->getNormals();
+  if (! normals) return;
 
   canvas ->setNormalsSize(s);
   normals->setLineSize(s);
@@ -1321,6 +1326,7 @@ normalsColorSlot(const QColor &c)
 {
   auto *canvas  = this->canvas();
   auto *normals = canvas->getNormals();
+  if (! normals) return;
 
   canvas ->setNormalsColor(c);
   normals->setLineColor(c);
@@ -1599,7 +1605,7 @@ CQNewGLLightsControl(CQNewGLControl *control) :
 
   auto *addButton = new QPushButton("Add");
 
-  connect(addButton, &QPushButton::clicked, this, &CQNewGLLightsControl::addSlot);
+  connect(addButton, SIGNAL(clicked()), this, SLOT(addSlot()));
 
   buttonsLayout->addWidget(addButton);
   buttonsLayout->addStretch(1);
@@ -1616,6 +1622,9 @@ void
 CQNewGLLightsControl::
 connectSlots(bool b)
 {
+  CQUtil::connectDisconnect(b, lightsList_, SIGNAL(currentItemChanged()),
+                            this, SLOT(updateWidgets()));
+
   CQUtil::connectDisconnect(b, ambientEdit_, SIGNAL(colorChanged(const QColor &)),
                             this, SLOT(ambientSlot(const QColor &)));
   CQUtil::connectDisconnect(b, diffuseEdit_, SIGNAL(colorChanged(const QColor &)),
@@ -1623,37 +1632,30 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, emissionEdit_, SIGNAL(colorChanged(const QColor &)),
                             this, SLOT(emissionSlot(const QColor &)));
 
-  if (b) {
-    connect(showCheck_, &QCheckBox::stateChanged, this,
-            &CQNewGLLightsControl::showSlot);
+  CQUtil::connectDisconnect(b, showCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(showSlot(int)));
 
-    connect(typeCombo_, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(typeSlot(int)));
-    connect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
-    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLLightsControl::positionSlot);
-    connect(directionEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLLightsControl::directionSlot);
-    connect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-            this, SLOT(colorSlot(const QColor &)));
+  CQUtil::connectDisconnect(b, typeCombo_, SIGNAL(currentIndexChanged(int)),
+                            this, SLOT(typeSlot(int)));
+
+  CQUtil::connectDisconnect(b, enabledCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(enabledSlot(int)));
+
+  CQUtil::connectDisconnect(b, positionEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(positionSlot()));
+  CQUtil::connectDisconnect(b, directionEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(directionSlot()));
+
+  CQUtil::connectDisconnect(b, colorEdit_, SIGNAL(colorChanged(const QColor &)),
+                            this, SLOT(colorSlot(const QColor &)));
+
+  if (b) {
     connect(radiusEdit_, &CQRealSpin::realValueChanged,
             this, &CQNewGLLightsControl::radiusSlot);
     connect(cutoffEdit_, &CQRealSpin::realValueChanged,
             this, &CQNewGLLightsControl::cutoffSlot);
   }
   else {
-    disconnect(showCheck_, &QCheckBox::stateChanged, this,
-               &CQNewGLLightsControl::showSlot);
-
-    disconnect(typeCombo_, SIGNAL(currentIndexChanged(int)),
-               this, SLOT(typeSlot(int)));
-    disconnect(enabledCheck_, SIGNAL(stateChanged(int)), this, SLOT(enabledSlot(int)));
-    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLLightsControl::positionSlot);
-    disconnect(directionEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLLightsControl::directionSlot);
-    disconnect(colorEdit_, SIGNAL(colorChanged(const QColor &)),
-               this, SLOT(colorSlot(const QColor &)));
     disconnect(radiusEdit_, &CQRealSpin::realValueChanged,
                this, &CQNewGLLightsControl::radiusSlot);
     disconnect(cutoffEdit_, &CQRealSpin::realValueChanged,
@@ -1871,6 +1873,10 @@ CQNewGLLightsControl::
 updateWidgets()
 {
   auto *canvas = this->canvas();
+  auto *light  = canvas->getCurrentLight();
+  if (! light) return;
+
+  //---
 
   connectSlots(false);
 
@@ -1891,8 +1897,6 @@ updateWidgets()
   showCheck_->setChecked(canvas->isShowLights());
 
   //---
-
-  auto *light = canvas->getCurrentLight();
 
   typeCombo_    ->setCurrentIndex(static_cast<int>(light->type()));
   enabledCheck_ ->setChecked(light->isEnabled());
@@ -1942,12 +1946,15 @@ void
 CQNewGLAxesControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas = this->canvas();
+  auto *axes   = canvas->getAxes();
+  if (! axes) return;
 
   //---
 
-  auto *canvas = this->canvas();
-  auto *axes   = canvas->getAxes();
+  connectSlots(false);
+
+  //---
 
   axisCheck_->setChecked(axes->isVisible());
 
@@ -1961,7 +1968,8 @@ CQNewGLAxesControl::
 showSlot(int state)
 {
   auto *canvas = this->canvas();
-  auto *axes   = canvas->getAxes();
+
+  auto *axes = canvas->getAxes();
 
   axes->setVisible(state);
   canvas->update();
@@ -2108,7 +2116,7 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
   auto *groupBox    = new QGroupBox("Objects");
   auto *groupLayout = new QVBoxLayout(groupBox);
 
-  objectsList_ = new CQNewGLObjectsList(control);
+  objectsList_ = new CQNewGLObjectsList(control->canvas());
 
   groupLayout->addWidget(objectsList_);
 
@@ -2209,8 +2217,8 @@ CQNewGLObjectsControl(CQNewGLControl *control) :
   auto *addButton   = new QPushButton("Add");
   auto *resetButton = new QPushButton("Reset Transform");
 
-  connect(addButton, &QPushButton::clicked, this, &CQNewGLObjectsControl::addSlot);
-  connect(resetButton, &QPushButton::clicked, this, &CQNewGLObjectsControl::resetSlot);
+  connect(addButton, SIGNAL(clicked()), this, SLOT(addSlot()));
+  connect(resetButton, SIGNAL(clicked()), this, SLOT(resetSlot()));
 
   buttonsLayout->addWidget(addButton);
   buttonsLayout->addWidget(resetButton);
@@ -2312,6 +2320,8 @@ void
 CQNewGLObjectsControl::
 updateSelected(int ind)
 {
+  auto *app = control_->app();
+
   auto *object = canvas()->getObject(ind);
 
   //---
@@ -2336,7 +2346,7 @@ updateSelected(int ind)
     solidCheck_    ->setChecked(objectData->isSolid    ());
     wireframeCheck_->setChecked(objectData->isWireframe());
 
-    auto bbox = canvas()->getObjectBBox(object);
+    auto bbox = app->getObjectBBox(object);
 
     centerEdit_->setValue(bbox.getCenter());
     sizeEdit_  ->setValue(bbox.getSize().point());
@@ -2524,7 +2534,9 @@ centerSlot()
   auto *object = getObjectListSelected();
   if (! object) return;
 
-  auto bbox = canvas()->getObjectBBox(object);
+  auto *app = control_->app();
+
+  auto bbox = app->getObjectBBox(object);
 
   auto c1 = bbox.getCenter();
   auto c2 = centerEdit_->getValue();
@@ -2538,7 +2550,7 @@ centerSlot()
 
   //---
 
-  bbox = canvas()->getObjectBBox(object);
+  bbox = app->getObjectBBox(object);
 
   centerEdit_->setValue(bbox.getCenter());
   sizeEdit_  ->setValue(bbox.getSize().point());
@@ -2551,7 +2563,9 @@ sizeSlot()
   auto *object = getObjectListSelected();
   if (! object) return;
 
-  auto bbox = canvas()->getObjectBBox(object);
+  auto *app = control_->app();
+
+  auto bbox = app->getObjectBBox(object);
 
   auto s1 = bbox.getSize().point();
   auto s2 = sizeEdit_->getValue();
@@ -2575,7 +2589,7 @@ sizeSlot()
 
   //---
 
-  bbox = canvas()->getObjectBBox(object);
+  bbox = app->getObjectBBox(object);
 
   centerEdit_->setValue(bbox.getCenter());
   sizeEdit_  ->setValue(bbox.getSize().point());
@@ -2605,20 +2619,23 @@ void
 CQNewGLObjectsControl::
 diffuseMapSlot()
 {
+  auto *canvas = control_->canvas();
+
   auto *edit = qobject_cast<CQNewGLTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
 
-  auto *texture = canvas()->getGeomTextureByName(textureName.toStdString());
+  auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = getObjectListSelected();
 
   if (object) {
     object->setDiffuseTexture(texture);
 
-    canvas()->updateObjectsData();
-    canvas()->update();
-    uvMap ()->update();
+    canvas->updateObjectsData();
+    canvas->update();
+
+    uvMap()->update();
   }
 }
 
@@ -2626,19 +2643,21 @@ void
 CQNewGLObjectsControl::
 normalMapSlot()
 {
+  auto *canvas = control_->canvas();
+
   auto *edit = qobject_cast<CQNewGLTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
 
-  auto *texture = canvas()->getGeomTextureByName(textureName.toStdString());
+  auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = getObjectListSelected();
 
   if (object) {
     object->setNormalTexture(texture);
 
-    canvas()->updateObjectsData();
-    canvas()->update();
+    canvas->updateObjectsData();
+    canvas->update();
   }
 }
 
@@ -2646,19 +2665,21 @@ void
 CQNewGLObjectsControl::
 specularMapSlot()
 {
+  auto *canvas = control_->canvas();
+
   auto *edit = qobject_cast<CQNewGLTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
 
-  auto *texture = canvas()->getGeomTextureByName(textureName.toStdString());
+  auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = getObjectListSelected();
 
   if (object) {
     object->setSpecularTexture(texture);
 
-    canvas()->updateObjectsData();
-    canvas()->update();
+    canvas->updateObjectsData();
+    canvas->update();
   }
 }
 
@@ -2666,19 +2687,21 @@ void
 CQNewGLObjectsControl::
 emissiveMapSlot()
 {
+  auto *canvas = control_->canvas();
+
   auto *edit = qobject_cast<CQNewGLTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
 
-  auto *texture = canvas()->getGeomTextureByName(textureName.toStdString());
+  auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = getObjectListSelected();
 
   if (object) {
     object->setEmissiveTexture(texture);
 
-    canvas()->updateObjectsData();
-    canvas()->update();
+    canvas->updateObjectsData();
+    canvas->update();
   }
 }
 
@@ -2686,23 +2709,26 @@ void
 CQNewGLObjectsControl::
 addSlot()
 {
+  auto *canvas = control_->canvas();
+  auto *app    = canvas->app();
+
 //auto dir = QDir::current().dirName();
-  auto dir = canvas()->app()->buildDir() + "/models";
+  auto dir = app->buildDir() + "/models";
 
   auto fileName = QFileDialog::getOpenFileName(this, "Open Model File", dir, "Files (*.*)");
   if (! fileName.length()) return;
 
   auto format = CImportBase::filenameToType(fileName.toStdString());
 
-  CQNewGLCanvas::LoadData loadData;
+  CQNewGLModel::LoadData loadData;
 
-  if (! canvas()->loadModel(fileName, format, loadData))
+  if (! app->loadModel(fileName, format, loadData))
     std::cerr << "Failed to load model '" << fileName.toStdString() << "'\n";
 
   CBBox3D bbox;
-  canvas()->updateModelData(bbox);
+  canvas->updateModelData(bbox);
 
-  canvas()->update();
+  canvas->update();
 }
 
 void
@@ -2713,6 +2739,8 @@ resetSlot()
 
   if (object) {
     object->setTransform(CMatrix3D::identity());
+
+    canvas()->updateAnnotations();
     canvas()->update();
   }
 }
@@ -2949,7 +2977,8 @@ paintEvent(QPaintEvent *)
 
   p.fillRect(rect(), Qt::white);
 
-  auto *canvas     = control_->canvas();
+  auto *canvas = control_->canvas();
+
   int   textureInd = control_->textureInd();
 
   const auto &textures = canvas->glTextures();
@@ -2987,6 +3016,7 @@ paintEvent(QPaintEvent *)
 
 //---
 
+#if 0
 CQNewGLTextureChooser::
 CQNewGLTextureChooser(CQNewGLControl *control) :
  control_(control)
@@ -3107,18 +3137,23 @@ currentIndexChanged(int ind)
 
   Q_EMIT textureChanged();
 }
+#endif
 
 //---
 
 CQNewGLUVControl::
-CQNewGLUVControl(CQNewGLControl *control) :
- CQNewGLControlFrame(control)
+CQNewGLUVControl(CQNewGLModel *app) :
+ app_(app)
 {
   setObjectName("uvControl");
 
+  setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
   layout_ = new QVBoxLayout(this);
 
-  objectsList_ = new CQNewGLObjectsList(control);
+  //---
+
+  objectsList_ = new CQNewGLObjectsList(app->canvas());
 
   layout_->addWidget(objectsList_);
 
@@ -3133,7 +3168,11 @@ CQNewGLUVControl(CQNewGLControl *control) :
 
   layout_->addStretch(1);
 
+  //---
+
   connectSlots(true);
+
+  updateWidgets();
 }
 
 void
@@ -3160,11 +3199,20 @@ updateObjects()
 
 void
 CQNewGLUVControl::
+updateWidgets()
+{
+  updateObjects();
+}
+
+void
+CQNewGLUVControl::
 objectSelectedSlot()
 {
   auto *object = objectsList_->getSelectedIndObject();
 
-  uvMap()->setObject(object);
+  auto *uvMap = app_->uvMap();
+
+  uvMap->setObject(object);
 }
 
 void
@@ -3182,7 +3230,9 @@ typeChanged(int ind)
     case 4: textureType = CQNewGLUVMap::TextureType::EMISSIVE; break;
   }
 
-  control_->uvMap()->setTextureType(textureType);
+  auto *uvMap = app_->uvMap();
+
+  uvMap->setTextureType(textureType);
 }
 
 //---
@@ -3202,7 +3252,7 @@ CQNewGLAnimControl(CQNewGLControl *control) :
   nameCombo_ = addLabelEdit("Name", new QComboBox);
   timeEdit_  = addLabelEdit("Time", new CQRealSpin);
 
-//objectsList_ = new CQNewGLObjectsList(control);
+//objectsList_ = new CQNewGLObjectsList(control->canvas());
 
 //layout_->addWidget(objectsList_);
 
@@ -3283,7 +3333,9 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   //---
 
-  connect(canvas(), SIGNAL(timerStep()), this, SLOT(timerSlot()));
+  auto *app = control_->app();
+
+  connect(app, SIGNAL(timerStep()), this, SLOT(timerSlot()));
 }
 
 #if 0
@@ -3308,8 +3360,9 @@ updateWidgets()
   //---
 
   auto *canvas = control_->canvas();
+  auto *app    = canvas->app();
 
-  enabledCheck_->setChecked(canvas->isAnimEnabled());
+  enabledCheck_->setChecked(app->isAnimEnabled());
 
   bonesCheck_       ->setChecked(canvas->isBonesEnabled());
   boneVerticesCheck_->setChecked(canvas->isShowBoneVertices());
@@ -3387,16 +3440,15 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, nameCombo_, SIGNAL(currentIndexChanged(int)),
                             this, SLOT(nameChanged(int)));
 
-  if (b) {
-    connect(timeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLAnimControl::timeSlot);
+  CQUtil::connectDisconnect(b, timeEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(timeSlot(double)));
 
+  if (b) {
 //  connect(objectsList_, &CQNewGLObjectsList::currentItemChanged,
 //          this, &CQNewGLAnimControl::objectSelectedSlot);
 
   }
   else {
-    disconnect(timeEdit_, &CQRealSpin::realValueChanged, this, &CQNewGLAnimControl::timeSlot);
-
 //  disconnect(objectsList_, &CQNewGLObjectsList::currentItemChanged,
 //             this, &CQNewGLAnimControl::objectSelectedSlot);
 
@@ -3408,8 +3460,10 @@ CQNewGLAnimControl::
 enabledSlot(int state)
 {
   auto *canvas = control_->canvas();
+  auto *app    = canvas->app();
 
-  canvas->setAnimEnabled(state);
+  app->setAnimEnabled(state);
+
   canvas->updateObjectsData();
   canvas->update();
 }
@@ -3531,8 +3585,10 @@ nameChanged(int ind)
   auto name = nameCombo_->itemText(ind);
 
   auto *canvas = control_->canvas();
+  auto *app    = canvas->app();
 
-  canvas->setAnimName(name);
+  app->setAnimName(name);
+
   canvas->updateObjectsData();
   canvas->update();
 
@@ -3547,8 +3603,9 @@ CQNewGLAnimControl::
 timeSlot(double t)
 {
   auto *canvas = control_->canvas();
+  auto *app    = canvas->app();
 
-  canvas->setTime(t);
+  app->setTime(t);
 
   if (canvas->isShowBonePoints())
     canvas->updateObjectsData();
@@ -3561,9 +3618,9 @@ CQNewGLAnimControl::
 playSlot()
 {
   if (! running_) {
-    auto *canvas = control_->canvas();
+    auto *app = control_->app();
 
-    canvas->startTimer();
+    app->startTimer();
   }
 
   step();
@@ -3713,30 +3770,25 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, bonesList_, SIGNAL(currentItemChanged()),
                             this, SLOT(bonesListSlot()));
 
+  CQUtil::connectDisconnect(b, matrixCombo_, SIGNAL(currentIndexChanged(int)),
+                            this, SLOT(matrixTypeChanged(int)));
+  CQUtil::connectDisconnect(b, animNameCombo_, SIGNAL(currentIndexChanged(int)),
+                            this, SLOT(animNameChanged(int)));
+
   if (b) {
-    connect(matrixCombo_, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(matrixTypeChanged(int)));
-    connect(animNameCombo_, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(animNameChanged(int)));
     connect(animTimeEdit_, &CQRealSpin::realValueChanged,
             this, &CQNewGLBonesControl::animTimeSlot);
-//  connect(isJointCheck_, SIGNAL(stateChanged(int)),
-//          this, SLOT(isJointSlot(int)));
-    connect(inverseCheck_, SIGNAL(stateChanged(int)),
-            this, SLOT(inverseSlot(int)));
   }
   else {
-    disconnect(matrixCombo_, SIGNAL(currentIndexChanged(int)),
-               this, SLOT(matrixTypeChanged(int)));
-    disconnect(animNameCombo_, SIGNAL(currentIndexChanged(int)),
-               this, SLOT(animNameChanged(int)));
     disconnect(animTimeEdit_, &CQRealSpin::realValueChanged,
                this, &CQNewGLBonesControl::animTimeSlot);
-//  disconnect(isJointCheck_, SIGNAL(stateChanged(int)),
-//             this, SLOT(isJointSlot(int)));
-    disconnect(inverseCheck_, SIGNAL(stateChanged(int)),
-               this, SLOT(inverseSlot(int)));
   }
+
+//CQUtil::connectDisconnect(b, isJointCheck_, SIGNAL(stateChanged(int)),
+//                          this, SLOT(isJointSlot(int)));
+
+  CQUtil::connectDisconnect(b, inverseCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(inverseSlot(int)));
 }
 
 void
@@ -3930,12 +3982,15 @@ void
 CQNewGLTerrainControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas  = this->canvas();
+  auto *terrain = canvas->getTerrain();
+  if (! terrain) return;
 
   //---
 
-  auto *canvas  = this->canvas();
-  auto *terrain = canvas->getTerrain();
+  connectSlots(false);
+
+  //---
 
   widthEdit_ ->setValue(terrain->width ());
   heightEdit_->setValue(terrain->height());
@@ -4085,12 +4140,15 @@ void
 CQNewGLMazeControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas = this->canvas();
+  auto *maze   = canvas->getMaze();
+  if (! maze) return;
 
   //---
 
-  auto *canvas = this->canvas();
-  auto *maze   = canvas->getMaze();
+  connectSlots(false);
+
+  //---
 
   widthEdit_ ->setValue(maze->width ());
   heightEdit_->setValue(maze->height());
@@ -4185,27 +4243,29 @@ connectSlots(bool b)
   if (b) {
     connect(widthEdit_, &CQRealSpin::realValueChanged,
             this, &CQNewGLSkyboxControl::widthSlot);
-    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
-            this, SLOT(wireframeSlot(int)));
   }
   else {
     disconnect(widthEdit_, &CQRealSpin::realValueChanged,
                this, &CQNewGLSkyboxControl::widthSlot);
-    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
-               this, SLOT(wireframeSlot(int)));
   }
+
+  CQUtil::connectDisconnect(b, wireframeCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(wireframeSlot(int)));
 }
 
 void
 CQNewGLSkyboxControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas = this->canvas();
+  auto *skybox = canvas->getSkybox();
+  if (! skybox) return;
 
   //---
 
-  auto *canvas = this->canvas();
-  auto *skybox = canvas->getSkybox();
+  connectSlots(false);
+
+  //---
 
   dirNameEdit_   ->setText(skybox->dirName());
   widthEdit_     ->setValue(skybox->width());
@@ -4350,22 +4410,12 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, runningCheck_, SIGNAL(stateChanged(int)),
                             this, SLOT(runningSlot(int)));
 
-  if (b) {
-    connect(positionEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLEmitterControl::positionSlot);
-    connect(minVelocityEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLEmitterControl::minVelocitySlot);
-    connect(maxVelocityEdit_, &CQPoint3DEdit::editingFinished,
-            this, &CQNewGLEmitterControl::maxVelocitySlot);
-  }
-  else {
-    disconnect(positionEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLEmitterControl::positionSlot);
-    disconnect(minVelocityEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLEmitterControl::minVelocitySlot);
-    disconnect(maxVelocityEdit_, &CQPoint3DEdit::editingFinished,
-               this, &CQNewGLEmitterControl::maxVelocitySlot);
-  }
+  CQUtil::connectDisconnect(b, positionEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(positionSlot()));
+  CQUtil::connectDisconnect(b, minVelocityEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(minVelocitySlot()));
+  CQUtil::connectDisconnect(b, maxVelocityEdit_, SIGNAL(editingFinished()),
+                            this, SLOT(maxVelocitySlot()));
 
   CQUtil::connectDisconnect(b, intervalSpin_, SIGNAL(valueChanged(int)),
                             this, SLOT(intervalSlot(int)));
@@ -4391,11 +4441,15 @@ void
 CQNewGLEmitterControl::
 updateWidgets()
 {
-  connectSlots(false);
+  auto *canvas  = this->canvas();
+  auto *emitter = canvas->getCurrentEmitter();
+  if (! emitter) return;
 
   //---
 
-  auto *canvas  = this->canvas();
+  connectSlots(false);
+
+  //---
 
   if (listInvalid_) {
     listInvalid_ = false;
@@ -4418,9 +4472,6 @@ updateWidgets()
       ++ind;
     }
   }
-
-  auto *emitter = canvas->getCurrentEmitter();
-  if (! emitter) return;
 
   enabledCheck_    ->setChecked(emitter->isEnabled());
   runningCheck_    ->setChecked(emitter->isRunning());
@@ -4662,11 +4713,12 @@ CQNewGLEmitterControl::
 addSlot()
 {
   auto *canvas = this->canvas();
+  auto *app    = canvas->app();
 
   canvas->addEmitter();
 
-  if (! canvas->isTimerRunning())
-    canvas->setTimerRunning(true);
+  if (! app->isTimerRunning())
+    app->setTimerRunning(true);
 
   listInvalid_ = true;
 
@@ -4679,21 +4731,24 @@ addSlot()
 //---
 
 CQNewGLFractalControl::
-CQNewGLFractalControl(CQNewGLControl *control) :
- CQNewGLControlFrame(control)
+CQNewGLFractalControl(CQNewGLModel *app) :
+ app_(app)
 {
   setObjectName("fractalControl");
+
+  setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
   layout_ = new QVBoxLayout(this);
 
   //--
 
-  typeCombo_ = new QComboBox;
+  typeCombo_ = addLabelEdit("Type", new QComboBox);
   typeCombo_->addItems(QStringList() << "Lorenz");
-  addLabelEdit("Type", typeCombo_ );
 
-  wireframeCheck_ = new QCheckBox;
-  addLabelEdit("Wireframe", wireframeCheck_);
+  wireframeCheck_ = addLabelEdit("Wireframe" , new QCheckBox);
+  textureCheck_   = addLabelEdit("Texture"   , new QCheckBox);
+  axesCheck_      = addLabelEdit("Axes"      , new QCheckBox);
+  pointSizeEdit_  = addLabelEdit("Point Size", new CQRealSpin);
 
   layout_->addStretch(1);
 
@@ -4706,7 +4761,7 @@ CQNewGLFractalControl(CQNewGLControl *control) :
 
   auto *generateButton = new QPushButton("Generate");
 
-  connect(generateButton, &QPushButton::clicked, this, &CQNewGLFractalControl::generateSlot);
+  connect(generateButton, SIGNAL(clicked()), this, SLOT(generateSlot()));
 
   buttonsLayout->addWidget(generateButton);
   buttonsLayout->addStretch(1);
@@ -4714,6 +4769,8 @@ CQNewGLFractalControl(CQNewGLControl *control) :
   //---
 
   connectSlots(true);
+
+  updateWidgets();
 }
 
 void
@@ -4722,29 +4779,36 @@ connectSlots(bool b)
 {
   CQUtil::connectDisconnect(b, typeCombo_, SIGNAL(currentIndexChanged(int)),
                             this, SLOT(typeSlot(int)));
-
-  if (b) {
-    connect(wireframeCheck_, SIGNAL(stateChanged(int)),
-            this, SLOT(wireframeSlot(int)));
-  }
-  else {
-    disconnect(wireframeCheck_, SIGNAL(stateChanged(int)),
-               this, SLOT(wireframeSlot(int)));
-  }
+  CQUtil::connectDisconnect(b, wireframeCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(wireframeSlot(int)));
+  CQUtil::connectDisconnect(b, textureCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(textureSlot(int)));
+  CQUtil::connectDisconnect(b, axesCheck_, SIGNAL(stateChanged(int)),
+                            this, SLOT(axesSlot(int)));
+  CQUtil::connectDisconnect(b, pointSizeEdit_, SIGNAL(realValueChanged(double)),
+                            this, SLOT(pointSizeSlot(double)));
 }
 
 void
 CQNewGLFractalControl::
 updateWidgets()
 {
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
+  if (! fractal) return;
+
+  auto *axes = fractalWidget->getAxes();
+
+  //---
+
   connectSlots(false);
 
   //---
 
-  auto *canvas  = this->canvas();
-  auto *fractal = canvas->getFractal();
-
   wireframeCheck_->setChecked(fractal->isWireframe());
+  textureCheck_  ->setChecked(fractal->isTextured());
+  axesCheck_     ->setChecked(axes ? axes->isVisible() : false);
+  pointSizeEdit_ ->setValue  (fractal->pointSize());
 
   //---
 
@@ -4755,8 +4819,8 @@ void
 CQNewGLFractalControl::
 typeSlot(int ind)
 {
-  auto *canvas  = this->canvas();
-  auto *fractal = canvas->getFractal();
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
 
   if (ind == 0)
     fractal->setType(CQNewGLFractal::Type::LORENZ);
@@ -4766,24 +4830,63 @@ void
 CQNewGLFractalControl::
 wireframeSlot(int state)
 {
-  auto *canvas  = this->canvas();
-  auto *fractal = canvas->getFractal();
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
 
   fractal->setWireframe(state);
-  canvas->update();
+
+  fractalWidget->update();
+}
+
+void
+CQNewGLFractalControl::
+textureSlot(int state)
+{
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
+
+  fractal->setTextured(state);
+
+  fractalWidget->update();
+}
+
+void
+CQNewGLFractalControl::
+axesSlot(int state)
+{
+  auto *fractalWidget = app_->fractalWidget();
+
+  auto *axes = fractalWidget->getAxes();
+  if (! axes) return;
+
+  axes->setVisible(state);
+
+  fractalWidget->update();
+}
+
+void
+CQNewGLFractalControl::
+pointSizeSlot(double r)
+{
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
+
+  fractal->setPointSize(r);
+
+  fractalWidget->update();
 }
 
 void
 CQNewGLFractalControl::
 generateSlot()
 {
-  auto *canvas  = this->canvas();
-  auto *fractal = canvas->getFractal();
+  auto *fractalWidget = app_->fractalWidget();
+  auto *fractal       = fractalWidget->fractal();
 
   fractal->setActive(true);
 
-  canvas->updateFractal();
-  canvas->update();
+  fractalWidget->updateFractal();
+  fractalWidget->update();
 }
 
 //---
@@ -5352,8 +5455,8 @@ updateShape(CQNewGLShape *shape)
 //---
 
 CQNewGLObjectsList::
-CQNewGLObjectsList(CQNewGLControl *control) :
- QFrame(nullptr), control_(control)
+CQNewGLObjectsList(CQNewGLCanvas *canvas) :
+ QFrame(nullptr), canvas_(canvas)
 {
   auto *layout = new QVBoxLayout(this);
 
@@ -5376,7 +5479,7 @@ updateObjects()
 
   //---
 
-  auto *canvas = control_->canvas();
+  auto *canvas = this->canvas_;
 
   tree_->clear();
 
@@ -5438,9 +5541,10 @@ void
 CQNewGLObjectsList::
 connectSlots(bool b)
 {
-  auto *canvas = control_->canvas();
+  auto *canvas = this->canvas_;
+  auto *app    = canvas->app();
 
-  CQUtil::connectDisconnect(b, canvas, SIGNAL(modelAdded()), this, SLOT(updateObjects()));
+  CQUtil::connectDisconnect(b, app, SIGNAL(modelAdded()), this, SLOT(updateObjects()));
 
   if (b) {
     connect(tree_, &QTreeWidget::currentItemChanged,
@@ -5466,7 +5570,7 @@ CGeomObject3D *
 CQNewGLObjectsList::
 getSelectedIndObject() const
 {
-  auto *canvas = control_->canvas();
+  auto *canvas = this->canvas_;
 
   return canvas->getObject(selectedInd_);
 }
@@ -5475,7 +5579,7 @@ CGeomObject3D *
 CQNewGLObjectsList::
 getObjectListSelected() const
 {
-  auto *canvas = control_->canvas();
+  auto *canvas = this->canvas_;
 
   auto selectedItems = tree_->selectedItems();
 
@@ -5566,7 +5670,7 @@ currentItemSlot(QListWidgetItem *item, QListWidgetItem *)
   if (isUpdateCurrent())
     canvas->setCurrentCamera(currentCamera_);
 
-  updateWidgets();
+  //updateWidgets();
 
   canvas->update();
 
@@ -5655,9 +5759,11 @@ currentItemSlot(QListWidgetItem *item, QListWidgetItem *)
 
   canvas->setCurrentLight(ind);
 
-  updateWidgets();
+  //updateWidgets();
 
   canvas->update();
+
+  Q_EMIT currentItemChanged();
 }
 
 //---

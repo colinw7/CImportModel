@@ -1,35 +1,28 @@
 #include <CQNewGLWireframe.h>
 #include <CQNewGLShaderProgram.h>
 #include <CQNewGLCanvas.h>
+#include <CQNewGLModel.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 
-CQNewGLShaderProgram* CQNewGLWireframe::shaderProgram_;
-
-void
-CQNewGLWireframe::
-initShader(CQNewGLCanvas *canvas)
-{
-  shaderProgram_ = new CQNewGLShaderProgram(canvas);
-
-  shaderProgram_->addShaders("wireframe.vs", "wireframe.fs");
-}
-
 CQNewGLWireframe::
 CQNewGLWireframe(CQNewGLCanvas *canvas) :
- CQNewGLObject(canvas)
+ CQNewGLObject(canvas), canvas_(canvas)
 {
+}
+
+CQNewGLShaderProgram *
+CQNewGLWireframe::
+shaderProgram()
+{
+  return canvas_->getShader("wireframe.vs", "wireframe.fs");
 }
 
 void
 CQNewGLWireframe::
 updateGeometry()
 {
-  if (! shaderProgram_)
-    initShader(canvas_);
-
-  //---
-
   initBuffer();
 
   //---
@@ -74,7 +67,7 @@ addBufferWireframe(CQNewGLObject *object, int &offset)
 
     faceData1.pos += offset;
 
-    faceDatas_.push_back(faceData1);
+    faceDataList_.faceDatas.push_back(faceData1);
 
     offset1 = faceData.pos + faceData.len;
   }
@@ -89,15 +82,17 @@ void
 CQNewGLWireframe::
 drawGeometry()
 {
+  auto *program = shaderProgram();
+
   buffer_->bind();
 
-  shaderProgram_->bind();
+  program->bind();
 
   //---
 
   // model matrix
   auto modelMatrix = CMatrix3D::identity();
-  canvas_->addShaderMVP(shaderProgram_, modelMatrix);
+  canvas_->addShaderMVP(program, modelMatrix);
 
   //---
 
@@ -113,5 +108,5 @@ drawGeometry()
 
   //---
 
-  shaderProgram_->release();
+  program->release();
 }
