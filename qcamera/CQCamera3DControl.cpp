@@ -6,6 +6,7 @@
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DAxes.h>
+#include <CQCamera3DObjectsList.h>
 #include <CQCamera3DTextureChooser.h>
 #include <CQCamera3DUtil.h>
 
@@ -22,15 +23,16 @@
 #include <CGeomTorus3D.h>
 #include <CQGLTexture.h>
 
-#if 0
 #include <CQMatrix3D.h>
-#endif
 #include <CQPoint3DEdit.h>
 #include <CQRealSpin.h>
 #include <CQColorEdit.h>
+#include <CQTextLabel.h>
 #include <CQUtil.h>
+#include <CStrUtil.h>
 
 #include <QFileDialog>
+#include <QTextEdit>
 #include <QGroupBox>
 #include <QComboBox>
 #include <QLabel>
@@ -83,6 +85,10 @@ CQCamera3DControl::
 CQCamera3DControl(CQCamera3DApp *app) :
  app_(app)
 {
+  auto *canvas = app_->canvas();
+
+  //---
+
   setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
   auto *layout = new QVBoxLayout(this);
@@ -232,8 +238,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   addStretch();
 
-  auto *buttonFrame = new QFrame;
-  auto *buttonayout = new QHBoxLayout(buttonFrame);
+  auto *buttonFrame  = new QFrame;
+  auto *buttonLayout = new QHBoxLayout(buttonFrame);
 
   currentLayout->addWidget(buttonFrame);
 
@@ -247,11 +253,11 @@ CQCamera3DControl(CQCamera3DApp *app) :
   connect(sideButton, SIGNAL(clicked()), this, SLOT(sideSlot()));
   connect(frontButton, SIGNAL(clicked()), this, SLOT(frontSlot()));
 
-  buttonayout->addWidget(resetButton);
-  buttonayout->addWidget(topButton);
-  buttonayout->addWidget(sideButton);
-  buttonayout->addWidget(frontButton);
-  buttonayout->addStretch(1);
+  buttonLayout->addWidget(resetButton);
+  buttonLayout->addWidget(topButton);
+  buttonLayout->addWidget(sideButton);
+  buttonLayout->addWidget(frontButton);
+  buttonLayout->addStretch(1);
 
   //------
 
@@ -296,35 +302,102 @@ CQCamera3DControl(CQCamera3DApp *app) :
   selectTypeCombo_ = addLabelEdit("Select", new QComboBox);
   selectTypeCombo_->addItems(selectTypeInd.names());
 
-  objectIndLabel_ = addLabelEdit("Name", new QLabel);
+  objectIndLabel_ = addLabelEdit("Name", new CQTextLabel);
   objectVisCheck_ = addLabelEdit("Visible", new QCheckBox);
-
-#if 0
-  objectMatrix_ = new CQMatrix3D;
-  selectionLayout->addWidget(objectMatrix_);
-#else
-  translationEdit_ = addLabelEdit("Translation", new CQPoint3DEdit);
-  rotationEdit_    = addLabelEdit("Rotation"   , new CQPoint3DEdit);
-  scaleEdit_       = addLabelEdit("Scale"      , new CQPoint3DEdit);
-#endif
 
   objectColor_ = addLabelEdit("Color", new CQColorEdit);
 
-  diffuseTextureEdit_  = addLabelEdit("Diffuse Texture" , new CQCamera3DTextureChooser(app_));
-  specularTextureEdit_ = addLabelEdit("Specular Texture", new CQCamera3DTextureChooser(app_));
-  normalTextureEdit_   = addLabelEdit("Normal Texture"  , new CQCamera3DTextureChooser(app_));
-  emissiveTextureEdit_ = addLabelEdit("Emissive Texture", new CQCamera3DTextureChooser(app_));
+  //---
 
-  addStretch();
+  auto *transformGroup  = new QGroupBox("Transform");
+  auto *transformLayout = new QVBoxLayout(transformGroup);
+
+  currentLayout->addWidget(transformGroup);
+
+  currentLayout = transformLayout;
+
+  objectMatrix_ = new CQMatrix3D;
+  selectionLayout->addWidget(objectMatrix_);
+
+  translationEdit_ = addLabelEdit("Translation", new CQPoint3DEdit);
+  rotationEdit_    = addLabelEdit("Rotation"   , new CQPoint3DEdit);
+  scaleEdit_       = addLabelEdit("Scale"      , new CQPoint3DEdit);
+
+  currentLayout = selectionLayout;
+
+  //---
+
+  auto *texturesGroup  = new QGroupBox("Textures");
+  auto *texturesLayout = new QVBoxLayout(texturesGroup);
+
+  currentLayout->addWidget(texturesGroup);
+
+  currentLayout = texturesLayout;
+
+  diffuseTextureEdit_  = addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
+  specularTextureEdit_ = addLabelEdit("Specular", new CQCamera3DTextureChooser(app_));
+  normalTextureEdit_   = addLabelEdit("Normal"  , new CQCamera3DTextureChooser(app_));
+  emissiveTextureEdit_ = addLabelEdit("Emissive", new CQCamera3DTextureChooser(app_));
+
+  auto *texturesButtonsFrame  = new QFrame;
+  auto *texturesButtonsLayout = new QHBoxLayout(texturesButtonsFrame);
+
+  currentLayout->addWidget(texturesButtonsFrame);
+
+  auto *addTextureButton     = new QPushButton("Add Texture");
+  auto *loadTextureMapButton = new QPushButton("Load Texture Map");
+
+  connect(addTextureButton, SIGNAL(clicked()), this, SLOT(addTextureSlot()));
+  connect(loadTextureMapButton, SIGNAL(clicked()), this, SLOT(loadTextureMapSlot()));
+
+  texturesButtonsLayout->addWidget(addTextureButton);
+  texturesButtonsLayout->addWidget(loadTextureMapButton);
+  texturesButtonsLayout->addStretch(1);
+
+  currentLayout = selectionLayout;
+
+  //---
+
+  auto *modGroup  = new QGroupBox("Modify");
+  auto *modLayout = new QHBoxLayout(modGroup);
+
+  currentLayout->addWidget(modGroup);
+
+  currentLayout = modLayout;
+
+  auto *swapYZButton  = new QPushButton("Swap YZ");
+  auto *invertXButton = new QPushButton("Invert X");
+  auto *invertYButton = new QPushButton("Invert Y");
+  auto *invertZButton = new QPushButton("Invert Z");
+
+  connect(swapYZButton , SIGNAL(clicked()), this, SLOT(swapYZSlot()));
+  connect(invertXButton, SIGNAL(clicked()), this, SLOT(invertXSlot()));
+  connect(invertYButton, SIGNAL(clicked()), this, SLOT(invertYSlot()));
+  connect(invertZButton, SIGNAL(clicked()), this, SLOT(invertZSlot()));
+
+  currentLayout->addWidget(swapYZButton);
+  currentLayout->addWidget(invertXButton);
+  currentLayout->addWidget(invertYButton);
+  currentLayout->addWidget(invertZButton);
+
+  currentLayout = selectionLayout;
+
+  //---
+
+  objectInfoText_ = new QTextEdit;
+
+  objectInfoText_->setReadOnly(true);
+
+  currentLayout->addWidget(objectInfoText_);
+
+  //addStretch();
+
+  //---
 
   auto *selectButtonFrame  = new QFrame;
   auto *selectButtonLayout = new QHBoxLayout(selectButtonFrame);;
 
   currentLayout->addWidget(selectButtonFrame);
-
-  auto *addTextureButton = new QPushButton("Add Texture");
-
-  connect(addTextureButton, SIGNAL(clicked()), this, SLOT(addTextureSlot()));
 
   auto *selectParentButton = new QPushButton("Select Parent");
 
@@ -334,7 +407,6 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   connect(deselectButton, SIGNAL(clicked()), this, SLOT(deselectSlot()));
 
-  selectButtonLayout->addWidget(addTextureButton);
   selectButtonLayout->addWidget(selectParentButton);
   selectButtonLayout->addWidget(deselectButton);
   selectButtonLayout->addStretch(1);
@@ -348,17 +420,35 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   currentLayout = objectsLayout;
 
+  objectsList_ = new CQCamera3DObjectsList(canvas);
+
+  currentLayout->addWidget(objectsList_);
+
+  auto *objectSelectButton = new QPushButton("Select");
+  auto *objectZoomButton   = new QPushButton("Zoom");
+
+  connect(objectSelectButton, SIGNAL(clicked()), this, SLOT(objectSelectSlot()));
+  connect(objectZoomButton, SIGNAL(clicked()), this, SLOT(objectZoomSlot()));
+
+  currentLayout->addWidget(objectSelectButton);
+  currentLayout->addWidget(objectZoomButton);
+
+  auto *addShapeFrame  = new QFrame;
+  auto *addShapeLayout = new QVBoxLayout(addShapeFrame);;
+
+  currentLayout->addWidget(addShapeFrame);
+
   auto *addCubeButton     = new QPushButton("Add Cube");
   auto *addCylinderButton = new QPushButton("Add Cylinder");
   auto *addPyramidButton  = new QPushButton("Add Pyramid");
   auto *addSphereButton   = new QPushButton("Add Sphere");
   auto *addTorusButton    = new QPushButton("Add Torus");
 
-  currentLayout->addWidget(addCubeButton);
-  currentLayout->addWidget(addCylinderButton);
-  currentLayout->addWidget(addPyramidButton);
-  currentLayout->addWidget(addSphereButton);
-  currentLayout->addWidget(addTorusButton);
+  addShapeLayout->addWidget(addCubeButton);
+  addShapeLayout->addWidget(addCylinderButton);
+  addShapeLayout->addWidget(addPyramidButton);
+  addShapeLayout->addWidget(addSphereButton);
+  addShapeLayout->addWidget(addTorusButton);
 
   connect(addCubeButton, SIGNAL(clicked()), this, SLOT(addCubeSlot()));
   connect(addCylinderButton, SIGNAL(clicked()), this, SLOT(addCylinderSlot()));
@@ -366,7 +456,7 @@ CQCamera3DControl(CQCamera3DApp *app) :
   connect(addSphereButton, SIGNAL(clicked()), this, SLOT(addSphereSlot()));
   connect(addTorusButton, SIGNAL(clicked()), this, SLOT(addTorusSlot()));
 
-  auto *addButton = new QPushButton("Add");
+  auto *addButton = new QPushButton("Add File");
 
   connect(addButton, SIGNAL(clicked()), this, SLOT(addModelSlot()));
 
@@ -455,39 +545,41 @@ updateWidgets()
 
   auto selectType = canvas->selectType();
 
-#if 0
-  objectMatrix_->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT);
-#else
+  objectMatrix_   ->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT);
   translationEdit_->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT);
   rotationEdit_   ->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT);
   scaleEdit_      ->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT);
-#endif
 
-  objectColor_->setEnabled(selectType == CQCamera3DCanvas::SelectType::OBJECT ||
-                           selectType == CQCamera3DCanvas::SelectType::FACE);
+  objectColor_->setEnabled(false);
+
+  objectIndLabel_->setText("");
+  objectVisCheck_->setChecked(false);
+
+  objectInfoText_->setText("");
 
   if      (selectType == CQCamera3DCanvas::SelectType::OBJECT) {
-    auto *currentObject = canvas->currentObject();
+    auto *object = canvas->currentObject();
 
-    if (currentObject) {
-      auto name = QString::fromStdString(currentObject->getName());
+    if (object) {
+      auto name = QString::fromStdString(object->getName());
 
-      objectIndLabel_->setText(QString("%1 (#%2)").arg(name).arg(currentObject->getInd()));
+      objectIndLabel_->setText(QString("%1 (#%2)").arg(name).arg(object->getInd()));
 
-      objectColor_->setColor(RGBAToQColor(currentObject->getFaceColor()));
+      objectVisCheck_->setChecked(object->getSelected());
 
-#if 0
-      objectMatrix_->setValue(currentObject->getTransform());
-#else
-      translationEdit_->setValue(currentObject->translation());
-      rotationEdit_   ->setValue(currentObject->rotationAngles());
-      scaleEdit_      ->setValue(currentObject->scale());
-#endif
+      objectColor_->setEnabled(true);
+      objectColor_->setColor(RGBAToQColor(object->getFaceColor()));
 
-      auto *diffuseTexture  = currentObject->getDiffuseTexture();
-      auto *specularTexture = currentObject->getSpecularTexture();
-      auto *normalTexture   = currentObject->getNormalTexture();
-      auto *emissiveTexture = currentObject->getEmissiveTexture();
+      objectMatrix_->setValue(object->getTransform());
+
+      translationEdit_->setValue(object->translationValues());
+      rotationEdit_   ->setValue(object->rotationValuesDeg());
+      scaleEdit_      ->setValue(object->scaleValues());
+
+      auto *diffuseTexture  = object->getDiffuseTexture();
+      auto *specularTexture = object->getSpecularTexture();
+      auto *normalTexture   = object->getNormalTexture();
+      auto *emissiveTexture = object->getEmissiveTexture();
 
       diffuseTextureEdit_  ->setTextureName(
         diffuseTexture ? QString::fromStdString(diffuseTexture->name()) : "");
@@ -498,18 +590,53 @@ updateWidgets()
       emissiveTextureEdit_ ->setTextureName(
         emissiveTexture ? QString::fromStdString(emissiveTexture->name()) : "");
 
-      objectVisCheck_->setChecked(currentObject->getSelected());
+      QString objStr;
+
+      const auto &faces = object->getFaces();
+
+      objStr += QString("Faces: %1\n").arg(faces.size());
+
+      uint nv = 0;
+      uint nt = 0;
+
+      for (const auto *face : faces) {
+        const auto &vertices = face->getVertices();
+        const auto &tpoints  = face->getTexturePoints();
+
+        nv += vertices.size();
+        nt += tpoints .size();
+      }
+
+      objStr += QString("Vertices: %1\n").arg(nv);
+      objStr += QString("Texture Points: %1\n").arg(nt);
+
+      objectInfoText_->setText(objStr);
     }
   }
   else if (selectType == CQCamera3DCanvas::SelectType::FACE) {
-    auto *currentFace = canvas->currentFace();
+    auto *face = canvas->currentFace();
 
-    if (currentFace) {
-      objectIndLabel_->setText(QString("%1").arg(currentFace->getInd()));
+    if (face) {
+      objectIndLabel_->setText(QString("%1").arg(face->getInd()));
 
-      objectColor_->setColor(RGBAToQColor(currentFace->getColor()));
+      objectColor_->setEnabled(true);
+      objectColor_->setColor(RGBAToQColor(face->getColor()));
 
-      objectVisCheck_->setChecked(currentFace->getSelected());
+      objectVisCheck_->setChecked(face->getSelected());
+
+      auto *diffuseTexture  = face->getDiffuseTexture();
+      auto *specularTexture = face->getSpecularTexture();
+      auto *normalTexture   = face->getNormalTexture();
+      auto *emissiveTexture = face->getEmissiveTexture();
+
+      diffuseTextureEdit_  ->setTextureName(
+        diffuseTexture ? QString::fromStdString(diffuseTexture->name()) : "");
+      specularTextureEdit_ ->setTextureName(
+        specularTexture ? QString::fromStdString(specularTexture->name()) : "");
+      normalTextureEdit_   ->setTextureName(
+        normalTexture ? QString::fromStdString(normalTexture->name()) : "");
+      emissiveTextureEdit_ ->setTextureName(
+        emissiveTexture ? QString::fromStdString(emissiveTexture->name()) : "");
     }
   }
 
@@ -525,6 +652,11 @@ void
 CQCamera3DControl::
 connectSlots(bool b)
 {
+  auto *canvas = app_->canvas();
+
+  CQUtil::connectDisconnect(b, canvas, SIGNAL(stateChanged()),
+                            this, SLOT(updateWidgets()));
+
   // General
   CQUtil::connectDisconnect(b, showWireframeCheck_, SIGNAL(stateChanged(int)),
                             this, SLOT(showWireframeSlot(int)));
@@ -641,6 +773,10 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, emissiveTextureEdit_, SIGNAL(textureChanged()),
                             this, SLOT(emissiveMapSlot()));
 
+  // Selection
+  CQUtil::connectDisconnect(b, canvas, SIGNAL(objectsChanged()),
+                            objectsList_, SLOT(updateObjects()));
+
   // Overview
   CQUtil::connectDisconnect(b, overviewEqualScale_, SIGNAL(stateChanged(int)),
                             this, SLOT(overviewEqualScaleSlot(int)));
@@ -732,16 +868,16 @@ objectVisSlot(int i)
   auto selectType = canvas->selectType();
 
   if      (selectType == CQCamera3DCanvas::SelectType::OBJECT) {
-    auto *currentObject = canvas->currentObject();
+    auto *object = canvas->currentObject();
 
-    if (currentObject)
-      currentObject->setVisible(i);
+    if (object)
+      object->setVisible(i);
   }
   else if (selectType == CQCamera3DCanvas::SelectType::FACE) {
-    auto *currentFace = canvas->currentFace();
+    auto *face = canvas->currentFace();
 
-    if (currentFace)
-      currentFace->setVisible(i);
+    if (face)
+      face->setVisible(i);
   }
 
   updateObjects();
@@ -1029,11 +1165,10 @@ CQCamera3DControl::
 objectMatrixSlot()
 {
   auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
 
-  auto *currentObject = canvas->currentObject();
-
-  if (currentObject) {
-    currentObject->setTransform(objectMatrix_->getValue());
+  if (object) {
+    object->setTransform(objectMatrix_->getValue());
 
     updateObjects();
   }
@@ -1044,13 +1179,12 @@ CQCamera3DControl::
 translationSlot()
 {
   auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
 
-  auto *currentObject = canvas->currentObject();
-
-  if (currentObject) {
+  if (object) {
     auto p = translationEdit_->getValue();
 
-    currentObject->setTranslation(p);
+    object->setTranslationValues(p);
 
     updateObjects();
   }
@@ -1061,13 +1195,12 @@ CQCamera3DControl::
 rotationSlot()
 {
   auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
 
-  auto *currentObject = canvas->currentObject();
-
-  if (currentObject) {
+  if (object) {
     auto p = rotationEdit_->getValue();
 
-    currentObject->setRotationAngles(p);
+    object->setRotationValuesDeg(p);
 
     updateObjects();
   }
@@ -1078,13 +1211,12 @@ CQCamera3DControl::
 scaleSlot()
 {
   auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
 
-  auto *currentObject = canvas->currentObject();
-
-  if (currentObject) {
+  if (object) {
     auto p = scaleEdit_->getValue();
 
-    currentObject->setScale(p);
+    object->setScaleValues(p);
 
     updateObjects();
   }
@@ -1100,16 +1232,16 @@ objectColorSlot(const QColor &c)
   auto selectType = canvas->selectType();
 
   if      (selectType == CQCamera3DCanvas::SelectType::OBJECT) {
-    auto *currentObject = canvas->currentObject();
+    auto *object = canvas->currentObject();
 
-    if (currentObject)
-      currentObject->setFaceColor(QColorToRGBA(c));
+    if (object)
+      object->setFaceColor(QColorToRGBA(c));
   }
   else if (selectType == CQCamera3DCanvas::SelectType::FACE) {
-    auto *currentFace = canvas->currentFace();
+    auto *face = canvas->currentFace();
 
-    if (currentFace)
-      currentFace->setColor(QColorToRGBA(c));
+    if (face)
+      face->setColor(QColorToRGBA(c));
   }
 
   updateObjects();
@@ -1120,20 +1252,20 @@ CQCamera3DControl::
 diffuseMapSlot()
 {
   auto *canvas = app_->canvas();
-
   auto *edit = qobject_cast<CQCamera3DTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
-
   auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = canvas->currentObject();
+  auto *face   = canvas->currentFace();
 
-  if (object) {
+  if (object)
     object->setDiffuseTexture(texture);
+  else if (face)
+    face->setDiffuseTexture(texture);
 
-    updateObjects();
-  }
+  updateObjects();
 }
 
 void
@@ -1141,20 +1273,20 @@ CQCamera3DControl::
 normalMapSlot()
 {
   auto *canvas = app_->canvas();
-
   auto *edit = qobject_cast<CQCamera3DTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
-
   auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = canvas->currentObject();
+  auto *face   = canvas->currentFace();
 
-  if (object) {
+  if      (object)
     object->setNormalTexture(texture);
+  else if (face)
+    face->setNormalTexture(texture);
 
-    updateObjects();
-  }
+  updateObjects();
 }
 
 void
@@ -1162,20 +1294,20 @@ CQCamera3DControl::
 specularMapSlot()
 {
   auto *canvas = app_->canvas();
-
   auto *edit = qobject_cast<CQCamera3DTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
-
   auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = canvas->currentObject();
+  auto *face   = canvas->currentFace();
 
-  if (object) {
+  if      (object)
     object->setSpecularTexture(texture);
+  else if (face)
+    face->setSpecularTexture(texture);
 
-    updateObjects();
-  }
+  updateObjects();
 }
 
 void
@@ -1183,20 +1315,20 @@ CQCamera3DControl::
 emissiveMapSlot()
 {
   auto *canvas = app_->canvas();
-
   auto *edit = qobject_cast<CQCamera3DTextureChooser *>(sender());
 
   auto textureName = edit->textureName();
-
   auto *texture = canvas->getGeomTextureByName(textureName.toStdString());
 
   auto *object = canvas->currentObject();
+  auto *face   = canvas->currentFace();
 
-  if (object) {
+  if      (object)
     object->setEmissiveTexture(texture);
+  else if (face)
+    face->setEmissiveTexture(texture);
 
-    updateObjects();
-  }
+  updateObjects();
 }
 
 void
@@ -1357,6 +1489,155 @@ axesZPosSlot(double r)
 
 void
 CQCamera3DControl::
+swapYZSlot()
+{
+  auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
+  if (! object) return;
+
+  object->swapYZ();
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+invertXSlot()
+{
+  auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
+  if (! object) return;
+
+  object->invertX();
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+invertYSlot()
+{
+  auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
+  if (! object) return;
+
+  object->invertY();
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+invertZSlot()
+{
+  auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
+  if (! object) return;
+
+  object->invertZ();
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+loadTextureMapSlot()
+{
+  struct TextureMapData {
+    std::string diffuse;
+    std::string normal;
+    std::string specular;
+    std::string emissive;
+  };
+
+  using TextureMap = std::map<std::string, TextureMapData>;
+
+  TextureMap textureMap;
+
+  auto dir = QDir::current().dirName();
+
+  auto fileName = QFileDialog::getOpenFileName(this, "Load Texture Map", dir, "Files (*.*)");
+  if (! fileName.length()) return;
+
+  CFile file(fileName.toStdString());
+  if (! file.exists()) return;
+
+  while (! file.eof()) {
+    std::string line;
+
+    file.readLine(line);
+
+    std::vector<std::string> words;
+
+    CStrUtil::toWords(line, words);
+    if (words.size() < 2) continue;
+
+    TextureMapData textureData;
+
+    textureData.diffuse = words[1];
+
+    if (words.size() > 2)
+      textureData.normal = words[2];
+
+    if (words.size() > 3)
+      textureData.specular = words[3];
+
+    textureMap[words[0]] = textureData;
+  }
+
+  for (auto &pt : textureMap) {
+    const auto &data = pt.second;
+
+    addTextureFile(data.diffuse);
+    addTextureFile(data.normal);
+    addTextureFile(data.specular);
+    addTextureFile(data.emissive);
+  }
+
+  auto *scene  = app_->getScene();
+  auto *canvas = app_->canvas();
+
+  for (auto *object : scene->getObjects()) {
+    auto name = object->getName();
+
+    auto pt = textureMap.find(name);
+    if (pt == textureMap.end())
+      continue;
+
+    const auto &data = (*pt).second;
+
+    auto *texture = canvas->getGeomTextureByName(data.diffuse);
+
+    if (texture)
+      object->setDiffuseTexture(texture);
+
+    if (data.normal != "") {
+      auto *texture = canvas->getGeomTextureByName(data.normal);
+
+      if (texture)
+        object->setNormalTexture(texture);
+    }
+
+    if (data.specular != "") {
+      auto *texture = canvas->getGeomTextureByName(data.specular);
+
+      if (texture)
+        object->setSpecularTexture(texture);
+    }
+
+    if (data.emissive != "") {
+      auto *texture = canvas->getGeomTextureByName(data.emissive);
+
+      if (texture)
+        object->setEmissiveTexture(texture);
+    }
+  }
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
 addTextureSlot()
 {
   auto dir = QDir::current().dirName();
@@ -1364,16 +1645,33 @@ addTextureSlot()
   auto fileName = QFileDialog::getOpenFileName(this, "Open Texture", dir, "Files (*.*)");
   if (! fileName.length()) return;
 
+  addTextureFile(fileName.toStdString());
+}
+
+void
+CQCamera3DControl::
+addTextureFile(const std::string &fileName)
+{
+  if (fileName == "")
+    return;
+
   auto *canvas = app_->canvas();
 
-  auto name1 = fileName.toStdString();
-  auto name2 = fileName.toStdString() + ".flip";
+  auto fileName1 = fileName;
+
+  auto len = fileName1.size();
+
+  if (len > 5 && fileName1.substr(len - 5) == ".flip")
+    fileName1 = fileName1.substr(0, len - 5);
+
+  auto name1 = fileName1;
+  auto name2 = fileName1 + ".flip";
 
   auto *texture1 = canvas->getTextureByName(name1);
   auto *texture2 = canvas->getTextureByName(name2);
 
-  if (! texture1) {
-    CImageFileSrc src(fileName.toStdString());
+  if (! texture1 || ! texture2) {
+    CImageFileSrc src(fileName1);
 
     auto image = CImageMgrInst->createImage(src);
 
@@ -1382,16 +1680,12 @@ addTextureSlot()
     gtexture1->setName(name1);
 
     (void) canvas->getTexture(gtexture1, /*add*/true);
-  }
 
-  if (! texture2) {
-    CImageFileSrc src(fileName.toStdString());
+    auto image1 = image->dup();
 
-    auto image = CImageMgrInst->createImage(src);
+    image1->flipH();
 
-    image->flipH();
-
-    auto *gtexture2 = CGeometryInst->createTexture(image);
+    auto *gtexture2 = CGeometryInst->createTexture(image1);
 
     gtexture2->setName(name2);
 
@@ -1404,8 +1698,8 @@ CQCamera3DControl::
 selectParentSlot()
 {
   auto *canvas = app_->canvas();
-
   auto *object = canvas->currentObject();
+  if (! object) return;
 
   if (object->parent())
     canvas->selectObject(object->parent());
@@ -1418,6 +1712,50 @@ deselectSlot()
   auto *canvas = app_->canvas();
 
   canvas->deselectAll();
+}
+
+void
+CQCamera3DControl::
+objectSelectSlot()
+{
+  auto *canvas = app_->canvas();
+
+  auto *object = objectsList_->getObjectListSelected();
+  if (! object) return;
+
+  canvas->selectObject(object);
+}
+
+void
+CQCamera3DControl::
+objectZoomSlot()
+{
+  auto *canvas = app_->canvas();
+  auto *object = canvas->currentObject();
+  if (! object) return;
+
+  auto *objectData = canvas->getObjectData(object);
+  if (! objectData) return;
+
+  auto bbox = objectData->bbox();
+
+  auto *camera = getCamera();
+
+  auto center = bbox.getCenter();
+  auto size   = bbox.getMaxSize();
+
+  auto s2 = std::sqrt(2.0);
+
+  auto origin = CVector3D(center.x, center.y, center.z);
+  auto pos    = CVector3D(center.x, center.y, center.z + camera->near() + s2*size/2.0);
+
+  camera->setPosition(pos);
+
+  camera->setPitch(0.0);
+  camera->setYaw(-M_PI/2.0);
+  camera->setRoll(0.0);
+
+  camera->setOrigin(origin);
 }
 
 void

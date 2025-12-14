@@ -215,6 +215,8 @@ readAscii()
 
             auto image = CImageMgrInst->createImage(src);
 
+            image->flipH();
+
             textureData->texture = CGeometryInst->createTexture(image);
 
             textureData->texture->setName(textureData->fileName);
@@ -667,35 +669,48 @@ processObjectsTextBlock(TextBlock *block)
 
     //---
 
+    VertexData vertexData;
+    NormalData normalData;
+    ColorData  colorData;
+    UVData     uvData;
+
     for (const auto &nv : block->nameValues) {
       if      (nv.name == "Version") {
       }
       else if (nv.name == "PolygonVertexIndex") {
-        geometryData->polygonVertexIndex = readIntegers(nv.value);
+        vertexData.indices = readIntegers(nv.value);
+        vertexData.set     = true;
       }
       else if (nv.name == "Vertices") {
-        geometryData->vertices = readReals(nv.value);
+        vertexData.values = readReals(nv.value);
+        vertexData.set    = true;
       }
       else if (nv.name == "Edges") {
         geometryData->edges = readIntegers(nv.value);
       }
       else if (nv.name == "NormalsIndex") {
-        geometryData->normalsIndex = readIntegers(nv.value);
+        normalData.indices = readIntegers(nv.value);
+        normalData.set     = true;
       }
       else if (nv.name == "Normals") {
-        geometryData->normals = readReals(nv.value);
+        normalData.values = readReals(nv.value);
+        normalData.set    = true;
       }
       else if (nv.name == "ColorIndex") {
-        geometryData->colorIndex = readIntegers(nv.value);
+        colorData.indices = readIntegers(nv.value);
+        colorData.set     = true;
       }
       else if (nv.name == "Colors") {
-        geometryData->colors = readReals(nv.value);
+        colorData.values = readReals(nv.value);
+        colorData.set    = true;
       }
       else if (nv.name == "UVIndex") {
-        geometryData->uvIndex = readIntegers(nv.value);
+        uvData.indices = readIntegers(nv.value);
+        uvData.set     = true;
       }
       else if (nv.name == "UV") {
-        geometryData->uv = readReals(nv.value);
+        uvData.values = readReals(nv.value);
+        uvData.set    = true;
       }
       else if (nv.name == "Materials") {
         geometryData->materials = readIntegers(nv.value);
@@ -740,6 +755,18 @@ processObjectsTextBlock(TextBlock *block)
         errorMsg("Unhandled name " + nv.name);
       }
     }
+
+    if (vertexData.set)
+      geometryData->vertexData.push_back(vertexData);
+
+    if (normalData.set)
+      geometryData->normalData.push_back(normalData);
+
+    if (colorData.set)
+      geometryData->colorData.push_back(colorData);
+
+    if (uvData.set)
+      geometryData->uvData.push_back(uvData);
 
     for (auto *child : block->children) {
       if     (child->nameValue.name == "Properties60") {
@@ -910,6 +937,8 @@ processObjectsTextBlock(TextBlock *block)
         }
       }
       else if (child->nameValue.name == "LayerElementNormal") {
+        NormalData normalData1;
+
         for (const auto &nv1 : child->nameValues) {
           if      (nv1.name == "Version") {
           }
@@ -919,20 +948,30 @@ processObjectsTextBlock(TextBlock *block)
           }
           else if (nv1.name == "ReferenceInformationType") {
           }
+          else if (nv1.name == "NormalsIndex") {
+            normalData1.indices = readIntegers(nv1.value);
+            normalData1.set     = true;
+          }
           else if (nv1.name == "Normals") {
-            geometryData->normals = readReals(nv1.value);
+            normalData1.values = readReals(nv1.value);
+            normalData1.set     = true;
           }
           else if (nv1.name == "NormalsW") {
           }
           else
             errorMsg("Invalid LayerElementNormal Name " + nv1.name);
         }
+
+        if (normalData1.set)
+          geometryData->normalData.push_back(normalData1);
       }
       else if (child->nameValue.name == "LayerElementSmoothing") {
         // Smoothing
         //geometryData->normals = readIntegers(nv.value);
       }
       else if (child->nameValue.name == "LayerElementUV") {
+        UVData uvData1;
+
         for (const auto &nv1 : child->nameValues) {
           if      (nv1.name == "Version") {
           }
@@ -942,15 +981,20 @@ processObjectsTextBlock(TextBlock *block)
           }
           else if (nv1.name == "ReferenceInformationType") {
           }
-          else if (nv1.name == "UV") {
-            geometryData->uv = readReals(nv1.value);
-          }
           else if (nv1.name == "UVIndex") {
-            geometryData->uvIndex = readIntegers(nv1.value);
+            uvData1.indices = readIntegers(nv1.value);
+            uvData1.set     = true;
+          }
+          else if (nv1.name == "UV") {
+            uvData1.values = readReals(nv1.value);
+            uvData1.set    = true;
           }
           else
             errorMsg("Invalid LayerElementUV Name " + nv1.name);
         }
+
+        if (uvData1.set)
+          geometryData->uvData.push_back(uvData1);
       }
       else if (child->nameValue.name == "LayerElementTexture") {
         for (const auto &nv1 : child->nameValues) {
@@ -998,16 +1042,29 @@ processObjectsTextBlock(TextBlock *block)
     }
 
     if (isDebug()) {
-      printIntegers("PolygonVertexIndex", geometryData->polygonVertexIndex);
-      printReals   ("Vertices"          , geometryData->vertices);
-      printIntegers("Edges"             , geometryData->edges);
-      printIntegers("NormalsIndex"      , geometryData->normalsIndex);
-      printReals   ("Normals"           , geometryData->normals);
-      printIntegers("ColorIndex"        , geometryData->colorIndex);
-      printReals   ("Colors"            , geometryData->colors);
-      printIntegers("UVIndex"           , geometryData->uvIndex);
-      printReals   ("UV"                , geometryData->uv);
-      printIntegers("Materials"         , geometryData->materials);
+      for (auto &data : geometryData->vertexData) {
+        printIntegers("PolygonVertexIndex", data.indices);
+        printReals   ("Vertices"          , data.values);
+      }
+
+      for (auto &data : geometryData->normalData) {
+        printIntegers("NormalsIndex", data.indices);
+        printReals   ("Normals"     , data.values);
+      }
+
+      for (auto &data : geometryData->colorData) {
+        printIntegers("ColorIndex", data.indices);
+        printReals   ("Colors"    , data.values);
+      }
+
+      for (auto &data : geometryData->uvData) {
+        printIntegers("UVIndex", data.indices);
+        printReals   ("UV"     , data.values);
+      }
+
+      printIntegers("Edges", geometryData->edges);
+
+      printIntegers("Materials", geometryData->materials);
     }
 
     addGeometryObject(geometryData);
@@ -1350,16 +1407,33 @@ readFileData(FileData &fileData)
       //---
 
       // set texture
-      auto *textureData = modelData->textureData;
+      for (const auto &pt : modelData->textureMap) {
+        auto *textureData = pt.second;
 
-      if (! textureData && modelData->materialData)
-        textureData = modelData->materialData->textureData;
-
-      if (textureData) {
         if (textureData->type == "NormalMap")
           geometryData->object->setNormalTexture(textureData->texture);
         else
           geometryData->object->setDiffuseTexture(textureData->texture);
+      }
+
+      for (const auto &pt : modelData->materialData->textureMap) {
+        auto *textureData = pt.second;
+
+        if (pt.first == "NormalMap")
+          geometryData->object->setNormalTexture(textureData->texture);
+        else
+          geometryData->object->setDiffuseTexture(textureData->texture);
+
+        if (textureData->videoData) {
+          for (const auto &pt1 : textureData->videoData->textureMap) {
+            auto *textureData1 = pt1.second;
+
+            if (pt1.first == "NormalMap")
+              geometryData->object->setNormalTexture(textureData1->texture);
+            else
+              geometryData->object->setDiffuseTexture(textureData1->texture);
+          }
+        }
       }
     }
   }
@@ -2311,11 +2385,11 @@ processDataTree(PropDataTree *tree)
                           }
                           else if (propName == "UVSet") {
                           }
+                          else if (propName == "UVSwap") {
+                          }
                           else if (propName == "WrapModeU") {
                           }
                           else if (propName == "WrapModeV") {
-                          }
-                          else if (propName == "UVSwap") {
                           }
                           else if (propName == "Translation") {
                           }
@@ -2499,12 +2573,12 @@ processDataTree(PropDataTree *tree)
 
             auto connectInfo = [&]() {
               std::cerr << "Info: Connect " << idType1 << " (" << id1 << ") -> " <<
-                           idType2 << " (" << id2 << ")\n";
+                           idType2 << " (" << id2 << "), Type: " << connectType << "\n";
             };
 
             auto connectError = [&](const std::string &name) {
-              std::cerr << "Error: Connect " << name << " -> " << idType2 << " " <<
-                           id1 << " " << id2 << "\n";
+              std::cerr << "Error: Connect " << name << " " << idType1 << " (" << id1 << ") -> " <<
+                           idType2 << " (" << id2 << "), Type: " << connectType << "\n";
             };
 
             //---
@@ -2531,6 +2605,7 @@ processDataTree(PropDataTree *tree)
                 if (geometryData->modelData && geometryData->modelData->id != id2) {
                   std::cerr << "Duplicate Geometry->Model (" << id1 << "->" << id2 << ") "
                                "(already associated with " << geometryData->modelData->id << ")\n";
+                  connectInfo();
                   //assert(false);
                 }
 
@@ -2633,6 +2708,7 @@ processDataTree(PropDataTree *tree)
                 if (modelData1->materialData && modelData1->materialData->id != id1) {
                   std::cerr << "Duplicate Material->Model (" << id1 << "->" << id2 << ") "
                                "(already associated with " << modelData1->materialData->id << ")\n";
+                  connectInfo();
                   //assert(false);
                 }
 
@@ -2669,8 +2745,10 @@ processDataTree(PropDataTree *tree)
                 assert(! textureData->modelData);
                 textureData->modelData = modelData1;
 
-                assert(! modelData1->textureData);
-                modelData1->textureData = textureData;
+                auto pt1 = modelData1->textureMap.find(textureData->type);
+                assert(pt1 == modelData1->textureMap.end());
+
+                modelData1->textureMap[textureData->type] = textureData;
 
                 //connectInfo();
 
@@ -2685,22 +2763,29 @@ processDataTree(PropDataTree *tree)
                 if (textureData->materialData && textureData->materialData->id != id2) {
                   std::cerr << "Duplicate Texture->Material (" << id1 << "->" << id2 << ") "
                              "(already associated with " << textureData->materialData->id << ")\n";
+                  connectInfo();
                   //assert(false);
                 }
 
                 textureData->materialData = materialData;
 
-                if (materialData->textureData && materialData->textureData->id != id1) {
-                  std::cerr << "Duplicate Material->Texture (" << id1 << "->" << id2 << ") "
-                             "(already associated with " << materialData->textureData->id << ")\n";
-                  //assert(false);
+                auto pt1 = materialData->textureMap.find(connectType);
+                if (pt1 != materialData->textureMap.end()) {
+                  auto *textureData1 = (*pt1).second;
+
+                  if (textureData != textureData1) {
+                    std::cerr << "Duplicate Material->Texture (" << id1 << "->" << id2 << ") "
+                                 "(already associated with " << textureData1->id << ")\n";
+                    connectInfo();
+                    //assert(false);
+                  }
                 }
 
-                materialData->textureData = textureData;
+                materialData->textureMap[connectType] = textureData;
+
+                //textureData->type = connectType;
 
                 //connectInfo();
-
-                textureData->type = connectType;
 
                 materialTexture[id2] = id1;
 
@@ -2924,8 +3009,8 @@ processDataTree(PropDataTree *tree)
             //---
 
             // video data
-            auto pv = videoData_.find(id1);
-            if (pv != videoData_.end()) {
+            auto pv = idVideoData_.find(id1);
+            if (pv != idVideoData_.end()) {
               auto *videoData = (*pv).second;
 
               // video -> texture
@@ -2933,13 +3018,30 @@ processDataTree(PropDataTree *tree)
               if (pt1 != idTextureData_.end()) {
                 auto *textureData1 = (*pt1).second;
 
-                if (videoData->textureData && videoData->textureData->id != id2) {
-                  std::cerr << "Duplicate video/texture data (" << id1 << "->" << id2 << ") "
-                               "(already associated with " << videoData->textureData->id << ")\n";
+                if (textureData1->videoData && textureData1->videoData->id != id2) {
+                  std::cerr << "Duplicate Texture->Video (" << id1 << "->" << id2 << ") "
+                             "(already associated with " << textureData1->videoData->id << ")\n";
+                  connectInfo();
                   //assert(false);
                 }
 
-                videoData->textureData = textureData1;
+                textureData1->videoData = videoData;
+
+                auto pt2 = videoData->textureMap.find(connectType);
+                if (pt2 != videoData->textureMap.end()) {
+                  auto *textureData2 = (*pt2).second;
+
+                  if (textureData1 != textureData2) {
+                    std::cerr << "Duplicate Video->Texture (" << id1 << "->" << id2 << ") "
+                                 "(already associated with " << textureData2->id << ")\n";
+                    connectInfo();
+                    //assert(false);
+                  }
+                }
+
+                videoData->textureMap[connectType] = textureData1;
+
+                //textureData1->type = connectType;
 
                 //connectInfo();
 
@@ -3200,6 +3302,7 @@ processDataTree(PropDataTree *tree)
 
           auto *geometryData = new GeometryData;
           geometryData->name = blockData.name;
+          geometryData->type = blockData.type;
 
           //---
 
@@ -3364,6 +3467,8 @@ processDataTree(PropDataTree *tree)
           //std::cerr << "modelId: " << blockData.id << "\n";
           //std::cerr << "modelName: " << modelData->name << "\n";
 
+          VertexData vertexData;
+
           for (const auto &pd2 : tree2->dataMap) {
             if      (pd2.first == "CameraId") {
             }
@@ -3410,20 +3515,25 @@ processDataTree(PropDataTree *tree)
             else if (pd2.first == "Version") {
             }
             else if (pd2.first == "PolygonVertexIndex") {
-              if (! modelData->geometryData)
-                modelData->geometryData = new GeometryData;
-
-              modelData->geometryData->polygonVertexIndex = getPropertyInts(pd2.second);
+              vertexData.indices = getPropertyInts(pd2.second);
+              vertexData.set     = true;
             }
             else if (pd2.first == "Vertices") {
-              if (! modelData->geometryData)
-                modelData->geometryData = new GeometryData;
-
-              modelData->geometryData->vertices = getPropertyDoubles(pd2.second);
+              vertexData.values = getPropertyDoubles(pd2.second);
+              vertexData.set    = true;
             }
             else
               unhandledDataName(treeName2, pd2.first);
           }
+
+          if (vertexData.set) {
+            if (! modelData->geometryData)
+              modelData->geometryData = new GeometryData;
+
+            modelData->geometryData->vertexData.push_back(vertexData);
+          }
+
+          //---
 
           for (auto *tree3 : tree2->children) {
             auto treeName3 = hierName(tree3);
@@ -3699,6 +3809,7 @@ processDataTree(PropDataTree *tree)
 
           textureData->id = blockData.id;
 
+          assert(idTextureData_.find(blockData.id) == idTextureData_.end());
           idTextureData_[blockData.id] = textureData;
         }
         else if (treeName2 == "Objects/Video") {
@@ -3719,9 +3830,10 @@ processDataTree(PropDataTree *tree)
           }
 
           auto *videoData = new VideoData;
-          videoData->name = blockData.name;
+          videoData->id = blockData.id;
 
-          videoData_[blockData.id] = videoData;
+          assert(idVideoData_.find(blockData.id) == idVideoData_.end());
+          idVideoData_[blockData.id] = videoData;
         }
         else if (treeName2 == "Objects/GlobalShading") {
         }
@@ -3784,11 +3896,12 @@ calcModelDataLocalTransform(ModelData *m) const
 
   if (m->localScaling) {
     auto p = m->localScaling.value();
-    s = CMatrix3D::translation(p.x, p.y, p.z);
+    s = CMatrix3D::scale(p.x, p.y, p.z);
   }
 
 //geometryData->localTransform = t*r*s;
-  return s*r*t;
+  return t*r*s;
+//#return s*r*t;
 }
 
 CMatrix3D
@@ -3821,8 +3934,10 @@ void
 CImportFBX::
 addGeometryObject(GeometryData *geometryData)
 {
-  if (geometryData->polygonVertexIndex.empty() ||
-      geometryData->vertices.empty())
+  if (geometryData->vertexData.empty())
+    return;
+
+  if (geometryData->type != "Mesh")
     return;
 
   //---
@@ -3857,12 +3972,24 @@ addGeometryObject(GeometryData *geometryData)
   Polygons polygons;
   Polygon  polygon;
 
-  auto ni  = uint(geometryData->polygonVertexIndex.size());
-  auto nv  = uint(geometryData->vertices          .size());
+  auto *vertexData = &geometryData->vertexData[0];
+
+  auto ni = uint(vertexData->indices.size());
+  auto nv = uint(vertexData->values .size());
   auto nv1 = nv/3;
 
-  auto nni  = uint(geometryData->normalsIndex.size());
-  auto nnv  = uint(geometryData->normals     .size());
+  //---
+
+  NormalData *normalData = nullptr;
+  uint        nni = 0, nnv = 0;
+
+  if (! geometryData->normalData.empty()) {
+    normalData = &geometryData->normalData[0];
+
+    nni = uint(normalData->indices.size());
+    nnv = uint(normalData->values .size());
+  }
+
   auto nnv1 = nnv/3;
 
   auto hasNormalIndex   = (nni == ni && nnv > 0);
@@ -3872,8 +3999,18 @@ addGeometryObject(GeometryData *geometryData)
   if (! hasNormalIndex && ! hasNormalVert && ! hasNormalVertInd && nnv > 0)
     std::cerr << "Ignored texture data\n";
 
-  auto nci  = uint(geometryData->colorIndex.size());
-  auto ncv  = uint(geometryData->colors    .size());
+  //---
+
+  ColorData *colorData = nullptr;
+  uint       nci = 0, ncv = 0;
+
+  if (! geometryData->colorData.empty()) {
+    colorData = &geometryData->colorData[0];
+
+    nci = uint(colorData->indices.size());
+    ncv = uint(colorData->values .size());
+  }
+
   auto ncv1 = (colorAlpha_ ? ncv/4 : ncv/3);
 
   auto hasColorIndex = (nci == ni && ncv > 0);
@@ -3882,8 +4019,18 @@ addGeometryObject(GeometryData *geometryData)
   if (! hasColorIndex && ! hasColorVert && ncv > 0)
     std::cerr << "Ignored color data\n";
 
-  auto nti  = uint(geometryData->uvIndex.size());
-  auto ntv  = uint(geometryData->uv     .size());
+  //---
+
+  UVData *uvData = nullptr;
+  uint    nti = 0, ntv = 0;
+
+  if (! geometryData->uvData.empty()) {
+    uvData = &geometryData->uvData[0];
+
+    nti = uint(uvData->indices.size());
+    ntv = uint(uvData->values .size());
+  }
+
   auto ntv1 = ntv/2;
 
   auto hasTextureIndex = (nti == ni && ntv > 0);
@@ -3892,10 +4039,12 @@ addGeometryObject(GeometryData *geometryData)
   if (! hasTextureIndex && ! hasTextureVert && ntv > 0)
     std::cerr << "Ignored texture data\n";
 
+  //---
+
   auto addPolyPoint = [&](int i) {
     PolyPoint polyPoint;
 
-    polyPoint.pointInd = geometryData->polygonVertexIndex[i];
+    polyPoint.pointInd = vertexData->indices[i];
 
     bool flush = (polyPoint.pointInd < 0);
 
@@ -3905,19 +4054,19 @@ addGeometryObject(GeometryData *geometryData)
     //---
 
     if      (hasNormalIndex)
-      polyPoint.normalInd = geometryData->normalsIndex[i];
+      polyPoint.normalInd = normalData->indices[i];
     else if (hasNormalVert)
       polyPoint.normalInd = polyPoint.pointInd;
     else if (hasNormalVertInd)
       polyPoint.normalInd = i;
 
     if      (hasColorIndex)
-      polyPoint.colorInd = geometryData->colorIndex[i];
+      polyPoint.colorInd = colorData->indices[i];
     else if (hasColorVert)
       polyPoint.colorInd = polyPoint.pointInd;
 
     if      (hasTextureIndex)
-      polyPoint.textureInd = geometryData->uvIndex[i];
+      polyPoint.textureInd = uvData->indices[i];
     else if (hasTextureVert)
       polyPoint.textureInd = polyPoint.pointInd;
 
@@ -3952,42 +4101,42 @@ addGeometryObject(GeometryData *geometryData)
     polygons.push_back(polygon);
 
   auto getPoint = [&](int iv) {
-    auto p = CPoint3D(geometryData->vertices[iv*3    ],
-                      geometryData->vertices[iv*3 + 1],
-                      geometryData->vertices[iv*3 + 2]);
+    auto p = CPoint3D(vertexData->values[iv*3    ],
+                      vertexData->values[iv*3 + 1],
+                      vertexData->values[iv*3 + 2]);
 
     return adjustPoint(p);
   };
 
   auto getNormal = [&](int iv) {
-    auto v = CVector3D(geometryData->normals[iv*3    ],
-                       geometryData->normals[iv*3 + 1],
-                       geometryData->normals[iv*3 + 2]);
+    auto v = CVector3D(normalData->values[iv*3    ],
+                       normalData->values[iv*3 + 1],
+                       normalData->values[iv*3 + 2]);
 
     return adjustNormal(v);
   };
 
   auto getColor = [&](int iv) {
     if (colorAlpha_) {
-      auto r = geometryData->colors[iv*4    ];
-      auto g = geometryData->colors[iv*4 + 1];
-      auto b = geometryData->colors[iv*4 + 2];
-      auto a = geometryData->colors[iv*4 + 3];
+      auto r = colorData->values[iv*4    ];
+      auto g = colorData->values[iv*4 + 1];
+      auto b = colorData->values[iv*4 + 2];
+      auto a = colorData->values[iv*4 + 3];
 
       return CRGBA(r, g, b, a);
     }
     else {
-      auto r = geometryData->colors[iv*3    ];
-      auto g = geometryData->colors[iv*3 + 1];
-      auto b = geometryData->colors[iv*3 + 2];
+      auto r = colorData->values[iv*3    ];
+      auto g = colorData->values[iv*3 + 1];
+      auto b = colorData->values[iv*3 + 2];
 
       return CRGBA(r, g, b);
     }
   };
 
   auto getTexturePoint = [&](int iv) {
-    auto u1 = geometryData->uv[iv*2    ];
-    auto v1 = geometryData->uv[iv*2 + 1];
+    auto u1 = uvData->values[iv*2    ];
+    auto v1 = uvData->values[iv*2 + 1];
 
     // swap ?
 
@@ -4043,6 +4192,8 @@ addGeometryObject(GeometryData *geometryData)
     if (! tpoints.empty())
       face.setTexturePoints(tpoints);
   }
+
+  
 }
 
 void
@@ -4072,16 +4223,20 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
 //std::cerr << "processGeometryDataTree " << treeName << "\n";
 
   if      (treeName == "Objects/Geometry") {
+    VertexData vertexData;
+
     for (const auto &pd : tree->dataMap) {
       const auto &name = pd.first;
 
-      if      (name == "PolygonVertexIndex") {
+      if      (name == "PolygonVertexIndex") { // vertex indices
         for (const auto &pa : pd.second) {
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::INT_ARRAY)
-              geometryData->polygonVertexIndex = data->getArrayData<int>();
+            if (data->type() == DataType::INT_ARRAY) {
+              vertexData.indices = data->getArrayData<int>();
+              vertexData.set     = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4092,8 +4247,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::DOUBLE_ARRAY)
-              geometryData->vertices = data->getArrayData<double>();
+            if (data->type() == DataType::DOUBLE_ARRAY) {
+              vertexData.values = data->getArrayData<double>();
+              vertexData.set    = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4112,8 +4269,13 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
         }
       }
     }
+
+    if (vertexData.set)
+      geometryData->vertexData.push_back(vertexData);
   }
   else if (treeName == "Objects/Geometry/LayerElementNormal") {
+    NormalData normalData;
+
     for (const auto &pd : tree->dataMap) {
       const auto &name = pd.first;
 
@@ -4122,8 +4284,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::INT_ARRAY)
-              geometryData->normalsIndex = data->getArrayData<int>();
+            if (data->type() == DataType::INT_ARRAY) {
+              normalData.indices = data->getArrayData<int>();
+              normalData.set     = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4134,8 +4298,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::DOUBLE_ARRAY)
-              geometryData->normals = data->getArrayData<double>();
+            if (data->type() == DataType::DOUBLE_ARRAY) {
+              normalData.values = data->getArrayData<double>();
+              normalData.set    = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4155,8 +4321,13 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
         unhandledDataName(treeName, name);
       }
     }
+
+    if (normalData.set)
+      geometryData->normalData.push_back(normalData);
   }
   else if (treeName == "Objects/Geometry/LayerElementColor") {
+    ColorData colorData;
+
     for (const auto &pd : tree->dataMap) {
       const auto &name = pd.first;
 
@@ -4165,8 +4336,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::INT_ARRAY)
-              geometryData->colorIndex = data->getArrayData<int>();
+            if (data->type() == DataType::INT_ARRAY) {
+              colorData.indices = data->getArrayData<int>();
+              colorData.set     = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4177,8 +4350,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::DOUBLE_ARRAY)
-              geometryData->colors = data->getArrayData<double>();
+            if (data->type() == DataType::DOUBLE_ARRAY) {
+              colorData.values = data->getArrayData<double>();
+              colorData.set    = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4186,18 +4361,23 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
       }
       else if (name == "Name") {
       }
+      else if (name == "Version") {
+      }
       else if (name == "MappingInformationType") {
       }
       else if (name == "ReferenceInformationType") {
-      }
-      else if (name == "Version") {
       }
       else {
         unhandledDataName(treeName, name);
       }
     }
+
+    if (colorData.set)
+      geometryData->colorData.push_back(colorData);
   }
   else if (treeName == "Objects/Geometry/LayerElementUV") {
+    UVData uvData;
+
     for (const auto &pd : tree->dataMap) {
       const auto &name = pd.first;
 
@@ -4206,8 +4386,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::INT_ARRAY)
-              geometryData->uvIndex = data->getArrayData<int>();
+            if (data->type() == DataType::INT_ARRAY) {
+              uvData.indices = data->getArrayData<int>();
+              uvData.set     = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4218,8 +4400,10 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
 
-            if (data->type() == DataType::DOUBLE_ARRAY)
-              geometryData->uv = data->getArrayData<double>();
+            if (data->type() == DataType::DOUBLE_ARRAY) {
+              uvData.values = data->getArrayData<double>();
+              uvData.set    = true;
+            }
             else
               errorMsg("Unexpected type for " + name);
           }
@@ -4237,6 +4421,9 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
         unhandledDataName(treeName, name);
       }
     }
+
+    if (uvData.set)
+      geometryData->uvData.push_back(uvData);
   }
   else if (treeName == "Objects/Geometry/LayerElementMaterial") {
     for (const auto &pd : tree->dataMap) {

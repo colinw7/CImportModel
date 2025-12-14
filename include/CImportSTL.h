@@ -59,7 +59,8 @@ class CImportSTL : public CImportBase {
   SceneP         pscene_;
   CGeomObject3D* object_  { nullptr };
   ObjectP        pobject_;
-  CFile*         file_    { nullptr };
+
+  CFile* file_ { nullptr };
 
   Triangles triangles_;
 

@@ -189,6 +189,14 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
+  const std::vector<CQCamera3DObjectData *> &getObjectDatas() const { return objectDatas_; }
+
+  CGeomObject3D *getObject(int i) const;
+
+  CQCamera3DObjectData *getObjectData(CGeomObject3D *object) const;
+
+  //---
+
   const GLTextures &glTextures() const { return glTextures_; }
 
   CQGLTexture *getTextureByName(const std::string &name) const;
@@ -216,9 +224,7 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   void initCamera();
 
-  void updateStatus();
-
-  CQCamera3DObjectData *getObjectData(int i, CGeomObject3D *o);
+  CQCamera3DObjectData *initObjectData(int i, CGeomObject3D *o);
 
   void mousePressEvent  (QMouseEvent *e) override;
   void mouseMoveEvent   (QMouseEvent *e) override;
@@ -238,12 +244,16 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   CQGLTexture *makeTexture(const CImagePtr &image) const;
 
  private Q_SLOTS:
+  void updateStatus();
+
   void cameraChanged();
 
  Q_SIGNALS:
   void stateChanged();
 
   void textureAdded();
+
+  void objectsChanged();
 
  private:
   struct MouseData {
@@ -321,11 +331,20 @@ class CQCamera3DObjectData {
  public:
   CQCamera3DObjectData(CQCamera3DCanvas *canvas);
 
+  int ind() const { return ind_; }
+  void setInd(int i) { ind_ = i; }
+
+  //---
+
   const CGeomObject3D *object() const { return object_; }
   void setObject(CGeomObject3D *o) { object_ = o; }
 
+  //---
+
   const CBBox3D &bbox() const { return bbox_; }
   void setBBox(const CBBox3D &v) { bbox_ = v; }
+
+  //---
 
   CQGLBuffer *buffer() const { return buffer_; }
 
@@ -339,6 +358,8 @@ class CQCamera3DObjectData {
   CQCamera3DCanvas* canvas_ { nullptr };
   CGeomObject3D*    object_ { nullptr };
   CQGLBuffer*       buffer_ { nullptr };
+
+  int ind_ { 0 };
 
   FaceDatas faceDatas_;
   CBBox3D   bbox_;

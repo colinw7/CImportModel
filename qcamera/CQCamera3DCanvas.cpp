@@ -58,6 +58,10 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
   overlay_   = new CQCamera3DOverlay  (this);
   overlay2D_ = new CQCamera3DOverlay2D(this);
+
+  //---
+
+  connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
 }
 
 void
@@ -214,7 +218,12 @@ addObjectsData()
   auto *scene = app_->getScene();
 
   for (auto *object : scene->getObjects()) {
-    auto *objectData = getObjectData(io, object);
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+    assert(object1);
+
+    auto *objectData = initObjectData(io, object);
+
+    auto modelMatrix = object1->getHierTransform();
 
     //---
 
@@ -295,6 +304,8 @@ addObjectsData()
         const auto &vertex = object->getVertex(v);
         const auto &model  = vertex.getModel();
 
+        auto model1 = modelMatrix*model;
+
         //---
 
         // update color, normal for custom vertex value
@@ -349,7 +360,7 @@ addObjectsData()
 
         ++iv;
 
-        bbox1 += model;
+        bbox1 += model1;
       }
 
       pos += faceData.len;
@@ -374,8 +385,6 @@ addObjectsData()
     bbox_.add(CPoint3D(-1, -1, -1));
     bbox_.add(CPoint3D( 1,  1,  1));
   }
-
-  updateStatus();
 }
 
 void
@@ -399,8 +408,6 @@ initCamera()
 
     camera->setYaw(a);
   }
-
-  updateStatus();
 }
 
 void
@@ -419,6 +426,18 @@ updateStatus()
   };
 
   auto bboxStr = QString("Center: %1, Size: %2").arg(pointStr(center)).arg(vectorStr(size));
+
+  auto *object = currentObject();
+  auto *face   = currentFace();
+
+  if      (object) {
+    auto name = QString::fromStdString(object->getName());
+
+    bboxStr += QString(", Object: %1 (#%2)").arg(name).arg(object->getInd());
+  }
+  else if (face) {
+    bboxStr += QString(", Face: %1").arg(face->getInd());
+  }
 
   app_->status()->setModelLabel(bboxStr);
 }
@@ -465,14 +484,14 @@ drawObjectsData()
 
     // model matrix
     //auto modelMatrix = CMatrix3DH::identity();
-    auto modelMatrix = object1->calcTransform();
+    auto modelMatrix = object1->getHierTransform();
     program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
 
     //---
 
     bool objectSelected = object->getHierSelected();
 
-    auto *objectData = getObjectData(io, object);
+    auto *objectData = initObjectData(io, object);
 
     objectData->buffer()->bind();
 
@@ -571,16 +590,53 @@ drawObjectsData()
   program->release();
 }
 
+CGeomObject3D *
+CQCamera3DCanvas::
+getObject(int ind) const
+{
+  for (auto &objectData : objectDatas_) {
+    if (objectData->ind() == ind)
+      return const_cast<CGeomObject3D *>(objectData->object());
+  }
+
+  return nullptr;
+}
+
 CQCamera3DObjectData *
 CQCamera3DCanvas::
-getObjectData(int io, CGeomObject3D *object)
+getObjectData(CGeomObject3D *object) const
 {
-  while (int(objectDatas_.size()) <= io)
-    objectDatas_.push_back(new CQCamera3DObjectData(this));
+  for (auto &objectData : objectDatas_) {
+    if (objectData->object() == object)
+      return objectData;
+  }
+
+  return nullptr;
+}
+
+
+CQCamera3DObjectData *
+CQCamera3DCanvas::
+initObjectData(int io, CGeomObject3D *object)
+{
+  bool changed = false;
+
+  while (int(objectDatas_.size()) <= io) {
+    auto *data = new CQCamera3DObjectData(this);
+
+    data->setInd(objectDatas_.size() + 1);
+
+    objectDatas_.push_back(data);
+
+    changed = true;
+  }
 
   auto *objectData = objectDatas_[io];
 
   objectData->setObject(object);
+
+  if (changed)
+    Q_EMIT objectsChanged();
 
   return objectData;
 }
@@ -655,6 +711,9 @@ deselectAll(bool update)
     }
   }
 
+  currentObject_ = nullptr;
+  currentFace_   = nullptr;
+
   if (changed && update) {
     this->update();
 
@@ -726,9 +785,9 @@ mousePressEvent(QMouseEvent *e)
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
       assert(object1);
 
-      //auto *objectData = getObjectData(io, object);
+      //auto *objectData = initObjectData(io, object);
 
-      auto modelMatrix = CMatrix3DH(object1->calcTransform());
+      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
 
       const auto &faces = object->getFaces();
 
@@ -1077,17 +1136,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(iscale, 1.0, 1.0);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(-0.1, right);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = -d*right;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_D) {
@@ -1095,17 +1154,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(scale, 1.0, 1.0);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(0.1, right);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = d*right;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_W) {
@@ -1113,17 +1172,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(1.0, scale, 1.0);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(0.1, up);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = d*up;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_S) {
@@ -1131,17 +1190,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(1.0, iscale, 1.0);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(-0.1, up);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = -d*up;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_Up) {
@@ -1149,17 +1208,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(1.0, 1.0, scale);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(0.1, front);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = d*front;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_Down) {
@@ -1167,17 +1226,17 @@ objectKeyPress(QKeyEvent *e)
 
     if      (isShift) {
       auto m = CMatrix3D::scale(1.0, 1.0, iscale);
-      object->setTransform(m*object->getTransform());
+      object->setScale(m*object->getScale());
     }
     else if (isControl) {
       auto m = CMatrix3D::rotation(-0.1, front);
-      object->setTransform(m*object->getTransform());
+      object->setRotate(m*object->getRotate());
     }
     else {
       auto t = -d*front;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-      object->setTransform(m*object->getTransform());
+      object->setTranslate(m*object->getTranslate());
     }
   }
   else if (k == Qt::Key_Question) {
@@ -1320,10 +1379,10 @@ void
 CQCamera3DCanvas::
 cameraChanged()
 {
-  app_->control()->updateWidgets();
-
   if (isShowPlanes())
     updateAnnotation();
+
+  Q_EMIT stateChanged();
 
   update();
 }
@@ -1374,7 +1433,7 @@ setCurrentObject(CQCamera3DGeomObject *object)
 {
   currentObject_ = object;
 
-  app_->control()->updateWidgets();
+  Q_EMIT stateChanged();
 }
 
 void
@@ -1383,7 +1442,7 @@ setCurrentFace(CGeomFace3D *face)
 {
   currentFace_ = face;
 
-  app_->control()->updateWidgets();
+  Q_EMIT stateChanged();
 }
 
 bool

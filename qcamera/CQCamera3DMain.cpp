@@ -32,9 +32,10 @@ main(int argc, char **argv)
     if (argv[i][0] == '-') {
       auto arg = QString(&argv[i][1]);
 
-      if      (arg == "3ds"   || arg == "3drw" || arg == "asc" || arg == "cob" || arg == "dxf" ||
-               arg == "fbx"   || arg == "gltf" || arg == "obj" || arg == "plg" || arg == "ply" ||
-               arg == "scene" || arg == "stl"  || arg == "v3d" || arg == "vox" || arg == "x3d") {
+      if      (arg == "3ds" || arg == "3drw" || arg == "asc" || arg == "blend" ||
+               arg == "cob" || arg == "dxf"  || arg == "fbx" || arg == "gltf"  ||
+               arg == "obj" || arg == "plg"  || arg == "ply" || arg == "scene" ||
+               arg == "stl"  || arg == "v3d" || arg == "vox" || arg == "x3d") {
         ++i;
 
         if (i < argc) {
@@ -85,7 +86,7 @@ main(int argc, char **argv)
     };
 
     auto strs = QStringList() <<
-      "3ds" << "3drw" << "asc" << "cob" << "dxf" << "fbx" << "glb" << "gltf" <<
+      "3ds" << "3drw" << "asc" << "blend" << "cob" << "dxf" << "fbx" << "glb" << "gltf" <<
       "obj" << "plg" << "ply"<< "scene"<< "stl"<< "v3d" << "vox" << "x3d";
 
     for (const auto &str : strs)

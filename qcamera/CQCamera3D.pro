@@ -33,11 +33,16 @@ CQCamera3DShaderProgram.cpp \
 CQCamera3DShape.cpp \
 CQCamera3DShapes.cpp \
 CQCamera3DStatus.cpp \
+CQCamera3DUVMap.cpp \
+CQCamera3DTextures.cpp \
 CQCamera3DTextureChooser.cpp \
+CQCamera3DObjectsList.cpp \
 \
 CQGLTexture.cpp \
 CQGLUtil.cpp \
 CQPoint3DEdit.cpp \
+CQMatrix3D.cpp \
+CQTextLabel.cpp \
 
 HEADERS += \
 CDisplayRange2D.h \
@@ -59,13 +64,19 @@ CQCamera3DShaderProgram.h \
 CQCamera3DShape.h \
 CQCamera3DShapes.h \
 CQCamera3DStatus.h \
+CQCamera3DTextures.h \
+CQCamera3DUVMap.h \
 CQCamera3DTextureChooser.h \
+CQCamera3DObjectsList.h \
 CQCamera3DUtil.h \
 \
 CQGLUtil.cpp \
 CQGLBuffer.h \
 CQGLTexture.h \
 CQPoint3DEdit.h \
+CQMatrix3D.h \
+CQTextLabel.h \
+\
 CWindowRange2D.h \
 stb_truetype.h \
 

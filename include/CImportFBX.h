@@ -674,23 +674,46 @@ class CImportFBX : public CImportBase {
   struct MaterialData;
   struct AnimationDeformerData;
 
+  using TextureMap = std::map<std::string, TextureData *>;
+
   // Geometry Mesh Data
+  struct VertexData {
+    bool                set { false };
+    std::vector<int>    indices;
+    std::vector<double> values;
+  };
+
+  struct NormalData {
+    bool                set { false };
+    std::vector<int>    indices;
+    std::vector<double> values;
+  };
+
+  struct ColorData {
+    bool                set { false };
+    std::vector<int>    indices;
+    std::vector<double> values;
+  };
+
+  struct UVData {
+    bool                set { false };
+    std::vector<int>    indices;
+    std::vector<double> values;
+  };
+
   struct GeometryData {
-    std::string         name;
-    std::vector<int>    polygonVertexIndex;
-    std::vector<double> vertices;
-    std::vector<int>    edges;
-    std::vector<int>    normalsIndex;
-    std::vector<double> normals;
-    std::vector<int>    colorIndex;
-    std::vector<double> colors;
-    std::vector<int>    uvIndex;
-    std::vector<double> uv;
-    std::vector<int>    materials;
-    std::vector<int>    textures;
-    OptPoint3           translation;
-    OptPoint3           rotation;
-    OptPoint3           scale;
+    std::string             name;
+    std::string             type;
+    std::vector<VertexData> vertexData;
+    std::vector<NormalData> normalData;
+    std::vector<ColorData>  colorData;
+    std::vector<UVData>     uvData;
+    std::vector<int>        edges;
+    std::vector<int>        materials;
+    std::vector<int>        textures;
+    OptPoint3               translation;
+    OptPoint3               rotation;
+    OptPoint3               scale;
 
     ModelData*             modelData    { nullptr };
     AnimationDeformerData* deformerData { nullptr };
@@ -708,7 +731,7 @@ class CImportFBX : public CImportBase {
     OptPoint3   localRotation;
     OptPoint3   localScaling;
 
-    TextureData*                        textureData  { nullptr };
+    TextureMap                          textureMap;
     MaterialData*                       materialData { nullptr };
     std::vector<AnimationDeformerData*> deformerData;
 
@@ -721,6 +744,7 @@ class CImportFBX : public CImportBase {
   };
 
   struct MaterialData;
+  struct VideoData;
 
   struct TextureData {
     IndName id;
@@ -731,8 +755,9 @@ class CImportFBX : public CImportBase {
     std::string   media;
     CGeomTexture* texture { nullptr };
 
-    ModelData*    modelData { nullptr };
+    ModelData*    modelData    { nullptr };
     MaterialData* materialData { nullptr };
+    VideoData*    videoData    { nullptr };
   };
 
   struct MaterialData {
@@ -749,7 +774,7 @@ class CImportFBX : public CImportBase {
     OptReal     specularFactor;
     OptReal     shininess;
 
-    TextureData*             textureData { nullptr };
+    TextureMap               textureMap;
     std::vector<ModelData *> modelData;
   };
 
@@ -907,10 +932,10 @@ class CImportFBX : public CImportBase {
   };
 
   struct VideoData {
-    std::string name;
+    IndName id;
 
-    ModelData*   modelData   { nullptr };
-    TextureData* textureData { nullptr };
+    ModelData* modelData   { nullptr };
+    TextureMap textureMap;
   };
 
   struct ConstraintData {
@@ -932,7 +957,7 @@ class CImportFBX : public CImportBase {
   IdAnimationLayerData     animationLayerData_;
   IdAnimationStackData     animationStackData_;
   IdNodeAttributeData      idNodeAttributeData_;
-  IdVideoData              videoData_;
+  IdVideoData              idVideoData_;
   IdConstraintData         constraintData_;
 
   bool colorAlpha_ { true };

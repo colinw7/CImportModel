@@ -46,6 +46,7 @@ CQNewGLSkybox.cpp \
 CQNewGLStatusBar.cpp \
 CQNewGLTerrain.cpp \
 CQNewGLTextureChooser.cpp \
+CQNewGLObjectsList.cpp \
 CQNewGLToolbar.cpp \
 CQNewGLUVMap.cpp \
 CQNewGLWidget.cpp \
@@ -108,6 +109,7 @@ CQNewGLSkybox.h \
 CQNewGLStatusBar.h \
 CQNewGLTerrain.h \
 CQNewGLTextureChooser.h \
+CQNewGLObjectsList.h \
 CQNewGLToolbar.h \
 CQNewGLUtil.h \
 CQNewGLUVMap.h \

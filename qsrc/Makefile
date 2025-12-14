@@ -80,6 +80,7 @@ SOURCES       = CQNewGLAxes.cpp \
 		CQNewGLStatusBar.cpp \
 		CQNewGLTerrain.cpp \
 		CQNewGLTextureChooser.cpp \
+		CQNewGLObjectsList.cpp \
 		CQNewGLToolbar.cpp \
 		CQNewGLUVMap.cpp \
 		CQNewGLWidget.cpp \
@@ -114,6 +115,7 @@ SOURCES       = CQNewGLAxes.cpp \
 		.moc/moc_CQNewGLStatusBar.cpp \
 		.moc/moc_CQNewGLTerrain.cpp \
 		.moc/moc_CQNewGLTextureChooser.cpp \
+		.moc/moc_CQNewGLObjectsList.cpp \
 		.moc/moc_CQNewGLToolbar.cpp \
 		.moc/moc_CQNewGLWidget.cpp \
 		.moc/moc_CQPoint3DEdit.cpp \
@@ -146,6 +148,7 @@ OBJECTS       = CQNewGLAxes.o \
 		CQNewGLStatusBar.o \
 		CQNewGLTerrain.o \
 		CQNewGLTextureChooser.o \
+		CQNewGLObjectsList.o \
 		CQNewGLToolbar.o \
 		CQNewGLUVMap.o \
 		CQNewGLWidget.o \
@@ -181,6 +184,7 @@ OBJECTS       = CQNewGLAxes.o \
 		moc_CQNewGLStatusBar.o \
 		moc_CQNewGLTerrain.o \
 		moc_CQNewGLTextureChooser.o \
+		moc_CQNewGLObjectsList.o \
 		moc_CQNewGLToolbar.o \
 		moc_CQNewGLWidget.o \
 		moc_CQPoint3DEdit.o \
@@ -308,6 +312,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQNewGLStatusBar.h \
 		CQNewGLTerrain.h \
 		CQNewGLTextureChooser.h \
+		CQNewGLObjectsList.h \
 		CQNewGLToolbar.h \
 		CQNewGLUtil.h \
 		CQNewGLUVMap.h \
@@ -348,6 +353,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQNewGLStatusBar.cpp \
 		CQNewGLTerrain.cpp \
 		CQNewGLTextureChooser.cpp \
+		CQNewGLObjectsList.cpp \
 		CQNewGLToolbar.cpp \
 		CQNewGLUVMap.cpp \
 		CQNewGLWidget.cpp \
@@ -590,8 +596,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents CQNewGLAxes.h CQNewGLBasis.h CQNewGLBBox.h CQNewGLBones.h CQNewGLCamera.h CQNewGLCanvas.h CQNewGLControl.h CQNewGLDrawTree.h CQNewGLEmitter.h CQNewGLFaceData.h CQNewGLFont.h CQNewGLFractal.h CQNewGLFractalWidget.h CQNewGLHull.h CQNewGLLight.h CQNewGLMaze.h CQNewGLModel.h CQNewGLModelObject.h CQNewGLNormals.h CQNewGLObject.h CQNewGLPath.h CQNewGLShaderProgram.h CQNewGLShape.h CQNewGLShapes.h CQNewGLSkybox.h CQNewGLStatusBar.h CQNewGLTerrain.h CQNewGLTextureChooser.h CQNewGLToolbar.h CQNewGLUtil.h CQNewGLUVMap.h CQNewGLWidget.h CQNewGLWireframe.h CQGLCubemap.h CQGLTexture.h CQGLUtil.h CQPoint3DEdit.h CQRotatedText.h CQMatrix3D.h CGLCamera.h CGLTexture.h $(DISTDIR)/
-	$(COPY_FILE) --parents CQNewGLAxes.cpp CQNewGLBasis.cpp CQNewGLBBox.cpp CQNewGLBones.cpp CQNewGLCamera.cpp CQNewGLCanvas.cpp CQNewGLControl.cpp CQNewGLDrawTree.cpp CQNewGLEmitter.cpp CQNewGLFont.cpp CQNewGLFractal.cpp CQNewGLFractalWidget.cpp CQNewGLHull.cpp CQNewGLLight.cpp CQNewGLMain.cpp CQNewGLMaze.cpp CQNewGLModel.cpp CQNewGLModelObject.cpp CQNewGLNormals.cpp CQNewGLObject.cpp CQNewGLPath.cpp CQNewGLShaderProgram.cpp CQNewGLShape.cpp CQNewGLShapes.cpp CQNewGLSkybox.cpp CQNewGLStatusBar.cpp CQNewGLTerrain.cpp CQNewGLTextureChooser.cpp CQNewGLToolbar.cpp CQNewGLUVMap.cpp CQNewGLWidget.cpp CQNewGLWireframe.cpp CQGLCubemap.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQRotatedText.cpp CQMatrix3D.cpp CGLCamera.cpp CGLTexture.cpp CFlocking.cpp CFlock.cpp CBoid.cpp CFireworks.cpp CDungeon.cpp CDungeonXML.cpp CDrawTree3D.cpp CTurtle3D.cpp CWaterSurface.cpp CLorenzCalc.cpp CSolidNoise.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents CQNewGLAxes.h CQNewGLBasis.h CQNewGLBBox.h CQNewGLBones.h CQNewGLCamera.h CQNewGLCanvas.h CQNewGLControl.h CQNewGLDrawTree.h CQNewGLEmitter.h CQNewGLFaceData.h CQNewGLFont.h CQNewGLFractal.h CQNewGLFractalWidget.h CQNewGLHull.h CQNewGLLight.h CQNewGLMaze.h CQNewGLModel.h CQNewGLModelObject.h CQNewGLNormals.h CQNewGLObject.h CQNewGLPath.h CQNewGLShaderProgram.h CQNewGLShape.h CQNewGLShapes.h CQNewGLSkybox.h CQNewGLStatusBar.h CQNewGLTerrain.h CQNewGLTextureChooser.h CQNewGLObjectsList.h CQNewGLToolbar.h CQNewGLUtil.h CQNewGLUVMap.h CQNewGLWidget.h CQNewGLWireframe.h CQGLCubemap.h CQGLTexture.h CQGLUtil.h CQPoint3DEdit.h CQRotatedText.h CQMatrix3D.h CGLCamera.h CGLTexture.h $(DISTDIR)/
+	$(COPY_FILE) --parents CQNewGLAxes.cpp CQNewGLBasis.cpp CQNewGLBBox.cpp CQNewGLBones.cpp CQNewGLCamera.cpp CQNewGLCanvas.cpp CQNewGLControl.cpp CQNewGLDrawTree.cpp CQNewGLEmitter.cpp CQNewGLFont.cpp CQNewGLFractal.cpp CQNewGLFractalWidget.cpp CQNewGLHull.cpp CQNewGLLight.cpp CQNewGLMain.cpp CQNewGLMaze.cpp CQNewGLModel.cpp CQNewGLModelObject.cpp CQNewGLNormals.cpp CQNewGLObject.cpp CQNewGLPath.cpp CQNewGLShaderProgram.cpp CQNewGLShape.cpp CQNewGLShapes.cpp CQNewGLSkybox.cpp CQNewGLStatusBar.cpp CQNewGLTerrain.cpp CQNewGLTextureChooser.cpp CQNewGLObjectsList.cpp CQNewGLToolbar.cpp CQNewGLUVMap.cpp CQNewGLWidget.cpp CQNewGLWireframe.cpp CQGLCubemap.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQRotatedText.cpp CQMatrix3D.cpp CGLCamera.cpp CGLTexture.cpp CFlocking.cpp CFlock.cpp CBoid.cpp CFireworks.cpp CDungeon.cpp CDungeonXML.cpp CDrawTree3D.cpp CTurtle3D.cpp CWaterSurface.cpp CLorenzCalc.cpp CSolidNoise.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -624,9 +630,9 @@ compiler_moc_predefs_clean:
 	@echo generating .moc/moc_predefs.h
 	@g++ -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qsrc" -O2 -std=gnu++1z -Wall -Wextra -dM -E -o .moc/moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: .moc/moc_CQNewGLBones.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLFractalWidget.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLTextureChooser.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLWidget.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
+compiler_moc_header_make_all: .moc/moc_CQNewGLBones.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLFractalWidget.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLTextureChooser.cpp .moc/moc_CQNewGLObjectsList.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLWidget.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) .moc/moc_CQNewGLBones.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLFractalWidget.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLTextureChooser.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLWidget.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
+	-$(DEL_FILE) .moc/moc_CQNewGLBones.cpp .moc/moc_CQNewGLCanvas.cpp .moc/moc_CQNewGLControl.cpp .moc/moc_CQNewGLDrawTree.cpp .moc/moc_CQNewGLEmitter.cpp .moc/moc_CQNewGLFractal.cpp .moc/moc_CQNewGLFractalWidget.cpp .moc/moc_CQNewGLModel.cpp .moc/moc_CQNewGLShape.cpp .moc/moc_CQNewGLStatusBar.cpp .moc/moc_CQNewGLTerrain.cpp .moc/moc_CQNewGLTextureChooser.cpp .moc/moc_CQNewGLObjectsList.cpp .moc/moc_CQNewGLToolbar.cpp .moc/moc_CQNewGLWidget.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQMatrix3D.cpp
 .moc/moc_CQNewGLBones.cpp: CQNewGLBones.h \
 		CQNewGLShaderProgram.h \
 		CQNewGLFaceData.h \
@@ -926,6 +932,11 @@ compiler_moc_header_clean:
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQNewGLTextureChooser.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLTextureChooser.h -o .moc/moc_CQNewGLTextureChooser.cpp
+
+.moc/moc_CQNewGLObjectsList.cpp: CQNewGLObjectsList.h \
+		.moc/moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	@echo moc CQNewGLObjectsList.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qsrc/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qsrc -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qsrc/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQNewGLObjectsList.h -o .moc/moc_CQNewGLObjectsList.cpp
 
 .moc/moc_CQNewGLToolbar.cpp: CQNewGLToolbar.h \
 		.moc/moc_predefs.h \
@@ -1412,6 +1423,7 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		CQNewGLFractalWidget.h \
 		CQNewGLFractal.h \
 		CQNewGLDrawTree.h \
+		CQNewGLObjectsList.h \
 		CQNewGLTextureChooser.h \
 		CQNewGLUtil.h \
 		../../CImportModel/include/CImportBase.h \
@@ -2728,6 +2740,57 @@ CQNewGLTextureChooser.o: CQNewGLTextureChooser.cpp CQNewGLTextureChooser.h \
 		../../CQUtil/include/CQUtilMeta.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLTextureChooser.o CQNewGLTextureChooser.cpp
 
+CQNewGLObjectsList.o: CQNewGLObjectsList.cpp CQNewGLObjectsList.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
+		CQNewGLFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		CQNewGLWidget.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CImageLib/include/CImagePtr.h \
+		../../CUtil/include/CGeom3DType.h \
+		CGLCamera.h \
+		../../CMath/include/CQuaternion.h \
+		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQNewGLModel.h \
+		CQNewGLModelObject.h \
+		CQNewGLObject.h \
+		../../CQUtil/include/CQUtil.h \
+		../../CQUtil/include/CQUtilMeta.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
+		../../CUtil/include/CClipSide.h \
+		../../CGeometry3D/include/CGeomPoint3D.h \
+		../../CMath/include/CCoordFrame3D.h \
+		../../CMath/include/COrthonormalBasis3D.h \
+		../../CGeometry3D/include/CGeomLine3D.h \
+		../../CImportModel/include/CMaterial.h \
+		../../CUtil/include/CLineDash.h \
+		../../CUtil/include/CILineDash.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CVector4D.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLObjectsList.o CQNewGLObjectsList.cpp
+
 CQNewGLToolbar.o: CQNewGLToolbar.cpp CQNewGLToolbar.h \
 		CQNewGLModel.h \
 		../../CUtil/include/CGeom3DType.h \
@@ -3518,6 +3581,9 @@ moc_CQNewGLTerrain.o: .moc/moc_CQNewGLTerrain.cpp
 
 moc_CQNewGLTextureChooser.o: .moc/moc_CQNewGLTextureChooser.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLTextureChooser.o .moc/moc_CQNewGLTextureChooser.cpp
+
+moc_CQNewGLObjectsList.o: .moc/moc_CQNewGLObjectsList.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLObjectsList.o .moc/moc_CQNewGLObjectsList.cpp
 
 moc_CQNewGLToolbar.o: .moc/moc_CQNewGLToolbar.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CQNewGLToolbar.o .moc/moc_CQNewGLToolbar.cpp

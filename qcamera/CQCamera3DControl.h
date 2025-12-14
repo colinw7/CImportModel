@@ -5,16 +5,16 @@
 
 class CQCamera3DApp;
 class CQCamera3DCamera;
+class CQCamera3DObjectsList;
 class CQCamera3DTextureChooser;
 
-#if 0
 class CQMatrix3D;
-#else
 class CQPoint3DEdit;
-#endif
 class CQRealSpin;
 class CQColorEdit;
+class CQTextLabel;
 
+class QTextEdit;
 class QComboBox;
 class QCheckBox;
 class QToolButton;
@@ -28,9 +28,9 @@ class CQCamera3DControl : public QFrame {
 
   void connectSlots(bool b);
 
+ private Q_SLOTS:
   void updateWidgets();
 
- private Q_SLOTS:
   void showWireframeSlot(int);
   void showSolidSlot(int);
 
@@ -106,11 +106,21 @@ class CQCamera3DControl : public QFrame {
   void specularMapSlot();
   void emissiveMapSlot();
 
+  void swapYZSlot();
+  void invertXSlot();
+  void invertYSlot();
+  void invertZSlot();
+
+  void loadTextureMapSlot();
+
   void addTextureSlot();
   void selectParentSlot();
   void deselectSlot();
 
   // Objects
+  void objectSelectSlot();
+  void objectZoomSlot();
+
   void addCubeSlot();
   void addCylinderSlot();
   void addPyramidSlot();
@@ -124,6 +134,8 @@ class CQCamera3DControl : public QFrame {
 
  private:
   void updateObjects();
+
+  void addTextureFile(const std::string &fileName);
 
  private:
   CQCamera3DCamera *getCamera() const;
@@ -185,17 +197,14 @@ class CQCamera3DControl : public QFrame {
   QComboBox* mouseTypeCombo_ { nullptr };
 
   // Selection
-  QComboBox* selectTypeCombo_ { nullptr };
-  QLabel*    objectIndLabel_  { nullptr };
-  QCheckBox* objectVisCheck_  { nullptr };
+  QComboBox*   selectTypeCombo_ { nullptr };
+  CQTextLabel* objectIndLabel_  { nullptr };
+  QCheckBox*   objectVisCheck_  { nullptr };
 
-#if 0
   CQMatrix3D*    objectMatrix_    { nullptr };
-#else
   CQPoint3DEdit* translationEdit_ { nullptr };
   CQPoint3DEdit* rotationEdit_    { nullptr };
   CQPoint3DEdit* scaleEdit_       { nullptr };
-#endif
 
   CQColorEdit* objectColor_ { nullptr };
 
@@ -203,6 +212,11 @@ class CQCamera3DControl : public QFrame {
   CQCamera3DTextureChooser *specularTextureEdit_ { nullptr };
   CQCamera3DTextureChooser *normalTextureEdit_   { nullptr };
   CQCamera3DTextureChooser *emissiveTextureEdit_ { nullptr };
+
+  QTextEdit* objectInfoText_ { nullptr };
+
+  // Objects
+  CQCamera3DObjectsList *objectsList_ { nullptr };
 
   // Overview
   QCheckBox* overviewEqualScale_ { nullptr };

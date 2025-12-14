@@ -20,6 +20,7 @@ CGeomImportPLG.cpp \
 CImport3DRW.cpp \
 CImport3DS.cpp \
 CImportASC.cpp \
+CImportBlend.cpp \
 CImportCOB.cpp \
 CImportDXF.cpp \
 CImportFBX.cpp \

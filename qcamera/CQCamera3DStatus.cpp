@@ -1,7 +1,8 @@
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DApp.h>
 
-#include <QLabel>
+#include <CQTextLabel.h>
+
 #include <QHBoxLayout>
 
 CQCamera3DStatus::
@@ -12,8 +13,8 @@ CQCamera3DStatus(CQCamera3DApp *app) :
 
   auto *layout = new QHBoxLayout(this);
 
-  modelLabel_ = new QLabel(" ");
-  mouseLabel_ = new QLabel(" ");
+  modelLabel_ = new CQTextLabel(" ");
+  mouseLabel_ = new CQTextLabel(" ");
 
   layout->addWidget (modelLabel_);
   layout->addStretch(1);

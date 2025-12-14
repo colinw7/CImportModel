@@ -37,8 +37,8 @@ setTextureName(const QString &name)
 
   int ind = 0;
 
-  for (const auto &pr : textures) {
-    const auto &textureData = pr.second;
+  for (const auto &pt : textures) {
+    const auto &textureData = pt.second;
 
     if (QString::fromStdString(textureData.glTexture->getName()) == name) {
       setCurrentIndex(ind + 1);
@@ -77,8 +77,8 @@ updateWidgets()
 
   const auto &textures = canvas->glTextures();
 
-  for (const auto &pr : textures) {
-    const auto &textureData = pr.second;
+  for (const auto &pt : textures) {
+    const auto &textureData = pt.second;
 
     auto objectName = QString::fromStdString(textureData.glTexture->getName());
 
@@ -113,8 +113,8 @@ currentIndexChanged(int ind)
 
   const auto &textures = canvas->glTextures();
 
-  for (const auto &pr : textures) {
-    const auto &textureData = pr.second;
+  for (const auto &pt : textures) {
+    const auto &textureData = pt.second;
 
     if (ind == ind1) {
       textureName_ = QString::fromStdString(textureData.glTexture->getName());

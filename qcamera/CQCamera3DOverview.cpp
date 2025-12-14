@@ -289,7 +289,7 @@ paintEvent(QPaintEvent *)
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
-    modelMatrix = CMatrix3DH(object1->calcTransform());
+    modelMatrix = CMatrix3DH(object1->getHierTransform());
 
     const auto &faces = object->getFaces();
 

@@ -1,6 +1,8 @@
 #include <CQCamera3DApp.h>
 #include <CQCamera3DCanvas.h>
 #include <CQCamera3DOverview.h>
+#include <CQCamera3DUVMap.h>
+#include <CQCamera3DTextures.h>
 #include <CQCamera3DControl.h>
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DGeomObject.h>
@@ -56,9 +58,13 @@ CQCamera3DApp()
 
   canvas_   = new CQCamera3DCanvas(this);
   overview_ = new CQCamera3DOverview(this);
+  uvMap_    = new CQCamera3DUVMap(this);
+  textures_ = new CQCamera3DTextures(this);
 
   tab->addWidget(canvas_  , "3D"      );
   tab->addWidget(overview_, "Overview");
+  tab->addWidget(uvMap_   , "UV"      );
+  tab->addWidget(textures_, "Textures");
 
   control_  = new CQCamera3DControl(this);
 

@@ -142,10 +142,7 @@ class CImportGLTF : public CImportBase {
  public:
   CImportGLTF(CGeomScene3D *scene=nullptr, const std::string &name="gltf");
 
- ~CImportGLTF();
-
-  bool isDebug() const { return debug_; }
-  void setDebug(bool b) { debug_ = b; }
+ ~CImportGLTF() override;
 
   bool isDebugData() const { return debugData_; }
   void setDebugData(bool b) { debugData_ = b; }
@@ -657,13 +654,13 @@ class CImportGLTF : public CImportBase {
   SceneP         pscene_;
   CGeomObject3D* object_  { nullptr };
   ObjectP        pobject_;
-  CFile*         file_    { nullptr };
+
+  CFile* file_ { nullptr };
 
   CGeomObject3D *rootObject_ { nullptr };
 
   bool binary_ { false };
 
-  bool debug_     { false };
   bool debugData_ { false };
   bool saveImage_ { false };
 

@@ -5,7 +5,7 @@
 
 class CQCamera3DApp;
 
-class QLabel;
+class CQTextLabel;
 
 class CQCamera3DStatus : public QFrame {
   Q_OBJECT
@@ -19,8 +19,8 @@ class CQCamera3DStatus : public QFrame {
  private:
   CQCamera3DApp* app_ { nullptr };
 
-  QLabel* modelLabel_ { nullptr };
-  QLabel* mouseLabel_ { nullptr };
+  CQTextLabel* modelLabel_ { nullptr };
+  CQTextLabel* mouseLabel_ { nullptr };
 };
 
 #endif

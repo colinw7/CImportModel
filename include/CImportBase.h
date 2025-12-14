@@ -32,6 +32,7 @@ class CImportBase {
     if      (suffix == "3ds"  ) return CGEOM_3D_TYPE_3DS;
     else if (suffix == "3drw" ) return CGEOM_3D_TYPE_3DRW;
     else if (suffix == "asc"  ) return CGEOM_3D_TYPE_ASC;
+    else if (suffix == "blend") return CGEOM_3D_TYPE_BLEND;
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;
     else if (suffix == "dxf"  ) return CGEOM_3D_TYPE_DXF;
     else if (suffix == "fbx"  ) return CGEOM_3D_TYPE_FBX;
@@ -82,6 +83,11 @@ class CImportBase {
 
   bool isSwapZX() const { return swapZX_; }
   void setSwapZX(bool b) { swapZX_ = b; }
+
+  //---
+
+  bool isFlipTexture() const { return flipTexture_; }
+  void setFlipTexture(bool b) { flipTexture_ = b; }
 
   //---
 
@@ -139,6 +145,8 @@ class CImportBase {
   bool swapXY_ { false };
   bool swapYZ_ { false };
   bool swapZX_ { false };
+
+  bool flipTexture_ { false };
 
   using FileNameMap = std::map<std::string, std::string>;
 

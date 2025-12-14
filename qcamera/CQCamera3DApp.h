@@ -7,6 +7,8 @@
 
 class CQCamera3DCanvas;
 class CQCamera3DOverview;
+class CQCamera3DUVMap;
+class CQCamera3DTextures;
 class CQCamera3DControl;
 class CQCamera3DStatus;
 
@@ -48,6 +50,8 @@ class CQCamera3DApp : public QFrame {
 
   CQCamera3DCanvas*   canvas  () const { return canvas_  ; }
   CQCamera3DOverview* overview() const { return overview_; }
+  CQCamera3DUVMap*    uvMap   () const { return uvMap_   ; }
+  CQCamera3DTextures* textures() const { return textures_; }
   CQCamera3DControl*  control () const { return control_ ; }
   CQCamera3DStatus*   status  () const { return status_  ; }
 
@@ -66,6 +70,8 @@ class CQCamera3DApp : public QFrame {
   // widgets
   CQCamera3DCanvas*   canvas_   { nullptr };
   CQCamera3DOverview* overview_ { nullptr };
+  CQCamera3DUVMap*    uvMap_    { nullptr };
+  CQCamera3DTextures* textures_ { nullptr };
   CQCamera3DControl*  control_  { nullptr };
   CQCamera3DStatus*   status_   { nullptr };
 };
