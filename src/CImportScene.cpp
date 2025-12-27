@@ -25,200 +25,6 @@
 
 //---
 
-#define ORIENTATION_CMD 1
-#define SCENE_CMD       2
-#define OBJECT_CMD      3
-#define PRIMITIVE_CMD   4
-#define COLORS_CMD      5
-#define COLOURS_CMD     6
-#define TEXTURES_CMD    7
-#define CSG_CMD         8
-
-static const char *
-global_commands[] = {
-  "Orientation",
-  "Scene",
-  "Object",
-  "Primitive",
-  "Colors",
-  "Colours",
-  "Textures",
-  "CSG",
-  nullptr,
-};
-
-//---
-
-#define SCENE_OBJECT_CMD     1
-#define SCENE_PROJECTION_CMD 2
-#define SCENE_EYE_CMD        3
-#define SCENE_WINDOW_CMD     4
-#define SCENE_END_CMD        5
-
-static const char *
-scene_commands[] = {
-  "Object",
-  "Projection",
-  "Eye",
-  "Window",
-  "End",
-  nullptr,
-};
-
-//---
-
-#define PRIMITIVE_FACES_CMD     1
-#define PRIMITIVE_SUB_FACES_CMD 2
-#define PRIMITIVE_LINES_CMD     3
-#define PRIMITIVE_SUB_LINES_CMD 4
-#define PRIMITIVE_POINTS_CMD    5
-#define PRIMITIVE_ROTATE_CMD    6
-#define PRIMITIVE_OBJECT_CMD    7
-#define PRIMITIVE_END_CMD       8
-
-static const char *
-primitive_commands[] = {
-  "Faces",
-  "SubFaces",
-  "Lines",
-  "SubLines",
-  "Points",
-  "Rotate",
-  "Object",
-  "End",
-  nullptr,
-};
-
-//---
-
-#define CSG_CUBE_CMD     1
-#define CSG_SPHERE_CMD   2
-#define CSG_CYLINDER_CMD 3
-#define CSG_COLOR_CMD    4
-#define CSG_END_CMD      5
-
-static const char *
-csg_commands[] = {
-  "Cube",
-  "Sphere",
-  "Cylinder",
-  "Color",
-  "End",
-  nullptr,
-};
-
-//---
-
-#define OBJECT_PRIMITIVE_CMD       1
-#define OBJECT_FLIP_ORIENTATION    2
-#define OBJECT_FACE_COLOR_CMD      3
-#define OBJECT_FACE_COLOUR_CMD     4
-#define OBJECT_SUB_FACE_COLOR_CMD  5
-#define OBJECT_SUB_FACE_COLOUR_CMD 6
-#define OBJECT_LINE_COLOR_CMD      7
-#define OBJECT_LINE_COLOUR_CMD     8
-#define OBJECT_SUB_LINE_COLOR_CMD  9
-#define OBJECT_SUB_LINE_COLOUR_CMD 10
-#define OBJECT_TEXTURE_CMD         11
-#define OBJECT_COVER_TEXTURE_CMD   12
-#define OBJECT_MASK_CMD            13
-#define OBJECT_COVER_MASK_CMD      14
-#define OBJECT_TRANSFORMS_CMD      15
-#define OBJECT_END_CMD             16
-
-static const char *
-object_commands[] = {
-  "Primitive",
-  "Flip_Orientation",
-  "Face_Color",
-  "Face_Colour",
-  "SubFace_Color",
-  "SubFace_Colour",
-  "Line_Color",
-  "Line_Colour",
-  "SubLine_Color",
-  "SubLine_Colour",
-  "Texture",
-  "CoverTexture",
-  "Mask",
-  "CoverMask",
-  "Transforms",
-  "End",
-  nullptr,
-};
-
-//---
-
-#define FACES_END_CMD 1
-
-static const char *
-faces_commands[] = {
-  "End",
-  nullptr,
-};
-
-//---
-
-#define LINES_END_CMD 1
-
-static const char *
-lines_commands[] = {
-  "End",
-  nullptr,
-};
-
-//---
-
-#define POINTS_END_CMD 1
-
-static const char *
-points_commands[] = {
-  "End",
-  nullptr,
-};
-
-//---
-
-#define ROTATE_END_CMD 1
-
-static const char *
-rotate_commands[] = {
-  "End",
-  nullptr,
-};
-
-//---
-
-#define COLORS_END_CMD 1
-
-static const char *
-colors_commands[] = {
-  "End",
-  nullptr,
-};
-
-//---
-
-#define TRANSFORMS_TRANSLATE_CMD 1
-#define TRANSFORMS_SCALE_CMD     2
-#define TRANSFORMS_ROTATE_X_CMD  3
-#define TRANSFORMS_ROTATE_Y_CMD  4
-#define TRANSFORMS_ROTATE_Z_CMD  5
-#define TRANSFORMS_END_CMD       6
-
-static const char *
-transforms_commands[] = {
-  "Translate",
-  "Scale",
-  "RotateX",
-  "RotateY",
-  "RotateZ",
-  "End",
-  nullptr,
-};
-
-//---
-
 class LineWords {
  public:
   LineWords(const std::string &line) {
@@ -275,6 +81,34 @@ bool
 CImportScene::
 read(CFile &file)
 {
+  enum Cmds {
+    ORIENTATION_CMD = 1,
+    SCENE_CMD       = 2,
+    OBJECT_CMD      = 3,
+    PRIMITIVE_CMD   = 4,
+    COLORS_CMD      = 5,
+    COLOURS_CMD     = 6,
+    TEXTURES_CMD    = 7,
+    MATERIAL_CMD    = 8,
+    CSG_CMD         = 9
+  };
+
+  static const char *
+  global_commands[] = {
+    "Orientation",
+    "Scene",
+    "Object",
+    "Primitive",
+    "Colors",
+    "Colours",
+    "Textures",
+    "Material",
+    "CSG",
+    nullptr,
+  };
+
+  //---
+
   file_ = &file;
 
   std::string line;
@@ -315,12 +149,16 @@ read(CFile &file)
         readTextures();
 
         break;
+      case MATERIAL_CMD:
+        readMaterial(words.getWord(1));
+
+        break;
       case CSG_CMD:
         readCSG(words.getWord(1));
 
         break;
       default:
-        errorMsg("Unrecognised Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("", words.getWord(0), global_commands);
         break;
     }
   }
@@ -332,6 +170,26 @@ void
 CImportScene::
 readScene()
 {
+  enum Cmds {
+    SCENE_OBJECT_CMD     = 1,
+    SCENE_PROJECTION_CMD = 2,
+    SCENE_EYE_CMD        = 3,
+    SCENE_WINDOW_CMD     = 4,
+    SCENE_END_CMD        = 5
+  };
+
+  static const char *
+  scene_commands[] = {
+    "Object",
+    "Projection",
+    "Eye",
+    "Window",
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -368,7 +226,7 @@ readScene()
 
         break;
       default:
-        errorMsg("Unrecognised Scene Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("Scene", words.getWord(0), scene_commands);
         break;
     }
   }
@@ -447,6 +305,32 @@ void
 CImportScene::
 readPrimitive(const std::string &name)
 {
+  enum Cmds {
+    PRIMITIVE_FACES_CMD     = 1,
+    PRIMITIVE_SUB_FACES_CMD = 2,
+    PRIMITIVE_LINES_CMD     = 3,
+    PRIMITIVE_SUB_LINES_CMD = 4,
+    PRIMITIVE_POINTS_CMD    = 5,
+    PRIMITIVE_ROTATE_CMD    = 6,
+    PRIMITIVE_OBJECT_CMD    = 7,
+    PRIMITIVE_END_CMD       = 8
+  };
+
+  static const char *
+  primitive_commands[] = {
+    "Faces",
+    "SubFaces",
+    "Lines",
+    "SubLines",
+    "Points",
+    "Rotate",
+    "Object",
+    "End",
+    nullptr,
+  };
+
+  //---
+
   auto *primitive = CGeometryInst->createObject3D(scene_, name);
 
   primitive->setName(name);
@@ -565,7 +449,7 @@ readPrimitive(const std::string &name)
 
         break;
       default:
-        errorMsg("Unrecognised Primitive Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("Primitive", words.getWord(0), primitive_commands);
         break;
     }
   }
@@ -577,6 +461,50 @@ void
 CImportScene::
 readObject(const std::string &name)
 {
+  enum Cmds {
+    OBJECT_PRIMITIVE_CMD       = 1,
+    OBJECT_FLIP_ORIENTATION    = 2,
+    OBJECT_FACE_COLOR_CMD      = 3,
+    OBJECT_FACE_COLOUR_CMD     = 4,
+    OBJECT_SUB_FACE_COLOR_CMD  = 5,
+    OBJECT_SUB_FACE_COLOUR_CMD = 6,
+    OBJECT_LINE_COLOR_CMD      = 7,
+    OBJECT_LINE_COLOUR_CMD     = 8,
+    OBJECT_SUB_LINE_COLOR_CMD  = 9,
+    OBJECT_SUB_LINE_COLOUR_CMD = 10,
+    OBJECT_TEXTURE_CMD         = 11,
+    OBJECT_COVER_TEXTURE_CMD   = 12,
+    OBJECT_MASK_CMD            = 13,
+    OBJECT_COVER_MASK_CMD      = 14,
+    OBJECT_MATERIAL_CMD        = 15,
+    OBJECT_TRANSFORMS_CMD      = 16,
+    OBJECT_END_CMD             = 17
+  };
+
+  static const char *
+  object_commands[] = {
+    "Primitive",
+    "Flip_Orientation",
+    "Face_Color",
+    "Face_Colour",
+    "SubFace_Color",
+    "SubFace_Colour",
+    "Line_Color",
+    "Line_Colour",
+    "SubLine_Color",
+    "SubLine_Colour",
+    "Texture",
+    "CoverTexture",
+    "Mask",
+    "CoverMask",
+    "Material",
+    "Transforms",
+    "End",
+    nullptr,
+  };
+
+  //---
+
   auto *object = CGeometryInst->createObject3D(scene_, name);
 
   object->setName(name);
@@ -697,13 +625,9 @@ readObject(const std::string &name)
         auto texture_num = words.getInteger(1);
 
         if (texture_num >= 1 && texture_num <= int(textures_.size())) {
-          CFile file(textures_[uint(texture_num - 1)]);
+          auto *texture = textures_[uint(texture_num - 1)];
 
-          CImageFileSrc src(file);
-
-          auto image = CImageMgrInst->createImage(src);
-
-          object->setTexture(image);
+          object->setTexture(texture);
         }
         else
           errorMsg("Invalid texture number " + std::to_string(texture_num));
@@ -714,13 +638,9 @@ readObject(const std::string &name)
         auto texture_num = words.getInteger(1);
 
         if (texture_num >= 1 && texture_num <= int(textures_.size())) {
-          CFile file(textures_[uint(texture_num - 1)]);
+          auto *texture = textures_[uint(texture_num - 1)];
 
-          CImageFileSrc src(file);
-
-          auto image = CImageMgrInst->createImage(src);
-
-          object->mapTexture(image);
+          object->mapTexture(texture);
         }
         else
           errorMsg("Invalid texture number " + std::to_string(texture_num));
@@ -731,13 +651,9 @@ readObject(const std::string &name)
         auto mask_num = words.getInteger(1);
 
         if (mask_num >= 1 && mask_num <= int(textures_.size())) {
-          CFile file(textures_[uint(mask_num - 1)]);
+          auto *texture = textures_[uint(mask_num - 1)];
 
-          CImageFileSrc src(file);
-
-          auto image = CImageMgrInst->createImage(src);
-
-          object->setMask(image);
+          object->setMask(texture->image()->image());
         }
         else
           errorMsg("Invalid mask number " + std::to_string(mask_num));
@@ -748,21 +664,36 @@ readObject(const std::string &name)
         auto mask_num = words.getInteger(1);
 
         if (mask_num >= 1 && mask_num <= int(textures_.size())) {
-          CFile file(textures_[uint(mask_num - 1)]);
+          auto *texture = textures_[uint(mask_num - 1)];
 
-          CImageFileSrc src(file);
-
-          auto image = CImageMgrInst->createImage(src);
-
-          object->mapMask(image);
+          object->mapMask(texture->image()->image());
         }
         else
           errorMsg("Invalid mask number " + std::to_string(mask_num));
 
         break;
       }
+      case OBJECT_MATERIAL_CMD: {
+        const auto &materialName = words.getWord(1);
+
+        CGeomMaterial *material = nullptr;
+
+        for (auto *material1 :  materials_) {
+          if (material1->name() == materialName) {
+            material = material1;
+            break;
+          }
+        }
+
+        if (material)
+          object->setMaterialP(material);
+        else
+          errorMsg("Invalid material name '" + materialName + "'");
+
+        break;
+      }
       case OBJECT_TRANSFORMS_CMD: {
-        CMatrix3D matrix = readTransforms();
+        auto matrix = readTransforms();
 
         object->transform(matrix);
 
@@ -773,7 +704,7 @@ readObject(const std::string &name)
 
         break;
       default:
-        errorMsg("Unrecognised Object Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("Object", words.getWord(0), object_commands);
         break;
     }
   }
@@ -785,6 +716,18 @@ void
 CImportScene::
 readFaces(CGeomObject3D *object, int pface_num)
 {
+  enum Cmds {
+    FACES_END_CMD = 1
+  };
+
+  static const char *
+  faces_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -869,6 +812,18 @@ void
 CImportScene::
 readLines(CGeomObject3D *object, int pface_num)
 {
+  enum Cmds {
+    LINES_END_CMD = 1
+  };
+
+  static const char *
+  lines_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -905,6 +860,18 @@ void
 CImportScene::
 readVertices(CGeomObject3D *object)
 {
+  enum Cmds {
+    POINTS_END_CMD = 1
+  };
+
+  static const char *
+  points_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -939,6 +906,18 @@ void
 CImportScene::
 readRotate(CGeomObject3D *object, int num_patches)
 {
+  enum Cmds {
+    ROTATE_END_CMD = 1
+  };
+
+  static const char *
+  rotate_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   std::vector<CPoint2D> points;
@@ -992,6 +971,18 @@ void
 CImportScene::
 readColors()
 {
+  enum Cmds {
+    COLORS_END_CMD = 1
+  };
+
+  static const char *
+  colors_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -1021,6 +1012,18 @@ void
 CImportScene::
 readTextures()
 {
+  enum Cmds {
+    TEXTURES_END_CMD = 1
+  };
+
+  static const char *
+  textures_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
   std::string line;
 
   bool end_command = false;
@@ -1031,19 +1034,146 @@ readTextures()
 
     auto words = LineWords(line);
 
-    int command_num = lookupCommand(words.getWord(0), colors_commands);
+    int command_num = lookupCommand(words.getWord(0), textures_commands);
 
     switch (command_num) {
-      case COLORS_END_CMD:
+      case TEXTURES_END_CMD:
+        end_command = true;
+
+        break;
+      default: {
+        auto filename = words.getWord(0);
+
+        CFile file(filename);
+
+        CImageFileSrc src(file);
+
+        auto image = CImageMgrInst->createImage(src);
+
+        auto *texture = CGeometryInst->createTexture(image);
+
+        texture->setName(filename);
+
+        textures_.push_back(texture);
+
+        break;
+      }
+    }
+  }
+}
+
+void
+CImportScene::
+readMaterial(const std::string &name)
+{
+  enum Cmds {
+    MATERIAL_DIFFUSE_CMD          = 1,
+    MATERIAL_DIFFUSE_TEXTURE_CMD  = 2,
+    MATERIAL_NORMAL_TEXTURE_CMD   = 3,
+    MATERIAL_SPECULAR_TEXTURE_CMD = 4,
+    MATERIAL_EMISSION_TEXTURE_CMD = 5,
+    MATERIAL_END_CMD              = 6
+  };
+
+  static const char *
+  material_commands[] = {
+    "Diffuse",
+    "DiffuseTexture",
+    "NormalTexture",
+    "SpecularTexture",
+    "EmissionTexture",
+    "End",
+    nullptr,
+  };
+
+  //---
+
+  auto *material = scene_->getMaterial(name);
+
+  if (! material) {
+    material = CGeometryInst->createMaterial();
+
+    material->setName(name);
+
+    scene_->addMaterial(material);
+  }
+
+  //---
+
+  auto getTexture = [&](int num) {
+    CGeomTexture *texture = nullptr;
+
+    if (num >= 1 && num <= int(textures_.size()))
+      texture = textures_[uint(num - 1)];
+    else
+      errorMsg("Invalid texture number " + std::to_string(num));
+
+    return texture;
+  };
+
+  std::string line;
+
+  bool end_command = false;
+
+  while (! end_command && file_->readLine(line)) {
+    if (isSkipLine(line))
+      continue;
+
+    auto words = LineWords(line);
+
+    int command_num = lookupCommand(words.getWord(0), material_commands);
+
+    switch (command_num) {
+      case MATERIAL_DIFFUSE_CMD: {
+        auto rgba = wordToColor(words.getWord(1));
+
+        material->setDiffuse(rgba);
+
+        break;
+      }
+      case MATERIAL_DIFFUSE_TEXTURE_CMD: {
+        auto *texture = getTexture(words.getInteger(1));
+
+        if (texture)
+          material->setDiffuseTexture(texture);
+
+        break;
+      }
+      case MATERIAL_NORMAL_TEXTURE_CMD: {
+        auto *texture = getTexture(words.getInteger(1));
+
+        if (texture)
+          material->setNormalTexture(texture);
+
+        break;
+      }
+      case MATERIAL_SPECULAR_TEXTURE_CMD: {
+        auto *texture = getTexture(words.getInteger(1));
+
+        if (texture)
+          material->setSpecularTexture(texture);
+
+        break;
+      }
+      case MATERIAL_EMISSION_TEXTURE_CMD: {
+        auto *texture = getTexture(words.getInteger(1));
+
+        if (texture)
+          material->setEmissiveTexture(texture);
+
+        break;
+      }
+      case MATERIAL_END_CMD:
         end_command = true;
 
         break;
       default:
-        textures_.push_back(words.getWord(0));
-
+        unrecogisedCommand("Material", words.getWord(0), material_commands);
         break;
     }
   }
+
+  materials_.push_back(material);
 }
 
 //----
@@ -1116,6 +1246,26 @@ void
 CImportScene::
 readCSG(const std::string &name)
 {
+  enum Cmds {
+    CSG_CUBE_CMD     = 1,
+    CSG_SPHERE_CMD   = 2,
+    CSG_CYLINDER_CMD = 3,
+    CSG_COLOR_CMD    = 4,
+    CSG_END_CMD      = 5
+  };
+
+  static const char *
+  csg_commands[] = {
+    "Cube",
+    "Sphere",
+    "Cylinder",
+    "Color",
+    "End",
+    nullptr,
+  };
+
+  //---
+
   auto *object = CGeometryInst->createObject3D(scene_, name);
 
   //---
@@ -1213,7 +1363,7 @@ readCSG(const std::string &name)
 
         break;
       default:
-        errorMsg("Unrecognised CSG Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("CSG", words.getWord(0), csg_commands);
         break;
     }
   }
@@ -1279,6 +1429,28 @@ CMatrix3D
 CImportScene::
 readTransforms()
 {
+  enum Cmds {
+    TRANSFORMS_TRANSLATE_CMD = 1,
+    TRANSFORMS_SCALE_CMD     = 2,
+    TRANSFORMS_ROTATE_X_CMD  = 3,
+    TRANSFORMS_ROTATE_Y_CMD  = 4,
+    TRANSFORMS_ROTATE_Z_CMD  = 5,
+    TRANSFORMS_END_CMD       = 6
+  };
+
+  static const char *
+  transforms_commands[] = {
+    "Translate",
+    "Scale",
+    "RotateX",
+    "RotateY",
+    "RotateZ",
+    "End",
+    nullptr,
+  };
+
+  //---
+
   CMatrix3D transform_matrix;
 
   transform_matrix.setIdentity();
@@ -1360,7 +1532,7 @@ readTransforms()
 
         break;
       default:
-        errorMsg("Unrecognised Transforms Command '" + words.getWord(0) + "'");
+        unrecogisedCommand("Transforms", words.getWord(0), transforms_commands);
         break;
     }
   }
@@ -1391,6 +1563,16 @@ lookupCommand(const std::string &command, const char **commands)
       return i + 1;
 
   return 0;
+}
+
+void
+CImportScene::
+unrecogisedCommand(const std::string &block, const std::string &command, const char **)
+{
+  if (block != "")
+    errorMsg("Unrecognised " + block + " Command '" + command + "'");
+  else
+    errorMsg("Unrecognised Command '" + command + "'");
 }
 
 CGeomObject3D &

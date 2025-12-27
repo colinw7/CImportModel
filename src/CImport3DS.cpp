@@ -18,16 +18,40 @@
 #define MAP_COORDS_ID       0x4140
 #define SMOOTH_GROUP_ID     0x4150
 #define MESH_MATRIX_ID      0x4160
+#define LIGHT_ID            0x4600
+#define SPOTLIGHT_ID        0x4610
+#define CAMERA_ID           0x4700
 #define M3DMAGIC_ID         0x4d4d
 #define MAT_NAME_ID         0xa000
 #define MAT_AMBIENT_ID      0xa010
 #define MAT_DIFFUSE_ID      0xa020
 #define MAT_SPECULAR_ID     0xa030
 #define MAT_SHININESS_ID    0xa040
+#define MAT_SHININESSP_ID   0xa041 // percent
 #define MAT_TRANSPARENCY_ID 0xa050
+#define MAT_SELF_ILLUM_ID   0xa080
 #define MAT_TWO_SIDED_ID    0xa081
+#define MAT_SELF_ILLUMP_ID  0xa081 // percent
 #define MAT_SHADING_ID      0xa100
+#define MAT_SHADING_TYPE_ID 0xa1e0
+#define TEXTURE_1_ID        0xa200
+#define MAT_GLOSSY_ID       0xa204
+#define MAP_OPACITY_ID      0xa210
+#define REFLECT_MAP_ID      0xa220
+#define BUMP_MAP_ID         0xa230
+#define MAP_FILENAME_ID     0xa300
+#define MAP_PARAM_ID        0xa351
 #define MAT_ENTRY_ID        0xafff
+#define KEY_FRAME_ID        0xb000
+#define MESH_INFO_ID        0xb002
+#define SPOTLIGHT_INFO_ID   0xb007
+#define FRAMES_BLOCK_ID     0xb008
+#define OBJECT_NAME_ID      0xb010
+#define OBJECT_PIVOT_ID     0xb013
+#define POS_TRACK_ID        0xb020
+#define ROT_TRACK_ID        0xb021
+#define SCALE_TRACK_ID      0xb022
+#define HIER_POS_IF         0xb030
 
 struct ChunkName {
   ushort      id;
@@ -49,8 +73,8 @@ chunk_names[] = {
   { POINT_ARRAY_ID     , "POINT_ARRAY"     , },
   { FACE_ARRAY_ID      , "FACE_ARRAY"      , },
   { MSH_MAT_GROUP_ID   , "MSH_MAT_GROUP"   , },
-  { MAP_COORDS_ID      , "MAP_COORDS_ID"   , },
-  { SMOOTH_GROUP_ID    , "SMOOTH_GROUP_ID" , },
+  { MAP_COORDS_ID      , "MAP_COORDS"      , },
+  { SMOOTH_GROUP_ID    , "SMOOTH_GROUP"    , },
   { MESH_MATRIX_ID     , "MESH_MATRIX"     , },
   { M3DMAGIC_ID        , "M3DMAGIC"        , },
   { MAT_NAME_ID        , "MAT_NAME"        , },
@@ -59,9 +83,15 @@ chunk_names[] = {
   { MAT_SPECULAR_ID    , "MAT_SPECULAR"    , },
   { MAT_SHININESS_ID   , "MAT_SHININESS"   , },
   { MAT_TRANSPARENCY_ID, "MAT_TRANSPARENCY", },
-  { MAT_TWO_SIDED_ID   , "MAT_TWO_SIDED_ID", },
+  { MAT_TWO_SIDED_ID   , "MAT_TWO_SIDED"   , },
   { MAT_SHADING_ID     , "MAT_SHADING"     , },
+  { MAT_SHADING_TYPE_ID, "MAT_SHADING_TYPE", },
+  { TEXTURE_1_ID       , "TEXTURE_1"       , },
+  { MAT_GLOSSY_ID      , "MAT_GLOSSY"      , },
+  { MAP_OPACITY_ID     , "MAP_OPACITY"     , },
+  { BUMP_MAP_ID        , "BUMP_MAP"        , },
   { MAT_ENTRY_ID       , "MAT_ENTRY"       , },
+  { KEY_FRAME_ID       , "KEY_FRAME"       , },
   { 0                  , nullptr           , },
 };
 
@@ -78,8 +108,6 @@ CImport3DS(CGeomScene3D *scene, const std::string &) :
 CImport3DS::
 ~CImport3DS()
 {
-  for (auto *material : materials_)
-    delete material;
 }
 
 bool
@@ -87,6 +115,8 @@ CImport3DS::
 read(CFile &file)
 {
   file_ = &file;
+
+  auto size = file_->getSize();
 
   CImport3DSChunk chunk(nullptr);
 
@@ -107,10 +137,20 @@ read(CFile &file)
       case MDATA_ID:
         readMData(&chunk1);
         break;
+      case NAMED_OBJECT_ID: {
+        CGeomObject3D *object;
+        readNamedObject(&chunk1, object);
+        break;
+      }
       default:
         skipChunk(&chunk1);
         break;
     }
+  }
+
+  if (ulong(file_->getPos()) < size) {
+    std::cerr << "Pos: " << file_->getPos() << " Size: " << size << "\n";
+    return false;
   }
 
   return true;
@@ -145,9 +185,11 @@ readMData(CImport3DSChunk *chunk)
       case MASTER_SCALE_ID:
         readMasterScale(&chunk1);
         break;
-      case NAMED_OBJECT_ID:
-        readNamedObject(&chunk1);
+      case NAMED_OBJECT_ID: {
+        CGeomObject3D *object;
+        readNamedObject(&chunk1, object);
         break;
+      }
       default:
         skipChunk(&chunk1);
         break;
@@ -175,7 +217,7 @@ readMatEntry(CImport3DSChunk *chunk)
 {
   CImport3DSChunk chunk1(chunk);
 
-  material_ = new CImport3DSMaterial;
+  material_ = CGeometryInst->createMaterial();
 
   materials_.push_back(material_);
 
@@ -205,44 +247,73 @@ readMatEntry(CImport3DSChunk *chunk)
       case MAT_SHADING_ID:
         readMatShading(&chunk1);
         break;
+      case TEXTURE_1_ID: {
+        TextureData texture;
+        readMatTexture(&chunk1, texture);
+        break;
+      }
+      case MAT_GLOSSY_ID: {
+        TextureData texture;
+        readMatTexture(&chunk1, texture);
+        break;
+      }
+      case MAP_OPACITY_ID: {
+        TextureData texture;
+        readMatTexture(&chunk1, texture);
+        break;
+      }
+      case BUMP_MAP_ID: {
+        TextureData texture;
+        readMatTexture(&chunk1, texture);
+        break;
+      }
       default:
         skipChunk(&chunk1);
         break;
     }
   }
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  auto *material1 = pscene_->getMaterial(material_->name());
 
-    auto *material = &material_->material;
+  if (! material1)
+    pscene_->addMaterial(material_);
 
-    std::cout << pad  << "Material '" << material_->name << "'\n";
-
-    std::cout << pad  << "  Ambient  " << material->getAmbient()  << "\n";
-    std::cout << pad  << "  Diffuse  " << material->getDiffuse()  << "\n";
-    std::cout << pad  << "  Specular " << material->getSpecular() << "\n";
-
-    std::cout << pad  << "  Shininess    " << material ->getShininess() << "\n";
-    std::cout << pad  << "  Transparency " << material_->transparency   << "\n";
-    std::cout << pad  << "  Shading      " << material_->shading        << "\n";
-  }
+  if (isDebug())
+    printMaterial(chunk, material_);
 
   return true;
+}
+
+void
+CImport3DS::
+printMaterial(CImport3DSChunk *chunk, CGeomMaterial *material)
+{
+  auto pad = getChunkPad(chunk);
+
+  std::cout << pad  << "Material '" << material->name() << "'\n";
+
+  std::cout << pad  << "  Ambient  " << material->getAmbient()  << "\n";
+  std::cout << pad  << "  Diffuse  " << material->getDiffuse()  << "\n";
+  std::cout << pad  << "  Specular " << material->getSpecular() << "\n";
+
+  std::cout << pad  << "  Shininess    " << material->getShininess() << "\n";
+  std::cout << pad  << "  Transparency " << material->transparency() << "\n";
+  std::cout << pad  << "  Shading      " << CGeomMaterial::shadingName(material->shading()) << "\n";
 }
 
 bool
 CImport3DS::
 readMatName(CImport3DSChunk *chunk)
 {
-  std::string name = readString(chunk);
+  auto name = readString(chunk);
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
 
     std::cout << pad << "  Material '" << name << "'\n";
   }
 
-  material_->name = name;
+  material_->setName(name);
 
   return true;
 }
@@ -260,14 +331,14 @@ readMatAmbient(CImport3DSChunk *chunk)
       case COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setAmbient(rgba);
+        material_->setAmbient(rgba);
 
         break;
       }
       case LIN_COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setAmbient(rgba);
+        material_->setAmbient(rgba);
 
         break;
       }
@@ -293,14 +364,14 @@ readMatDiffuse(CImport3DSChunk *chunk)
       case COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setDiffuse(rgba);
+        material_->setDiffuse(rgba);
 
         break;
       }
       case LIN_COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setDiffuse(rgba);
+        material_->setDiffuse(rgba);
 
         break;
       }
@@ -326,14 +397,14 @@ readMatSpecular(CImport3DSChunk *chunk)
       case COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setSpecular(rgba);
+        material_->setSpecular(rgba);
 
         break;
       }
       case LIN_COLOR_24_ID: {
         readColor(chunk, rgba);
 
-        material_->material.setSpecular(rgba);
+        material_->setSpecular(rgba);
 
         break;
       }
@@ -370,7 +441,7 @@ readMatShininess(CImport3DSChunk *chunk)
     }
   }
 
-  material_->material.setShininess(f_shininess);
+  material_->setShininess(f_shininess);
 
   return true;
 }
@@ -399,7 +470,7 @@ readMatTransparency(CImport3DSChunk *chunk)
     }
   }
 
-  material_->transparency = f_transparency;
+  material_->setTransparency(f_transparency);
 
   return true;
 }
@@ -408,7 +479,7 @@ bool
 CImport3DS::
 readMatTwoSided(CImport3DSChunk *)
 {
-  material_->two_sided = true;
+  material_->setTwoSided(true);
 
   return true;
 }
@@ -417,11 +488,49 @@ bool
 CImport3DS::
 readMatShading(CImport3DSChunk *chunk)
 {
-  ushort shading;
+  // shading: 1=flat, 2=gouraud, 3=phong, 4=metal
 
+  ushort shading;
   readShort(chunk, &shading);
 
-  material_->shading = shading;
+  switch (shading) {
+    case 0: material_->setShading(CGeomMaterial::Shading::WIRE   ); break;
+    case 1: material_->setShading(CGeomMaterial::Shading::FLAT   ); break;
+    case 2: material_->setShading(CGeomMaterial::Shading::GOURAUD); break;
+    case 3: material_->setShading(CGeomMaterial::Shading::PHONG  ); break;
+    case 4: material_->setShading(CGeomMaterial::Shading::METAL  ); break;
+    case 5: material_->setShading(CGeomMaterial::Shading::BLINN  ); break;
+    default: std::cerr << "Invalid material shading: " << shading << "\n;";
+  }
+
+  return true;
+}
+
+bool
+CImport3DS::
+readMatTexture(CImport3DSChunk *chunk, TextureData &texture)
+{
+  ushort type;
+  readShort(chunk, &type);
+
+  switch (type) {
+    case MAP_FILENAME_ID:
+      uint len;
+      readLong(chunk, &len);
+
+      texture.filename = readString(chunk);
+
+      break;
+    default:
+      std::cerr << "Unhandled texture data type : " << type << "\n";
+      break;
+  }
+
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
+
+    std::cout << pad << "Texture: " << texture.filename << "\n";
+  }
 
   return true;
 }
@@ -472,58 +581,69 @@ readMasterScale(CImport3DSChunk *chunk)
 
 bool
 CImport3DS::
-readNamedObject(CImport3DSChunk *chunk)
+readNamedObject(CImport3DSChunk *chunk, CGeomObject3D* &object)
 {
   CImport3DSChunk chunk1(chunk);
 
-  std::string name = readString(chunk);
+  auto name = readString(chunk);
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
 
-    std::cout << pad << "Object " << name << "\n";
+    std::cout << pad << "  Name: " << name << "\n";
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object = CGeometryInst->createObject3D(scene_, name);
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
       case N_TRI_OBJECT_ID:
-        readNTriObject(&chunk1);
+        readNTriObject(&chunk1, object);
         break;
+      case NAMED_OBJECT_ID: {
+        CGeomObject3D *object1;
+        readNamedObject(&chunk1, object1);
+
+        object->addChild(object1);
+
+        break;
+      }
       default:
         skipChunk(&chunk1);
         break;
     }
   }
 
-  scene_->addObject(object_);
+  scene_->addObject(object);
 
   return true;
 }
 
 bool
 CImport3DS::
-readNTriObject(CImport3DSChunk *chunk)
+readNTriObject(CImport3DSChunk *chunk, CGeomObject3D *object)
 {
   CImport3DSChunk chunk1(chunk);
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
       case POINT_ARRAY_ID:
-        readPointArray(&chunk1);
+        readPointArray(&chunk1, object);
         break;
       case FACE_ARRAY_ID:
-        readFaceArray(&chunk1);
+        readFaceArray(&chunk1, object);
         break;
       case MSH_MAT_GROUP_ID:
-        readMshMatGroup(&chunk1);
+        readMshMatGroup(&chunk1, object);
         break;
       case SMOOTH_GROUP_ID:
         readSmoothGroup(&chunk1);
         break;
       case MESH_MATRIX_ID:
-        readMeshMatrix(&chunk1);
+        readMeshMatrix(&chunk1, object);
+        break;
+      case MAP_COORDS_ID:
+        readMapCoords(&chunk1, object);
         break;
       default:
         skipChunk(&chunk1);
@@ -536,10 +656,9 @@ readNTriObject(CImport3DSChunk *chunk)
 
 bool
 CImport3DS::
-readPointArray(CImport3DSChunk *chunk)
+readPointArray(CImport3DSChunk *chunk, CGeomObject3D *object)
 {
   ushort num_points;
-
   readShort(chunk, &num_points);
 
   for (int i = 0; i < num_points; ++i) {
@@ -549,15 +668,15 @@ readPointArray(CImport3DSChunk *chunk)
     readFloat(chunk, &y);
     readFloat(chunk, &z);
 
-    if (debug_) {
-      std::string pad = getChunkPad(chunk);
+    if (isDebug()) {
+      auto pad = getChunkPad(chunk);
 
       std::cout << pad << "  Point " << i << ": " << x << " " << y << " " << z << "\n";
     }
 
-    uint vertex_num = object_->addVertex(CPoint3D(x, y, z));
+    uint vertex_num = object->addVertex(CPoint3D(x, y, z));
 
-    CGeomVertex3D &vertex = object_->getVertex(vertex_num);
+    auto &vertex = object->getVertex(vertex_num);
 
     vertex.setViewed(vertex.getCurrent());
   }
@@ -567,18 +686,17 @@ readPointArray(CImport3DSChunk *chunk)
 
 bool
 CImport3DS::
-readFaceArray(CImport3DSChunk *chunk)
+readFaceArray(CImport3DSChunk *chunk, CGeomObject3D *object)
 {
   vertexFaceList_.clear();
 
-  uint num_vertices = object_->getNumVertices();
+  uint num_vertices = object->getNumVertices();
 
   ushort num_faces;
-
   readShort(chunk, &num_faces);
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
 
     std::cout << pad  << "Num faces " << num_faces << "\n";
   }
@@ -601,8 +719,8 @@ readFaceArray(CImport3DSChunk *chunk)
 
     readShort(chunk, &flags);
 
-    if (debug_) {
-      std::string pad = getChunkPad(chunk);
+    if (isDebug()) {
+      auto pad = getChunkPad(chunk);
 
       std::cout << pad << "  Face " << i << ":";
 
@@ -614,9 +732,9 @@ readFaceArray(CImport3DSChunk *chunk)
       std::cout << "\n";
     }
 
-    auto &vertex1 = object_->getVertex(vertices[0]);
-    auto &vertex2 = object_->getVertex(vertices[1]);
-    auto &vertex3 = object_->getVertex(vertices[2]);
+    auto &vertex1 = object->getVertex(vertices[0]);
+    auto &vertex2 = object->getVertex(vertices[1]);
+    auto &vertex3 = object->getVertex(vertices[2]);
 
     auto orient = CMathGeom3D::PolygonOrientation(vertex1.getCurrent(),
                                                   vertex2.getCurrent(),
@@ -626,9 +744,9 @@ readFaceArray(CImport3DSChunk *chunk)
     if (orient == CPOLYGON_ORIENTATION_ANTICLOCKWISE)
       std::swap(vertices[0], vertices[2]);
 
-    uint face_num = object_->addFace(vertices);
+    uint face_num = object->addFace(vertices);
 
-    CGeomFace3D &face = object_->getFace(face_num);
+    CGeomFace3D &face = object->getFace(face_num);
 
     CVector3D normal;
 
@@ -641,12 +759,12 @@ readFaceArray(CImport3DSChunk *chunk)
   }
 
   for (const auto &pvf : vertexFaceList_) {
-    auto &vertex = object_->getVertex(pvf.first);
+    auto &vertex = object->getVertex(pvf.first);
 
     CVector3D normal(0, 0, 0);
 
     for (const auto &pf1 : pvf.second) {
-      auto &face = object_->getFace(pf1);
+      auto &face = object->getFace(pf1);
 
       normal += face.getNormal();
     }
@@ -663,61 +781,67 @@ readFaceArray(CImport3DSChunk *chunk)
 
 bool
 CImport3DS::
-readMshMatGroup(CImport3DSChunk *chunk)
+readMshMatGroup(CImport3DSChunk *chunk, CGeomObject3D *object)
 {
-  ushort face_num;
-  ushort num_faces;
+  auto name = readString(chunk);
 
-  std::string name = readString(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
-
-    std::cout << pad << "Mat Group " << name << "\n";
+    std::cout << pad << "  Mat Group: " << name << "\n";
   }
 
+  ushort num_faces;
   readShort(chunk, &num_faces);
 
   std::vector<ushort> face_nums;
 
   for (ushort i = 0; i < num_faces; ++i) {
+    ushort face_num;
     readShort(chunk, &face_num);
 
     face_nums.push_back(face_num);
   }
 
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
+
+    std::cout << pad << "  Faces:";
+
+    for (const auto &s : face_nums)
+      std::cout << " " << s;
+
+    std::cerr << "\n";
+  }
+
   auto pmaterial = materials_.begin();
 
   for ( ; pmaterial != materials_.end(); ++pmaterial)
-    if ((*pmaterial)->name == name)
+    if ((*pmaterial)->name() == name)
       break;
 
-  if (pmaterial != materials_.end()) {
-    if (debug_) {
-      std::string pad = getChunkPad(chunk);
+  if (pmaterial == materials_.end()) {
+    std::cerr << "Material not found\n";
+    return false;
+  }
 
-      std::cout << pad << "  Ambient  " << (*pmaterial)->material.getAmbient()  << "\n";
-      std::cout << pad << "  Diffuse  " << (*pmaterial)->material.getDiffuse()  << "\n";
-      std::cout << pad << "  Specular " << (*pmaterial)->material.getSpecular() << "\n";
+  auto *material = *pmaterial;
 
-      std::cout << pad << "  Shininess    " << (*pmaterial)->material.getShininess() << "\n";
-      std::cout << pad << "  Transparency " << (*pmaterial)->transparency << "\n";
-      std::cout << pad << "  Shading      " << (*pmaterial)->shading      << "\n";
+  if (isDebug())
+    printMaterial(chunk, material);
+
+  for (ushort i = 0; i < num_faces; ++i) {
+    auto face_num = face_nums[i];
+
+    if (face_num < object->getNumFaces()) {
+      auto &face = object->getFace(face_num);
+
+      face.setMaterialP(material);
+
+      face.setTwoSided(material->isTwoSided());
     }
-
-    for (ushort i = 0; i < num_faces; ++i) {
-      face_num = face_nums[i];
-
-      if (face_num < object_->getNumFaces()) {
-        CGeomFace3D &face = object_->getFace(face_num);
-
-        face.setMaterial((*pmaterial)->material);
-
-        face.setTwoSided((*pmaterial)->two_sided);
-      }
-      else
-        std::cerr << "Invalid face num " << face_num << "\n";
-    }
+    else
+      std::cerr << "Invalid face num " << face_num << "\n";
   }
 
   return true;
@@ -731,8 +855,11 @@ readSmoothGroup(CImport3DSChunk *chunk)
 
   ushort num_faces = ushort(uint(chunk->left)/sizeof(uint));
 
-  if (debug_)
-    std::cout << num_faces << "\n";
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
+
+    std::cout << pad << "Num Faces: " << num_faces << "\n";
+  }
 
   for (ushort i = 0; i < num_faces; ++i) {
     uint smooth;
@@ -742,19 +869,22 @@ readSmoothGroup(CImport3DSChunk *chunk)
 
     if (smooth == 0) continue;
 
-    if (debug_)
-      std::cout << "Smooth Groups";
+    if (isDebug()) {
+      auto pad = getChunkPad(chunk);
+
+      std::cout << pad << "  Smooth Groups (" << std::hex << smooth << std::dec << ") = Bits";
+    }
 
     for (uint b = 0; b < 32; ++b) {
       if (smooth & (1<<b)) {
         smoothGroupFaceList_[b].push_back(i);
 
-        if (debug_)
-          std::cout << ":" << b;
+        if (isDebug())
+          std::cout << " " << b;
       }
     }
 
-    if (debug_)
+    if (isDebug())
       std::cout << "\n";
   }
 
@@ -763,7 +893,7 @@ readSmoothGroup(CImport3DSChunk *chunk)
 
 bool
 CImport3DS::
-readMeshMatrix(CImport3DSChunk *chunk)
+readMeshMatrix(CImport3DSChunk *chunk, CGeomObject3D *)
 {
   float matrix[3][4];
 
@@ -780,13 +910,50 @@ readMeshMatrix(CImport3DSChunk *chunk)
   readFloat(chunk, &matrix[1][3]);
   readFloat(chunk, &matrix[2][3]);
 
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
+
+    std::cout << pad << "Mesh Matrix\n";
+    pad += " ";
 
     std::cout << pad << matrix[0][0] << " " << matrix[1][0] << " " << matrix[2][0] << "\n";
     std::cout << pad << matrix[0][1] << " " << matrix[1][1] << " " << matrix[2][1] << "\n";
     std::cout << pad << matrix[0][2] << " " << matrix[1][2] << " " << matrix[2][2] << "\n";
     std::cout << pad << matrix[0][3] << " " << matrix[1][3] << " " << matrix[2][3] << "\n";
+  }
+
+#if 0
+  // TODO
+  CMatrix3DH m;
+  m.setValues(matrix[0][0], matrix[1][0], matrix[2][0],
+              matrix[0][1], matrix[1][1], matrix[2][1],
+              matrix[0][2], matrix[1][2], matrix[2][2],
+              matrix[0][3], matrix[1][3], matrix[2][3]);
+#endif
+
+  return true;
+}
+
+bool
+CImport3DS::
+readMapCoords(CImport3DSChunk *chunk, CGeomObject3D *object)
+{
+  ushort n;
+  if (! readShort(chunk, &n))
+    return false;
+
+  for (int i = 0; i < int(n); ++i) {
+    float x, y;
+    readFloat(chunk, &x);
+    readFloat(chunk, &y);
+
+    if (isDebug()) {
+      auto pad = getChunkPad(chunk);
+
+      std::cout << pad << "  Texture Point " << i << ": " << x << " " << y << "\n";
+    }
+
+    (void) object->addTexturePoint(CPoint2D(x, y));
   }
 
   return true;
@@ -796,20 +963,31 @@ bool
 CImport3DS::
 readChunk(CImport3DSChunk *chunk)
 {
-  if (chunk->parent != nullptr && chunk->parent->left <= 0)
+  if (chunk->parent != nullptr && chunk->parent->left <= 0) {
+    if (isDebug()) {
+      auto pad = getChunkPad(chunk);
+
+      std::cerr << pad << "Chunk EOF\n";
+    }
+
     return false;
+  }
 
   chunk->left = 6;
 
-  if (! readShort(chunk, &chunk->id))
+  if (! readShort(chunk, &chunk->id)) {
+    std::cerr << "Failed to read chunk id\n";
     return false;
+  }
 
-  if (! readLong(chunk, &chunk->len))
+  if (! readLong(chunk, &chunk->len)) {
+    std::cerr << "Failed to read chunk length\n";
     return false;
+  }
 
-  chunk->left = ushort(chunk->len - 6);
+  chunk->left = chunk->len - 6;
 
-  if (debug_)
+  if (isDebug())
     printChunk(chunk);
 
   return true;
@@ -819,10 +997,11 @@ bool
 CImport3DS::
 skipChunk(CImport3DSChunk *chunk)
 {
-  if (debug_) {
-    std::string pad = getChunkPad(chunk);
+  if (isDebug()) {
+    auto pad = getChunkPad(chunk);
 
-    std::cerr << pad << "  !!Skip Chunk!! " << getChunkName(chunk) << "\n";
+    std::cerr << pad << "  !!Skip Chunk!! " << getChunkName(chunk) <<
+                 " (" << chunk->left << ")\n";
   }
 
   int c;
@@ -900,15 +1079,12 @@ std::string
 CImport3DS::
 readString(CImport3DSChunk *chunk)
 {
-  static char *buffer = nullptr;
-  static uint  buffer_max = 0;
+  if (uint(chunk->left) > bufferMax_) {
+    bufferMax_ = uint(chunk->left + 32);
 
-  if (uint(chunk->left) > buffer_max) {
-    buffer_max = uint(chunk->left + 32);
+    delete [] buffer_;
 
-    delete [] buffer;
-
-    buffer = new char [buffer_max + 1];
+    buffer_ = new char [bufferMax_ + 1];
   }
 
   int i = 0;
@@ -924,12 +1100,12 @@ readString(CImport3DSChunk *chunk)
     if (c == '\0')
       break;
 
-    buffer[i++] = char(c);
+    buffer_[i++] = char(c);
   }
 
-  buffer[i] = '\0';
+  buffer_[i] = '\0';
 
-  std::string str = std::string(buffer);
+  std::string str = std::string(buffer_);
 
   return str;
 }
@@ -971,7 +1147,7 @@ getChunkName(CImport3DSChunk *chunk)
     return std::string(name);
   }
 
-  sprintf(name, "%x", chunk->id);
+  sprintf(name, "???? (%x)", chunk->id);
 
   return std::string(name);
 }
@@ -990,7 +1166,7 @@ void
 CImport3DS::
 printChunk(CImport3DSChunk *chunk)
 {
-  std::string pad = getChunkPad(chunk);
+  auto pad = getChunkPad(chunk);
 
   std::cout << pad << "Chunk " << getChunkName(chunk) << " " << chunk->left << "\n";
 }

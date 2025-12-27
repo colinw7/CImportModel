@@ -7,6 +7,7 @@
 #include <CGeomPyramid3D.h>
 #include <CGeomSphere3D.h>
 #include <CGeomTorus3D.h>
+#include <CGeometry3D.h>
 
 namespace CQCamera3DShapes {
 
@@ -127,7 +128,7 @@ void
 addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
         const ShapeData &data, CQCamera3DFaceDataList &faceDataList)
 {
-  auto *object = new CGeomObject3D(nullptr, "");
+  auto *object = CGeometryInst->createObject3D(nullptr, "");
 
   auto h = p1.distanceTo(p2);
 
@@ -182,7 +183,7 @@ void
 addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r,
             const ShapeData &data, CQCamera3DFaceDataList &faceDataList)
 {
-  auto *object = new CGeomObject3D(nullptr, "");
+  auto *object = CGeometryInst->createObject3D(nullptr, "");
 
   auto h = p1.distanceTo(p2);
 
@@ -237,7 +238,7 @@ void
 addSphere(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const ShapeData &data,
           double angleStart, double angleDelta, CQCamera3DFaceDataList &faceDataList)
 {
-  auto *object = new CGeomObject3D(nullptr, "");
+  auto *object = CGeometryInst->createObject3D(nullptr, "");
 
   auto r = p1.distanceTo(p2)/2.0;
 
@@ -309,7 +310,7 @@ void
 addPyramid(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
            const ShapeData &data, CQCamera3DFaceDataList &faceDataList)
 {
-  auto *object = new CGeomObject3D(nullptr, "");
+  auto *object = CGeometryInst->createObject3D(nullptr, "");
 
   auto h = p1.distanceTo(p2);
 
@@ -363,7 +364,7 @@ void
 addTorus(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double rfactor,
          double power1, double power2, const ShapeData &data, CQCamera3DFaceDataList &faceDataList)
 {
-  auto *object = new CGeomObject3D(nullptr, "");
+  auto *object = CGeometryInst->createObject3D(nullptr, "");
 
   auto r0 = p1.distanceTo(p2);
   auto r1 = rfactor*r0;

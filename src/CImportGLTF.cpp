@@ -1,5 +1,6 @@
 #include <CImportGLTF.h>
 #include <CGeometry3D.h>
+#include <CGeomNodeData.h>
 #include <CJson.h>
 #include <CMinMax.h>
 #include <CQuaternion.h>
@@ -402,9 +403,8 @@ processData()
     auto nodeInd = int(node.indName.ind);
 
     if (rootObject_->hasNode(nodeInd)) {
-      rootObject_->setNodeLocalTransforms(nodeInd,
-        node.ttransform, node.rtransform, node.stransform);
-      rootObject_->setNodeLocalTransform (nodeInd, node.transform);
+      rootObject_->setNodeLocalTransforms(nodeInd, node.mtranslate, node.mrotate, node.mscale);
+    //rootObject_->setNodeLocalTransform(nodeInd, node.transform);
 
       rootObject_->setNodeGlobalTransform(nodeInd, node.hierTransform);
 //    rootObject_->setNodeGlobalTransform(nodeInd, calcNodeGlobalTransform(&node));
@@ -1110,15 +1110,15 @@ processAnim()
         auto ni = imeshData->fscalars.size();
 
         for (const auto &f : imeshData->fscalars)
-          animationData.range.push_back(f);
+          animationData.addRangeValue(f);
 
         if (! imeshData->min.empty())
-          animationData.rangeMin = imeshData->min[0];
+          animationData.setRangeMin(imeshData->min[0]);
 
         if (! imeshData->max.empty())
-          animationData.rangeMax = imeshData->max[0];
+          animationData.setRangeMax(imeshData->max[0]);
 
-        animationData.interpolation = sampler.interpType;
+        animationData.setInterpolation(sampler.interpType);
 
         //---
 
@@ -1140,7 +1140,7 @@ processAnim()
           }
 
           for (const auto &v : omeshData->vec4)
-            animationData.rotation.push_back(CQuaternion(v.w, v.x, v.y, v.z));
+            animationData.addRotation(CQuaternion(v.w, v.x, v.y, v.z));
 
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::ROTATION, animationData);
@@ -1161,7 +1161,7 @@ processAnim()
           }
 
           for (const auto &v : omeshData->vec3)
-            animationData.translation.push_back(CVector3D(v.x, v.y, v.z));
+            animationData.addTranslation(CVector3D(v.x, v.y, v.z));
 
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::TRANSLATION, animationData);
@@ -1182,7 +1182,7 @@ processAnim()
           }
 
           for (const auto &v : omeshData->vec3)
-            animationData.scale.push_back(CVector3D(v.x, v.y, v.z));
+            animationData.addScale(CVector3D(v.x, v.y, v.z));
 
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::SCALE, animationData);
@@ -1256,11 +1256,11 @@ CImportGLTF::
 processNodeHierTransform(Node *node)
 {
   if (node->parent) {
-    node->hierTranslate = node->parent->hierTranslate*node->ttransform;
+    node->hierTranslate = node->parent->hierTranslate*node->mtranslate.matrix();
     node->hierTransform = node->parent->hierTransform*node->transform;
   }
   else {
-    node->hierTranslate = node->ttransform;
+    node->hierTranslate = node->mtranslate.matrix();
     node->hierTransform = node->transform;
   }
 
@@ -1326,19 +1326,19 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
         CGeomNodeData nodeData;
 
-        nodeData.parent = (node1->parent ? int(node1->parent->indName.ind) : -1);
+        nodeData.setParent(node1->parent ? int(node1->parent->indName.ind) : -1);
 
-        nodeData.isJoint = node1->isJoint;
+        nodeData.setJoint(node1->isJoint);
 
         if (node1->inverseBindMatrix)
-          nodeData.inverseBindMatrix = node1->inverseBindMatrix->matrix().toCMatrix();
+          nodeData.setInverseBindMatrix(node1->inverseBindMatrix->matrix().toCMatrix());
 
-        nodeData.children.resize(node1->children.size());
+        nodeData.resizeChildren(uint(node1->children.size()));
 
-        nodeData.name = node1->name;
+        nodeData.setName(node1->name);
 
         for (size_t ic = 0; ic < node1->children.size(); ++ic)
-          nodeData.children[ic] = int(node1->children[ic].ind);
+          nodeData.setChild(uint(ic), int(node1->children[ic].ind));
 
         if (! rootObject_->hasNode(int(ind)))
           rootObject_->addNode(int(ind), nodeData);
@@ -1363,10 +1363,10 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
       if (node1.inverseBindMatrix)
         nodeData.inverseBindMatrix = node1.inverseBindMatrix->matrix().toCMatrix();
 
-      nodeData.children.resize(node1.children.size());
+      nodeData.resizeChildren(uint(node1.children.size()));
 
       for (size_t ic = 0; ic < node1.children.size(); ++ic)
-        nodeData.children[ic] = int(node1.children[ic].ind);
+        nodeData.setChild(uint(ic), int(node1.children[ic].ind);
 
       nodeData.name = node1.name;
 
@@ -1395,20 +1395,20 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       CGeomNodeData nodeData;
 
-      nodeData.parent = (node1->parent ? int(node1->parent->indName.ind) : -1);
+      nodeData.setParent(node1->parent ? int(node1->parent->indName.ind) : -1);
 
       if (node1->inverseBindMatrix)
-        nodeData.inverseBindMatrix = node1->inverseBindMatrix->matrix().toCMatrix();
+        nodeData.setInverseBindMatrix(node1->inverseBindMatrix->matrix().toCMatrix());
 
-      nodeData.children.resize(node1->children.size());
+      nodeData.resizeChildren(uint(node1->children.size()));
 
       for (size_t ic = 0; ic < node1->children.size(); ++ic) {
-        nodeData.children[ic] = int(node1->children[ic].ind);
+        nodeData.setChild(uint(ic), int(node1->children[ic].ind));
 
         nodeIds.push_back(node1->children[ic]);
       }
 
-      nodeData.name = node1->name;
+      nodeData.setName(node1->name);
 
       rootObject_->addNode(int(indName.ind), nodeData);
 
@@ -1425,19 +1425,19 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       CGeomNodeData nodeData;
 
-      nodeData.parent = (node1.parent ? int(node1.parent->indName.ind) : -1);
+      nodeData.setParent(node1.parent ? int(node1.parent->indName.ind) : -1);
 
-      nodeData.isJoint = node1.isJoint;
+      nodeData.setJoint(node1.isJoint);
 
       if (node1.inverseBindMatrix)
-        nodeData.inverseBindMatrix = node1.inverseBindMatrix->matrix().toCMatrix();
+        nodeData.setInverseBindMatrix(node1.inverseBindMatrix->matrix().toCMatrix());
 
-      nodeData.children.resize(node1.children.size());
+      nodeData.resizeChildren(uint(node1.children.size()));
 
       for (size_t ic = 0; ic < node1.children.size(); ++ic)
-        nodeData.children[ic] = int(node1.children[ic].ind);
+        nodeData.setChild(uint(ic), int(node1.children[ic].ind));
 
-      nodeData.name = node1.name;
+      nodeData.setName(node1.name);
 
       rootObject_->addNode(int(ind), nodeData);
 
@@ -1475,28 +1475,23 @@ calcNodeTransform(Node *node) const
   if (node->matrix)
     return node->matrix->toCMatrix();
 
-  node->ttransform = CMatrix3D::identity();
-  node->rtransform = CMatrix3D::identity();
-  node->stransform = CMatrix3D::identity();
+  node->mtranslate = CTranslate3D();
+  node->mrotate    = CRotate3D();
+  node->mscale     = CScale3D();
 
   if (node->translation)
-    node->ttransform = CMatrix3D::translation(node->translation->x,
-                                              node->translation->y,
-                                              node->translation->z);
+    node->mtranslate = CTranslate3D(node->translation->x,
+                                    node->translation->y,
+                                    node->translation->z);
 
-  if (node->rotation) {
-    //auto v = CVector3D(node->rotation->x, node->rotation->y, node->rotation->z);
-    //node->rtransform.setRotation(node->rotation->w, v);
-
-    auto q = CQuaternion(node->rotation->w, node->rotation->x,
-                         node->rotation->y, node->rotation->z);
-    q.toRotationMatrix(node->rtransform);
-  }
+  if (node->rotation)
+    node->mrotate = CRotate3D(node->rotation->w, node->rotation->x,
+                              node->rotation->y, node->rotation->z);
 
   if (node->scale)
-    node->stransform = CMatrix3D::scale(node->scale->x, node->scale->y, node->scale->z);
+    node->mscale = CScale3D(node->scale->x, node->scale->y, node->scale->z);
 
-  return node->ttransform*node->rtransform*node->stransform;
+  return node->mtranslate.matrix()*node->mrotate.matrix()*node->mscale.matrix();
 }
 
 #if 0
@@ -1671,9 +1666,11 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
     for (const auto &p : positions) {
       auto ind = object->addVertex(CPoint3D(p.x, p.y, p.z));
 
+#if 0
       if (isDebug())
         debugMsg("add vertex: " + std::to_string(p.x) + " " + std::to_string(p.y) +
                  " " + std::to_string(p.z));
+#endif
 
       auto &v = object->getVertex(ind);
 
@@ -1682,9 +1679,11 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
         v.setNormal(CVector3D(n.x, n.y, n.z));
 
+#if 0
         if (isDebug())
           debugMsg("set normal: " + std::to_string(n.x) + " " + std::to_string(n.y) +
                    " " + std::to_string(n.z));
+#endif
       }
 
       if (ind < nt) {
@@ -1692,8 +1691,10 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
         v.setTextureMap(CPoint2D(t.x, t.y));
 
+#if 0
         if (isDebug())
           debugMsg("set texture: " + std::to_string(t.x) + " " + std::to_string(t.y));
+#endif
       }
 
       //---
@@ -1756,9 +1757,11 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
 
       object->addITriangle(uint(i1), uint(i2), uint(i3));
 
+#if 0
       if (isDebug())
         debugMsg("add triangle: " + std::to_string(i1) + " " + std::to_string(i2) +
                  " " + std::to_string(i3));
+#endif
     }
 
     //---
@@ -1769,7 +1772,10 @@ processMesh(CGeomObject3D *object, const Mesh &mesh)
       if (! getMaterial(primitive.material, material))
         return errorMsg("Invalid mesh material");
 
-      //printMaterial(material, primitive.material);
+#if 0
+      if (isDebug())
+        printMaterial(material, primitive.material);
+#endif
 
       //---
 
@@ -1929,6 +1935,8 @@ resolveImage(const Image &image)
   if (! getImageData(image, data, len))
     return false;
 
+  std::string prefix;
+
   if      (image.mimeType == "image/png") {
     auto image1 = CImageMgrInst->createImage();
 
@@ -1936,6 +1944,8 @@ resolveImage(const Image &image)
       return errorMsg("Invalid image data");
 
     image.image = image1;
+
+    prefix = "png";
   }
   else if (image.mimeType == "image/jpeg") {
     auto image1 = CImageMgrInst->createImage();
@@ -1944,6 +1954,8 @@ resolveImage(const Image &image)
       return errorMsg("Invalid image data");
 
     image.image = image1;
+
+    prefix = "jpg";
   }
   else if (image.mimeType == "image/webp") {
     auto image1 = CImageMgrInst->createImage();
@@ -1952,9 +1964,18 @@ resolveImage(const Image &image)
       return errorMsg("Invalid image data");
 
     image.image = image1;
+
+    prefix = "webp";
   }
   else
     return errorMsg("Invalid image type '" + image.mimeType + "'");
+
+  if (isSaveImage()) {
+    auto name = "image." + image.indName.to_string() + "." + prefix;
+
+    if (! writeFile(name, data, len))
+      return errorMsg("Image write failed");
+  }
 
   return true;
 }
@@ -5267,52 +5288,116 @@ void
 CImportGLTF::
 printMaterial(const Material &material, const IndName &indName) const
 {
+  auto printOptValue = [](const std::string &name, const auto &value) {
+    if (value)
+      std::cerr << "  " << name << ": " << value.value() << "\n";
+  };
+
   std::cerr << " material[" << indName << "]\n";
 
   std::cerr << "  name: " << material.name << "\n";
-  std::cerr << "  technique: " << material.technique << "\n";
 
-  if (material.metallicFactor)
-    std::cerr << "  metallicFactor: "  << material.metallicFactor.value() << "\n";
-  if (material.roughnessFactor)
-    std::cerr << "  roughnessFactor: " << material.roughnessFactor.value() << "\n";
+  if (material.technique != "")
+    std::cerr << "  technique: " << material.technique << "\n";
+
+  printOptValue("metallicFactor" , material.metallicFactor);
+  printOptValue("roughnessFactor", material.roughnessFactor);
 
   auto printTexture = [&](const MaterialTexture &texture, const std::string &id) {
+    if (texture.index < 0) return;
+
     std::cerr << "  " << id << "\n";
-    if (texture.index >= 0)
-      std::cerr << "   index: " << texture.index << "\n";
+    std::cerr << "   index: " << texture.index << "\n";
+
     if (texture.texCoord)
       std::cerr << "   texCoord: " << texture.texCoord.value() << "\n";
     if (texture.scale)
       std::cerr << "   scale: " << texture.scale.value() << "\n";
     if (texture.strength)
       std::cerr << "   strength: " << texture.strength.value() << "\n";
+    if (texture.rotation)
+      std::cerr << "   rotation: " << texture.rotation.value() << "\n";
+    if (texture.scaleVector)
+      std::cerr << "   scaleVector: " << texture.scaleVector.value() << "\n";
+    if (texture.offsetVector)
+      std::cerr << "   offsetVector: " << texture.offsetVector.value() << "\n";
   };
 
   printTexture(material.normalTexture           , "normalTexture");
   printTexture(material.occlusionTexture        , "occlusionTexture");
   printTexture(material.metallicRoughnessTexture, "metallicRoughnessTexture");
 
-  if (material.ambient)
-    std::cerr << "  ambient: " << material.ambient.value() << "\n";
-  if (material.diffuse)
-    std::cerr << "  diffuse: " << material.diffuse.value() << "\n";
-  if (material.shininess)
-    std::cerr << "  shininess: " << material.shininess.value() << "\n";
-  if (material.transparency)
-    std::cerr << "  transparency: " << material.transparency.value() << "\n";
+  printOptValue("ambient"     , material.ambient);
+  printOptValue("diffuse"     , material.diffuse);
+  printOptValue("shininess"   , material.shininess);
+  printOptValue("transparency", material.transparency);
 
   printTexture(material.baseColorTexture, "baseColorTexture");
+  printOptValue("baseColorFactor", material.baseColorFactor);
 
   printTexture(material.specularTexture, "specularTexture");
-  if (material.specular)
-    std::cerr << "  specular: " << material.specular.value() << "\n";
+  printOptValue("specularFactor"     , material.specularFactor);
+  printOptValue("specular"           , material.specular);
+  printOptValue("specularColorFactor", material.specularColorFactor);
 
   printTexture(material.emissiveTexture, "emissiveTexture");
-  if (material.emission)
-    std::cerr << "  emission: " << material.emission.value() << "\n";
+  printOptValue("emissiveStrength", material.emissiveStrength);
+  printOptValue("emissiveFactor"  , material.emissiveFactor);
+  printOptValue("emission"        , material.emission);
 
+  printOptValue("transmissionFactor", material.transmissionFactor);
+  printTexture(material.transmissionTexture, "transmissionTexture");
+
+  printOptValue("attenuationColor", material.attenuationColor);
+  printOptValue("attenuationDistance", material.attenuationDistance);
+
+  printOptValue("thicknessFactor", material.thicknessFactor);
   printTexture(material.thicknessTexture, "thicknessTexture");
+
+  if (material.doubleSided)
+    std::cerr << "   doubleSided: true\n";
+
+  if (material.alphaMode != "")
+    std::cerr << "   alphaMode: " << material.alphaMode << "\n";
+
+  printOptValue("alphaCutoff", material.alphaCutoff);
+
+  printOptValue("diffuseTransmissionFactor", material.diffuseTransmissionFactor);
+  printTexture(material.diffuseTransmissionTexture, "diffuseTransmissionTexture");
+  printOptValue("diffuseTransmissionColorFactor", material.diffuseTransmissionColorFactor);
+  printTexture(material.diffuseTransmissionColorTexture, "diffuseTransmissionColorTexture");
+
+  // anisotropy
+  printOptValue("anisotropyStrength", material.anisotropyStrength);
+  printOptValue("anisotropyRotation", material.anisotropyRotation);
+  printTexture(material.anisotropyTexture, "anisotropyTexture");
+
+  // clearcoat
+  printOptValue("clearcoatFactor", material.clearcoatFactor);
+  printOptValue("clearcoatRoughnessFactor", material.clearcoatRoughnessFactor);
+  printTexture(material.clearcoatTexture, "clearcoatTexture");
+  printTexture(material.clearcoatNormalTexture, "clearcoatNormalTexture");
+  printTexture(material.clearcoatRoughnessTexture, "clearcoatRoughnessTexture");
+
+  // sheen
+  printOptValue("sheenColorFactor", material.sheenColorFactor);
+  printTexture(material.sheenColorTexture, "sheenColorTexture");
+  printOptValue("sheenRoughnessFactor", material.sheenRoughnessFactor);
+  printTexture(material.sheenRoughnessTexture, "sheenRoughnessTexture");
+
+  // iridescence
+  printOptValue("iridescenceFactor", material.iridescenceFactor);
+  printOptValue("iridescenceIor", material.iridescenceIor);
+  printTexture(material.iridescenceTexture, "iridescenceTexture");
+  printTexture(material.iridescenceThicknessTexture, "iridescenceThicknessTexture");
+  printOptValue("iridescenceThicknessMinimum", material.iridescenceThicknessMinimum);
+  printOptValue("iridescenceThicknessMaximum", material.iridescenceThicknessMaximum);
+
+  printOptValue("dispersion", material.dispersion);
+  printOptValue("ior", material.ior);
+
+  printTexture(material.diffuseTexture, "diffuseTexture");
+  printTexture(material.specularGlossinessTexture, "specularGlossinessTexture");
 }
 
 void

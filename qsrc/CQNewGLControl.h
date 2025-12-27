@@ -19,12 +19,11 @@ class CQNewGLCameraControl;
 class CQNewGLLightsControl;
 class CQNewGLAnnotationsControl;
 class CQNewGLAxesControl;
-//class CQNewGLBBoxControl;
-//class CQNewGLHullControl;
 class CQNewGLObjectsControl;
 class CQNewGLTexturesControl;
 class CQNewGLTextureImage;
 class CQNewGLTextureChooser;
+class CQNewGLAnimChooser;
 class CQNewGLAnimControl;
 class CQNewGLBonesControl;
 class CQNewGLTerrainControl;
@@ -81,9 +80,6 @@ class CQNewGLControl : public QFrame {
   void updateLights();
   void updateAnnotations();
   void updateAxes();
-//void updateBBox();
-//void updateHull();
-//void updateUV();
   void updateAnim();
   void updateBones();
 
@@ -93,8 +89,6 @@ class CQNewGLControl : public QFrame {
   void updateEmitter();
   void updateDrawTree();
   void updateShape();
-
-//CGeomObject3D *getRootObject() const;
 
  public Q_SLOTS:
   void updateWidgets();
@@ -126,8 +120,6 @@ class CQNewGLControl : public QFrame {
   CQNewGLLightsControl*      lightsControl_      { nullptr };
   CQNewGLAnnotationsControl* annotationsControl_ { nullptr };
   CQNewGLAxesControl*        axesControl_        { nullptr };
-//CQNewGLBBoxControl*        bboxControl_        { nullptr };
-//CQNewGLHullControl*        hullControl_        { nullptr };
   CQNewGLObjectsControl*     objectsControl_     { nullptr };
   CQNewGLTexturesControl*    texturesControl_    { nullptr };
   CQNewGLAnimControl*        animControl_        { nullptr };
@@ -551,50 +543,6 @@ class CQNewGLAxesControl : public CQNewGLControlFrame {
 
 //---
 
-#if 0
-class CQNewGLBBoxControl : public CQNewGLControlFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLBBoxControl(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
- public Q_SLOTS:
-  void updateWidgets();
-
- private Q_SLOTS:
-  void showSlot(int b);
-
- private:
-  QCheckBox* showCheck_ { nullptr };
-};
-#endif
-
-//---
-
-#if 0
-class CQNewGLHullControl : public CQNewGLControlFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLHullControl(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
- public Q_SLOTS:
-  void updateWidgets();
-
- private Q_SLOTS:
-  void showSlot(int b);
-
- private:
-  QCheckBox* showCheck_ { nullptr };
-};
-#endif
-
-//---
-
 class CQNewGLObjectsControl : public CQNewGLControlFrame {
   Q_OBJECT
 
@@ -775,7 +723,7 @@ class CQNewGLAnimControl : public CQNewGLControlFrame {
   void showBonePointsSlot(int);
   void bonesTransformSlot(int);
 //void objectSelectedSlot();
-  void nameChanged(int);
+  void nameChanged();
 
   void timeSlot(double);
   void playSlot();
@@ -786,9 +734,9 @@ class CQNewGLAnimControl : public CQNewGLControlFrame {
  private:
   bool running_ { false };
 
-  QCheckBox*  enabledCheck_ { nullptr };
-  QComboBox*  nameCombo_    { nullptr };
-  CQRealSpin* timeEdit_     { nullptr };
+  QCheckBox*          enabledCheck_ { nullptr };
+  CQNewGLAnimChooser* nameCombo_    { nullptr };
+  CQRealSpin*         timeEdit_     { nullptr };
 
   QCheckBox*          bonesCheck_          { nullptr };
   QCheckBox*          boneVerticesCheck_   { nullptr };
@@ -1111,155 +1059,5 @@ class CQNewGLShapeControl : public CQNewGLControlFrame {
 
   ShapeData shapeData_;
 };
-
-//---
-
-class CQNewGLCamerasList : public QFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLCamerasList(CQNewGLControl *control);
-
-  bool isUpdateCurrent() const { return updateCurrent_; }
-  void setUpdateCurrent(bool b) { updateCurrent_ = b; }
-
-  void connectSlots(bool b);
-
-  void updateWidgets();
-
-  CQNewGLCamera *getCurrentCamera() const;
-
- private Q_SLOTS:
-  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
-
- Q_SIGNALS:
-  void currentItemChanged();
-
- private:
-  CQNewGLControl* control_ { nullptr };
-  QListWidget*    list_    { nullptr };
-
-  int  currentCamera_ { 0 };
-  bool updateCurrent_ { true };
-};
-
-//---
-
-class CQNewGLLightsList : public QFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLLightsList(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
-  void updateWidgets();
-
- private Q_SLOTS:
-  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
-
- Q_SIGNALS:
-  void currentItemChanged();
-
- private:
-  CQNewGLControl* control_ { nullptr };
-  QListWidget*    list_    { nullptr };
-};
-
-//---
-
-class CQNewGLBonesList : public QFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLBonesList(CQNewGLControl *control);
-
-  int boneInd() const { return boneInd_; }
-
-  void connectSlots(bool b);
-
-  void updateWidgets();
-
-  CGeomNodeData *getBoneNode(int boneInd) const;
-
- private Q_SLOTS:
-  void currentItemSlot(QTreeWidgetItem *, QTreeWidgetItem *);
-
- Q_SIGNALS:
-  void currentItemChanged();
-
- private:
-  QTreeWidgetItem *createNodeItem(CGeomObject3D *object, int nodeId);
-
- private:
-  using NodeItems = std::map<int, QTreeWidgetItem *>;
-
-  CQNewGLControl* control_ { nullptr };
-  QTreeWidget*    tree_    { nullptr };
-
-  int boneInd_ { -1 };
-
-  NodeItems nodeItems_;
-};
-
-//---
-
-#if 0
-class CQNewGLTextureChooser : public QComboBox {
-  Q_OBJECT
-
- public:
-  CQNewGLTextureChooser(CQNewGLControl *control);
-
-  QString textureName() const { return textureName_; }
-  void setTextureName(const QString &name);
-
-  void connectSlots(bool b);
-
- Q_SIGNALS:
-  void textureChanged();
-
- public Q_SLOTS:
-  void updateWidgets();
-
- private Q_SLOTS:
-  void needsUpdateSlot();
-  void currentIndexChanged(int);
-
- private:
-  CQNewGLControl* control_ { nullptr };
-  QString         textureName_;
-  bool            needsUpdate_ { true };
-};
-#endif
-
-//---
-
-class CQNewGLShapesList : public QFrame {
-  Q_OBJECT
-
- public:
-  CQNewGLShapesList(CQNewGLControl *control);
-
-  void connectSlots(bool b);
-
-  void updateWidgets();
-
- private Q_SLOTS:
-  void invalidateShapes();
-
-  void currentItemSlot(QListWidgetItem *, QListWidgetItem *);
-
- Q_SIGNALS:
-  void currentItemChanged();
-
- private:
-  CQNewGLControl* control_ { nullptr };
-  QListWidget*    list_    { nullptr };
-
-  bool reload_ { false };
-};
-
-//---
 
 #endif

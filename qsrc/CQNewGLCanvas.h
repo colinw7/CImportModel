@@ -236,7 +236,7 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   //---
 
-  // normal
+  // wireframe
   CQNewGLWireframe *getWireframe() const { return wireframe_; }
 
   //---
@@ -491,6 +491,8 @@ class CQNewGLCanvas : public CQNewGLWidget {
   void updateAnnotationObjects();
 
   //---
+
+  std::vector<QString> getAnimNames(double &tmin, double &tmax) const;
 
   std::vector<CGeomObject3D *> getRootObjects() const;
 

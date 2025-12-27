@@ -1031,7 +1031,7 @@ processObjectsTextBlock(TextBlock *block)
             geometryData->materials = readIntegers(nv1.value);
           }
           else
-            errorMsg("Invalid LayerElementTexture Name " + nv1.name);
+            errorMsg("Invalid LayerElementMaterial Name " + nv1.name);
         }
       }
       else if (child->nameValue.name == "Layer") {
@@ -1089,15 +1089,17 @@ processObjectsTextBlock(TextBlock *block)
               continue;
             }
 
-            if      (values1[0] == "Shininess" || values1[0] == "ShininessExponent") {
-              materialData->shininess = std::stod(values1[3]);
-            }
-            else if (values1[0] == "Ambient" || values1[0] == "AmbientColor") {
+            if      (values1[0] == "Ambient" || values1[0] == "AmbientColor") {
               if (! valuesColor(values1, materialData->ambientColor))
                 continue; // error
             }
             else if (values1[0] == "AmbientFactor") {
               materialData->ambientFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Bump") {
+            }
+            else if (values1[0] == "BumpFactor") {
+              materialData->bumpFactor = std::stod(values1[3]);
             }
             else if (values1[0] == "Diffuse" || values1[0] == "DiffuseColor") {
               if (! valuesColor(values1, materialData->diffuseColor))
@@ -1113,6 +1115,24 @@ processObjectsTextBlock(TextBlock *block)
             else if (values1[0] == "EmissiveFactor") {
               materialData->emissionFactor = std::stod(values1[3]);
             }
+            else if (values1[0] == "MultiLayer") {
+            }
+            else if (values1[0] == "Opacity") {
+              materialData->opacity = std::stod(values1[3]);
+            }
+            else if (values1[0] == "ReflectionColor") {
+              if (! valuesColor(values1, materialData->reflectionColor))
+                continue; // error
+            }
+            else if (values1[0] == "ReflectionFactor") {
+              materialData->reflectionFactor = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Reflectivity") {
+              materialData->reflectivity = std::stod(values1[3]);
+            }
+            else if (values1[0] == "Shininess" || values1[0] == "ShininessExponent") {
+              materialData->shininess = std::stod(values1[3]);
+            }
             else if (values1[0] == "Specular" || values1[0] == "SpecularColor") {
               if (! valuesColor(values1, materialData->specularColor))
                 continue; // error
@@ -1122,21 +1142,12 @@ processObjectsTextBlock(TextBlock *block)
             }
             else if (values1[0] == "ShadingModel") {
             }
-            else if (values1[0] == "MultiLayer") {
-            }
-            else if (values1[0] == "Bump") {
-            }
             else if (values1[0] == "TransparentColor") {
+              if (! valuesColor(values1, materialData->transparencyColor))
+                continue; // error
             }
             else if (values1[0] == "TransparencyFactor") {
-            }
-            else if (values1[0] == "ReflectionColor") {
-            }
-            else if (values1[0] == "ReflectionFactor") {
-            }
-            else if (values1[0] == "Opacity") {
-            }
-            else if (values1[0] == "Reflectivity") {
+              materialData->transparencyFactor = std::stod(values1[3]);
             }
             else {
               unhandledProperty(name + "/" + child->nameValue.name + "/" + nv.name, values1[0]);
@@ -1161,28 +1172,8 @@ processObjectsTextBlock(TextBlock *block)
 
       materialDataMap_[materialName] = materialData;
 
-      if (isDebug()) {
-        std::cerr << "Material: " << materialName;
-        if (materialData->ambientColor)
-          std::cerr << " AmbientColor: " << materialData->ambientColor.value();
-        if (materialData->ambientFactor)
-          std::cerr << " AmbientFactor: " << materialData->ambientFactor.value();
-        if (materialData->diffuseColor)
-          std::cerr << " DiffuseColor: " << materialData->diffuseColor.value();
-        if (materialData->diffuseFactor)
-          std::cerr << " DiffuseFactor: " << materialData->diffuseFactor.value();
-        if (materialData->emissionColor)
-          std::cerr << " EmissionColor: " << materialData->emissionColor.value();
-        if (materialData->emissionFactor)
-          std::cerr << " EmissionFactor: " << materialData->emissionFactor.value();
-        if (materialData->specularColor)
-          std::cerr << " SpecularColor: " << materialData->specularColor.value();
-        if (materialData->specularFactor)
-          std::cerr << " SpecularFactor: " << materialData->specularFactor.value();
-        if (materialData->shininess)
-          std::cerr << " Shininess: " << materialData->shininess.value();
-        std::cerr << "\n";
-      }
+      if (isDebug())
+        printMaterialData(materialData);
     }
   }
   else if (name == "Objects/Texture") {
@@ -1285,7 +1276,17 @@ processObjectsTextBlock(TextBlock *block)
     // TODO
   }
   else if (name == "Objects/Pose") {
-    // TODO
+    //printBlockNameValues(block);
+
+    for (const auto &nv : block->nameValues) {
+      errorMsg("Unhandled name " + nv.name);
+    }
+
+    for (auto *child : block->children) {
+      //printBlockNameValues(child);
+
+      errorMsg("Invalid " + name + " Child " + child->nameValue.name);
+    }
   }
   else if (name == "Objects/NodeAttribute") {
     // TODO
@@ -1382,6 +1383,22 @@ readFileData(FileData &fileData)
 
   //---
 
+#if 0
+  std::vector<ModelData *> rootModels;
+
+  for (const auto &pm : idModelData_) {
+    auto *modelData = pm.second;
+
+    if (! modelData->parent)
+      rootModels.push_back(modelData);
+  }
+
+  for (auto *modelData : rootModels)
+    processHierModel(modelData, 0);
+#endif
+
+  //---
+
   for (const auto &pg : idGeometryData_) {
     auto *geometryData = pg.second;
 
@@ -1392,50 +1409,45 @@ readFileData(FileData &fileData)
     // set name and transform
     auto *modelData = geometryData->modelData;
 
-    if (modelData && geometryData->object) {
-      geometryData->object->setName(modelData->name);
+    if (! modelData || ! geometryData->object)
+      continue;
+
+    geometryData->object->setName(modelData->name);
 
 #if 0
-      auto name = calcModelDataHierName(modelData);
-      std::cerr << "calcModelDataHierTransform " << name << "\n";
+    auto name = calcModelDataHierName(modelData);
+
+    std::vector<TRSData> hierTRS;
+    calcModelDataHierTRS(modelData, hierTRS);
+
+    if (hierTRS.size() > 1) {
+      auto printTRS = [](const TRSData &trs, int depth) {
+        std::string prefix = "  ";
+        for (int i = 0; i < depth; ++i)
+          prefix += "  ";
+
+        if (trs.translation) std::cerr << prefix << "T: " << *trs.translation << "\n";
+        if (trs.rotation   ) std::cerr << prefix << "R: " << *trs.rotation    << "\n";
+        if (trs.scaling    ) std::cerr << prefix << "S: " << *trs.scaling     << "\n";
+      };
+
+      std::cerr << "Model: " << name << "\n";
+      std::cerr << " Local:\n";
+      printTRS(modelData->localTRS, 0);
+
+      std::cerr << " Hier :\n";
+      int i = 0;
+      for (const auto &trs1 : hierTRS)
+        printTRS(trs1, i++);
+    }
 #endif
 
-      auto hierTransform = calcModelDataHierTransform(modelData);
+    auto localTransform = calcModelDataLocalTransform(modelData);
+    geometryData->object->transform(localTransform);
 
-      geometryData->object->transform(hierTransform);
+    //---
 
-      //---
-
-      // set texture
-      for (const auto &pt : modelData->textureMap) {
-        auto *textureData = pt.second;
-
-        if (textureData->type == "NormalMap")
-          geometryData->object->setNormalTexture(textureData->texture);
-        else
-          geometryData->object->setDiffuseTexture(textureData->texture);
-      }
-
-      for (const auto &pt : modelData->materialData->textureMap) {
-        auto *textureData = pt.second;
-
-        if (pt.first == "NormalMap")
-          geometryData->object->setNormalTexture(textureData->texture);
-        else
-          geometryData->object->setDiffuseTexture(textureData->texture);
-
-        if (textureData->videoData) {
-          for (const auto &pt1 : textureData->videoData->textureMap) {
-            auto *textureData1 = pt1.second;
-
-            if (pt1.first == "NormalMap")
-              geometryData->object->setNormalTexture(textureData1->texture);
-            else
-              geometryData->object->setDiffuseTexture(textureData1->texture);
-          }
-        }
-      }
-    }
+    setGeometryTextures(geometryData);
   }
 
   //---
@@ -1506,7 +1518,53 @@ readFileData(FileData &fileData)
   }
 #endif
 
+  //---
+
+#if 0
+  for (const auto &pg : idGeometryData_) {
+    auto *geometryData = pg.second;
+
+    if (! geometryData->modelData || ! geometryData->modelData->parent)
+      continue;
+
+    std::cerr << geometryData->modelData->name << " " <<
+                 geometryData->modelData->parent->name << "\n";
+  }
+#endif
+
   return true;
+}
+
+void
+CImportFBX::
+processHierModel(ModelData *modelData, int depth)
+{
+  std::string prefix;
+  for (int i = 0; i < depth; ++i)
+    prefix += "  ";
+
+  std::cerr << prefix << "Model: " << modelData->name << "\n";
+
+  if (! modelData->geometryDataList.empty()) {
+    int j = 0;
+
+    std::cerr << prefix << "  Geometry: ";
+
+    for (auto *geometryData : modelData->geometryDataList) {
+      if (j > 0)
+        std::cerr << ", ";
+
+      std::cerr << geometryData->name;
+
+      ++j;
+    }
+
+    std::cerr << "\n";
+  }
+
+  for (auto *modelData1 : modelData->children) {
+    processHierModel(modelData1, depth + 1);
+  }
 }
 
 void
@@ -1596,7 +1654,6 @@ processDataTree(PropDataTree *tree)
     return def;
   };
 
-#if 0
   auto getPropertyInt = [&](const PropIndDataArray &pa, int ind=0) {
     int ind1 = 0;
 
@@ -1614,7 +1671,6 @@ processDataTree(PropDataTree *tree)
 
     return 0L;
   };
-#endif
 
   auto getPropertyReal = [&](const PropIndDataArray &pa, int ind=0) {
     int ind1 = 0;
@@ -2253,7 +2309,7 @@ processDataTree(PropDataTree *tree)
                             auto localTranslation = CPoint3D(x, y, z);
 
                             if (isDebug())
-                              std::cerr << "localTranslation: " << localTranslation << "\n";
+                              std::cerr << "  localTranslation: " << localTranslation << "\n";
                           }
                           else if (propName == "Lcl Rotation") {
                             auto x = getPropertyArrayReal(pa4.second, 4);
@@ -2263,7 +2319,7 @@ processDataTree(PropDataTree *tree)
                             auto localRotation = CPoint3D(x, y, z);
 
                             if (isDebug())
-                              std::cerr << "localRotation: " << localRotation << "\n";
+                              std::cerr << "  localRotation: " << localRotation << "\n";
                           }
                           else if (propName == "Lcl Scaling") {
                             auto x = getPropertyArrayReal(pa4.second, 4);
@@ -2273,7 +2329,7 @@ processDataTree(PropDataTree *tree)
                             auto localScaling = CPoint3D(x, y, z);
 
                             if (isDebug())
-                              std::cerr << "localScaling: " << localScaling << "\n";
+                              std::cerr << "  localScaling: " << localScaling << "\n";
                           }
                           else if (propName == "Visibility") {
                           }
@@ -2547,7 +2603,7 @@ processDataTree(PropDataTree *tree)
       using IdMap      = IndNameMap<IndName>;
       using IdArraySet = IndNameMap<std::set<IndName>>;
 
-      IdMap      modelGeometry, materialTexture;
+      IdMap      modelGeometry;
       IdArraySet materialModel;
 
       for (const auto &pdm1 : tree1->dataMap) {
@@ -2703,18 +2759,9 @@ processDataTree(PropDataTree *tree)
               if (pm1 != idModelData_.end()) {
                 auto *modelData1 = (*pm1).second;
 
-                materialData->modelData.push_back(modelData1);
+                materialData->modelData[modelData1->id] = modelData1;
 
-                if (modelData1->materialData && modelData1->materialData->id != id1) {
-                  std::cerr << "Duplicate Material->Model (" << id1 << "->" << id2 << ") "
-                               "(already associated with " << modelData1->materialData->id << ")\n";
-                  connectInfo();
-                  //assert(false);
-                }
-
-                modelData1->materialData = materialData;
-
-                //connectInfo();
+                modelData1->materialData[materialData->id] = materialData;
 
                 materialModel[id1].insert(id2);
 
@@ -2735,7 +2782,9 @@ processDataTree(PropDataTree *tree)
             // texture
             auto pt = idTextureData_.find(id1);
             if (pt != idTextureData_.end()) {
-              auto *textureData = (*pt).second;
+              const auto &textureDataList = (*pt).second;
+
+              auto *textureData = textureDataList[0];
 
               // texture -> model
               auto pn1 = idModelData_.find(id2);
@@ -2760,34 +2809,9 @@ processDataTree(PropDataTree *tree)
               if (pm1 != idMaterialData_.end()) {
                 auto *materialData = (*pm1).second;
 
-                if (textureData->materialData && textureData->materialData->id != id2) {
-                  std::cerr << "Duplicate Texture->Material (" << id1 << "->" << id2 << ") "
-                             "(already associated with " << textureData->materialData->id << ")\n";
-                  connectInfo();
-                  //assert(false);
-                }
+                textureData->materialData[materialData->id] = materialData;
 
-                textureData->materialData = materialData;
-
-                auto pt1 = materialData->textureMap.find(connectType);
-                if (pt1 != materialData->textureMap.end()) {
-                  auto *textureData1 = (*pt1).second;
-
-                  if (textureData != textureData1) {
-                    std::cerr << "Duplicate Material->Texture (" << id1 << "->" << id2 << ") "
-                                 "(already associated with " << textureData1->id << ")\n";
-                    connectInfo();
-                    //assert(false);
-                  }
-                }
-
-                materialData->textureMap[connectType] = textureData;
-
-                //textureData->type = connectType;
-
-                //connectInfo();
-
-                materialTexture[id2] = id1;
+                materialData->textureMap[connectType][textureData->id] = textureData;
 
                 auto pm2 = materialModel.find(id2);
 
@@ -3016,34 +3040,21 @@ processDataTree(PropDataTree *tree)
               // video -> texture
               auto pt1 = idTextureData_.find(id2);
               if (pt1 != idTextureData_.end()) {
-                auto *textureData1 = (*pt1).second;
+                const auto &textureDataList1 = (*pt1).second;
 
-                if (textureData1->videoData && textureData1->videoData->id != id2) {
-                  std::cerr << "Duplicate Texture->Video (" << id1 << "->" << id2 << ") "
-                             "(already associated with " << textureData1->videoData->id << ")\n";
-                  connectInfo();
-                  //assert(false);
-                }
+                auto *textureData1 = textureDataList1[0];
 
-                textureData1->videoData = videoData;
+                textureData1->videoData.push_back(videoData);
 
-                auto pt2 = videoData->textureMap.find(connectType);
-                if (pt2 != videoData->textureMap.end()) {
-                  auto *textureData2 = (*pt2).second;
+                auto pt2 = videoData->textureListMap.find(connectType);
 
-                  if (textureData1 != textureData2) {
-                    std::cerr << "Duplicate Video->Texture (" << id1 << "->" << id2 << ") "
-                                 "(already associated with " << textureData2->id << ")\n";
-                    connectInfo();
-                    //assert(false);
-                  }
-                }
+                if (pt2 == videoData->textureListMap.end())
+                  pt2 = videoData->textureListMap.insert(pt2,
+                    TextureListMap::value_type(connectType, TextureList()));
 
-                videoData->textureMap[connectType] = textureData1;
+                auto &textureList = (*pt2).second;
 
-                //textureData1->type = connectType;
-
-                //connectInfo();
+                textureList.push_back(textureData1);
 
                 continue;
               }
@@ -3336,6 +3347,8 @@ processDataTree(PropDataTree *tree)
             }
             else if (treeName3 == "Objects/Geometry/LayerElementMaterial") {
             }
+            else if (treeName3 == "Objects/Geometry/LayerElementTexture") {
+            }
             else if (treeName3 == "Objects/Geometry/Layer") {
             }
             else
@@ -3383,51 +3396,83 @@ processDataTree(PropDataTree *tree)
                   for (const auto &pa3 : pd3.second) {
                     auto propName3 = getPropertyArrayName(pa3.second);
 
-                    if      (propName3 == "Ambient") {
-                    }
-                    else if (propName3 == "AmbientColor") {
+                    if      (propName3 == "Ambient" || propName3 == "AmbientColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->ambientColor = CRGBA(r, g, b);
                     }
                     else if (propName3 == "AmbientFactor") {
+                      materialData->ambientFactor = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "BumpFactor") {
+                      materialData->bumpFactor = getPropertyArrayReal(pa3.second, 4);
                     }
-                    else if (propName3 == "Diffuse") {
-                    }
-                    else if (propName3 == "DiffuseColor") {
+                    else if (propName3 == "Diffuse" || propName3 == "DiffuseColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->diffuseColor = CRGBA(r, g, b);
                     }
                     else if (propName3 == "DiffuseFactor") {
+                      materialData->diffuseFactor = getPropertyArrayReal(pa3.second, 4);
                     }
-                    else if (propName3 == "Emissive") {
-                    }
-                    else if (propName3 == "EmissiveColor") {
+                    else if (propName3 == "Emissive" || propName3 == "EmissiveColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->emissionColor = CRGBA(r, g, b);
                     }
                     else if (propName3 == "EmissiveFactor") {
+                      materialData->emissionFactor = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "Opacity") {
+                      materialData->opacity = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "Reflectivity") {
+                      materialData->reflectivity = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "ReflectionColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->reflectionColor = CRGBA(r, g, b);
                     }
                     else if (propName3 == "ReflectionFactor") {
+                      materialData->reflectionFactor = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "ShadingModel") {
+                      materialData->shadingModel = getPropertyArrayName(pa3.second, 4);
                     }
-                    else if (propName3 == "Shininess") {
+                    else if (propName3 == "Shininess" || propName3 == "ShininessExponent") {
+                      materialData->shininess = getPropertyArrayReal(pa3.second, 4);
                     }
-                    else if (propName3 == "ShininessExponent") {
-                    }
-                    else if (propName3 == "Specular") {
-                    }
-                    else if (propName3 == "SpecularColor") {
+                    else if (propName3 == "Specular" || propName3 == "SpecularColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->specularColor = CRGBA(r, g, b);
                     }
                     else if (propName3 == "SpecularFactor") {
-                    }
-                    else if (propName3 == "TransparencyFactor") {
+                      materialData->specularFactor = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "TransparentColor") {
+                      auto r = getPropertyArrayReal(pa3.second, 4);
+                      auto g = getPropertyArrayReal(pa3.second, 5);
+                      auto b = getPropertyArrayReal(pa3.second, 6);
+
+                      materialData->transparencyColor = CRGBA(r, g, b);
+                    }
+                    else if (propName3 == "TransparencyFactor") {
+                      materialData->transparencyFactor = getPropertyArrayReal(pa3.second, 4);
                     }
                     else if (propName3 == "UseMaterial") {
+                      unhandledProperty(treeName3, propName3);
                     }
                     else
                       unhandledProperty(treeName3, propName3);
@@ -3450,6 +3495,9 @@ processDataTree(PropDataTree *tree)
           materialData->id = blockData.id;
 
           idMaterialData_[blockData.id] = materialData;
+
+          if (isDebug())
+            printMaterialData(materialData);
         }
         else if (treeName2 == "Objects/Model") {
           if (isDebug())
@@ -3553,33 +3601,33 @@ processDataTree(PropDataTree *tree)
                       auto y = getPropertyArrayReal(pa3.second, 5);
                       auto z = getPropertyArrayReal(pa3.second, 6);
 
-                      modelData->localTranslation = CPoint3D(x, y, z);
+                      modelData->localTRS.translation = CPoint3D(x, y, z);
 
                       if (isDebug())
-                        std::cerr << "localTranslation: " <<
-                          modelData->localTranslation.value() << "\n";
+                        std::cerr << "  Lcl Translation: " <<
+                          modelData->localTRS.translation.value() << "\n";
                     }
                     else if (propName3 == "Lcl Rotation") {
                       auto x = getPropertyArrayReal(pa3.second, 4);
                       auto y = getPropertyArrayReal(pa3.second, 5);
                       auto z = getPropertyArrayReal(pa3.second, 6);
 
-                      modelData->localRotation = CPoint3D(x, y, z);
+                      modelData->localTRS.rotation = CPoint3D(x, y, z);
 
                       if (isDebug())
-                        std::cerr << "localRotation: " <<
-                          modelData->localRotation.value() << "\n";
+                        std::cerr << "  Lcl Rotation: " <<
+                          modelData->localTRS.rotation.value() << "\n";
                     }
                     else if (propName3 == "Lcl Scaling") {
                       auto x = getPropertyArrayReal(pa3.second, 4);
                       auto y = getPropertyArrayReal(pa3.second, 5);
                       auto z = getPropertyArrayReal(pa3.second, 6);
 
-                      modelData->localScaling = CPoint3D(x, y, z);
+                      modelData->localTRS.scaling = CPoint3D(x, y, z);
 
                       if (isDebug())
-                        std::cerr << "localScaling: " <<
-                          modelData->localScaling.value() << "\n";
+                        std::cerr << "  Lcl Scaling: " <<
+                          modelData->localTRS.scaling.value() << "\n";
                     }
                     else if (propName3 == "AspectW") {
                     }
@@ -3591,7 +3639,15 @@ processDataTree(PropDataTree *tree)
                     }
                     else if (propName3 == "ForegroundTransparent") {
                     }
+                    else if (propName3 == "GeometricRotation") {
+                    }
+                    else if (propName3 == "GeometricScaling") {
+                    }
+                    else if (propName3 == "GeometricTranslation") {
+                    }
                     else if (propName3 == "MaxHandle") {
+                    }
+                    else if (propName3 == "Opacity") {
                     }
                     else if (propName3 == "PreferedAngleX") {
                     }
@@ -3600,6 +3656,8 @@ processDataTree(PropDataTree *tree)
                     else if (propName3 == "PreferedAngleZ") {
                     }
                     else if (propName3 == "PreRotation") {
+                    }
+                    else if (propName3 == "Reflectivity") {
                     }
                     else if (propName3 == "ResolutionMode") {
                     }
@@ -3695,8 +3753,15 @@ processDataTree(PropDataTree *tree)
           idNodeAttributeData_[blockData.id] = nodeAttributeData;
         }
         else if (treeName2 == "Objects/Pose") {
-          //BlockData blockData;
-          //readBlockDetails(tree2, blockData, treeName2);
+          if (isDebug())
+            printParentDataMap(tree2);
+          //printPropertyNames(tree2);
+
+          BlockData blockData;
+          readBlockDetails(tree2, blockData, treeName2);
+
+          auto *poseData = new PoseData;
+          poseData->name = blockData.name;
 
           for (const auto &pd2 : tree2->dataMap) {
             if      (pd2.first == "NbPoseNodes") {
@@ -3712,26 +3777,38 @@ processDataTree(PropDataTree *tree)
           for (auto *tree3 : tree2->children) {
             auto treeName3 = hierName(tree3);
 
-            if (treeName3 == "Objects/Pose/PoseNode") {
-#if 0
-              long node = 0;
+            PoseNodeData poseNodeData;
 
+            if (treeName3 == "Objects/Pose/PoseNode") {
               for (const auto &pd3 : tree3->dataMap) {
                 if      (pd3.first == "Node") {
-                  node = getPropertyInt(pd3.second);
+                  poseNodeData.node = getPropertyInt(pd3.second);
+
+#if 0
+                  auto pm = idModelData_.find(node);
+                  if (pm != idModelData_.end()) {
+                    auto *modelData = (*pm).second;
+                    std::cerr << node << " (" << modelData->name << ")\n";
+                  }
+                  else {
+                    std::cerr << node << " (no model)\n";
+                  }
+#endif
                 }
                 else if (pd3.first == "Matrix") {
+                  poseNodeData.matrix = getPropertyDoubleArray(pd3.second);
                 }
                 else
                   unhandledDataName(treeName2, pd3.first);
               }
 
-              std::cerr << node << "\n";
-#endif
+              poseData->nodes.push_back(poseNodeData);
             }
             else
               unhandledTree(treeName3);
           }
+
+          idPoseData_[blockData.id] = poseData;
         }
         else if (treeName2 == "Objects/Texture") {
           if (isDebug())
@@ -3809,8 +3886,7 @@ processDataTree(PropDataTree *tree)
 
           textureData->id = blockData.id;
 
-          assert(idTextureData_.find(blockData.id) == idTextureData_.end());
-          idTextureData_[blockData.id] = textureData;
+          idTextureData_[blockData.id].push_back(textureData);
         }
         else if (treeName2 == "Objects/Video") {
           BlockData blockData;
@@ -3874,34 +3950,100 @@ processDataTree(PropDataTree *tree)
   }
 }
 
+void
+CImportFBX::
+printMaterialData(MaterialData *materialData) const
+{
+  std::cerr << "Material: " << materialData->name << "\n";
+
+  if (materialData->ambientColor)
+    std::cerr << " AmbientColor: " << materialData->ambientColor.value() << "\n";
+  if (materialData->ambientFactor)
+    std::cerr << " AmbientFactor: " << materialData->ambientFactor.value() << "\n";
+
+  if (materialData->diffuseColor)
+    std::cerr << " DiffuseColor: " << materialData->diffuseColor.value() << "\n";
+  if (materialData->diffuseFactor)
+    std::cerr << " DiffuseFactor: " << materialData->diffuseFactor.value() << "\n";
+
+  if (materialData->emissionColor)
+    std::cerr << " EmissionColor: " << materialData->emissionColor.value() << "\n";
+  if (materialData->emissionFactor)
+    std::cerr << " EmissionFactor: " << materialData->emissionFactor.value() << "\n";
+
+  if (materialData->specularColor)
+    std::cerr << " SpecularColor: " << materialData->specularColor.value() << "\n";
+  if (materialData->specularFactor)
+    std::cerr << " SpecularFactor: " << materialData->specularFactor.value() << "\n";
+
+  if (materialData->shininess)
+    std::cerr << " Shininess: " << materialData->shininess.value() << "\n";
+  if (materialData->bumpFactor)
+    std::cerr << " BumpFactor: " << materialData->bumpFactor.value() << "\n";
+
+  if (materialData->transparencyColor)
+    std::cerr << " TransparencyColor: " << materialData->transparencyColor.value() << "\n";
+  if (materialData->transparencyFactor)
+    std::cerr << " TransparencyFactor: " << materialData->transparencyFactor.value() << "\n";
+  if (materialData->opacity)
+    std::cerr << " Opacity: " << materialData->opacity.value() << "\n";
+
+  if (materialData->reflectionColor)
+    std::cerr << " ReflectionColor: " << materialData->reflectionColor.value() << "\n";
+  if (materialData->reflectionFactor)
+    std::cerr << " ReflectionFactor: " << materialData->reflectionFactor.value() << "\n";
+  if (materialData->reflectivity)
+    std::cerr << " Reflectivity: " << materialData->reflectivity.value() << "\n";
+}
+
 CMatrix3D
 CImportFBX::
-calcModelDataLocalTransform(ModelData *m) const
+calcModelDataLocalTransform(ModelData *modelData) const
+{
+  auto m = calcTRSDataMatrix(modelData->localTRS);
+
+ //geometryData->localTransform = m;
+
+  return m;
+}
+
+CMatrix3D
+CImportFBX::
+calcTRSDataMatrix(const TRSData &trs) const
 {
   auto t = CMatrix3D::identity();
   auto s = CMatrix3D::identity();
   auto r = CMatrix3D::identity();
 
-  if (m->localTranslation) {
-    auto p = m->localTranslation.value();
+  if (trs.translation) {
+    auto p = trs.translation.value();
     t = CMatrix3D::translation(p.x, p.y, p.z);
   }
 
-  if (m->localRotation) {
-    auto p = m->localRotation.value();
+  if (trs.rotation) {
+    auto p = trs.rotation.value();
     r = CMatrix3D::rotation(CMathGen::DegToRad(p.x),
                             CMathGen::DegToRad(p.y),
                             CMathGen::DegToRad(p.z));
   }
 
-  if (m->localScaling) {
-    auto p = m->localScaling.value();
+  if (trs.scaling) {
+    auto p = trs.scaling.value();
     s = CMatrix3D::scale(p.x, p.y, p.z);
   }
 
-//geometryData->localTransform = t*r*s;
   return t*r*s;
-//#return s*r*t;
+//return s*r*t;
+}
+
+void
+CImportFBX::
+calcModelDataHierTRS(ModelData *m, std::vector<TRSData> &trsArray) const
+{
+  if (m->parent)
+    calcModelDataHierTRS(m->parent, trsArray);
+
+  trsArray.push_back(m->localTRS);
 }
 
 CMatrix3D
@@ -3910,10 +4052,8 @@ calcModelDataHierTransform(ModelData *m) const
 {
   auto t = calcModelDataLocalTransform(m);
 
-#if 0
   if (m->parent)
     t = calcModelDataHierTransform(m->parent)*t;
-#endif
 
   return t;
 }
@@ -3956,6 +4096,61 @@ addGeometryObject(GeometryData *geometryData)
   scene_->addObject(geometryData->object);
 
   object_->addChild(geometryData->object);
+
+  //---
+
+  // get material data
+
+  MaterialData *materialData = nullptr;
+
+  if (geometryData->modelData && ! geometryData->modelData->materialData.empty())
+    materialData = geometryData->modelData->materialData.begin()->second;
+
+  CGeomMaterial *material = nullptr;
+
+  if (materialData) {
+    material = scene_->getMaterial(materialData->name);
+
+    if (! material) {
+      material = new CGeomMaterial;
+
+      material->setName(materialData->name);
+
+      if (materialData->ambientColor)
+        material->setAmbient(*materialData->ambientColor);
+
+      if (materialData->diffuseColor)
+        material->setDiffuse(*materialData->diffuseColor);
+
+      if (materialData->emissionColor)
+        material->setEmission(*materialData->emissionColor);
+
+      if (materialData->specularColor)
+        material->setSpecular(*materialData->specularColor);
+
+      if (materialData->shininess)
+        material->setShininess(*materialData->shininess);
+
+      for (const auto &pt : materialData->textureMap) {
+        const auto &textureType = pt.first;
+        const auto &textureData = pt.second;
+
+        for (const auto &pt1 : textureData) {
+          auto *textureData1 = pt1.second;
+
+          if (textureType == "NormalMap")
+            material->setNormalTexture(textureData1->texture);
+          else
+            material->setDiffuseTexture(textureData1->texture);
+        }
+      }
+
+      scene_->addMaterial(material);
+    }
+  }
+
+  if (material)
+    geometryData->object->setMaterialP(material);
 
   //---
 
@@ -4191,9 +4386,65 @@ addGeometryObject(GeometryData *geometryData)
 
     if (! tpoints.empty())
       face.setTexturePoints(tpoints);
+
+    if (material)
+      face.setMaterialP(material);
+  }
+}
+
+void
+CImportFBX::
+setGeometryTextures(GeometryData *geometryData)
+{
+  auto *modelData = geometryData->modelData;
+
+  if (! modelData || ! geometryData->object)
+    return;
+
+  // set texture
+  for (const auto &pt : modelData->textureMap) {
+    auto *textureData = pt.second;
+
+    if (textureData->type == "NormalMap")
+      geometryData->object->setNormalTexture(textureData->texture);
+    else
+      geometryData->object->setDiffuseTexture(textureData->texture);
   }
 
-  
+  for (const auto &pm : modelData->materialData) {
+    auto *materialData = pm.second;
+
+    for (const auto &pt : materialData->textureMap) {
+      const auto &textureType = pt.first;
+
+      for (const auto &pt1 : pt.second) {
+        auto *textureData = pt1.second;
+
+        if (textureType == "NormalMap")
+          geometryData->object->setNormalTexture(textureData->texture);
+        else
+          geometryData->object->setDiffuseTexture(textureData->texture);
+
+        if (! textureData->videoData.empty()) {
+          auto *videoData = textureData->videoData[0];
+
+          for (const auto &pt2 : videoData->textureListMap) {
+            const auto &textureType1 = pt2.first;
+            const auto &textureList1 = pt2.second;
+
+            for (auto *textureData1 : textureList1) {
+              if (textureType1 == "NormalMap")
+                geometryData->object->setNormalTexture(textureData1->texture);
+              else
+                geometryData->object->setDiffuseTexture(textureData1->texture);
+
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 void
@@ -4429,7 +4680,15 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
     for (const auto &pd : tree->dataMap) {
       const auto &name = pd.first;
 
-      if      (name == "Materials") {
+      if      (name == "Name") {
+      }
+      else if (name == "Version") {
+      }
+      else if (name == "MappingInformationType") {
+      }
+      else if (name == "ReferenceInformationType") {
+      }
+      else if (name == "Materials") {
         for (const auto &pa : pd.second) {
           for (const auto &pa1 : pa.second) {
             auto *data = pa1.second;
@@ -4441,13 +4700,26 @@ processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData)
           }
         }
       }
-      else if (name == "Name") {
+      else {
+        unhandledDataName(treeName, name);
+      }
+    }
+  }
+  else if (treeName == "Objects/Geometry/LayerElementTexture") {
+    for (const auto &pd : tree->dataMap) {
+      const auto &name = pd.first;
+
+      if      (name == "Name") {
       }
       else if (name == "Version") {
       }
       else if (name == "MappingInformationType") {
       }
       else if (name == "ReferenceInformationType") {
+      }
+      else if (name == "BlendMode") {
+      }
+      else if (name == "TextureAlpha") {
       }
       else {
         unhandledDataName(treeName, name);
@@ -4760,6 +5032,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(rdata);
   }
+  // string
   else if (t == 'S') {
     uint len;
     if (! fileData.readUInt(&len))
@@ -4773,6 +5046,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(str);
   }
+  // 16 bit int
   else if (t == 'Y') {
     short s;
     if (! fileData.readShort(&s))
@@ -4781,12 +5055,14 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(s);
   }
+  // 1 bit bool flag (yes/no)
   else if (t == 'C') {
     uchar c;
     if (! fileData.readUChar(&c))
       return errorMsg("Failed to read data for " + ucharStr(t));
     infoMsg(" C " + ucharStr(c));
   }
+  // 32 bit int
   else if (t == 'I') {
     int i;
     if (! fileData.readInt(&i))
@@ -4795,6 +5071,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(i);
   }
+  // float
   else if (t == 'F') {
     float f;
     if (! fileData.readFloat(&f))
@@ -4803,6 +5080,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(f);
   }
+  // double
   else if (t == 'D') {
     double r;
     if (! fileData.readDouble(&r))
@@ -4811,6 +5089,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(r);
   }
+  // 64 bit int
   else if (t == 'L') {
     long l;
     if (! fileData.readLong(&l))
@@ -4819,6 +5098,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     propData->setData(l);
   }
+  // array of float
   else if (t == 'f') {
     std::vector<float> data;
     if (! fileData.readArrayData(data, t, depth_))
@@ -4828,6 +5108,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     infoMsg(" f " + propData->toString());
   }
+  // array of double
   else if (t == 'd') {
     std::vector<double> data;
     if (! fileData.readArrayData(data, t, depth_))
@@ -4837,6 +5118,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     infoMsg(" d " + propData->toString());
   }
+  // array of long
   else if (t == 'l') {
     std::vector<long> data;
     if (! fileData.readArrayData(data, t, depth_))
@@ -4846,6 +5128,7 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     infoMsg(" l " + propData->toString());
   }
+  // array of int
   else if (t == 'i') {
     std::vector<int> data;
     if (! fileData.readArrayData(data, t, depth_))
@@ -4855,6 +5138,19 @@ readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
 
     infoMsg(" i " + propData->toString());
   }
+#if 0
+  // array of char
+  else if (t == 'c') {
+    std::vector<uchar> data;
+    if (! fileData.readArrayData(data, t, depth_))
+      return false;
+
+    propData->setData(data);
+
+    infoMsg(" c " + propData->toString());
+  }
+#endif
+  // binary data
   else if (t == 'b') {
     std::vector<uchar> data;
     if (! fileData.readArrayData(data, t, depth_))

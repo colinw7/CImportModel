@@ -66,6 +66,9 @@ class CQNewGLModel : public QFrame {
   CQNewGLUVControl      *uvControl     () const { return uvControl_; }
   CQNewGLFractalControl *fractalControl() const { return fractalControl_; }
 
+  //---
+
+  // lighting
   double ambientStrength() const { return ambientStrength_; }
   void setAmbientStrength(double r) { ambientStrength_ = r; }
 
@@ -79,8 +82,11 @@ class CQNewGLModel : public QFrame {
   void setEmissiveStrength(double r) { emissiveStrength_ = r; }
 
   double shininess() const { return shininess_; }
-  void setShininess(double r);
+  void setShininess(double r) { shininess_ = r; }
 
+  //---
+
+  // interaction target
   const Type &type() const { return type_; }
   void setType(const Type &t) { type_ = t; }
 

@@ -12,6 +12,8 @@ class CGeomObject3D;
 class CGeomFace3D;
 class CGeomLine3D;
 class CGeomVertex3D;
+class CGeomTexture;
+class CGeomMaterial;
 
 class CImportScene : public CImportBase {
  public:
@@ -42,11 +44,16 @@ class CImportScene : public CImportBase {
   void           readRotate(CGeomObject3D *object, int num_patches);
   void           readColors();
   void           readTextures();
+  void           readMaterial(const std::string &name);
   void           readCSG(const std::string &name);
   CMatrix3D      readTransforms();
   CGeomObject3D *getObject(const std::string &name);
   CGeomObject3D *getPrimitive(const std::string &name);
-  int            lookupCommand(const std::string &command, const char **commands);
+
+  int lookupCommand(const std::string &command, const char **commands);
+
+  void unrecogisedCommand(const std::string &block, const std::string &command,
+                          const char **commands);
 
   CRGBA wordToColor(const std::string &word) const;
   CRGBA getRGBA(int color) const;
@@ -58,6 +65,8 @@ class CImportScene : public CImportBase {
  private:
   using NameObjMap = std::map<std::string, CGeomObject3D *>;
   using Names      = std::vector<std::string>;
+  using Materials  = std::vector<CGeomMaterial *>;
+  using Textures   = std::vector<CGeomTexture *>;
 
   std::string modelDir_;
 
@@ -67,7 +76,8 @@ class CImportScene : public CImportBase {
   NameObjMap    objects_;
   NameObjMap    primitives_;
   Names         colors_;
-  Names         textures_;
+  Textures      textures_;
+  Materials     materials_;
   int           orientation_ { 1 };
 };
 

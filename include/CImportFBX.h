@@ -74,6 +74,7 @@ class CImportFBX : public CImportBase {
  public:
   using OptReal   = std::optional<double>;
   using OptPoint3 = std::optional<CPoint3D>;
+  using OptString = std::optional<std::string>;
   using OptColor  = std::optional<CRGBA>;
 
   template<typename T>
@@ -674,7 +675,13 @@ class CImportFBX : public CImportBase {
   struct MaterialData;
   struct AnimationDeformerData;
 
-  using TextureMap = std::map<std::string, TextureData *>;
+  using TextureList       = std::vector<TextureData *>;
+  using TextureMap        = std::map<std::string, TextureData *>;
+  using TextureListMap    = std::map<std::string, TextureList>;
+  using IdModelData       = IndNameMap<ModelData *>;
+  using IdMaterialData    = IndNameMap<MaterialData *>;
+  using IdTextureData     = IndNameMap<TextureData *>;
+  using IdTextureDataList = IndNameMap<TextureList>;
 
   // Geometry Mesh Data
   struct VertexData {
@@ -721,29 +728,33 @@ class CImportFBX : public CImportBase {
     CGeomObject3D* object { nullptr };
   };
 
+  struct TRSData {
+    OptPoint3 translation;
+    OptPoint3 rotation;
+    OptPoint3 scaling;
+  };
+
   // Geometry Instance
   struct ModelData {
     IndName id;
 
     std::string name;
     std::string type;
-    OptPoint3   localTranslation;
-    OptPoint3   localRotation;
-    OptPoint3   localScaling;
+    TRSData     localTRS;
 
-    TextureMap                          textureMap;
-    MaterialData*                       materialData { nullptr };
+    TextureMap     textureMap;
+    IdMaterialData materialData;
+
     std::vector<AnimationDeformerData*> deformerData;
 
     ModelData*               parent { nullptr };
     std::vector<ModelData *> children;
 
-    GeometryData*  geometryData { nullptr };
+    GeometryData* geometryData { nullptr };
 
     std::vector<GeometryData *> geometryDataList;
   };
 
-  struct MaterialData;
   struct VideoData;
 
   struct TextureData {
@@ -755,27 +766,38 @@ class CImportFBX : public CImportBase {
     std::string   media;
     CGeomTexture* texture { nullptr };
 
-    ModelData*    modelData    { nullptr };
-    MaterialData* materialData { nullptr };
-    VideoData*    videoData    { nullptr };
+    ModelData*               modelData { nullptr };
+    IdMaterialData           materialData;
+    std::vector<VideoData *> videoData;
   };
 
   struct MaterialData {
     IndName id;
 
     std::string name;
-    OptColor    ambientColor;
-    OptReal     ambientFactor;
-    OptColor    diffuseColor;
-    OptReal     diffuseFactor;
-    OptColor    emissionColor;
-    OptReal     emissionFactor;
-    OptColor    specularColor;
-    OptReal     specularFactor;
-    OptReal     shininess;
 
-    TextureMap               textureMap;
-    std::vector<ModelData *> modelData;
+    OptColor  ambientColor;
+    OptReal   ambientFactor;
+    OptColor  diffuseColor;
+    OptReal   diffuseFactor;
+    OptColor  emissionColor;
+    OptReal   emissionFactor;
+    OptColor  specularColor;
+    OptReal   specularFactor;
+    OptReal   shininess;
+    OptReal   bumpFactor;
+    OptColor  transparencyColor;
+    OptReal   transparencyFactor;
+    OptReal   opacity;
+    OptColor  reflectionColor;
+    OptReal   reflectionFactor;
+    OptReal   reflectivity;
+    OptString shadingModel;
+
+    using TextureMap = std::map<std::string, IdTextureData>;
+
+    TextureMap  textureMap;
+    IdModelData modelData;
   };
 
   //---
@@ -801,6 +823,8 @@ class CImportFBX : public CImportBase {
   bool readScopeData(const std::string &name, uint ni, uint ind, FileData &fileData,
                      const std::string &scopeName, PropDataTree *propDataTree);
 
+  void processHierModel(ModelData *modelData, int depth);
+
   void dumpTree(PropDataTree *tree, int depth=0);
   void dumpDataMap(PropDataTree *tree, int depth=0);
 
@@ -808,6 +832,12 @@ class CImportFBX : public CImportBase {
   void processGeometryDataTree(PropDataTree *tree, GeometryData *geometryData);
 
   void addGeometryObject(GeometryData *geometryData);
+
+  void setGeometryTextures(GeometryData *geometryData);
+
+  CMatrix3D calcTRSDataMatrix(const TRSData &trs) const;
+
+  void calcModelDataHierTRS(ModelData *m, std::vector<TRSData> &trsArray) const;
 
   CMatrix3D calcModelDataLocalTransform(ModelData *m) const;
   CMatrix3D calcModelDataHierTransform(ModelData *m) const;
@@ -820,6 +850,8 @@ class CImportFBX : public CImportBase {
   bool loadTexture(TextureData *textureData, std::string &fileName);
 
   std::string getObjectName();
+
+  void printMaterialData(MaterialData *materialData) const;
 
   void infoMsg(const std::string &msg) const;
   bool errorMsg(const std::string &msg) const;
@@ -867,15 +899,12 @@ class CImportFBX : public CImportBase {
 
   using IdType         = IndNameMap<std::string>;
   using IdGeometryData = IndNameMap<GeometryData *>;
-  using IdModelData    = IndNameMap<ModelData *>;
-  using IdTextureData  = IndNameMap<TextureData *>;
-  using IdMaterialData = IndNameMap<MaterialData *>;
 
-  IdType         idType_;
-  IdGeometryData idGeometryData_;
-  IdModelData    idModelData_;
-  IdTextureData  idTextureData_;
-  IdMaterialData idMaterialData_;
+  IdType            idType_;
+  IdGeometryData    idGeometryData_;
+  IdModelData       idModelData_;
+  IdTextureDataList idTextureData_;
+  IdMaterialData    idMaterialData_;
 
   struct AnimationLayerData;
   struct AnimationCurveNodeData;
@@ -934,12 +963,22 @@ class CImportFBX : public CImportBase {
   struct VideoData {
     IndName id;
 
-    ModelData* modelData   { nullptr };
-    TextureMap textureMap;
+    ModelData*     modelData   { nullptr };
+    TextureListMap textureListMap;
   };
 
   struct ConstraintData {
     std::string name;
+  };
+
+  struct PoseNodeData {
+    long                node { -1 };
+    std::vector<double> matrix;
+  };
+
+  struct PoseData {
+    std::string               name;
+    std::vector<PoseNodeData> nodes;
   };
 
   using IdAnimationCurveData     = IndNameMap<AnimationCurveData *>;
@@ -950,6 +989,7 @@ class CImportFBX : public CImportBase {
   using IdNodeAttributeData      = IndNameMap<NodeAttributeData *>;
   using IdVideoData              = IndNameMap<VideoData *>;
   using IdConstraintData         = IndNameMap<ConstraintData *>;
+  using IdPoseData               = IndNameMap<PoseData *>;
 
   IdAnimationCurveData     animationCurveData_;
   IdAnimationCurveNodeData animationCurveNodeData_;
@@ -959,6 +999,7 @@ class CImportFBX : public CImportBase {
   IdNodeAttributeData      idNodeAttributeData_;
   IdVideoData              idVideoData_;
   IdConstraintData         constraintData_;
+  IdPoseData               idPoseData_;
 
   bool colorAlpha_ { true };
 };

@@ -16,6 +16,8 @@ CQCamera3DTextures::
 CQCamera3DTextures(CQCamera3DApp *app) :
  app_(app)
 {
+  setObjectName("textures");
+
   auto *canvas = app_->canvas();
 
   connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
@@ -44,6 +46,15 @@ paintEvent(QPaintEvent *)
   int nr = std::max(int(sqrt(n)), 1);
   int nc = (n + nr - 1)/nr;
 
+  if (w >= h) {
+    if (nc < nr)
+      std::swap(nr, nc);
+  }
+  else {
+    if (nr < nc)
+      std::swap(nr, nc);
+  }
+
   auto iw = double(w)/nc;
   auto ih = double(h)/nr;
 
@@ -64,9 +75,6 @@ paintEvent(QPaintEvent *)
     auto y = ir*ih;
 
     painter.drawImage(int(x), int(y), qimage1);
-
-    iw = qimage1.width ();
-    ih = qimage1.height();
 
     ++ic;
 

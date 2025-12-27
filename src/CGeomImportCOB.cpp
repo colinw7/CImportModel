@@ -54,7 +54,13 @@ setFacesMaterial(int imat, CShadeType3D,
                  const CRGBA &specular, const CRGBA &emission, double shininess,
                  const std::string &)
 {
-  auto *material = new CMaterial(ambient, diffuse, specular, emission, shininess);
+  auto *material = new CGeomMaterial;
+
+  material->setAmbient(ambient);
+  material->setDiffuse(diffuse);
+  material->setSpecular(specular);
+  material->setEmission(emission);
+  material->setShininess(shininess);
 
   setFacesMaterial(imat, material);
 }
@@ -70,7 +76,7 @@ addMaterialFace(int imat, uint face_num)
 
 void
 CGeomImportCOB::
-setFacesMaterial(int imat, CMaterial *material)
+setFacesMaterial(int imat, CGeomMaterial *material)
 {
   FaceList &face_list = getMaterialFaces(imat);
 

@@ -159,13 +159,6 @@ tabSlot(int i)
 
 void
 CQNewGLModel::
-setShininess(double r)
-{
-  shininess_ = r;
-}
-
-void
-CQNewGLModel::
 setShowBone(bool b)
 {
   showBone_ = b;

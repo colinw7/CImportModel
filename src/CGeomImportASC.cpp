@@ -34,7 +34,7 @@ void
 CGeomImportASC::
 addITriangle(int i1, int i2, int i3, const CRGBA &rgba)
 {
-  auto *material = new CMaterial;
+  auto *material = new CGeomMaterial;
 
   material->setAmbient(rgba);
 

@@ -16,6 +16,8 @@ CQCamera3DUVMap::
 CQCamera3DUVMap(CQCamera3DApp *app) :
  app_(app)
 {
+  setObjectName("uvMap");
+
   auto *canvas = app_->canvas();
 
   connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
@@ -48,25 +50,39 @@ paintEvent(QPaintEvent *)
 
   CGeomTexture *texture = nullptr;
 
+  auto updateTexture = [&](CGeomTexture *t) {
+    if (t) texture = t;
+  };
+
   if      (object) {
-    if      (textureType_ == TextureType::DIFFUSE)
-      texture = object->getDiffuseTexture();
-    else if (textureType_ == TextureType::NORMAL)
-      texture = object->getNormalTexture();
-    else if (textureType_ == TextureType::SPECULAR)
-      texture = object->getSpecularTexture();
-    else if (textureType_ == TextureType::EMISSIVE)
-      texture = object->getEmissiveTexture();
+    if      (textureType_ == TextureType::DIFFUSE ) updateTexture(object->getDiffuseTexture ());
+    else if (textureType_ == TextureType::NORMAL  ) updateTexture(object->getNormalTexture  ());
+    else if (textureType_ == TextureType::SPECULAR) updateTexture(object->getSpecularTexture());
+    else if (textureType_ == TextureType::EMISSIVE) updateTexture(object->getEmissiveTexture());
+
+    auto *objMat = object->getMaterialP();
+
+    if (objMat) {
+      if      (textureType_ == TextureType::DIFFUSE ) updateTexture(objMat->diffuseTexture ());
+      else if (textureType_ == TextureType::NORMAL  ) updateTexture(objMat->normalTexture  ());
+      else if (textureType_ == TextureType::SPECULAR) updateTexture(objMat->specularTexture());
+      else if (textureType_ == TextureType::EMISSIVE) updateTexture(objMat->emissiveTexture());
+    }
   }
   else if (face) {
-    if      (textureType_ == TextureType::DIFFUSE)
-      texture = face->getDiffuseTexture();
-    else if (textureType_ == TextureType::NORMAL)
-      texture = face->getNormalTexture();
-    else if (textureType_ == TextureType::SPECULAR)
-      texture = face->getSpecularTexture();
-    else if (textureType_ == TextureType::EMISSIVE)
-      texture = face->getEmissiveTexture();
+    if      (textureType_ == TextureType::DIFFUSE ) updateTexture(face->getDiffuseTexture ());
+    else if (textureType_ == TextureType::NORMAL  ) updateTexture(face->getNormalTexture  ());
+    else if (textureType_ == TextureType::SPECULAR) updateTexture(face->getSpecularTexture());
+    else if (textureType_ == TextureType::EMISSIVE) updateTexture(face->getEmissiveTexture());
+
+    auto *faceMat = object->getMaterialP();
+
+    if (faceMat) {
+      if      (textureType_ == TextureType::DIFFUSE ) updateTexture(faceMat->diffuseTexture ());
+      else if (textureType_ == TextureType::NORMAL  ) updateTexture(faceMat->normalTexture  ());
+      else if (textureType_ == TextureType::SPECULAR) updateTexture(faceMat->specularTexture());
+      else if (textureType_ == TextureType::EMISSIVE) updateTexture(faceMat->emissiveTexture());
+    }
   }
 
   if (texture) {

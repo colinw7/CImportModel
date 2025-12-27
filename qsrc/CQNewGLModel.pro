@@ -45,12 +45,19 @@ CQNewGLShapes.cpp \
 CQNewGLSkybox.cpp \
 CQNewGLStatusBar.cpp \
 CQNewGLTerrain.cpp \
-CQNewGLTextureChooser.cpp \
-CQNewGLObjectsList.cpp \
 CQNewGLToolbar.cpp \
 CQNewGLUVMap.cpp \
 CQNewGLWidget.cpp \
 CQNewGLWireframe.cpp \
+\
+CQNewGLBonesList.cpp \
+CQNewGLCamerasList.cpp \
+CQNewGLLightsList.cpp \
+CQNewGLObjectsList.cpp \
+CQNewGLShapesList.cpp \
+\
+CQNewGLAnimChooser.cpp \
+CQNewGLTextureChooser.cpp \
 \
 CQGLCubemap.cpp \
 CQGLTexture.cpp \
@@ -108,13 +115,20 @@ CQNewGLShapes.h \
 CQNewGLSkybox.h \
 CQNewGLStatusBar.h \
 CQNewGLTerrain.h \
-CQNewGLTextureChooser.h \
-CQNewGLObjectsList.h \
 CQNewGLToolbar.h \
 CQNewGLUtil.h \
 CQNewGLUVMap.h \
 CQNewGLWidget.h \
 CQNewGLWireframe.h \
+\
+CQNewGLBonesList.h \
+CQNewGLCamerasList.h \
+CQNewGLLightsList.h \
+CQNewGLObjectsList.h \
+CQNewGLShapesList.h \
+\
+CQNewGLAnimChooser.h \
+CQNewGLTextureChooser.h \
 \
 CQGLCubemap.h \
 CQGLTexture.h \

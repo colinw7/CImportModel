@@ -3,8 +3,12 @@
 
 #include <CImportBase.h>
 #include <CGeomObject3D.h>
+#include <CGeomAnimationData.h>
 #include <CGLMatrix3D.h>
 #include <CFile.h>
+#include <CTranslate3D.h>
+#include <CScale3D.h>
+#include <CRotate3D.h>
 
 #include <string>
 #include <vector>
@@ -278,7 +282,8 @@ class CImportGLTF : public CImportBase {
     mutable CImagePtr image;
   };
 
-  using OptColor = std::optional<Color>;
+  using OptColor  = std::optional<Color>;
+  using OptVector = std::optional<CVector2D>;
 
   struct MaterialTexture {
     long      index    { -1 };
@@ -286,8 +291,8 @@ class CImportGLTF : public CImportBase {
     OptReal   scale;
     OptReal   strength;
     OptReal   rotation;
-    CVector2D scaleVector;
-    CVector2D offsetVector;
+    OptVector scaleVector;
+    OptVector offsetVector;
   };
 
   struct Material : IndData {
@@ -414,10 +419,12 @@ class CImportGLTF : public CImportBase {
     OptMat4 inverseBindMatrix;
 
     // combined translation, rotation, scale matrix
-    CMatrix3D transform     { CMatrix3D::identity() };
-    CMatrix3D ttransform    { CMatrix3D::identity() };
-    CMatrix3D rtransform    { CMatrix3D::identity() };
-    CMatrix3D stransform    { CMatrix3D::identity() };
+    CMatrix3D transform { CMatrix3D::identity() };
+
+    CTranslate3D mtranslate;
+    CRotate3D    mrotate;
+    CScale3D     mscale;
+
     CMatrix3D hierTranslate { CMatrix3D::identity() };
     CMatrix3D hierTransform { CMatrix3D::identity() };
 

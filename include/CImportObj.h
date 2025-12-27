@@ -41,34 +41,36 @@ class CImportObj : public CImportBase {
   bool readMaterialFile(const std::string &filename);
 
  private:
+  using OptColor = std::optional<CRGBA>;
+  using OptReal  = std::optional<double>;
+  using OptInt   = std::optional<int>;
+
   struct MapImage {
-    std::string name;
+    std::string name;  // empty when unset
     CImagePtr   image;
   };
 
   struct Material {
     std::string name;
-    CRGBA       ambientColor            { 0.1, 0.1, 0.1, 1.0 }; // Ka
-    CRGBA       diffuseColor            { 0.9, 0.9, 0.9, 1.0 }; // Kd
-    CRGBA       emissionColor           { 0.0, 0.0, 0.0, 1.0 }; // Ke
-    CRGBA       specularColor           { 0.0, 0.0, 0.0, 1.0 }; // Ks
-    int         illuminationModel       { 0 };                  // illum
-    double      specularExponent        { 0.0 };                // Ns
-    double      refractionIndex         { 0.0 };                // Ni
-    double      transparency            { 0.0 };                // Tr
-    CRGBA       transmissionFilterColor { 0.0, 0.0, 0.0, 1.0 }; // Tf
-    MapImage    ambientMap;                                     // map_Ka
-    MapImage    diffuseMap;                                     // map_Kd
-    MapImage    specularMap;                                    // map_Ks
-    MapImage    emissiveMap;                                    // map_Ke
-    MapImage    bumpMap;                                        // map_Bump
+    OptColor    ambientColor;            // Ka
+    OptColor    diffuseColor;            // Kd
+    OptColor    specularColor;           // Ks
+    OptColor    emissionColor;           // Ke
+    OptInt      illuminationModel;       // illum
+    OptReal     specularExponent;        // Ns
+    OptReal     refractionIndex;         // Ni
+    OptReal     transparency;            // Tr
+    OptColor    transmissionFilterColor; // Tf
+    MapImage    ambientMap;              // map_Ka
+    MapImage    diffuseMap;              // map_Kd
+    MapImage    specularMap;             // map_Ks
+    MapImage    emissiveMap;             // map_Ke
+    MapImage    bumpMap;                 // map_Bump
   };
 
   using Materials     = std::map<std::string, Material *>;
   using TexturePoints = std::vector<CPoint3D>;
   using NormalPoints  = std::vector<CPoint3D>;
-
-  using TextureMap = std::map<std::string, CGeomTexture *>;
 
   CGeomScene3D*  scene_    { nullptr };
   SceneP         pscene_;
@@ -76,7 +78,6 @@ class CImportObj : public CImportBase {
   ObjectP        pobject_;
   Materials      materials_;
   Material*      material_ { nullptr };
-  TextureMap     textureMap_;
   CFile*         file_     { nullptr };
   int            vnum_     { 0 };
   int            vnnum_    { 0 };

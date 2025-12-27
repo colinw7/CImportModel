@@ -27,6 +27,7 @@
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 #include <CGeomTexture.h>
+#include <CGeomNodeData.h>
 #include <CQGLUtil.h>
 #include <CFile.h>
 #include <CSphere3D.h>
@@ -1589,11 +1590,11 @@ updateObjectBones(CBBox3D &bbox)
   // transform node to model coords
   auto getNodeTransform = [&](const CGeomNodeData &nodeData) {
     if      (bonesTransform() == BonesTransform::INVERSE_BIND)
-      return nodeData.inverseBindMatrix.inverse();
+      return nodeData.inverseBindMatrix().inverse();
     else if (bonesTransform() == BonesTransform::LOCAL)
-      return nodeData.localTransform;
+      return nodeData.localTransform();
     else if (bonesTransform() == BonesTransform::GLOBAL)
-      return nodeData.globalTransform;
+      return nodeData.globalTransform();
     else
       return CMatrix3D::identity();
   };
@@ -1680,9 +1681,9 @@ updateObjectBones(CBBox3D &bbox)
 
     for (const auto &nodeId : nodeIds) {
       const auto &node = rootObject->getNode(nodeId);
-      if (! node.valid) continue;
+      if (! node.isValid()) continue;
 
-      if (! node.isJoint)
+      if (! node.isJoint())
         continue;
 
       //---
@@ -1699,16 +1700,16 @@ updateObjectBones(CBBox3D &bbox)
 
       //---
 
-      auto color = (node.selected ? bonesSelectedColor() : bonesColor());
+      auto color = (node.isSelected() ? bonesSelectedColor() : bonesColor());
 
-      addBonesCube(objectData, m, cubeSize, nodeId, color, node.selected, pos, bbox);
+      addBonesCube(objectData, m, cubeSize, nodeId, color, node.isSelected(), pos, bbox);
 
       //---
 
-      if (node.parent >= 0) {
-        const auto &pnode = rootObject->getNode(node.parent);
+      if (node.parent() >= 0) {
+        const auto &pnode = rootObject->getNode(node.parent());
 
-        if (pnode.valid && pnode.isJoint) {
+        if (pnode.isValid() && pnode.isJoint()) {
 #if 1
           auto m1 = getNodeTransform(pnode);
         //auto c1 = transformNode(pnode);
@@ -1717,7 +1718,7 @@ updateObjectBones(CBBox3D &bbox)
           auto c1 = hierTransformNode(pnode);
 #endif
 
-          addBonesLine(objectData, c, c1, lineSize, nodeId, node.parent, lineColor, pos);
+          addBonesLine(objectData, c, c1, lineSize, nodeId, node.parent(), lineColor, pos);
         }
       }
 
@@ -1725,7 +1726,7 @@ updateObjectBones(CBBox3D &bbox)
 
       auto c1 = c + CPoint3D(0.0, cubeSize/2.0, cubeSize/2.0);
 
-      (void) createText(node.name, c1, ts1);
+      (void) createText(node.name(), c1, ts1);
     }
 
     for (auto *text : objectData->bonesData().texts)
@@ -2656,11 +2657,9 @@ void
 CQNewGLCanvas::
 addShaderLightGlobals(CQNewGLShaderProgram *program)
 {
-  program->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor()));
+  program->setUniformValue("ambientColor"   , CQGLUtil::toVector(ambientColor()));
+  program->setUniformValue("ambientStrength", float(app_->ambientStrength()));
 
-  //---
-
-  program->setUniformValue("ambientStrength" , float(app_->ambientStrength()));
   program->setUniformValue("diffuseStrength" , float(app_->diffuseStrength()));
   program->setUniformValue("specularStrength", float(app_->specularStrength()));
   program->setUniformValue("emissiveStrength", float(app_->emissiveStrength()));
@@ -2748,8 +2747,8 @@ getBoneData(CGeomObject3D *object, int nodeId, BoneData &boneData) const
 
   const auto &nodeData = object->getNode(boneInd);
 
-  boneData.name = nodeData.name;
-  boneData.ind  = nodeData.ind;
+  boneData.name = nodeData.name();
+  boneData.ind  = nodeData.ind();
 
   getNodeVertices(object, nodeId, boneData);
 }
@@ -2835,11 +2834,16 @@ updateNodeMatrices(CQNewGLModelObject *objectData)
     CMatrix3D            transform  { CMatrix3D::identity() };
   };
 
+#if 1
+  auto meshMatrix = object->getMeshGlobalTransform();
+#else
   int meshNodeId = rootObject->getMeshNode();
 
   const auto &meshNodeData = rootObject->getNode(meshNodeId);
 
-  auto meshMatrix        = meshNodeData.globalTransform;
+  auto meshMatrix = meshNodeData.globalTransform();
+#endif
+
   auto inverseMeshMatrix = meshMatrix.inverse();
 
 #if 0
@@ -2919,8 +2923,12 @@ updateNodeMatrices(CQNewGLModelObject *objectData)
 
     const auto &nodeData = rootObject->getNode(nodeId);
 
-    if (nodeData.valid) {
-      auto transform = inverseMeshMatrix*nodeData.hierAnimMatrix*nodeData.inverseBindMatrix;
+    if (nodeData.isValid()) {
+#if 1
+      auto transform = nodeData.calcNodeAnimMatrix(inverseMeshMatrix);
+#else
+      auto transform = inverseMeshMatrix*nodeData.hierAnimMatrix()*nodeData.inverseBindMatrix();
+#endif
 
       nodeMatrices[ij] = transform;
     }
@@ -3092,6 +3100,35 @@ getAnnotationObjects() const
     objects.push_back(maze);
 
   return objects;
+}
+
+//---
+
+std::vector<QString>
+CQNewGLCanvas::
+getAnimNames(double &tmin, double &tmax) const
+{
+  std::set<QString> animNameSet;
+
+  auto rootObjects = this->getRootObjects();
+
+  for (auto *rootObject : rootObjects) {
+    std::vector<std::string> animNames1;
+    rootObject->getAnimationNames(animNames1);
+
+    for (const auto &animName1 : animNames1)
+      animNameSet.insert(QString::fromStdString(animName1));
+
+    if (! animNames1.empty())
+      rootObject->getAnimationRange(animNames1[0], tmin, tmax);
+  }
+
+  std::vector<QString> animNames;
+
+  for (const auto &animName : animNameSet)
+    animNames.push_back(animName);
+
+  return animNames;
 }
 
 //---

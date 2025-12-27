@@ -5,9 +5,11 @@
 #include <CPoint3D.h>
 #include <vector>
 
+class CGeomFace3D;
 class CQGLTexture;
 
 struct CQCamera3DFaceData {
+  CGeomFace3D* face            { nullptr };
   bool         selected        { false };
   bool         visible         { true };
   int          pos             { 0 };

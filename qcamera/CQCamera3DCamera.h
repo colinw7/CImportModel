@@ -474,10 +474,10 @@ class CQCamera3DCamera : public QObject {
  private:
   bool visible_ { true };
 
-  double fov_    { 45.0 };      // field of view
-  double aspect_ { 1.0 };       // pixel aspect
-  double near_   { 1.0 };       // near z (too small get z fighting)
-  double far_    { 1000000.0 }; // far z
+  double fov_    { 45.0 };     // field of view
+  double aspect_ { 1.0 };      // pixel aspect
+  double near_   { 0.1 };      // near z (too small get z fighting)
+  double far_    { 100000.0 }; // far z (too large (too far fron near) get z fighting)
 
   CVector3D origin_   { 0.0, 0.0, 0.0 }; // camera rotation center
   CVector3D position_ { 1.0, 1.0, 1.0 }; // camera position

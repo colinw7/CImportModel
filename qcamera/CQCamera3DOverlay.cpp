@@ -60,6 +60,8 @@ drawGeometry()
 {
   glEnable(GL_CULL_FACE);
 
+  glFrontFace(GL_CCW);
+
   //---
 
   auto pw = canvas_->pixelWidth ();

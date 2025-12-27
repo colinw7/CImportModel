@@ -10,6 +10,7 @@ class CGLVector3D;
 class CMatrix3D;
 class CMatrix3DH;
 class CVector3D;
+class CPoint3D;
 class CRGBA;
 
 namespace CQGLUtil {
@@ -20,6 +21,7 @@ QMatrix4x4 toQMatrix(const CMatrix3DH &m);
 
 QVector3D toVector(const CGLVector3D &v);
 QVector3D toVector(const CVector3D &v);
+QVector3D toVector(const CPoint3D &p);
 QVector3D toVector(const QColor &c);
 QVector3D toVector(const CRGBA &c);
 

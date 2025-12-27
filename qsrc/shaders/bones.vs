@@ -16,6 +16,7 @@ uniform bool useBones;
 uniform int  boneId;
 uniform int  parentBoneId;
 uniform mat4 globalBoneTransform[128];
+uniform bool isLine;
 
 vec3 applyBoneTransform(vec4 p) {
   mat4 boneTransform;
@@ -32,13 +33,17 @@ vec3 applyBoneTransform(vec4 p) {
 }
 
 vec3 boneColor() {
-  if (parentBoneId >= 0) {
-    if (aTexCoords.x > 0) {
-      return vec3(1.0, 0.0, 0.0);
+  if (isLine) {
+    if (parentBoneId >= 0) {
+      if (aTexCoords.x > 0) {
+        return vec3(1.0, 0.0, 0.0);
+      } else {
+        return vec3(0.0, 0.0, 1.0);
+      }
     } else {
-      return vec3(0.0, 0.0, 1.0);
+      return aColor;
     }
-  } else {
+  } else { 
     return aColor;
   }
 }

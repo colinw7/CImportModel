@@ -44,7 +44,7 @@ class CGeomImportCOB : public CImportCOB {
 
  private:
   void addMaterialFace(int imat, uint face_num);
-  void setFacesMaterial(int imat, CMaterial *material);
+  void setFacesMaterial(int imat, CGeomMaterial *material);
 
   FaceList &getMaterialFaces(int num);
 

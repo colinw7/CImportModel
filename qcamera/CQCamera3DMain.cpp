@@ -1,12 +1,55 @@
 #include <CQCamera3DMain.h>
 #include <CQCamera3DApp.h>
+#include <CQCamera3DCanvas.h>
 
 #include <CQImage.h>
+#include <CQMetaEdit.h>
 #include <CImportBase.h>
 #include <CGeomScene3D.h>
 #include <CGeometry3D.h>
 
 #include <QApplication>
+#include <QKeyEvent>
+
+class CQCamera3DEventFilter : public QObject {
+ public:
+  CQCamera3DEventFilter() { }
+
+ protected:
+  bool eventFilter(QObject *obj, QEvent *event) override {
+    if (event->type() == QEvent::KeyPress) {
+      auto *keyEvent = static_cast<QKeyEvent *>(event);
+
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_Home) {
+        showMetaEdit();
+        return true;
+      }
+
+#if 0
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_End) {
+        CQApp::showPerfDialog();
+        return true;
+      }
+
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageDown) {
+        CQApp::showOptions();
+        return true;
+      }
+#endif
+    }
+
+    // standard event processing
+    return QObject::eventFilter(obj, event);
+  }
+
+  void showMetaEdit() {
+    auto *metaEdit = new CQMetaEdit;
+
+    metaEdit->show();
+
+    metaEdit->raise();
+  }
+};
 
 int
 main(int argc, char **argv)
@@ -25,6 +68,8 @@ main(int argc, char **argv)
   bool        invertX = false;
   bool        invertY = false;
   bool        invertZ = false;
+  std::string textureMap;
+  std::string materialMap;
 
   std::vector<std::string> args;
 
@@ -43,7 +88,7 @@ main(int argc, char **argv)
           modelName = QString(argv[i]);
         }
         else
-          std::cerr << "Missing filename for " << argv[i] << "\n";
+          std::cerr << "Missing filename for " << argv[i - 1] << "\n";
       }
       else if (arg == "swap_xy") {
         swapXY = true;
@@ -62,6 +107,32 @@ main(int argc, char **argv)
       }
       else if (arg == "invert_z") {
         invertZ = true;
+      }
+      else if (arg == "texture_map") {
+        ++i;
+
+        if (i < argc)
+          textureMap = argv[i];
+        else
+          std::cerr << "Missing filename for " << argv[i - 1] << "\n";
+      }
+      else if (arg == "material_map") {
+        ++i;
+
+        if (i < argc)
+          materialMap = argv[i];
+        else
+          std::cerr << "Missing filename for " << argv[i - 1] << "\n";
+      }
+      else if (arg == "h" || arg == "help") {
+        std::cerr << "CQCamera3D "
+         "[-3ds|-3drw|-asc|-blend|-cob|-dxf|-fbx|-gltf|-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
+         "[-swap_xy|swap_yz|swap_zx] "
+         "[-invert_x|-invert_y|-invert_z] "
+         "[-texture_map <file>] [<file>]"
+         "[-material_map <file>] [<file>]"
+         "\n";
+        return 0;
       }
       else {
         std::cerr << "Invalid option " << argv[i] << "\n";
@@ -113,7 +184,25 @@ main(int argc, char **argv)
 
   //---
 
+  auto *canvas = app->canvas();
+
+  if (textureMap != "")
+    canvas->setInitTextureMap(textureMap);
+
+  if (materialMap != "")
+    canvas->setInitMaterialMap(materialMap);
+
+  //---
+
+  auto *eventFilter = new CQCamera3DEventFilter;
+
+  app->installEventFilter(eventFilter);
+
+  //---
+
   app->show();
+
+  //---
 
   qapp.exec();
 }

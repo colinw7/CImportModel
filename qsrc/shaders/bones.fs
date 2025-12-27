@@ -16,6 +16,7 @@ uniform float diffuseStrength;
 uniform float specularStrength;
 uniform float shininess;
 
+uniform bool isLine;
 uniform bool isSelected;
 uniform bool isWireframe;
 
@@ -46,5 +47,5 @@ void main()
   vec3 result = ambient + diffuse + specular;
 
   FragColor = (! isSelected ? (! isWireframe ?
-    vec4(result, 1.0) : vec4(1.0, 1.0, 1.0, 1.0)) : vec4(1.0, 0.0, 0.0, 1.0));
+    vec4(result, 1.0) : vec4(1.0, 1.0, 1.0, 1.0)) : vec4(1.0, 1.0, 0.0, 1.0));
 }

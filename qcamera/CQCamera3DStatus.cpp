@@ -9,6 +9,8 @@ CQCamera3DStatus::
 CQCamera3DStatus(CQCamera3DApp *app) :
  app_(app)
 {
+  setObjectName("status");
+
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
   auto *layout = new QHBoxLayout(this);

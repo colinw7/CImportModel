@@ -21,12 +21,18 @@
 #include <CQNewGLShape.h>
 #include <CQNewGLObjectsList.h>
 #include <CQNewGLTextureChooser.h>
+#include <CQNewGLAnimChooser.h>
+#include <CQNewGLBonesList.h>
+#include <CQNewGLShapesList.h>
+#include <CQNewGLCamerasList.h>
+#include <CQNewGLLightsList.h>
 #include <CQNewGLUtil.h>
 
 #include <CImportBase.h>
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 #include <CGeomTexture.h>
+#include <CGeomNodeData.h>
 #include <CQGLTexture.h>
 #include <CQUtil.h>
 
@@ -130,18 +136,6 @@ CQNewGLControl(CQNewGLModel *app) :
   axesControl_ = new CQNewGLAxesControl(this);
 
   addModelTab(axesControl_, "Axes");
-
-#if 0
-  bboxControl_ = new CQNewGLBBoxControl(this);
-
-  addModelTab(bboxControl_, "BBox");
-#endif
-
-#if 0
-  hullControl_ = new CQNewGLHullControl(this);
-
-  addModelTab(hullControl_, "Hull");
-#endif
 
   texturesControl_ = new CQNewGLTexturesControl(this);
 
@@ -255,11 +249,8 @@ updateWidgets()
   updateAnnotations();
 
   updateAxes();
-//updateBBox();
-//updateHull();
 
   updateTextures();
-//updateUV();
   updateAnim();
   updateBones();
 
@@ -339,37 +330,12 @@ updateAxes()
   axesControl_->updateWidgets();
 }
 
-#if 0
-void
-CQNewGLControl::
-updateBBox()
-{
-  bboxControl_->updateWidgets();
-}
-
-void
-CQNewGLControl::
-updateHull()
-{
-  hullControl_->updateWidgets();
-}
-#endif
-
 void
 CQNewGLControl::
 updateTextures()
 {
   texturesControl_->updateWidgets();
 }
-
-#if 0
-void
-CQNewGLControl::
-updateUV()
-{
-  uvControl_->updateObjects();
-}
-#endif
 
 void
 CQNewGLControl::
@@ -3250,7 +3216,7 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   enabledCheck_ = addLabelEdit("Enabled", new QCheckBox);
 
-  nameCombo_ = addLabelEdit("Name", new QComboBox);
+  nameCombo_ = addLabelEdit("Name", new CQNewGLAnimChooser(control));
   timeEdit_  = addLabelEdit("Time", new CQRealSpin);
 
 //objectsList_ = new CQNewGLObjectsList(control->canvas());
@@ -3379,34 +3345,9 @@ updateWidgets()
 
   //---
 
-  double tmin = 0.0;
-  double tmax = 1.0;
+  nameCombo_->updateWidgets();
 
-  std::set<QString> animNames;
-
-  auto rootObjects = canvas->getRootObjects();
-
-  for (auto *rootObject : rootObjects) {
-    std::vector<std::string> animNames1;
-    rootObject->getAnimationNames(animNames1);
-
-    for (const auto &animName1 : animNames1)
-      animNames.insert(QString::fromStdString(animName1));
-
-    if (! animNames1.empty())
-      rootObject->getAnimationRange(animNames1[0], tmin, tmax);
-  }
-
-  nameCombo_->clear();
-
-  nameCombo_->addItem("");
-
-  for (const auto &name : animNames)
-    nameCombo_->addItem(name);
-
-  nameCombo_->setCurrentIndex(0);
-
-  timeEdit_->setRange(tmin, tmax);
+  timeEdit_->setRange(nameCombo_->tmin(), nameCombo_->tmax());
 
   //---
 
@@ -3438,8 +3379,8 @@ connectSlots(bool b)
 
   CQUtil::connectDisconnect(b, bonesTransform_, SIGNAL(currentIndexChanged(int)),
                             this, SLOT(bonesTransformSlot(int)));
-  CQUtil::connectDisconnect(b, nameCombo_, SIGNAL(currentIndexChanged(int)),
-                            this, SLOT(nameChanged(int)));
+  CQUtil::connectDisconnect(b, nameCombo_, SIGNAL(animChanged()),
+                            this, SLOT(nameChanged()));
 
   CQUtil::connectDisconnect(b, timeEdit_, SIGNAL(realValueChanged(double)),
                             this, SLOT(timeSlot(double)));
@@ -3498,8 +3439,8 @@ boneListSlot()
   auto *node = bonesList_->getBoneNode(bonesList_->boneInd());
 
   if (node) {
-    boneSelectButton_  ->setEnabled(! node->selected);
-    boneDeselectButton_->setEnabled(node->selected);
+    boneSelectButton_  ->setEnabled(! node->isSelected());
+    boneDeselectButton_->setEnabled(node->isSelected());
   }
   else {
     boneSelectButton_  ->setEnabled(false);
@@ -3514,7 +3455,7 @@ boneSelectSlot()
   auto *node = bonesList_->getBoneNode(bonesList_->boneInd());
   if (! node) return;
 
-  node->selected = true;
+  node->setSelected(true);
 
   auto *canvas = this->canvas();
   canvas->updateObjectsData();
@@ -3531,7 +3472,7 @@ boneDeselectSlot()
   auto *node = bonesList_->getBoneNode(bonesList_->boneInd());
   if (! node) return;
 
-  node->selected = false;
+  node->setSelected(false);
 
   auto *canvas = this->canvas();
   canvas->updateObjectsData();
@@ -3581,9 +3522,9 @@ objectSelectedSlot()
 
 void
 CQNewGLAnimControl::
-nameChanged(int ind)
+nameChanged()
 {
-  auto name = nameCombo_->itemText(ind);
+  auto name = nameCombo_->animName();
 
   auto *canvas = control_->canvas();
   auto *app    = canvas->app();
@@ -3808,7 +3749,7 @@ updateMatrix()
 
   auto *node = bonesList_->getBoneNode(bonesList_->boneInd());
 
-  isJointCheck_->setChecked(node ? node->isJoint : false);
+  isJointCheck_->setChecked(node ? node->isJoint() : false);
 
   auto matrix = getMatrix();
 
@@ -3848,15 +3789,17 @@ getMatrix() const
   CMatrix3D matrix;
 
   if      (matrixType_ == MatrixType::INVERSE_BIND)
-    matrix = node->inverseBindMatrix;
+    matrix = node->inverseBindMatrix();
   else if (matrixType_ == MatrixType::LOCAL)
-    matrix = node->localTransform;
+    matrix = node->localTransform();
   else if (matrixType_ == MatrixType::GLOBAL)
-    matrix = node->globalTransform;
+    matrix = node->globalTransform();
   else if (matrixType_ == MatrixType::ANIM) {
-    node->object->updateNodesAnimationData(boneAnimName_.toStdString(), boneAnimTime_);
+    auto *object = const_cast<CGeomObject3D *>(node->object());
 
-    matrix = node->animMatrix;
+    object->updateNodesAnimationData(boneAnimName_.toStdString(), boneAnimTime_);
+
+    matrix = node->animMatrix();
   }
 
   if (inverse_)
@@ -5451,469 +5394,4 @@ updateShape(CQNewGLShape *shape)
   canvas->updateObjectsData();
   canvas->updateAnnotationObjects();
   canvas->update();
-}
-
-//---
-
-CQNewGLCamerasList::
-CQNewGLCamerasList(CQNewGLControl *control) :
- control_(control)
-{
-  setObjectName("camerasList");
-
-  auto *layout = new QVBoxLayout(this);
-
-  //--
-
-  list_ = new QListWidget;
-
-  list_->setSelectionMode(QListWidget::SingleSelection);
-
-  layout->addWidget(list_);
-
-  //---
-
-  connectSlots(true);
-
-  updateWidgets();
-}
-
-void
-CQNewGLCamerasList::
-connectSlots(bool b)
-{
-  CQUtil::connectDisconnect(b, list_,
-    SIGNAL(currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
-    this, SLOT(currentItemSlot(QListWidgetItem *, QListWidgetItem *)));
-}
-
-void
-CQNewGLCamerasList::
-updateWidgets()
-{
-  connectSlots(false);
-
-  //---
-
-  auto *canvas = control_->canvas();
-
-  list_->clear();
-
-  int ind = 0;
-
-  for (auto *camera : canvas->cameras()) {
-    const auto &name = camera->name();
-
-    auto *item = new QListWidgetItem(name);
-
-    list_->addItem(item);
-
-    item->setData(Qt::UserRole, ind++);
-  }
-
-  //---
-
-  connectSlots(true);
-}
-
-void
-CQNewGLCamerasList::
-currentItemSlot(QListWidgetItem *item, QListWidgetItem *)
-{
-  auto *canvas = control_->canvas();
-
-  currentCamera_ = item->data(Qt::UserRole).toInt();
-
-  if (isUpdateCurrent())
-    canvas->setCurrentCamera(currentCamera_);
-
-  //updateWidgets();
-
-  canvas->update();
-
-  Q_EMIT currentItemChanged();
-}
-
-CQNewGLCamera *
-CQNewGLCamerasList::
-getCurrentCamera() const
-{
-  auto *canvas = control_->canvas();
-
-  return canvas->getCamera(currentCamera_);
-}
-
-//---
-
-CQNewGLLightsList::
-CQNewGLLightsList(CQNewGLControl *control) :
- control_(control)
-{
-  setObjectName("lightsList");
-
-  auto *layout = new QVBoxLayout(this);
-
-  //--
-
-  list_ = new QListWidget;
-
-  list_->setSelectionMode(QListWidget::SingleSelection);
-
-  layout->addWidget(list_);
-
-  //---
-
-  connectSlots(true);
-
-  updateWidgets();
-}
-
-void
-CQNewGLLightsList::
-connectSlots(bool b)
-{
-  CQUtil::connectDisconnect(b, list_,
-    SIGNAL(currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
-    this, SLOT(currentItemSlot(QListWidgetItem *, QListWidgetItem *)));
-}
-
-void
-CQNewGLLightsList::
-updateWidgets()
-{
-  connectSlots(false);
-
-  //---
-
-  auto *canvas = control_->canvas();
-
-  list_->clear();
-
-  int ind = 0;
-
-  for (auto *light : canvas->lights()) {
-    const auto &name = light->name();
-
-    auto *item = new QListWidgetItem(name);
-
-    list_->addItem(item);
-
-    item->setData(Qt::UserRole, ind++);
-  }
-
-  //---
-
-  connectSlots(true);
-}
-
-void
-CQNewGLLightsList::
-currentItemSlot(QListWidgetItem *item, QListWidgetItem *)
-{
-  auto *canvas = control_->canvas();
-
-  int ind = item->data(Qt::UserRole).toInt();
-
-  canvas->setCurrentLight(ind);
-
-  //updateWidgets();
-
-  canvas->update();
-
-  Q_EMIT currentItemChanged();
-}
-
-//---
-
-CQNewGLBonesList::
-CQNewGLBonesList(CQNewGLControl *control) :
- control_(control)
-{
-  setObjectName("bonesList");
-
-  auto *layout = new QVBoxLayout(this);
-
-  //--
-
-  tree_ = new QTreeWidget;
-
-  tree_->setSelectionMode(QListWidget::SingleSelection);
-
-  layout->addWidget(tree_);
-
-  //---
-
-  connectSlots(true);
-
-  updateWidgets();
-}
-
-void
-CQNewGLBonesList::
-connectSlots(bool b)
-{
-  CQUtil::connectDisconnect(b, tree_,
-    SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)),
-    this, SLOT(currentItemSlot(QTreeWidgetItem *, QTreeWidgetItem *)));
-}
-
-void
-CQNewGLBonesList::
-updateWidgets()
-{
-  connectSlots(false);
-
-  //---
-
-  auto *canvas = control_->canvas();
-
-#if 0
-//auto *object = getBonesObject();
-  auto *object = control_->getRootObject();
-#endif
-
-  tree_->clear();
-
-  auto rootObjects = canvas->getRootObjects();
-
-  for (auto *object : rootObjects) {
-    nodeItems_.clear();
-
-    const auto &nodeIds = object->getNodeIds();
-
-    for (const auto &nodeId : nodeIds) {
-      createNodeItem(object, nodeId);
-    }
-  }
-
-  //---
-
-  connectSlots(true);
-}
-
-QTreeWidgetItem *
-CQNewGLBonesList::
-createNodeItem(CGeomObject3D *object, int nodeId)
-{
-  auto pn = nodeItems_.find(nodeId);
-
-  if (pn != nodeItems_.end())
-    return (*pn).second;
-
-  //---
-
-  const auto &nodeData = object->getNode(nodeId);
-  if (! nodeData.valid) return nullptr;
-
-  auto objectName = QString(" %1").arg(QString::fromStdString(nodeData.name));
-
-  objectName += QString(" (%1)").arg(nodeId);
-
-#if 0
-  if (nodeData.parent >= 0)
-    objectName += QString(" Parent:%1").arg(nodeData.parent);
-
-  if (! nodeData.children.empty()) {
-    objectName += " Children:";
-
-    int ic = 0;
-
-    for (const auto &c : nodeData.children) {
-      if (ic != 0)
-        objectName += ", ";
-
-      objectName += QString("%1").arg(c);
-
-      ++ic;
-    }
-  }
-#endif
-
-  QTreeWidgetItem *item { nullptr };
-
-  if (nodeData.parent >= 0) {
-    auto *parentItem = createNodeItem(object, nodeData.parent);
-
-    item = new QTreeWidgetItem(parentItem, QStringList() << objectName);
-
-    parentItem->addChild(item);
-  }
-  else {
-    item = new QTreeWidgetItem(tree_, QStringList() << objectName);
-
-    tree_->addTopLevelItem(item);
-  }
-
-  item->setData(0, Qt::UserRole, nodeId);
-
-  nodeItems_[nodeId] = item;
-
-  return item;
-}
-
-void
-CQNewGLBonesList::
-currentItemSlot(QTreeWidgetItem *item, QTreeWidgetItem *)
-{
-  boneInd_ = item->data(0, Qt::UserRole).toInt();
-
-  auto *canvas = control_->canvas();
-
-  auto rootObjects = canvas->getRootObjects();
-
-  for (auto *object : rootObjects) {
-    CQNewGLCanvas::BoneData boneData;
-
-    canvas->getBoneData(object, boneInd_, boneData);
-
-    std::cerr << "Node: " << boneData.name << "(" << boneData.ind << ")\n";
-
-    for (const auto &v : boneData.vertices)
-      std::cerr << "  Vertex: " << v.x << " " << v.y << " " << v.z << "\n";
-  }
-
-  canvas->setCurrentBone(boneInd_);
-
-  if (canvas->isShowBoneVertices()) {
-    canvas->updateObjectsData();
-    canvas->update();
-  }
-
-  Q_EMIT currentItemChanged();
-}
-
-CGeomNodeData *
-CQNewGLBonesList::
-getBoneNode(int boneInd) const
-{
-  if (boneInd < 0)
-    return nullptr;
-
-  auto *canvas = control_->canvas();
-
-  auto rootObjects = canvas->getRootObjects();
-
-#if 0
-//auto *object = getBonesObject();
-  auto *object = control_->getRootObject();
-#endif
-
-  for (auto *object : rootObjects) {
-    const auto &node = object->getNode(boneInd);
-    if (! node.valid) continue;
-
-    return const_cast<CGeomNodeData *>(&node);
-  }
-
-  return nullptr;
-}
-
-//---
-
-CQNewGLShapesList::
-CQNewGLShapesList(CQNewGLControl *control) :
- control_(control)
-{
-  setObjectName("bonesList");
-
-  auto *layout = new QVBoxLayout(this);
-
-  //--
-
-  list_ = new QListWidget;
-
-  list_->setSelectionMode(QListWidget::SingleSelection);
-
-  layout->addWidget(list_);
-
-  //---
-
-  connectSlots(true);
-
-  updateWidgets();
-}
-
-void
-CQNewGLShapesList::
-connectSlots(bool b)
-{
-  auto *canvas = control_->canvas();
-
-  CQUtil::connectDisconnect(b, canvas, SIGNAL(currentShapeChanged()),
-                            this, SLOT(invalidateShapes()));
-
-  CQUtil::connectDisconnect(b, canvas, SIGNAL(shapeAdded()),
-                            this, SLOT(invalidateShapes()));
-  CQUtil::connectDisconnect(b, canvas, SIGNAL(shapeDeleted()),
-                            this, SLOT(invalidateShapes()));
-
-  if (b) {
-    connect(list_, &QListWidget::currentItemChanged,
-            this, &CQNewGLShapesList::currentItemSlot);
-  }
-  else {
-    disconnect(list_, &QListWidget::currentItemChanged,
-               this, &CQNewGLShapesList::currentItemSlot);
-  }
-}
-
-void
-CQNewGLShapesList::
-invalidateShapes()
-{
-  reload_ = true;
-
-  updateWidgets();
-}
-
-void
-CQNewGLShapesList::
-updateWidgets()
-{
-  connectSlots(false);
-
-  //---
-
-  auto *canvas = control_->canvas();
-
-  if (reload_) {
-    reload_ = false;
-
-    auto *currentShape =  canvas->getCurrentShape();
-
-    list_->clear();
-
-    uint ind        = 0;
-    uint currentInd = 0;
-
-    for (auto *shape : canvas->shapes()) {
-      if (shape == currentShape)
-        currentInd = ind;
-
-      const auto &name = shape->name();
-
-      auto *item = new QListWidgetItem(name);
-
-      list_->addItem(item);
-
-      item->setData(Qt::UserRole, ind++);
-    }
-
-    list_->setCurrentRow(currentInd);
-  }
-
-  //---
-
-  connectSlots(true);
-}
-
-void
-CQNewGLShapesList::
-currentItemSlot(QListWidgetItem *item, QListWidgetItem *)
-{
-  auto *canvas = control_->canvas();
-
-  int ind = item->data(Qt::UserRole).toInt();
-
-  canvas->setCurrentShape(ind);
 }

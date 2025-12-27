@@ -7,16 +7,6 @@
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 
-struct CImport3DSMaterial {
-  CImport3DSMaterial() { }
-
-  std::string name;
-  CMaterial   material;
-  double      transparency { 0.0 };
-  int         shading      { 0 }; // 1=flat, 2=gouraud, 3=phong, 4=metal
-  bool        two_sided    { false };
-};
-
 //---
 
 struct CImport3DSChunk {
@@ -24,10 +14,10 @@ struct CImport3DSChunk {
    parent(parent1) {
   }
 
-  CImport3DSChunk *parent { nullptr };
+  CImport3DSChunk* parent { nullptr };
   ushort           id     { 0 };
   uint             len    { 0 };
-  int              left   { 0 };
+  uint             left   { 0 };
 };
 
 //---
@@ -49,6 +39,10 @@ class CImport3DS : public CImportBase {
   }
 
  private:
+  struct TextureData {
+    std::string filename;
+  };
+
   bool        readM3DVersion      (CImport3DSChunk *chunk);
   bool        readMData           (CImport3DSChunk *chunk);
   bool        readMeshVersion     (CImport3DSChunk *chunk);
@@ -61,17 +55,20 @@ class CImport3DS : public CImportBase {
   bool        readMatTransparency (CImport3DSChunk *chunk);
   bool        readMatTwoSided     (CImport3DSChunk *chunk);
   bool        readMatShading      (CImport3DSChunk *chunk);
+  bool        readMatTexture      (CImport3DSChunk *chunk, TextureData &texture);
   bool        readColor           (CImport3DSChunk *chunk, CRGBA &color);
   bool        readIntPercentage   (CImport3DSChunk *chunk, ushort *percent);
   bool        readFloatPercentage (CImport3DSChunk *chunk, float *percent);
   bool        readMasterScale     (CImport3DSChunk *chunk);
-  bool        readNamedObject     (CImport3DSChunk *chunk);
-  bool        readNTriObject      (CImport3DSChunk *chunk);
-  bool        readPointArray      (CImport3DSChunk *chunk);
-  bool        readFaceArray       (CImport3DSChunk *chunk);
-  bool        readMshMatGroup     (CImport3DSChunk *chunk);
+  bool        readNamedObject     (CImport3DSChunk *chunk, CGeomObject3D* &object);
+  bool        readNTriObject      (CImport3DSChunk *chunk, CGeomObject3D *object);
+  bool        readPointArray      (CImport3DSChunk *chunk, CGeomObject3D *object);
+  bool        readFaceArray       (CImport3DSChunk *chunk, CGeomObject3D *object);
+  bool        readMshMatGroup     (CImport3DSChunk *chunk, CGeomObject3D *object);
+  void        printMaterial       (CImport3DSChunk *chunk, CGeomMaterial *material);
   bool        readSmoothGroup     (CImport3DSChunk *chunk);
-  bool        readMeshMatrix      (CImport3DSChunk *chunk);
+  bool        readMeshMatrix      (CImport3DSChunk *chunk, CGeomObject3D *object);
+  bool        readMapCoords       (CImport3DSChunk *chunk, CGeomObject3D *object);
   bool        readChunk           (CImport3DSChunk *chunk);
   bool        skipChunk           (CImport3DSChunk *chunk);
   bool        readChar            (CImport3DSChunk *chunk, uchar *c);
@@ -86,19 +83,21 @@ class CImport3DS : public CImportBase {
   std::string getChunkPad         (CImport3DSChunk *chunk);
 
  private:
-  typedef std::vector<CImport3DSMaterial *> MaterialList;
-  typedef std::vector<uint>                 FaceList;
-  typedef std::map<uint, FaceList>          VertexFaceList;
-  typedef std::map<uint, FaceList>          SmoothGroupFaceList;
+  using MaterialList        = std::vector<CGeomMaterial *>;
+  using FaceList            = std::vector<uint>;
+  using VertexFaceList      = std::map<uint, FaceList>;
+  using SmoothGroupFaceList = std::map<uint, FaceList>;
 
   CFile*              file_     { nullptr };
   CGeomScene3D*       scene_    { nullptr };
   SceneP              pscene_;
-  CGeomObject3D*      object_   { nullptr };
-  CImport3DSMaterial* material_ { nullptr };
+  CGeomMaterial*      material_ { nullptr };
   MaterialList        materials_;
   VertexFaceList      vertexFaceList_;
   SmoothGroupFaceList smoothGroupFaceList_;
+
+  char *buffer_    { nullptr };
+  uint  bufferMax_ { 0 };
 };
 
 #endif

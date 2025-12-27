@@ -352,14 +352,14 @@ readFace(const std::string &line)
 
   auto faceNum = object_->addFace(vertices);
 
-  auto &face = object_->getFace(faceNum);
+  auto *face = object_->getFaceP(faceNum);
 
   if (groupName_ != "") {
     auto &group = object_->getGroup(groupName_);
 
     group.addFace(faceNum);
 
-    face.setGroup(group.id());
+    face->setGroup(group.id());
   }
 
   //---
@@ -372,7 +372,7 @@ readFace(const std::string &line)
   std::vector<CPoint2D> texturePoints1;
 
   for (size_t i = 0; i < ntp; ++i) {
-    auto &v = object_->getVertex(face.getVertex(uint(i)));
+    auto &v = object_->getVertex(face->getVertex(uint(i)));
 
     auto ti = texturePoints[i];
 
@@ -398,57 +398,79 @@ readFace(const std::string &line)
   //---
 
   if (material_) {
-    CMaterial material;
+    auto *material = pscene_->getMaterial(material_->name);
 
-    material.setAmbient (material_->ambientColor);
-    material.setDiffuse (material_->diffuseColor);
-    material.setSpecular(material_->specularColor);
+    if (! material) {
+      material = CGeometryInst->createMaterial();
 
-    object_->setFaceMaterial(uint(faceNum), material);
+      material->setName(material_->name);
+
+      pscene_->addMaterial(material);
+    }
+
+    //---
+
+    if (material_->ambientColor)
+      material->setAmbient(*material_->ambientColor);
+
+    if (material_->diffuseColor)
+      material->setDiffuse(*material_->diffuseColor);
+
+    if (material_->specularColor)
+      material->setSpecular(*material_->specularColor);
 
     auto getTexture = [&](const std::string &name, CImagePtr &image) {
-      auto pm = textureMap_.find(name);
+      auto *texture = pscene_->getTexture(name);
 
-      if (pm == textureMap_.end()) {
-        auto *texture = CGeometryInst->createTexture(image);
+      if (! texture) {
+        texture = CGeometryInst->createTexture(image);
 
         texture->setName(name);
 
-        pm = textureMap_.insert(pm, TextureMap::value_type(name, texture));
+        pscene_->addTexture(texture);
       }
 
-      return (*pm).second;
+      return texture;
     };
 
     if (! material_->diffuseMap.name.empty()) {
       auto *texture = getTexture(material_->diffuseMap.name, material_->diffuseMap.image);
 
-      object_->setFaceDiffuseTexture(uint(faceNum), texture);
-    }
-
-    if (! material_->specularMap.name.empty()) {
-      auto *texture = getTexture(material_->specularMap.name, material_->specularMap.image);
-
-      object_->setFaceSpecularTexture(uint(faceNum), texture);
-    }
-
-    if (! material_->emissiveMap.name.empty()) {
-      auto *texture = getTexture(material_->emissiveMap.name, material_->emissiveMap.image);
-
-      object_->setFaceEmissiveTexture(uint(faceNum), texture);
+      material->setDiffuseTexture(texture);
+      face    ->setDiffuseTexture(texture);
     }
 
     if (! material_->bumpMap.name.empty()) {
       auto *texture = getTexture(material_->bumpMap.name, material_->bumpMap.image);
 
-      object_->setFaceNormalTexture(uint(faceNum), texture);
+      material->setNormalTexture(texture);
+      face    ->setNormalTexture(texture);
     }
+
+    if (! material_->specularMap.name.empty()) {
+      auto *texture = getTexture(material_->specularMap.name, material_->specularMap.image);
+
+      material->setSpecularTexture(texture);
+      face    ->setSpecularTexture(texture);
+    }
+
+    if (! material_->emissiveMap.name.empty()) {
+      auto *texture = getTexture(material_->emissiveMap.name, material_->emissiveMap.image);
+
+      material->setEmissiveTexture(texture);
+      face    ->setEmissiveTexture(texture);
+    }
+
+    if (material_->transparency)
+      material->setTransparency(*material_->transparency);
+
+    face->setMaterialP(material);
   }
 
   //---
 
   if (texturePoints1.size() == ntp)
-    face.setTexturePoints(texturePoints1);
+    face->setTexturePoints(texturePoints1);
 
   return true;
 }
@@ -521,23 +543,35 @@ readMaterialFile(const std::string &filename)
     }
     // ambient
     else if (len > 2 && line1.substr(0, 2) == "Ka" && line1[2] == ' ') {
-      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->ambientColor))
-        error("Invalid data for Ka");
+      CRGBA c;
+      if (readRGB(CStrUtil::stripSpaces(line1.substr(2)), c))
+        material->ambientColor = c;
+      else
+        error("Invalid color for Ka");
     }
     // diffuse
     else if (len > 2 && line1.substr(0, 2) == "Kd" && line1[2] == ' ') {
-      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->diffuseColor))
-        error("Invalid data for Kd");
+      CRGBA c;
+      if (readRGB(CStrUtil::stripSpaces(line1.substr(2)), c))
+        material->diffuseColor = c;
+      else
+        error("Invalid color for Kd");
     }
     // emissive
     else if (len > 2 && line1.substr(0, 2) == "Ke" && line1[2] == ' ') {
-      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->emissionColor))
-        error("Invalid data for Ke");
+      CRGBA c;
+      if (readRGB(CStrUtil::stripSpaces(line1.substr(2)), c))
+        material->emissionColor = c;
+      else
+        error("Invalid color for Ke");
     }
     // specular
     else if (len > 2 && line1.substr(0, 2) == "Ks" && line1[2] == ' ') {
-      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), material->specularColor))
-        error("Invalid data for Ks");
+      CRGBA c;
+      if (readRGB(CStrUtil::stripSpaces(line1.substr(2)), c))
+        material->specularColor = c;
+      else
+        error("Invalid color for Ks");
     }
     // illumination model
     //   0. Color on and Ambient off
@@ -557,7 +591,7 @@ readMaterialFile(const std::string &filename)
       if (CStrUtil::isInteger(rhs))
         material->illuminationModel = int(CStrUtil::toInteger(rhs));
       else
-        error("Invalid data for illum");
+        error("Invalid integer for illum");
     }
     // specular exponent
     else if (len > 2 && line1.substr(0, 2) == "Ns" && line1[2] == ' ') {
@@ -566,7 +600,7 @@ readMaterialFile(const std::string &filename)
       if (CStrUtil::isReal(rhs))
         material->specularExponent = CStrUtil::toReal(rhs);
       else
-        error("Invalid data for Ns");
+        error("Invalid real for Ns");
     }
     // optical density
     else if (len > 2 && line1.substr(0, 2) == "Ni" && line1[2] == ' ') {
@@ -575,31 +609,32 @@ readMaterialFile(const std::string &filename)
       if (CStrUtil::isReal(rhs))
         material->refractionIndex = CStrUtil::toReal(rhs);
       else
-        error("Invalid data for Ni");
+        error("Invalid real for Ni");
     }
-    // transparency
+    // transparency (inverted) 0.0 = opaque, 1.0 = tramsparent
     else if (len > 2 && line1.substr(0, 2) == "Tr" && line1[2] == ' ') {
       auto rhs = CStrUtil::stripSpaces(line1.substr(2));
 
       if (CStrUtil::isReal(rhs))
         material->transparency = CStrUtil::toReal(rhs);
       else
-        error("Invalid data for Tr");
+        error("Invalid real for Tr");
     }
     else if (len > 2 && line1.substr(0, 2) == "Tf" && line1[2] == ' ') {
       CRGBA tf;
-      if (! readRGB(CStrUtil::stripSpaces(line1.substr(2)), tf))
-        error("Invalid data for Tf");
-
-      material->transmissionFilterColor = tf;
+      if (readRGB(CStrUtil::stripSpaces(line1.substr(2)), tf))
+        material->transmissionFilterColor = tf;
+      else
+        error("Invalid color for Tf");
     }
+    // transparency (normal) 1.0 = opaque, 0.0 = tramsparent
     else if (len > 1 && line1.substr(0, 1) == "d" && line1[1] == ' ') {
       auto rhs = CStrUtil::stripSpaces(line1.substr(1));
 
       if (CStrUtil::isReal(rhs))
         material->transparency = 1.0 - CStrUtil::toReal(rhs);
       else
-        error("Invalid data for d");
+        error("Invalid real for d");
     }
     // ambient
     else if (len > 6 && line1.substr(0, 6) == "map_Ka" && line1[6] == ' ') {
@@ -728,6 +763,40 @@ readMaterialFile(const std::string &filename)
     else {
       // TODO: map_Ns, map_d, disp, decal
       error("Unrecognised line");
+    }
+  }
+
+  if (isDebug()) {
+    auto printOptValue = [&](const std::string &name, const auto &v) {
+      if (v)
+        std::cerr << "  " << name << ": " << *v << "\n";
+    };
+
+    auto printMapImage = [&](const std::string &name, const MapImage &v) {
+      if (v.name != "")
+        std::cerr << "  " << name << ": " << v.name << "\n";
+    };
+
+    for (const auto &pm : materials_) {
+      auto *material1 = pm.second;
+
+      std::cerr << "Material: '" << material1->name << "'\n";
+
+      printOptValue("ambientColor"           , material1->ambientColor           );
+      printOptValue("diffuseColor"           , material1->diffuseColor           );
+      printOptValue("specularColor"          , material1->specularColor          );
+      printOptValue("emissionColor"          , material1->emissionColor          );
+      printOptValue("illuminationModel"      , material1->illuminationModel      );
+      printOptValue("specularExponent"       , material1->specularExponent       );
+      printOptValue("refractionIndex"        , material1->refractionIndex        );
+      printOptValue("transparency"           , material1->transparency           );
+      printOptValue("transmissionFilterColor", material1->transmissionFilterColor);
+
+      printMapImage("ambientMap" , material1->ambientMap );
+      printMapImage("diffuseMap" , material1->diffuseMap );
+      printMapImage("specularMap", material1->specularMap);
+      printMapImage("emissiveMap", material1->emissiveMap);
+      printMapImage("bumpMap"    , material1->bumpMap    );
     }
   }
 

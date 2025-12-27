@@ -33,8 +33,7 @@ vec3 applyBoneTransform(vec4 p) {
   return vec3(globalBoneTransform[boneId]*p);
 }
 
-void main()
-{
+void main() {
   vec3 position = aPos;
   vec3 norm     = normalize(aNormal);
 

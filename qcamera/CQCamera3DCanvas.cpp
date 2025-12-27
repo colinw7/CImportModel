@@ -3,8 +3,10 @@
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DFaceData.h>
 #include <CQCamera3DCamera.h>
+#include <CQCamera3DLight.h>
 #include <CQCamera3DShape.h>
 #include <CQCamera3DAnnotation.h>
+#include <CQCamera3DNormals.h>
 #include <CQCamera3DOverlay.h>
 #include <CQCamera3DOverlay2D.h>
 #include <CQCamera3DControl.h>
@@ -12,6 +14,7 @@
 #include <CQCamera3DAxes.h>
 #include <CQCamera3DFont.h>
 #include <CQCamera3DGeomObject.h>
+#include <CQCamera3DUtil.h>
 
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
@@ -19,26 +22,23 @@
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomTexture.h>
+#include <CGeometry3D.h>
+#include <CStrUtil.h>
 
 #include <QMouseEvent>
 #include <QWheelEvent>
-
-namespace {
-
-double sign(double r) {
-  if (r == 0.0) return 0.0;
-  return (r > 0.0 ? 1.0 : -1.0);
-}
-
-}
 
 CQCamera3DCanvas::
 CQCamera3DCanvas(CQCamera3DApp *app) :
  app_(app)
 {
+  setObjectName("canvas");
+
   setFocusPolicy(Qt::StrongFocus);
 
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+  //---
 
   for (int i = 0; i < 2; ++i) {
     auto *camera = new CQCamera3DCamera;
@@ -50,11 +50,19 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
   setCameraInd(0);
 
+  //---
+
+  addLight();
+
+  //---
+
   shape_ = new CQCamera3DShape(this);
 
 #if 0
   annotation_ = new CQCamera3DAnnotation(this);
 #endif
+
+  normals_ = new CQCamera3DNormals(this);
 
   overlay_   = new CQCamera3DOverlay  (this);
   overlay2D_ = new CQCamera3DOverlay2D(this);
@@ -62,6 +70,56 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   //---
 
   connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
+}
+
+void
+CQCamera3DCanvas::
+addLight()
+{
+  auto id = uint(lights_.size() + 1);
+
+  auto name = QString("light.%1").arg(id);
+
+  auto *scene = app_->getScene();
+
+  auto *light = CGeometryInst->createLight3D(scene, name.toStdString());
+
+  auto *light1 = dynamic_cast<CQCamera3DLight *>(light);
+
+  light1->setId(id);
+
+  resetLight(light1);
+
+  lights_.push_back(light1);
+
+  Q_EMIT lightAdded();
+}
+
+void
+CQCamera3DCanvas::
+resetLight(CQCamera3DLight *light)
+{
+  light->setDirection(CVector3D(0, 1, 0));
+
+  if (bbox_.isSet()) {
+    auto center  = bbox_.getCenter();
+    auto maxSize = bbox_.getMaxSize();
+
+    light->setPosition(CPoint3D(center.x, center.y + maxSize, center.z));
+
+    light->setPointRadius(2*maxSize);
+
+    light->setSpotDirection(CVector3D(center.x, center.y, center.z + maxSize));
+  }
+  else {
+    light->setPosition(CPoint3D(0, 1, 0));
+
+    light->setPointRadius(10);
+
+    light->setSpotDirection(CVector3D(0, 0, 1));
+  }
+
+  light->setSpotCutOffAngle(90);
 }
 
 void
@@ -80,6 +138,14 @@ initializeGL()
 
   font_->setSize(48);
   font_->setFontName("OpenSans-Regular.ttf");
+
+  //---
+
+  if (initTextureMap_ != "")
+    loadTextureMap(initTextureMap_);
+
+  if (initMaterialMap_ != "")
+    loadMaterialMap(initMaterialMap_);
 
   //---
 
@@ -108,6 +174,284 @@ initializeGL()
   //---
 
   initCamera();
+
+  //---
+
+  for (auto *light : lights_)
+    resetLight(light);
+
+  //---
+
+  Q_EMIT stateChanged();
+}
+
+bool
+CQCamera3DCanvas::
+loadTextureMap(const std::string &fileName)
+{
+  struct TextureMapData {
+    std::string diffuse;
+    std::string normal;
+    std::string specular;
+    std::string emissive;
+  };
+
+  using TextureMap = std::map<std::string, TextureMapData>;
+
+  TextureMap textureMap;
+
+  CFile file(fileName);
+  if (! file.exists()) return false;
+
+  while (! file.eof()) {
+    std::string line;
+
+    file.readLine(line);
+
+    //---
+
+    // skip comment
+    int pos = 0;
+
+    while (line[pos] != '\0' && isspace(line[pos]))
+      ++pos;
+
+    if (line[pos] == '#')
+      continue;
+
+    //---
+
+    std::vector<std::string> words;
+
+    CStrUtil::toWords(line, words);
+    if (words.size() < 2) continue;
+
+    TextureMapData textureData;
+
+    textureData.diffuse = words[1];
+
+    if (words.size() > 2)
+      textureData.normal = words[2];
+
+    if (words.size() > 3)
+      textureData.specular = words[3];
+
+    if (words.size() > 4)
+      textureData.emissive = words[4];
+
+    textureMap[words[0]] = textureData;
+  }
+
+  for (auto &pt : textureMap) {
+    const auto &data = pt.second;
+
+    if (data.diffuse != "" && data.diffuse != "none")
+      addTextureFile(data.diffuse);
+    if (data.normal != "" && data.normal != "none")
+      addTextureFile(data.normal);
+    if (data.specular != "" && data.specular != "none")
+      addTextureFile(data.specular);
+    if (data.emissive != "" && data.emissive != "none")
+      addTextureFile(data.emissive);
+  }
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    auto name = object->getName();
+
+    auto pt = textureMap.find(name);
+    if (pt == textureMap.end())
+      continue;
+
+    const auto &data = (*pt).second;
+
+    auto *texture = getGeomTextureByName(data.diffuse);
+
+    if (texture)
+      object->setDiffuseTexture(texture);
+
+    if (data.normal != "") {
+      auto *texture = getGeomTextureByName(data.normal);
+
+      if (texture)
+        object->setNormalTexture(texture);
+    }
+
+    if (data.specular != "") {
+      auto *texture = getGeomTextureByName(data.specular);
+
+      if (texture)
+        object->setSpecularTexture(texture);
+    }
+
+    if (data.emissive != "") {
+      auto *texture = getGeomTextureByName(data.emissive);
+
+      if (texture)
+        object->setEmissiveTexture(texture);
+    }
+  }
+
+  objectsChanged();
+
+  return true;
+}
+
+bool
+CQCamera3DCanvas::
+loadMaterialMap(const std::string &fileName)
+{
+  struct MaterialMapData {
+    std::string diffuse;
+    std::string normal;
+    std::string specular;
+    std::string emissive;
+  };
+
+  using MaterialMap = std::map<std::string, MaterialMapData>;
+
+  MaterialMap materialMap;
+
+  CFile file(fileName);
+  if (! file.exists()) return false;
+
+  while (! file.eof()) {
+    std::string line;
+
+    file.readLine(line);
+
+    //---
+
+    // skip comment
+    int pos = 0;
+
+    while (line[pos] != '\0' && isspace(line[pos]))
+      ++pos;
+
+    if (line[pos] == '#')
+      continue;
+
+    //---
+
+    std::vector<std::string> words;
+
+    CStrUtil::toWords(line, words);
+    if (words.size() < 2) continue;
+
+    MaterialMapData maerialData;
+
+    maerialData.diffuse = words[1];
+
+    if (words.size() > 2)
+      maerialData.normal = words[2];
+
+    if (words.size() > 3)
+      maerialData.specular = words[3];
+
+    if (words.size() > 4)
+      maerialData.emissive = words[4];
+
+    materialMap[words[0]] = maerialData;
+  }
+
+  for (auto &pt : materialMap) {
+    const auto &data = pt.second;
+
+    if (data.diffuse != "" && data.diffuse != "none")
+      addTextureFile(data.diffuse);
+    if (data.normal != "" && data.normal != "none")
+      addTextureFile(data.normal);
+    if (data.specular != "" && data.specular != "none")
+      addTextureFile(data.specular);
+    if (data.emissive != "" && data.emissive != "none")
+      addTextureFile(data.emissive);
+  }
+
+  auto *scene = app_->getScene();
+
+  for (auto *material : scene->getMaterials()) {
+    auto name = material->name();
+
+    auto pm = materialMap.find(name);
+    if (pm == materialMap.end())
+      continue;
+
+    const auto &data = (*pm).second;
+
+    auto *texture = getGeomTextureByName(data.diffuse);
+
+    if (texture)
+      material->setDiffuseTexture(texture);
+
+    if (data.normal != "") {
+      auto *texture = getGeomTextureByName(data.normal);
+
+      if (texture)
+        material->setNormalTexture(texture);
+    }
+
+    if (data.specular != "") {
+      auto *texture = getGeomTextureByName(data.specular);
+
+      if (texture)
+        material->setSpecularTexture(texture);
+    }
+
+    if (data.emissive != "") {
+      auto *texture = getGeomTextureByName(data.emissive);
+
+      if (texture)
+        material->setEmissiveTexture(texture);
+    }
+  }
+
+  objectsChanged();
+
+  return true;
+}
+
+void
+CQCamera3DCanvas::
+addTextureFile(const std::string &fileName)
+{
+  if (fileName == "")
+    return;
+
+  auto fileName1 = fileName;
+
+  auto len = fileName1.size();
+
+  if (len > 5 && fileName1.substr(len - 5) == ".flip")
+    fileName1 = fileName1.substr(0, len - 5);
+
+  auto name1 = fileName1;
+  auto name2 = fileName1 + ".flip";
+
+  auto *texture1 = getTextureByName(name1);
+  auto *texture2 = getTextureByName(name2);
+
+  if (! texture1 || ! texture2) {
+    CImageFileSrc src(fileName1);
+
+    auto image = CImageMgrInst->createImage(src);
+
+    auto *gtexture1 = CGeometryInst->createTexture(image);
+
+    gtexture1->setName(name1);
+
+    (void) getTexture(gtexture1, /*add*/true);
+
+    auto image1 = image->dup();
+
+    image1->flipH();
+
+    auto *gtexture2 = CGeometryInst->createTexture(image1);
+
+    gtexture2->setName(name2);
+
+    (void) getTexture(gtexture2, /*add*/true);
+  }
 }
 
 void
@@ -151,6 +495,12 @@ paintGL()
   drawObjectsData();
 
   shape_->drawGeometry();
+
+  if (isShowNormals()) {
+    normals_->updateGeometry();
+
+    normals_->drawGeometry();
+  }
 
 #if 0
   annotation_->drawGeometry();
@@ -231,52 +581,69 @@ addObjectsData()
 
     //---
 
+    auto *objectMaterial = object->getMaterialP();
+
     auto *diffuseTexture  = object->getDiffuseTexture();
-//  auto *specularTexture = object->getSpecularTexture();
     auto *normalTexture   = object->getNormalTexture();
-//  auto *emissiveTexture = object->getEmissiveTexture();
+    auto *specularTexture = object->getSpecularTexture();
+    auto *emissiveTexture = object->getEmissiveTexture();
 
     //---
 
     CBBox3D bbox1;
 
-    const auto &faces = object->getFaces();
-
     int pos = 0;
 
-    for (const auto *face : faces) {
+    auto addFaceData = [&](const CGeomFace3D *face, bool reverse=false) {
       CQCamera3DFaceData faceData;
+
+      faceData.face = const_cast<CGeomFace3D *>(face);
+
+      //---
+
+      auto *faceMaterial = faceData.face->getMaterialP();
+
+      if (! faceMaterial && objectMaterial)
+        faceMaterial = objectMaterial;
 
       //---
 
       auto color = face->color().value_or(CRGBA(1, 1, 1));
 
+      if (faceMaterial && faceMaterial->diffuse())
+        color = faceMaterial->diffuse().value();
+
       //---
 
       // set face textures
-      auto *diffuseTexture1 = face->getDiffuseTexture();
-      if (! diffuseTexture1) diffuseTexture1 = diffuseTexture;
+      auto *diffuseTexture1  = face->getDiffuseTexture();
+      auto *normalTexture1   = face->getNormalTexture();
+      auto *specularTexture1 = face->getSpecularTexture();
+      auto *emissiveTexture1 = face->getEmissiveTexture();
 
-//    auto *specularTexture1 = face->getSpecularTexture();
-//    if (! specularTexture1) specularTexture1 = specularTexture;
+      if (! diffuseTexture1 ) diffuseTexture1  = diffuseTexture;
+      if (! normalTexture1  ) normalTexture1   = normalTexture;
+      if (! specularTexture1) specularTexture1 = specularTexture;
+      if (! emissiveTexture1) emissiveTexture1 = emissiveTexture;
 
-      auto *normalTexture1 = face->getNormalTexture();
-      if (! normalTexture1) normalTexture1 = normalTexture;
-
-//    auto *emissiveTexture1 = face->getEmissiveTexture();
-//    if (! emissiveTexture1) emissiveTexture1 = emissiveTexture;
+      if (faceMaterial) {
+        if (faceMaterial->diffuseTexture ()) diffuseTexture1  = faceMaterial->diffuseTexture ();
+        if (faceMaterial->normalTexture  ()) normalTexture1   = faceMaterial->normalTexture  ();
+        if (faceMaterial->specularTexture()) specularTexture1 = faceMaterial->specularTexture();
+        if (faceMaterial->emissiveTexture()) emissiveTexture1 = faceMaterial->emissiveTexture();
+      }
 
       if (diffuseTexture1)
         faceData.diffuseTexture = getTexture(diffuseTexture1, /*add*/true);
 
-//    if (specularTexture1)
-//      faceData.specularTexture = getTexture(specularTexture1, /*add*/true);
-
       if (normalTexture1)
         faceData.normalTexture = getTexture(normalTexture1, /*add*/true);
 
-//    if (emissiveTexture1)
-//      faceData.emissiveTexture = getTexture(emissiveTexture1, /*add*/true);
+      if (specularTexture1)
+        faceData.specularTexture = getTexture(specularTexture1, /*add*/true);
+
+      if (emissiveTexture1)
+        faceData.emissiveTexture = getTexture(emissiveTexture1, /*add*/true);
 
       //---
 
@@ -290,13 +657,13 @@ addObjectsData()
 
       //---
 
-      const auto &vertices = face->getVertices();
+      auto vertices = face->getVertices();
+
+      if (reverse)
+        std::reverse(vertices.begin(), vertices.end());
 
       faceData.pos = pos;
       faceData.len = int(vertices.size());
-
-      faceData.selected = face->getSelected();
-      faceData.visible  = face->getVisible();
 
       int iv = 0;
 
@@ -366,6 +733,19 @@ addObjectsData()
       pos += faceData.len;
 
       objectData->addFaceData(faceData);
+    };
+
+    //---
+
+    const auto &faces = object->getFaces();
+
+    for (const auto *face : faces) {
+      addFaceData(face);
+
+      auto *faceMaterial = const_cast<CGeomFace3D *>(face)->getMaterialP();
+
+      if (faceMaterial && faceMaterial->isTwoSided())
+        addFaceData(face, /*reverse*/true);
     }
 
     //---
@@ -397,7 +777,7 @@ initCamera()
   auto s2 = std::sqrt(2.0);
 
   auto origin = CVector3D(center.x, center.y, center.z);
-  auto pos    = CVector3D(center.x, center.y, center.z + s2*maxSize/2.0);
+  auto pos    = CVector3D(center.x, center.y, center.z + s2*maxSize);
 
   auto v = CVector3D(origin, pos);
   auto a = std::atan2(v.z(), v.x());
@@ -414,8 +794,8 @@ void
 CQCamera3DCanvas::
 updateStatus()
 {
-  auto center  = bbox_.getCenter();
-  auto size    = bbox_.getSize();
+  auto center = bbox_.getCenter();
+  auto size   = bbox_.getSize();
 
   auto pointStr = [](const CPoint3D &p) {
     return QString("(%1 %2 %3)").arg(p.x).arg(p.y).arg(p.z);
@@ -465,7 +845,7 @@ drawObjectsData()
 
   //---
 
-  program->setUniformValue("ambient", CQGLUtil::toVector(ambientColor()));
+  addShaderLights(program);
 
   //---
 
@@ -478,7 +858,6 @@ drawObjectsData()
       ++io;
       continue;
     }
-
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
@@ -495,11 +874,8 @@ drawObjectsData()
 
     objectData->buffer()->bind();
 
-    for (const auto &faceData : objectData->faceDatas()) {
-      if (! faceData.visible)
-        continue;
-
-      bool faceSelected = faceData.selected;
+    auto drawFace = [&](const CQCamera3DFaceData &faceData, double transparency) {
+      bool faceSelected = faceData.face->getSelected();
 
       bool selected = objectSelected || faceSelected;
 
@@ -520,35 +896,32 @@ drawObjectsData()
 
       //---
 
-#if 0
-      bool useSpecularTexture = faceData.specularTexture;
-
-      program->setUniformValue("specularTexture.enabled", useSpecularTexture);
-
-      if (useSpecularTexture) {
-        glActiveTexture(GL_TEXTURE1);
-        faceData.specularTexture->bind();
-
-        program->setUniformValue("specularTexture.texture", 1);
-      }
-#endif
-
-      //---
-
       bool useNormalTexture = faceData.normalTexture;
 
       program->setUniformValue("normalTexture.enabled", useNormalTexture);
 
       if (useNormalTexture) {
-        glActiveTexture(GL_TEXTURE2);
+        glActiveTexture(GL_TEXTURE1);
         faceData.normalTexture->bind();
 
-        program->setUniformValue("normalTexture.texture", 2);
+        program->setUniformValue("normalTexture.texture", 1);
       }
 
       //---
 
-#if 0
+      bool useSpecularTexture = faceData.specularTexture;
+
+      program->setUniformValue("specularTexture.enabled", useSpecularTexture);
+
+      if (useSpecularTexture) {
+        glActiveTexture(GL_TEXTURE2);
+        faceData.specularTexture->bind();
+
+        program->setUniformValue("specularTexture.texture", 2);
+      }
+
+      //---
+
       bool useEmissiveTexture = faceData.emissiveTexture;
 
       program->setUniformValue("emissiveTexture.enabled", useEmissiveTexture);
@@ -559,7 +932,14 @@ drawObjectsData()
 
         program->setUniformValue("emissiveTexture.texture", 3);
       }
-#endif
+
+      program->setUniformValue("emissionColor", CQGLUtil::toVector(faceData.emission));
+
+      //---
+
+      program->setUniformValue("shininess", float(faceData.shininess));
+
+      program->setUniformValue("transparency", float(1.0 - transparency));
 
       //---
 
@@ -578,7 +958,51 @@ drawObjectsData()
 
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
       }
+    };
+
+    //---
+
+    bool anyTransparent = false;
+
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+
+    for (const auto &faceData : objectData->faceDatas()) {
+      if (! faceData.face->getVisible())
+        continue;
+
+      auto *faceMaterial = faceData.face->getMaterialP();
+
+      if (faceMaterial && faceMaterial->transparency() > 0.0) {
+        anyTransparent = true;
+        continue;
+      }
+
+      drawFace(faceData, 0.0);
     }
+
+    if (anyTransparent) {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glDepthMask(GL_FALSE);
+
+      for (const auto &faceData : objectData->faceDatas()) {
+        if (! faceData.face->getVisible())
+          continue;
+
+        auto *faceMaterial = faceData.face->getMaterialP();
+
+        if (! faceMaterial || faceMaterial->transparency() <= 0.0)
+          continue;
+
+        drawFace(faceData, faceMaterial->transparency());
+      }
+
+      glDisable(GL_BLEND);
+      glDepthMask(GL_TRUE);
+    }
+
+    //---
 
     objectData->buffer()->unbind();
 
@@ -588,6 +1012,100 @@ drawObjectsData()
   //---
 
   program->release();
+}
+
+void
+CQCamera3DCanvas::
+addShaderLights(CQCamera3DShaderProgram *program)
+{
+  program->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor()));
+  program->setUniformValue("ambientStrength", float(ambientStrength()));
+
+  program->setUniformValue("diffuseStrength" , float(diffuseStrength()));
+  program->setUniformValue("specularStrength", float(specularStrength()));
+  program->setUniformValue("emissiveStrength", float(emissiveStrength()));
+
+  program->setUniformValue("fixedDiffuse", isFixedDiffuse());
+
+  //---
+
+  // max four active lights
+  enum { MAX_LIGHTS = 4 };
+
+  int il = 0;
+
+  for (auto *light : lights()) {
+    auto lightName = QString("lights[%1]").arg(il);
+
+    program->setUniformValue(toCString(lightName + ".type"), int(light->getType()));
+    program->setUniformValue(toCString(lightName + ".enabled"), light->getEnabled());
+
+    program->setUniformValue(toCString(lightName + ".position"),
+      CQGLUtil::toVector(light->getPosition()));
+
+    program->setUniformValue(toCString(lightName + ".color"),
+      CQGLUtil::toVector(ColorToVector(light->getDiffuse())));
+
+    if      (light->getType() == CGeomLight3DType::DIRECTIONAL) {
+      program->setUniformValue(toCString(lightName + ".direction"),
+        CQGLUtil::toVector(light->getDirection()));
+    }
+    else if (light->getType() == CGeomLight3DType::POINT) {
+      program->setUniformValue(toCString(lightName + ".radius"), float(light->getPointRadius()));
+
+      program->setUniformValue(toCString(lightName + ".attenuation0"),
+        float(light->getConstantAttenuation()));
+      program->setUniformValue(toCString(lightName + ".attenuation1"),
+        float(light->getLinearAttenuation()));
+      program->setUniformValue(toCString(lightName + ".attenuation2"),
+        float(light->getQuadraticAttenuation()));
+    }
+    else if (light->getType() == CGeomLight3DType::SPOT) {
+      program->setUniformValue(toCString(lightName + ".direction"),
+        CQGLUtil::toVector(light->getSpotDirection()));
+
+      auto a = light->getSpotCutOffAngle();
+
+      auto cosv = std::cos(CMathGen::DegToRad(a));
+
+      program->setUniformValue(toCString(lightName + ".cutoff"), float(cosv));
+
+      program->setUniformValue(toCString(lightName + ".exponent"),
+        float(light->getSpotExponent()));
+    }
+
+    ++il;
+
+    if (il >= MAX_LIGHTS)
+      break;
+  }
+
+  for ( ; il < MAX_LIGHTS; ++il) {
+    auto lightName = QString("lights[%1]").arg(il);
+
+    program->setUniformValue(toCString(lightName + ".enabled"), false);
+  }
+}
+
+CQCamera3DGeomObject *
+CQCamera3DCanvas::
+rootObject() const
+{
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    if (! object->getVisible())
+      continue;
+
+    while (object->parent())
+      object = object->parent();
+
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+
+    return object1;
+  }
+
+  return nullptr;
 }
 
 CGeomObject3D *
@@ -677,6 +1195,31 @@ selectFace(CGeomFace3D *face, bool update)
 
   setCurrentObject(nullptr);
   setCurrentFace  (face);
+
+  if (changed && update) {
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+
+  return changed;
+}
+
+bool
+CQCamera3DCanvas::
+selectFaces(const std::vector<CGeomFace3D *> &faces, bool update)
+{
+  auto changed = deselectAll(update);
+
+  for (auto *face : faces) {
+    if (! face->getSelected()) {
+      face->setSelected(true);
+      changed = true;
+    }
+  }
+
+  setCurrentObject(nullptr);
+  setCurrentFace  (! faces.empty() ? faces[0] : nullptr);
 
   if (changed && update) {
     this->update();
@@ -782,6 +1325,9 @@ mousePressEvent(QMouseEvent *e)
     auto *scene = app_->getScene();
 
     for (auto *object : scene->getObjects()) {
+      if (! object->getVisible())
+        continue;
+
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
       assert(object1);
 
@@ -953,26 +1499,29 @@ mouseMoveEvent(QMouseEvent *e)
   bool isShift   = (e->modifiers() & Qt::ShiftModifier);
   bool isControl = (e->modifiers() & Qt::ControlModifier);
 
-  auto dx = sign(mouseData_.move.x - mouseData_.press.x);
-  auto dy = sign(mouseData_.move.y - mouseData_.press.y);
+  auto dx = CMathUtil::sign(mouseData_.move.x - mouseData_.press.x);
+  auto dy = CMathUtil::sign(mouseData_.move.y - mouseData_.press.y);
 
   auto bbox = app_->canvas()->bbox();
   auto size = bbox.getSize();
 
+  auto dx1 = mouseScale()*dx*size.getX();
+  auto dy1 = mouseScale()*dy*size.getX();
+
   if      (mouseData_.button == Qt::MiddleButton) {
     if      (isShift) {
-      camera->movePosition(0, dx*size.getX()/100.0);
-      camera->movePosition(1, dy*size.getY()/100.0);
+      camera->movePosition(0, dx1);
+      camera->movePosition(1, dy1);
     }
     else if (isControl) {
       camera->rotatePosition(2, dx*0.05);
     }
     else {
       //camera->rotatePosition(1, dx*0.05);
-      camera->moveAroundY(-dx*size.getX()/100.0);
+      camera->moveAroundY(-dx1);
 
       //camera->rotatePosition(0, dy*0.05);
-      camera->moveAroundX(dy*size.getY()/100.0);
+      camera->moveAroundX(dy1);
     }
   }
   else if (mouseData_.button == Qt::RightButton) {
@@ -984,8 +1533,8 @@ mouseMoveEvent(QMouseEvent *e)
     app_->status()->setMouseLabel(posStr);
 
     if (isShift) {
-      camera->moveOrigin(0, dx*size.getX()/100.0);
-      camera->moveOrigin(1, dy*size.getY()/100.0);
+      camera->moveOrigin(0, dx1);
+      camera->moveOrigin(1, dy1);
     }
   }
 
@@ -1114,6 +1663,10 @@ CQCamera3DCanvas::
 objectKeyPress(QKeyEvent *e)
 {
   auto *object = currentObject();
+
+  if (! object)
+    object = rootObject();
+
   if (! object) return;
 
   auto *camera = currentCamera();
@@ -1395,6 +1948,37 @@ currentCamera() const
     return cameras_[cameraInd_];
   else
     return nullptr;
+}
+
+CQCamera3DLight *
+CQCamera3DCanvas::
+currentLight() const
+{
+  auto *light = getLightById(lightInd_);
+
+  if (! light && ! lights_.empty())
+    light = lights_[0];
+
+  return light;
+}
+
+void
+CQCamera3DCanvas::
+setCurrentLight(CQCamera3DLight *light)
+{
+  lightInd_ = (light ? light->id() : 0);
+}
+
+CQCamera3DLight*
+CQCamera3DCanvas::
+getLightById(uint id) const
+{
+  for (auto *light : lights_) {
+    if (light->id() == id)
+      return light;
+  }
+
+  return nullptr;
 }
 
 void

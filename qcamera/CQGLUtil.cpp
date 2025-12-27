@@ -69,6 +69,13 @@ toVector(const CVector3D &v)
 
 QVector3D
 CQGLUtil::
+toVector(const CPoint3D &p)
+{
+  return QVector3D(p.x, p.y, p.z);
+}
+
+QVector3D
+CQGLUtil::
 toVector(const QColor &c)
 {
   return QVector3D(c.redF(), c.greenF(), c.blueF());

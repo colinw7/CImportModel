@@ -10,6 +10,7 @@
 #include <CQGLTexture.h>
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
+#include <CGeomNodeData.h>
 #include <CQGLUtil.h>
 #include <CStrUtil.h>
 
@@ -206,11 +207,11 @@ updateObjectBones(CBBox3D &bbox)
   // transform node to model coords
   auto getNodeTransform = [&](const CGeomNodeData &nodeData) {
     if      (bonesTransform() == BonesTransform::INVERSE_BIND)
-      return nodeData.inverseBindMatrix.inverse();
+      return nodeData.inverseBindMatrix().inverse();
     else if (bonesTransform() == BonesTransform::LOCAL)
-      return nodeData.localTransform;
+      return nodeData.localTransform();
     else if (bonesTransform() == BonesTransform::GLOBAL)
-      return nodeData.globalTransform;
+      return nodeData.globalTransform();
     else
       return CMatrix3D::identity();
   };
@@ -297,9 +298,9 @@ updateObjectBones(CBBox3D &bbox)
 
     for (const auto &nodeId : nodeIds) {
       const auto &node = rootObject->getNode(nodeId);
-      if (! node.valid) continue;
+      if (! node.isValid()) continue;
 
-      if (! node.isJoint)
+      if (! node.isJoint())
         continue;
 
       //---
@@ -316,16 +317,16 @@ updateObjectBones(CBBox3D &bbox)
 
       //---
 
-      auto color = (node.selected ? bonesSelectedColor() : bonesColor());
+      auto color = (node.isSelected() ? bonesSelectedColor() : bonesColor());
 
-      addBonesCube(objectData, m, cubeSize, nodeId, color, node.selected, pos, bbox);
+      addBonesCube(objectData, m, cubeSize, nodeId, color, node.isSelected(), pos, bbox);
 
       //---
 
-      if (node.parent >= 0) {
-        const auto &pnode = rootObject->getNode(node.parent);
+      if (node.parent() >= 0) {
+        const auto &pnode = rootObject->getNode(node.parent());
 
-        if (pnode.valid && pnode.isJoint) {
+        if (pnode.isValid() && pnode.isJoint()) {
 #if 1
           auto m1 = getNodeTransform(pnode);
         //auto c1 = transformNode(pnode);
@@ -334,7 +335,7 @@ updateObjectBones(CBBox3D &bbox)
           auto c1 = hierTransformNode(pnode);
 #endif
 
-          addBonesLine(objectData, c, c1, lineSize, nodeId, node.parent, lineColor, pos);
+          addBonesLine(objectData, c, c1, lineSize, nodeId, node.parent(), lineColor, pos);
         }
       }
 
@@ -342,7 +343,7 @@ updateObjectBones(CBBox3D &bbox)
 
       auto c1 = c + CPoint3D(0.0, cubeSize/2.0, cubeSize/2.0);
 
-      (void) createText(node.name, c1, ts1);
+      (void) createText(node.name(), c1, ts1);
     }
 
     for (auto *text : objectData->bonesData().texts)
@@ -648,7 +649,7 @@ updateNodeMatrices(CQNewGLModelObject *objectData)
 
   const auto &meshNodeData = rootObject->getNode(meshNodeId);
 
-  auto meshMatrix        = meshNodeData.globalTransform;
+  auto meshMatrix        = meshNodeData.globalTransform();
   auto inverseMeshMatrix = meshMatrix.inverse();
 
 #if 0
@@ -728,8 +729,8 @@ updateNodeMatrices(CQNewGLModelObject *objectData)
 
     const auto &nodeData = rootObject->getNode(nodeId);
 
-    if (nodeData.valid) {
-      auto transform = inverseMeshMatrix*nodeData.hierAnimMatrix*nodeData.inverseBindMatrix;
+    if (nodeData.isValid()) {
+      auto transform = inverseMeshMatrix*nodeData.hierAnimMatrix()*nodeData.inverseBindMatrix();
 
       nodeMatrices[ij] = transform;
     }

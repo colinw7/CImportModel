@@ -14,6 +14,8 @@ CQCamera3DObjectsList::
 CQCamera3DObjectsList(CQCamera3DCanvas *canvas) :
  QFrame(nullptr), canvas_(canvas)
 {
+  setObjectName("objectsList");
+
   auto *layout = new QVBoxLayout(this);
 
   tree_ = new QTreeWidget;
