@@ -1032,6 +1032,14 @@ bool
 CImportGLTF::
 processAnim()
 {
+  enum class ChannelType {
+    NONE,
+    TRANSLATION,
+    ROTATION,
+    SCALE,
+    WEIGHTS,
+  };
+
   for (const auto &animation : jsonData_.animations) {
     if (isDebug())
       debugMsg("Animation: " + animation.name);
@@ -1041,6 +1049,19 @@ processAnim()
         debugMsg(" Channels");
 
       for (const auto &channel : channels) {
+        ChannelType channelType { ChannelType::NONE };
+
+        if      (channel.path == "translation")
+          channelType = ChannelType::TRANSLATION;
+        else if (channel.path == "rotation")
+          channelType = ChannelType::ROTATION;
+        else if (channel.path == "scale")
+          channelType = ChannelType::SCALE;
+        else if (channel.path == "weights")
+          channelType = ChannelType::WEIGHTS;
+
+        //---
+
         CGeomAnimationData animationData;
 
         if (isDebug())
@@ -1107,45 +1128,26 @@ processAnim()
                    std::to_string(imeshData->componentType) + ")"); continue;
         }
 
-        auto ni = imeshData->fscalars.size();
-
-        for (const auto &f : imeshData->fscalars)
-          animationData.addRangeValue(f);
-
-        if (! imeshData->min.empty())
-          animationData.setRangeMin(imeshData->min[0]);
-
-        if (! imeshData->max.empty())
-          animationData.setRangeMax(imeshData->max[0]);
-
-        animationData.setInterpolation(sampler.interpType);
-
-        //---
-
         auto nodeInd = int(node->indName.ind);
 
-        if      (channel.path == "rotation") {
-          if (omeshData->type != "VEC4") {
-            errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
-                     std::to_string(channel.sampler) + " rotation");
-            continue;
-          }
+        auto ni = imeshData->fscalars.size();
 
-          if (ni != omeshData->vec4.size()) {
-            errorMsg("Invalid Size for animation '" + animation.name + "' sampler " +
-                     std::to_string(channel.sampler) + " rotation " +
-                     "(Expected " + std::to_string(ni) +
-                     " Actual " + std::to_string(omeshData->vec4.size()) + ")");
-            continue;
-          }
+        if      (channelType == ChannelType::TRANSLATION) {
+          for (const auto &f : imeshData->fscalars)
+            animationData.addTranslationRangeValue(f);
 
-          for (const auto &v : omeshData->vec4)
-            animationData.addRotation(CQuaternion(v.w, v.x, v.y, v.z));
+          if (! imeshData->min.empty())
+            animationData.setTranslationRangeMin(imeshData->min[0]);
 
-          rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
-            CGeomObject3D::Transform::ROTATION, animationData);
-        }
-        else if (channel.path == "translation") {
+          if (! imeshData->max.empty())
+            animationData.setTranslationRangeMax(imeshData->max[0]);
+
+          //---
+
+          animationData.setTranslationInterpolation(sampler.interpType);
+
+          //---
+
           if (omeshData->type != "VEC3") {
             errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
                      std::to_string(channel.sampler) + " translation");
@@ -1166,7 +1168,58 @@ processAnim()
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::TRANSLATION, animationData);
         }
-        else if (channel.path == "scale") {
+        else if (channelType == ChannelType::ROTATION) {
+          for (const auto &f : imeshData->fscalars)
+            animationData.addRotationRangeValue(f);
+
+          if (! imeshData->min.empty())
+            animationData.setRotationRangeMin(imeshData->min[0]);
+
+          if (! imeshData->max.empty())
+            animationData.setRotationRangeMax(imeshData->max[0]);
+
+          //---
+
+          animationData.setRotationInterpolation(sampler.interpType);
+
+          //---
+
+          if (omeshData->type != "VEC4") {
+            errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " rotation");
+            continue;
+          }
+
+          if (ni != omeshData->vec4.size()) {
+            errorMsg("Invalid Size for animation '" + animation.name + "' sampler " +
+                     std::to_string(channel.sampler) + " rotation " +
+                     "(Expected " + std::to_string(ni) +
+                     " Actual " + std::to_string(omeshData->vec4.size()) + ")");
+            continue;
+          }
+
+          for (const auto &v : omeshData->vec4)
+            animationData.addRotation(CQuaternion(v.w, v.x, v.y, v.z));
+
+          rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
+            CGeomObject3D::Transform::ROTATION, animationData);
+        }
+        else if (channelType == ChannelType::SCALE) {
+          for (const auto &f : imeshData->fscalars)
+            animationData.addScaleRangeValue(f);
+
+          if (! imeshData->min.empty())
+            animationData.setScaleRangeMin(imeshData->min[0]);
+
+          if (! imeshData->max.empty())
+            animationData.setScaleRangeMax(imeshData->max[0]);
+
+          //---
+
+          animationData.setScaleInterpolation(sampler.interpType);
+
+          //---
+
           if (omeshData->type != "VEC3") {
             errorMsg("Invalid Type for animation '" + animation.name + "' sampler " +
                      std::to_string(channel.sampler) + " scale");
@@ -1187,7 +1240,7 @@ processAnim()
           rootObject_->setNodeAnimationTransformData(nodeInd, animation.name,
             CGeomObject3D::Transform::SCALE, animationData);
         }
-        else if (channel.path == "weights") {
+        else if (channelType == ChannelType::WEIGHTS) {
           TODO("channel.path weights");
         }
         else {

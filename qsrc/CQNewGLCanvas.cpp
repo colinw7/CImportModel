@@ -3120,7 +3120,7 @@ getAnimNames(double &tmin, double &tmax) const
       animNameSet.insert(QString::fromStdString(animName1));
 
     if (! animNames1.empty())
-      rootObject->getAnimationRange(animNames1[0], tmin, tmax);
+      rootObject->getAnimationTranslationRange(animNames1[0], tmin, tmax);
   }
 
   std::vector<QString> animNames;

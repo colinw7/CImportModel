@@ -420,9 +420,17 @@ class CQCamera3DControl : public QFrame {
     CQIconButton*          pauseButton { nullptr };
     CQIconButton*          stepButton  { nullptr };
     CQTextLabel*           nodeLabel   { nullptr };
-    QComboBox*             interpCombo { nullptr };
-    QTableWidget*          animTable   { nullptr };
-    bool                   running     { false   };
+
+    QComboBox*    translationInterpCombo { nullptr };
+    QTableWidget* animTranslationTable   { nullptr };
+
+    QComboBox*    rotationInterpCombo { nullptr };
+    QTableWidget* animRotationTable   { nullptr };
+
+    QComboBox*    scaleInterpCombo { nullptr };
+    QTableWidget* animScaleTable   { nullptr };
+
+    bool running { false };
   };
 
   AnimData animData_;

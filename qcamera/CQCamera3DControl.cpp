@@ -43,6 +43,7 @@
 
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QHeaderView>
 #include <QTextEdit>
 #include <QGroupBox>
 #include <QComboBox>
@@ -972,12 +973,43 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   animData_.nodeLabel = addLabelEdit("Node", new CQTextLabel);
 
-  animData_.interpCombo = addLabelEdit("Interpolation", new QComboBox);
-  animData_.interpCombo->addItems(animInterpolationInd.names());
+  auto createTableWidget = []() {
+    auto *table = new QTableWidget;
 
-  animData_.animTable = new QTableWidget;
+    table->horizontalHeader()->setStretchLastSection(true);
 
-  currentLayout->addWidget(animData_.animTable);
+    return table;
+  };
+
+  startGroup("Translation");
+
+  animData_.translationInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.translationInterpCombo->addItems(animInterpolationInd.names());
+
+  animData_.animTranslationTable = createTableWidget();
+  currentLayout->addWidget(animData_.animTranslationTable);
+
+  endGroup();
+
+  startGroup("Rotation");
+
+  animData_.rotationInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.rotationInterpCombo->addItems(animInterpolationInd.names());
+
+  animData_.animRotationTable = createTableWidget();
+  currentLayout->addWidget(animData_.animRotationTable);
+
+  endGroup();
+
+  startGroup("Scale");
+
+  animData_.scaleInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.scaleInterpCombo->addItems(animInterpolationInd.names());
+
+  animData_.animScaleTable = createTableWidget();
+  currentLayout->addWidget(animData_.animScaleTable);
+
+  endGroup();
 
   //------
 
@@ -3216,27 +3248,6 @@ updateAnim()
     return;
 
   if (object->updateNodeAnimationData(*node, animName, animTime)) {
-    const auto &animationData = node->getAnimationData(animName);
-
-    animData_.nodeLabel->setText(QString::fromStdString(node->name()));
-
-    animData_.interpCombo->setCurrentIndex(
-      animInterpolationInd.typeToInd(animationData.interpolation()));
-
-    animData_.animTable->setColumnCount(4);
-
-    animData_.animTable->setHorizontalHeaderLabels(
-      QStringList() << "Time" << "Tramslation" << "Rotation" << "Scale");
-
-    const auto &range        = animationData.range       ();
-    const auto &translations = animationData.translations();
-    const auto &rotations    = animationData.rotations   ();
-    const auto &scales       = animationData.scales      ();
-
-    int nr = int(range.size());
-
-    animData_.animTable->setRowCount(nr);
-
     auto pointToString = [](const CVector3D &p) {
       return QString("%1 %2 %3").arg(p.getX()).arg(p.getY()).arg(p.getZ());
     };
@@ -3245,16 +3256,70 @@ updateAnim()
       return QString("%1 %2 %3 %4").arg(q.getW()).arg(q.getX()).arg(q.getY()).arg(q.getZ());
     };
 
-    for (int r = 0; r < nr; ++r) {
-      auto *item1 = new QTableWidgetItem(QString("%1").arg(range[r]));
-      auto *item2 = new QTableWidgetItem(pointToString     (translations[r]));
-      auto *item3 = new QTableWidgetItem(quaternionToString(rotations   [r]));
-      auto *item4 = new QTableWidgetItem(pointToString     (scales      [r]));
+    //---
 
-      animData_.animTable->setItem(r, 0, item1);
-      animData_.animTable->setItem(r, 1, item2);
-      animData_.animTable->setItem(r, 2, item3);
-      animData_.animTable->setItem(r, 3, item4);
+    const auto &animationData = node->getAnimationData(animName);
+
+    animData_.nodeLabel->setText(QString::fromStdString(node->name()));
+
+    animData_.translationInterpCombo->setCurrentIndex(
+      animInterpolationInd.typeToInd(animationData.translationInterpolation()));
+    animData_.rotationInterpCombo->setCurrentIndex(
+      animInterpolationInd.typeToInd(animationData.rotationInterpolation()));
+    animData_.scaleInterpCombo->setCurrentIndex(
+      animInterpolationInd.typeToInd(animationData.scaleInterpolation()));
+
+    animData_.animTranslationTable->setColumnCount(2);
+    animData_.animRotationTable   ->setColumnCount(2);
+    animData_.animScaleTable      ->setColumnCount(2);
+
+    animData_.animTranslationTable->setHorizontalHeaderLabels(QStringList() << "Time" << "Value");
+    animData_.animRotationTable   ->setHorizontalHeaderLabels(QStringList() << "Time" << "Value");
+    animData_.animScaleTable      ->setHorizontalHeaderLabels(QStringList() << "Time" << "Value");
+
+    const auto &translationRange = animationData.translationRange();
+    const auto &translations     = animationData.translations    ();
+
+    int ntr = int(translationRange.size());
+
+    animData_.animTranslationTable->setRowCount(ntr);
+
+    for (int r = 0; r < ntr; ++r) {
+      auto *item1 = new QTableWidgetItem(QString("%1").arg(translationRange[r]));
+      auto *item2 = new QTableWidgetItem(pointToString(translations[r]));
+
+      animData_.animTranslationTable->setItem(r, 0, item1);
+      animData_.animTranslationTable->setItem(r, 1, item2);
+    }
+
+    const auto &rotationRange = animationData.rotationRange();
+    const auto &rotations     = animationData.rotations    ();
+
+    int nrr = int(rotationRange.size());
+
+    animData_.animRotationTable->setRowCount(nrr);
+
+    for (int r = 0; r < nrr; ++r) {
+      auto *item1 = new QTableWidgetItem(QString("%1").arg(rotationRange[r]));
+      auto *item2 = new QTableWidgetItem(quaternionToString(rotations[r]));
+
+      animData_.animRotationTable->setItem(r, 0, item1);
+      animData_.animRotationTable->setItem(r, 1, item2);
+    }
+
+    const auto &scaleRange = animationData.scaleRange();
+    const auto &scales     = animationData.scales    ();
+
+    int nsr = int(scaleRange.size());
+
+    animData_.animScaleTable->setRowCount(nsr);
+
+    for (int r = 0; r < nsr; ++r) {
+      auto *item1 = new QTableWidgetItem(QString("%1").arg(scaleRange[r]));
+      auto *item2 = new QTableWidgetItem(pointToString(scales[r]));
+
+      animData_.animScaleTable->setItem(r, 0, item1);
+      animData_.animScaleTable->setItem(r, 1, item2);
     }
   }
 }

@@ -327,7 +327,7 @@ drawCamera()
     const auto &xyPlane = canvas->xyPlane();
 
     CLine3D line(eyeLine.pv1, eyeLine.pv2);
-    double t;
+    double t = 0.0;
     (void) xyPlane.intersectLine(line, &t);
     auto pi = line.point(t);
 
