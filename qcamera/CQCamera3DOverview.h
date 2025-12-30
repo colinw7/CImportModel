@@ -13,6 +13,7 @@
 
 class CQCamera3DApp;
 class CGeomFace3D;
+class CQRubberBand;
 class CVector3D;
 
 class CQCamera3DOverview : public QFrame {
@@ -23,6 +24,14 @@ class CQCamera3DOverview : public QFrame {
     NONE,
     WIREFRAME,
     SOLID
+  };
+
+  enum class ViewType {
+    NONE,
+    XY,
+    ZY,
+    XZ,
+    THREED
   };
 
   using SelectType = CQCamera3DSelectType;
@@ -66,16 +75,26 @@ class CQCamera3DOverview : public QFrame {
  private:
   void updateRange();
 
+  CPoint2D pixelToView(ViewType viewType, const QPointF &p) const;
+
+  QPointF viewQPoint(ViewType viewType, const CPoint3D &p) const;
+  CPoint2D viewPoint(ViewType viewType, const CPoint3D &p) const;
+
   void setCameraPosition(int x, int y, bool angle);
   void setLightPosition(int x, int y, bool setDirection);
 
-  void selectObject(int x, int y) ;
+  void selectObjectAt(const QPoint &p) ;
+  void selectObjectAt1(ViewType viewType, const CPoint3D &p);
+
+  void selectObjectIn(const QPoint &p, const QRect &r);
 
   void selectObjectXY(const CPoint3D &p);
   void selectObjectZY(const CPoint3D &p);
   void selectObjectXZ(const CPoint3D &p);
 
   void drawModel();
+  void updateNodeMatrices();
+
   void drawCamera();
   void drawLights();
 
@@ -99,6 +118,11 @@ class CQCamera3DOverview : public QFrame {
     std::vector<CPoint3D> points;
   };
 
+  using NodeMatrices       = std::map<int, CMatrix3D>;
+  using ObjectNodeMatrices = std::map<uint, NodeMatrices>;
+
+  //---
+
   CQCamera3DApp* app_ { nullptr };
 
   CDisplayRange2D xrange_;
@@ -117,8 +141,10 @@ class CQCamera3DOverview : public QFrame {
   bool      cameraVisible_ { true };
   bool      lightsVisible_ { true };
 
-  bool pressed_     { false };
-  int  mouseButton_ { 0 };
+  bool   pressed_     { false };
+  int    mouseButton_ { 0 };
+  QPoint pressPixel_;
+  QPoint movePixel_;
 
   std::vector<FaceData> faces_;
 
@@ -133,7 +159,11 @@ class CQCamera3DOverview : public QFrame {
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
 
+  ObjectNodeMatrices objectNodeMatrices_;
+
   QPixmap lightPixmap_;
+
+  CQRubberBand* rubberBand_ { nullptr };
 };
 
 #endif

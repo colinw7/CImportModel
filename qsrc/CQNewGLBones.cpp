@@ -63,12 +63,12 @@ void
 CQNewGLBones::
 resizeGL(int width, int height)
 {
-  setWindowWidth (width);
-  setWindowHeight(height);
-
-  //---
+  setPixelWidth (width);
+  setPixelHeight(height);
 
   glViewport(0, 0, width, height);
+
+  setAspect(double(width)/double(height));
 }
 
 void
@@ -78,24 +78,25 @@ paintGL()
   // clear canvas
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  glViewport(0, 0, pixelWidth(), pixelHeight());
+
   //---
 
+  // set GL state
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
   glFrontFace(GL_CW);
 
   //---
 
-  pixelWidth_  = width ();
-  pixelHeight_ = height();
-
-  // set view
+  // set camera
   auto *camera = getCurrentCamera();
 
-  aspect_ = float(pixelWidth_)/float(pixelHeight_);
+  camera->setAspect(aspect());
 
-  camera->setAspect(aspect_);
+  //---
 
+  // set view state
   paintData_.projection = camera->getPerspectiveMatrix();
   paintData_.view       = camera->getViewMatrix();
   paintData_.viewPos    = camera->position();
@@ -132,7 +133,7 @@ addCamera()
 
   camera_->setColor(cameraData.color);
 
-  camera_->setLastPos(float(windowWidth())/2.0f, float(windowHeight())/2.0f);
+  camera_->setLastPos(float(pixelWidth())/2.0f, float(pixelHeight())/2.0f);
 }
 
 void

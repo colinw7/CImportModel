@@ -121,7 +121,7 @@ drawGeometry()
   //---
 
   // model matrix
-  auto *camera = canvas_->currentCamera();
+  auto *camera = canvas_->getCurrentCamera();
 
   auto projectionMatrix = camera->perspectiveMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));

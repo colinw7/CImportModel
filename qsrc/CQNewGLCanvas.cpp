@@ -59,15 +59,6 @@ setOrtho(bool b)
 
 void
 CQNewGLCanvas::
-setAmbientColor(const QColor &c)
-{
-  ambientColor_ = c;
-
-  update();
-}
-
-void
-CQNewGLCanvas::
 setDiffuseColor(const QColor &c)
 {
   diffuseColor_ = c;
@@ -473,13 +464,6 @@ initializeGL()
 
   //---
 
-  enableDepthTest  ();
-  enableCullFace   ();
-  enableFrontFace  ();
-  enablePolygonLine();
-
-  //---
-
   // lights
   addLight(/*update*/false);
 
@@ -584,7 +568,7 @@ addCamera(bool update)
 
   camera->setColor(cameraData.color);
 
-  camera->setLastPos(float(windowWidth())/2.0f, float(windowHeight())/2.0f);
+  camera->setLastPos(float(pixelWidth())/2.0f, float(pixelHeight())/2.0f);
 
   cameras_.push_back(camera);
 
@@ -1160,12 +1144,12 @@ updateModelData(CBBox3D &bbox)
     //---
 
 #if 1
-    auto meshMatrix = app_->getMeshGlobalTransform(objectData->object(), /*invert*/false);
+    auto meshMatrix = object->getMeshGlobalTransform();
 #else
     auto meshMatrix = CMatrix3D::identity();
 
     if (useBones)
-      meshMatrix = app_->getMeshGlobalTransform(objectData->object(), /*invert*/true);
+      meshMatrix = app_->getMeshGlobalTransform(object, /*invert*/true);
 #endif
 
     //---
@@ -1217,9 +1201,10 @@ updateModelData(CBBox3D &bbox)
     //---
 
     if (showBonePoints) {
-      auto t = app_->time();
+      auto animName = app_->animName().toStdString();
+      auto animTime = app_->time();
 
-      (void) rootObject->updateNodesAnimationData(app_->animName().toStdString(), t);
+      (void) rootObject->updateNodesAnimationData(animName, animTime);
     }
 
     //---
@@ -1528,19 +1513,6 @@ updateModelData(CBBox3D &bbox)
     bbox += bbox1;
 #endif
   }
-
-  //---
-
-#if 0
-  // move to center, add scale to unit cube
-  modelTranslate_.setX(-sceneCenter_.getX());
-  modelTranslate_.setY(-sceneCenter_.getY());
-  modelTranslate_.setZ(-sceneCenter_.getZ());
-
-  modelScale_.setX(invSceneScale_);
-  modelScale_.setY(invSceneScale_);
-  modelScale_.setZ(invSceneScale_);
-#endif
 }
 
 CPoint3D
@@ -1896,9 +1868,10 @@ drawObjectBones(CQNewGLModelObject *objectData)
   bool useBones = (app_->isAnimEnabled() && app_->animName() != "");
 
   if (useBones) {
-    auto t = app_->time();
+    auto animName = app_->animName().toStdString();
+    auto animTime = app_->time();
 
-    if (! rootObject->updateNodesAnimationData(app_->animName().toStdString(), t))
+    if (! rootObject->updateNodesAnimationData(animName, animTime))
       useBones = false;
   }
 
@@ -1927,10 +1900,10 @@ drawObjectBones(CQNewGLModelObject *objectData)
 
   // bones transform
   if (useBones) {
-    updateNodeMatrices(objectData);
+    updateNodeMatrices(object);
 
     program->setUniformValueArray("globalBoneTransform",
-      &paintData_.nodeQMatrices[0], paintData_.numNodeMatrices);
+      &paintData_.nodeQMatrices[0], PaintData::NUM_NODE_MATRICES);
   }
 
   //---
@@ -2294,27 +2267,46 @@ setSceneBBox(const CBBox3D &bbox)
 
 void
 CQNewGLCanvas::
+resizeGL(int width, int height)
+{
+  setPixelWidth (width);
+  setPixelHeight(height);
+
+  glViewport(0, 0, width, height);
+
+  setAspect(double(width)/double(height));
+}
+
+void
+CQNewGLCanvas::
 paintGL()
 {
-  // per-frame time logic
+  // clear canvas
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glViewport(0, 0, pixelWidth(), pixelHeight());
+
+  //---
+
+  // set GL state
+  enableDepthTest  ();
+  enableCullFace   ();
+  enableFrontFace  ();
+  enablePolygonLine();
+
+  //---
+
+  // set camera
   auto *camera = getCurrentCamera();
 
   camera->updateFrameTime();
 
-  //---
-
-  // clear canvas
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  camera->setAspect(aspect());
 
   //---
 
-  pixelWidth_  = width ();
-  pixelHeight_ = height();
-
-  // set view
-  aspect_ = float(pixelWidth_)/float(pixelHeight_);
-
-  camera->setAspect(aspect_);
+  // set view state
+  paintData_.reset();
 
   if (isOrtho())
     paintData_.projection = camera->getOrthoMatrix();
@@ -2353,7 +2345,6 @@ paintGL()
       if (! objectData->isSolid() && objectData->isWireframe())
         drawObjectModel(objectData);
     }
-
   }
   else {
     // draw model objects
@@ -2471,9 +2462,10 @@ drawObjectModel(CQNewGLModelObject *objectData)
   bool useBones = (app_->isAnimEnabled() && app_->animName() != "");
 
   if (useBones) {
-    auto t = app_->time();
+    auto animName = app_->animName().toStdString();
+    auto animTime = app_->time();
 
-    if (! rootObject->updateNodesAnimationData(app_->animName().toStdString(), t))
+    if (! rootObject->updateNodesAnimationData(animName, animTime))
       useBones = false;
   }
 
@@ -2484,11 +2476,11 @@ drawObjectModel(CQNewGLModelObject *objectData)
 
   auto *program = objectData->shaderProgram();
 
-  auto isSelected = object->getSelected();
+  program->bind();
+
+  //---
 
   objectData->buffer()->bind();
-
-  program->bind();
 
   //---
 
@@ -2504,21 +2496,11 @@ drawObjectModel(CQNewGLModelObject *objectData)
   //---
 
   // model rotation
-#if 0
-  auto modelMatrix = CMatrix3D::identity();
-
-  modelMatrix.scaled(modelScale_.getX(), modelScale_.getY(), modelScale_.getZ());
-  modelMatrix.rotated(modelRotate_.x(), CVector3D(1.0, 0.0, 0.0));
-  modelMatrix.rotated(modelRotate_.y(), CVector3D(0.0, 1.0, 0.0));
-  modelMatrix.rotated(modelRotate_.z(), CVector3D(0.0, 0.0, 1.0));
-  modelMatrix.translated(modelTranslate_.getX(), modelTranslate_.getY(), modelTranslate_.getZ());
-#else
   //auto modelMatrix = getModelMatrix();
   auto modelMatrix = object->getHierTransform();
-#endif
 
   if (useBones) {
-    auto meshMatrix = app_->getMeshGlobalTransform(objectData->object(), /*invert*/false);
+    auto meshMatrix = object->getMeshGlobalTransform();
 
     modelMatrix = meshMatrix*modelMatrix;
   }
@@ -2535,10 +2517,10 @@ drawObjectModel(CQNewGLModelObject *objectData)
 
   // bones transform
   if (useBones) {
-    updateNodeMatrices(objectData);
+    updateNodeMatrices(object);
 
     program->setUniformValueArray("globalBoneTransform",
-      &paintData_.nodeQMatrices[0], paintData_.numNodeMatrices);
+      &paintData_.nodeQMatrices[0], PaintData::NUM_NODE_MATRICES);
   }
 
   //---
@@ -2553,6 +2535,8 @@ drawObjectModel(CQNewGLModelObject *objectData)
   }
 
   //---
+
+  auto isSelected = object->getSelected();
 
   program->setUniformValue("isSelected", isSelected);
 
@@ -2804,131 +2788,49 @@ getModelMatrix() const
 {
   auto modelMatrix = CMatrix3D::identity();
 
-#if 0
-  modelMatrix.scaled(invSceneScale_, invSceneScale_, invSceneScale_);
-  modelMatrix.rotated(modelRotate_.x(), CVector3D(1.0, 0.0, 0.0));
-  modelMatrix.rotated(modelRotate_.y(), CVector3D(0.0, 1.0, 0.0));
-  modelMatrix.rotated(modelRotate_.z(), CVector3D(0.0, 0.0, 1.0));
-  modelMatrix.translated(-sceneCenter_.getX(), -sceneCenter_.getY(), -sceneCenter_.getZ());
-#endif
-
   return modelMatrix;
 }
 
 void
 CQNewGLCanvas::
-updateNodeMatrices(CQNewGLModelObject *objectData)
+updateNodeMatrices(CGeomObject3D *object)
 {
-  auto *object     = objectData->object();
   auto *rootObject = object->getRootObject();
+
+  if (rootObject == paintData_.rootObject)
+    return;
+
+  paintData_.rootObject = rootObject;
+
+  //---
 
   std::vector<CMatrix3D> nodeMatrices;
 
-  for (int i = 0; i < paintData_.numNodeMatrices; i++)
+  for (int i = 0; i < PaintData::NUM_NODE_MATRICES; i++)
     nodeMatrices.push_back(CMatrix3D::identity());
 
   struct WorkData {
-    const CGeomNodeData *parent     { nullptr };
-    const CGeomNodeData *node       { nullptr };
-//  CMatrix3D            animMatrix { CMatrix3D::identity() };
-    CMatrix3D            transform  { CMatrix3D::identity() };
+    const CGeomNodeData *parent    { nullptr };
+    const CGeomNodeData *node      { nullptr };
+    CMatrix3D            transform { CMatrix3D::identity() };
   };
 
-#if 1
-  auto meshMatrix = object->getMeshGlobalTransform();
-#else
-  int meshNodeId = rootObject->getMeshNode();
-
-  const auto &meshNodeData = rootObject->getNode(meshNodeId);
-
-  auto meshMatrix = meshNodeData.globalTransform();
-#endif
+  auto meshMatrix = rootObject->getMeshGlobalTransform();
 
   auto inverseMeshMatrix = meshMatrix.inverse();
 
-#if 0
-  int nodeMax = -1;
-
-  std::vector<WorkData> workList;
-
-  int rootNodeId = rootObject->getRootNode();
-
-  const auto &rootNodeData = rootObject->getNode(rootNodeId);
-
-  if (rootNodeData.valid) {
-    auto rootInverseBindMatrix = rootNodeData.inverseBindMatrix;
-
-//  auto rootInverseMatrix = rootInverseBindMatrix.inverse();
-//  auto rootInverseMatrix = rootNodeData.globalTransform.inverse();
-//  auto rootInverseMatrix = rootNodeData.localTransform.inverse();
-//  auto rootInverseMatrix = CMatrix3D::identity();
-//  auto rootInverseMatrix = rootNodeData.animMatrix.inverse();
-
-    WorkData rootWorkData;
-
-    rootWorkData.parent     = nullptr;
-    rootWorkData.node       = &rootNodeData;
-//  rootWorkData.animMatrix = rootNodeData.animMatrix;
-//  rootWorkData.transform  = rootWorkData.animMatrix*rootInverseBindMatrix;
-    rootWorkData.transform  = inverseMeshMatrix*rootNodeData.hierAnimMatrix*rootInverseBindMatrix;
-
-    nodeMatrices[rootNodeId] = rootWorkData.transform;
-
-    nodeMax = std::max(nodeMax, rootNodeId);
-
-    workList.push_back(rootWorkData);
-  }
-
-  while (! workList.empty()) {
-    const auto &parentWorkData = workList.back(); workList.pop_back();
-
-    for (const auto &id : parentWorkData.node->children) {
-      const auto &childNodeData = rootObject->getNode(id);
-      assert(childNodeData.valid);
-
-      auto childInverseBindMatrix = childNodeData.inverseBindMatrix;
-
-//    auto childInverseMatrix = childInverseBindMatrix.inverse();
-//    auto childInverseMatrix = childNodeData.globalTransform.inverse();
-//    auto childInverseMatrix = childNodeData.localTransform.inverse();
-//    auto childInverseMatrix = CMatrix3D::identity();
-
-      WorkData childWorkData;
-
-      childWorkData.parent     = parentWorkData.node;
-      childWorkData.node       = &childNodeData;
-//    childWorkData.animMatrix = parentWorkData.animMatrix*childNodeData.animMatrix;
-//    childWorkData.transform  = childWorkData.animMatrix*childInverseBindMatrix;
-      childWorkData.transform  =
-        inverseMeshMatrix*childNodeData.hierAnimMatrix*childInverseBindMatrix;
-
-      nodeMatrices[id] = childWorkData.transform;
-
-      nodeMax = std::max(nodeMax, id);
-
-      workList.push_back(childWorkData);
-    }
-  }
-
-//std::cerr << nodeMax << "\n";
-  assert(nodeMax < paintData_.numNodeMatrices);
-#else
   const auto &nodeIds = rootObject->getNodeIds();
 
   int ij = 0;
 
   for (const auto &nodeId : nodeIds) {
-    if (ij >= paintData_.numNodeMatrices)
+    if (ij >= PaintData::NUM_NODE_MATRICES)
       break;
 
     const auto &nodeData = rootObject->getNode(nodeId);
 
     if (nodeData.isValid()) {
-#if 1
       auto transform = nodeData.calcNodeAnimMatrix(inverseMeshMatrix);
-#else
-      auto transform = inverseMeshMatrix*nodeData.hierAnimMatrix()*nodeData.inverseBindMatrix();
-#endif
 
       nodeMatrices[ij] = transform;
     }
@@ -2936,12 +2838,11 @@ updateNodeMatrices(CQNewGLModelObject *objectData)
     ++ij;
   }
 
-  if (ij >= paintData_.numNodeMatrices)
+  if (ij >= PaintData::NUM_NODE_MATRICES)
     std::cerr << "Too many bones\n";
-#endif
 
-  paintData_.nodeMatrices .resize(paintData_.numNodeMatrices);
-  paintData_.nodeQMatrices.resize(paintData_.numNodeMatrices);
+  paintData_.nodeMatrices .resize(PaintData::NUM_NODE_MATRICES);
+  paintData_.nodeQMatrices.resize(PaintData::NUM_NODE_MATRICES);
 
   int im = 0;
   for (const auto &m : nodeMatrices) {
@@ -3161,18 +3062,6 @@ getRootObjects() const
 
 void
 CQNewGLCanvas::
-resizeGL(int width, int height)
-{
-  setWindowWidth (width);
-  setWindowHeight(height);
-
-  //---
-
-  glViewport(0, 0, width, height);
-}
-
-void
-CQNewGLCanvas::
 mousePressEvent(QMouseEvent *e)
 {
   mouseData_.pressX = e->x();
@@ -3378,15 +3267,17 @@ calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev)
   //---
 
   // set pixel (mouse) position in GL coords
+  auto aspect = this->aspect();
+
   double x1, y1;
 
-  if (aspect_ > 1.0) {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0, -aspect_,  aspect_);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,      1.0,     -1.0);
+  if (aspect > 1.0) {
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0, -aspect,  aspect);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,     1.0,    -1.0);
   }
   else {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0,    -1.0,       1.0);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,  aspect_, -aspect_);
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0,   -1.0,      1.0);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,  aspect, -aspect);
   }
 
   auto z1 = 1.0;
@@ -3581,13 +3472,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setZ(modelTranslate_.getZ() + sceneSize_.z()/100.0);
-
-        Q_EMIT modelMatrixChanged();
-      }
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3606,7 +3490,6 @@ keyPressEvent(QKeyEvent *e)
         update();
       }
     }
-#endif
   }
   else if (e->key() == Qt::Key_S) {
     if      (type == CQNewGLModel::Type::CAMERA) {
@@ -3621,13 +3504,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setZ(modelTranslate_.getZ() - sceneSize_.z()/100.0);
-
-        Q_EMIT modelMatrixChanged();
-      }
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3646,7 +3522,6 @@ keyPressEvent(QKeyEvent *e)
         update();
       }
     }
-#endif
   }
   else if (e->key() == Qt::Key_A) {
     if      (type == CQNewGLModel::Type::CAMERA) {
@@ -3714,44 +3589,14 @@ keyPressEvent(QKeyEvent *e)
   }
   else if (e->key() == Qt::Key_X) {
     if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setX(modelTranslate_.getX() + sceneSize_.x()/100.0);
-      }
-      else {
-        modelRotate_.setX(modelRotate_.x() + da);
-      }
-
-      Q_EMIT modelMatrixChanged();
-#endif
     }
   }
   else if (e->key() == Qt::Key_Y) {
     if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setY(modelTranslate_.getY() + sceneSize_.y()/100.0);
-      }
-      else {
-        modelRotate_.setY(modelRotate_.y() + da);
-      }
-
-      Q_EMIT modelMatrixChanged();
-#endif
     }
   }
   else if (e->key() == Qt::Key_Z) {
     if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setZ(modelTranslate_.getZ() + sceneSize_.z()/100.0);
-      }
-      else {
-        modelRotate_.setZ(modelRotate_.z() + da);
-      }
-
-      Q_EMIT modelMatrixChanged();
-#endif
     }
   }
   else if (e->key() == Qt::Key_Up) {
@@ -3771,19 +3616,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setY(modelTranslate_.getY() + sceneSize_.y()/100.0);
-      }
-      else {
-        double f = 1.1;
-        modelScale_.setX(modelScale_.getX()*f);
-        modelScale_.setY(modelScale_.getY()*f);
-        modelScale_.setZ(modelScale_.getZ()*f);
-      }
-
-      Q_EMIT modelMatrixChanged();
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3801,7 +3633,6 @@ keyPressEvent(QKeyEvent *e)
         updateAnnotations();
         update();
       }
-#endif
     }
   }
   else if (e->key() == Qt::Key_Down) {
@@ -3821,19 +3652,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setY(modelTranslate_.getY() - sceneSize_.y()/100.0);
-      }
-      else {
-        double f = 1.1;
-        modelScale_.setX(modelScale_.getX()/f);
-        modelScale_.setY(modelScale_.getY()/f);
-        modelScale_.setZ(modelScale_.getZ()/f);
-      }
-
-      Q_EMIT modelMatrixChanged();
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3851,7 +3669,6 @@ keyPressEvent(QKeyEvent *e)
         updateAnnotations();
         update();
       }
-#endif
     }
   }
   else if (e->key() == Qt::Key_Left) {
@@ -3865,13 +3682,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setX(modelTranslate_.getX() - sceneSize_.x()/100.0);
-
-        Q_EMIT modelMatrixChanged();
-      }
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3889,7 +3699,6 @@ keyPressEvent(QKeyEvent *e)
         updateAnnotations();
         update();
       }
-#endif
     }
   }
   else if (e->key() == Qt::Key_Right) {
@@ -3903,13 +3712,6 @@ keyPressEvent(QKeyEvent *e)
       app()->updateLights();
     }
     else if (type == CQNewGLModel::Type::MODEL) {
-#if 0
-      if (isControl) {
-        modelTranslate_.setX(modelTranslate_.getX() + sceneSize_.x()/100.0);
-
-        Q_EMIT modelMatrixChanged();
-      }
-#else
       auto *object = getCurrentObject();
 
       if (object) {
@@ -3927,7 +3729,6 @@ keyPressEvent(QKeyEvent *e)
         updateAnnotations();
         update();
       }
-#endif
     }
   }
 

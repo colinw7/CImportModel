@@ -15,7 +15,6 @@
 #include <CImagePtr.h>
 
 #include <QOpenGLExtraFunctions>
-//#include <QOpenGLFunctions_3_3_Core>
 #include <QMatrix4x4>
 
 class CQNewGLModelObject;
@@ -87,7 +86,7 @@ class CQNewGLCanvas : public CQNewGLWidget {
   void setOrtho(bool b);
 
   const QColor &ambientColor() const { return ambientColor_; }
-  void setAmbientColor(const QColor &c);
+  void setAmbientColor(const QColor &c) { ambientColor_ = c; update(); }
 
   const QColor &diffuseColor() const { return diffuseColor_; }
   void setDiffuseColor(const QColor &c);
@@ -137,14 +136,6 @@ class CQNewGLCanvas : public CQNewGLWidget {
   void enableCullFace();
   void enableFrontFace();
   void enablePolygonLine();
-
-  //---
-
-//const CVector3D &modelTranslate() const { return modelTranslate_; }
-//void setModelTranslate(const CVector3D &v) { modelTranslate_ = v; }
-
-//const CVector3D &modelRotate() const { return modelRotate_; }
-//void setModelRotate(const CVector3D &v) { modelRotate_ = v; }
 
   //---
 
@@ -501,8 +492,6 @@ class CQNewGLCanvas : public CQNewGLWidget {
   void getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const;
 
  Q_SIGNALS:
-  void modelMatrixChanged();
-
   void currentObjectChanged();
   void currentCameraChanged();
   void currentLightChanged();
@@ -528,17 +517,30 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   void drawObjectNormals(CQNewGLModelObject *objectData);
 
-  void updateNodeMatrices(CQNewGLModelObject *objectData);
+  void updateNodeMatrices(CGeomObject3D *rootObject);
 
  private:
   struct PaintData {
+    enum { NUM_NODE_MATRICES = 128 };
+
     CGLVector3D viewPos;
     CGLMatrix3D projection;
     CGLMatrix3D view;
 
+    CGeomObject3D*          rootObject { nullptr };
     std::vector<CMatrix3D>  nodeMatrices;
     std::vector<QMatrix4x4> nodeQMatrices;
-    int                     numNodeMatrices { 128 };
+
+    void reset() {
+      viewPos    = CGLVector3D();
+      projection = CGLMatrix3D();
+      view       = CGLMatrix3D();
+
+      rootObject = nullptr;
+
+      nodeMatrices .clear();
+      nodeQMatrices.clear();
+    }
   };
 
   struct TextureMapData {
@@ -571,17 +573,8 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   PaintData paintData_;
 
-  int pixelWidth_  { 0 };
-  int pixelHeight_ { 0 };
-
-  double aspect_ { 1.0 };
-
   // objects
   int currentObjectNum_ { -1 };
-
-//CVector3D modelRotate_    { 0.0, 0.0, 0.0 };
-//CVector3D modelScale_     { 1.0, 1.0, 1.0 };
-//CVector3D modelTranslate_ { 0.0, 0.0, 0.0 };
 
   CQNewGLShaderProgram* normalShaderProgram_ { nullptr };
 

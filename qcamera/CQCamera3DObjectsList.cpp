@@ -4,9 +4,9 @@
 #include <CQCamera3DGeomObject.h>
 
 #include <CQUtil.h>
+#include <CQTreeWidget.h>
 #include <CGeomObject3D.h>
 
-#include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
 
@@ -18,7 +18,7 @@ CQCamera3DObjectsList(CQCamera3DCanvas *canvas) :
 
   auto *layout = new QVBoxLayout(this);
 
-  tree_ = new QTreeWidget;
+  tree_ = new CQTreeWidget;
 
   tree_->setSelectionMode(QTreeWidget::SingleSelection);
 

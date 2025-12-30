@@ -46,6 +46,10 @@ class CQCamera3DControl : public QFrame {
 
   void showWireframeSlot(int);
   void showSolidSlot(int);
+  void showPointsSlot(int i);
+
+  void pointSizeSlot(double);
+  void lineWidthSlot(double);
 
   void showNormalsSlot(int);
   void normalsSizeSlot(double r);
@@ -205,6 +209,8 @@ class CQCamera3DControl : public QFrame {
 
   // Bones
   void bonesModelSlot(int);
+  void bonesBoneNodeSlot(int i);
+  void bonesPointJointsSlot(int i);
   void currentBoneSlot();
   void updateBones();
   void updateAnim();
@@ -240,6 +246,10 @@ class CQCamera3DControl : public QFrame {
   // General
   QCheckBox* showWireframeCheck_ { nullptr };
   QCheckBox* showSolidCheck_     { nullptr };
+  QCheckBox* showPointsCheck_    { nullptr };
+
+  CQRealSpin* pointSizeEdit_ { nullptr };
+  CQRealSpin* lineWidthEdit_ { nullptr };
 
   QCheckBox*   showNormalsCheck_ { nullptr };
   CQRealSpin*  normalsSizeEdit_  { nullptr };
@@ -379,8 +389,8 @@ class CQCamera3DControl : public QFrame {
   // Overview
   struct OverviewData {
     QCheckBox* equalScale      { nullptr };
-    QComboBox* selectTypeCombo { nullptr };
     QComboBox* mouseTypeCombo  { nullptr };
+    QComboBox* selectTypeCombo { nullptr };
     QComboBox* modelTypeCombo  { nullptr };
     QCheckBox* cameraCheck     { nullptr };
     QCheckBox* lightsCheck     { nullptr };
@@ -397,7 +407,11 @@ class CQCamera3DControl : public QFrame {
 
   // Bones
   struct BonesData {
-    QCheckBox* modelCheck { nullptr };
+    QCheckBox* modelCheck     { nullptr };
+    QCheckBox* boneNodesCheck { nullptr };
+    QCheckBox* pointJoints    { nullptr };
+
+    QCheckBox* jointCheck { nullptr };
 
     CQCamera3DBonesList* bonesList { nullptr };
 

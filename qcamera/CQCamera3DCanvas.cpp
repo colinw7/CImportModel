@@ -22,6 +22,7 @@
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomTexture.h>
+#include <CGeomNodeData.h>
 #include <CGeometry3D.h>
 #include <CStrUtil.h>
 
@@ -70,6 +71,48 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   //---
 
   connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
+
+  connect(app_, SIGNAL(animNameChanged()), this, SLOT(addObjectsData()));
+  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(addObjectsData()));
+}
+
+void
+CQCamera3DCanvas::
+enableDepthTest()
+{
+  if (isDepthTest())
+    glEnable(GL_DEPTH_TEST);
+  else
+    glDisable(GL_DEPTH_TEST);
+}
+
+void
+CQCamera3DCanvas::
+enableCullFace()
+{
+  if (isCullFace())
+    glEnable(GL_CULL_FACE);
+  else
+    glDisable(GL_CULL_FACE);
+}
+
+void
+CQCamera3DCanvas::
+enableFrontFace()
+{
+  glFrontFace(isFrontFace() ? GL_CW : GL_CCW);
+}
+
+void
+CQCamera3DCanvas::
+enablePolygonLine()
+{
+  if (isPolygonLine())
+    glEnable(GL_POLYGON_OFFSET_LINE);
+  else
+    glDisable(GL_POLYGON_OFFSET_LINE);
+
+  glPolygonOffset(-1.0f, -1.0f);
 }
 
 void
@@ -152,8 +195,6 @@ initializeGL()
   axes_ = new CQCamera3DAxes(this);
 
   //---
-
-  initShader();
 
   addObjectsData();
 
@@ -456,6 +497,18 @@ addTextureFile(const std::string &fileName)
 
 void
 CQCamera3DCanvas::
+resizeGL(int width, int height)
+{
+  setPixelWidth (width);
+  setPixelHeight(height);
+
+  glViewport(0, 0, width, height);
+
+  setAspect(double(width)/double(height));
+}
+
+void
+CQCamera3DCanvas::
 paintGL()
 {
   // clear canvas
@@ -465,37 +518,41 @@ paintGL()
 
   //---
 
-  if (isDepthTest())
-    glEnable(GL_DEPTH_TEST);
-  else
-    glDisable(GL_DEPTH_TEST);
-
-  if (isCullFace())
-    glEnable(GL_CULL_FACE);
-  else
-    glDisable(GL_CULL_FACE);
-
-  glFrontFace(isFrontFace() ? GL_CW : GL_CCW);
-
-  if (isPolygonLine())
-    glEnable(GL_POLYGON_OFFSET_LINE);
-  else
-    glDisable(GL_POLYGON_OFFSET_LINE);
-
-  glPolygonOffset(-1.0f, -1.0f);
+  // set GL state
+  enableDepthTest  ();
+  enableCullFace   ();
+  enableFrontFace  ();
+  enablePolygonLine();
 
   //---
 
+  // set camera
+  auto *camera = getCurrentCamera();
+
+  camera->setAspect(aspect());
+
+  //---
+
+  // draw axes
   if (isShowAxes()) {
     axes_->updateGeometry();
 
     axes_->drawGeometry();
   }
 
+  //---
+
+  // draw model objects
   drawObjectsData();
 
+  //---
+
+  // draw shapes
   shape_->drawGeometry();
 
+  //---
+
+  // draw normals
   if (isShowNormals()) {
     normals_->updateGeometry();
 
@@ -508,20 +565,8 @@ paintGL()
 
   //---
 
-  glDisable(GL_DEPTH_TEST);
-
   overlay2D_->drawGeometry();
   overlay_  ->drawGeometry();
-}
-
-void
-CQCamera3DCanvas::
-resizeGL(int width, int height)
-{
-  pixelWidth_  = width;
-  pixelHeight_ = height;
-
-  glViewport(0, 0, width, height);
 }
 
 void
@@ -549,12 +594,17 @@ setShowAxes(bool b)
     axes_->setVisible(b);
 }
 
-void
+CQCamera3DShaderProgram *
 CQCamera3DCanvas::
-initShader()
+shaderProgram()
 {
-  shaderProgram_ = new CQCamera3DShaderProgram(this);
-  shaderProgram_->addShaders("model.vs", "model.fs");
+  if (! shaderProgram_) {
+    shaderProgram_ = new CQCamera3DShaderProgram(this);
+
+    shaderProgram_->addShaders("model.vs", "model.fs");
+  }
+
+  return shaderProgram_;
 }
 
 void
@@ -562,6 +612,9 @@ CQCamera3DCanvas::
 addObjectsData()
 {
   bbox_ = CBBox3D();
+
+  int    boneNodeIds[4];
+  double boneWeights[4];
 
   int io = 0;
 
@@ -715,6 +768,20 @@ addObjectsData()
 
         //---
 
+        const auto &jointData = vertex.getJointData();
+
+        if (jointData.nodeDatas[0].node >= 0) {
+          for (int i = 0; i < 4; ++i) {
+            boneNodeIds[i] = jointData.nodeDatas[i].node;
+            boneWeights[i] = jointData.nodeDatas[i].weight;
+          }
+
+          buffer->addBoneIds    (boneNodeIds[0], boneNodeIds[1], boneNodeIds[2], boneNodeIds[3]);
+          buffer->addBoneWeights(boneWeights[0], boneWeights[1], boneWeights[2], boneWeights[3]);
+        }
+
+        //---
+
         if (faceData.diffuseTexture) {
           const auto &tpoint = face->getTexturePoint(vertex, iv);
 
@@ -826,12 +893,14 @@ void
 CQCamera3DCanvas::
 drawObjectsData()
 {
-  auto *program = shaderProgram_;
+  auto *program = this->shaderProgram();
 
   program->bind();
 
+  //---
+
   // camera projection
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   auto projectionMatrix = camera->perspectiveMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
@@ -849,6 +918,19 @@ drawObjectsData()
 
   //---
 
+  glPointSize(pointSize());
+  glLineWidth(lineWidth());
+
+  paintData_.reset();
+
+  //---
+
+  auto animName = app_->animName();
+
+  bool isAnim = (animName != "");
+
+  //---
+
   int io = 0;
 
   auto *scene = app_->getScene();
@@ -858,6 +940,7 @@ drawObjectsData()
       ++io;
       continue;
     }
+
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
@@ -865,6 +948,18 @@ drawObjectsData()
     //auto modelMatrix = CMatrix3DH::identity();
     auto modelMatrix = object1->getHierTransform();
     program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+
+    //---
+
+    // anim
+    program->setUniformValue("useBonePoints", isAnim);
+
+    if (isAnim) {
+      updateNodeMatrices(object);
+
+      program->setUniformValueArray("globalBoneTransform",
+        &paintData_.nodeQMatrices[0], PaintData::NUM_NODE_MATRICES);
+    }
 
     //---
 
@@ -957,6 +1052,12 @@ drawObjectsData()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+      }
+
+      if (isPoints()) {
+        program->setUniformValue("isWireframe", true);
+
+        glDrawArrays(GL_POINTS, faceData.pos, faceData.len);
       }
     };
 
@@ -1087,6 +1188,66 @@ addShaderLights(CQCamera3DShaderProgram *program)
   }
 }
 
+void
+CQCamera3DCanvas::
+updateNodeMatrices(CGeomObject3D *object)
+{
+  auto *rootObject = object->getRootObject();
+
+  if (rootObject == paintData_.rootObject)
+    return;
+
+  paintData_.rootObject = rootObject;
+
+  //---
+
+  auto animName = app_->animName().toStdString();
+  auto animTime = app_->animTime();
+
+  (void) rootObject->updateNodesAnimationData(animName, animTime);
+
+  //---
+
+  std::vector<CMatrix3D> nodeMatrices;
+
+  for (int i = 0; i < PaintData::NUM_NODE_MATRICES; i++)
+    nodeMatrices.push_back(CMatrix3D::identity());
+
+  struct WorkData {
+    const CGeomNodeData *parent    { nullptr };
+    const CGeomNodeData *node      { nullptr };
+    CMatrix3D            transform { CMatrix3D::identity() };
+  };
+
+  auto meshMatrix        = rootObject->getMeshGlobalTransform();
+  auto inverseMeshMatrix = meshMatrix.inverse();
+
+  for (const auto &pn : rootObject->getNodes()) {
+    auto &node = const_cast<CGeomNodeData &>(pn.second);
+
+    if (! node.isJoint())
+      continue;
+
+    int nodeId = node.index();
+
+    if (nodeId >= PaintData::NUM_NODE_MATRICES)
+      break;
+
+    nodeMatrices[nodeId] = node.calcNodeAnimMatrix(inverseMeshMatrix);
+  }
+
+  paintData_.nodeMatrices .resize(PaintData::NUM_NODE_MATRICES);
+  paintData_.nodeQMatrices.resize(PaintData::NUM_NODE_MATRICES);
+
+  int im = 0;
+  for (const auto &m : nodeMatrices) {
+    paintData_.nodeMatrices [im] = m;
+    paintData_.nodeQMatrices[im] = CQGLUtil::toQMatrix(m);
+
+    ++im;
+  }
+}
+
 CQCamera3DGeomObject *
 CQCamera3DCanvas::
 rootObject() const
@@ -1170,8 +1331,9 @@ selectObject(CGeomObject3D *object, bool update)
     changed = true;
   }
 
-  setCurrentObject(dynamic_cast<CQCamera3DGeomObject *>(object));
-  setCurrentFace  (nullptr);
+  setCurrentObject(dynamic_cast<CQCamera3DGeomObject *>(object), /*update*/ false);
+  setCurrentFace  (nullptr, /*update*/ false);
+  setCurrentVertex(nullptr, /*update*/ false);
 
   if (changed && update) {
     this->update();
@@ -1193,8 +1355,9 @@ selectFace(CGeomFace3D *face, bool update)
     changed = true;
   }
 
-  setCurrentObject(nullptr);
-  setCurrentFace  (face);
+  setCurrentObject(nullptr, /*update*/ false);
+  setCurrentFace  (face   , /*update*/ false);
+  setCurrentVertex(nullptr, /*update*/ false);
 
   if (changed && update) {
     this->update();
@@ -1218,8 +1381,83 @@ selectFaces(const std::vector<CGeomFace3D *> &faces, bool update)
     }
   }
 
-  setCurrentObject(nullptr);
-  setCurrentFace  (! faces.empty() ? faces[0] : nullptr);
+  setCurrentObject(nullptr, /*update*/ false);
+  setCurrentFace  (! faces.empty() ? faces[0] : nullptr, /*update*/ false);
+
+  if (changed && update) {
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+
+  return changed;
+}
+
+bool
+CQCamera3DCanvas::
+selectVertex(CGeomVertex3D *vertex, bool update)
+{
+  auto changed = deselectAll(update);
+
+  if (! vertex->isSelected()) {
+    vertex->setSelected(true);
+    changed = true;
+  }
+
+  setCurrentObject(nullptr, /*update*/ false);
+  setCurrentFace  (nullptr, /*update*/ false);
+  setCurrentVertex(vertex , /*update*/ false);
+
+  if (changed && update) {
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+
+  return changed;
+}
+
+bool
+CQCamera3DCanvas::
+selectVertices(const ObjectSelectInds &selectInds, bool update)
+{
+  auto changed = deselectAll(update);
+
+  auto *scene = app_->getScene();
+
+  CGeomVertex3D *pvertex = nullptr;
+
+  for (auto *object : scene->getObjects()) {
+    auto po = selectInds.find(object);
+    if (po == selectInds.end()) continue;
+
+    const auto &vinds = (*po).second;
+
+    const auto &faces = object->getFaces();
+
+    for (const auto *face : faces) {
+      auto vertices = face->getVertices();
+
+      for (const auto &v : vertices) {
+        auto pv = vinds.find(v);
+        if (pv == vinds.end()) continue;
+
+        auto &vertex = object->getVertex(v);
+
+        if (! pvertex)
+          pvertex = const_cast<CGeomVertex3D *>(&vertex);
+
+        if (! vertex.isSelected()) {
+          vertex.setSelected(true);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  setCurrentObject(nullptr, /*update*/ false);
+  setCurrentFace  (nullptr, /*update*/ false);
+  setCurrentVertex(pvertex, /*update*/ false);
 
   if (changed && update) {
     this->update();
@@ -1251,11 +1489,23 @@ deselectAll(bool update)
         face->setSelected(false);
         changed = true;
       }
+
+      auto vertices = face->getVertices();
+
+      for (const auto &v : vertices) {
+        auto &vertex = object->getVertex(v);
+
+        if (vertex.isSelected()) {
+          vertex.setSelected(false);
+          changed = true;
+        }
+      }
     }
   }
 
   currentObject_ = nullptr;
   currentFace_   = nullptr;
+  currentVertex_ = nullptr;
 
   if (changed && update) {
     this->update();
@@ -1272,7 +1522,7 @@ void
 CQCamera3DCanvas::
 mousePressEvent(QMouseEvent *e)
 {
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   bool isShift   = (e->modifiers() & Qt::ShiftModifier);
   bool isControl = (e->modifiers() & Qt::ControlModifier);
@@ -1447,11 +1697,8 @@ mousePressEvent(QMouseEvent *e)
     else if (selectType() == SelectType::POINT) {
       if (insideFace.object) {
         for (auto *vertex : insideFace.object->getVertices()) {
-          bool selected = (vertex->getInd() == uint(insideFace.vertex));
-
-          if (vertex->getTag() != selected) {
-            vertex->setTag(selected);
-            changed = true;
+          if (vertex->getInd() == uint(insideFace.vertex)) {
+            changed = selectVertex(vertex, /*update*/false);
           }
         }
       }
@@ -1459,6 +1706,7 @@ mousePressEvent(QMouseEvent *e)
 
     if (changed) {
       addObjectsData();
+
       updateAnnotation();
 
       update();
@@ -1491,7 +1739,7 @@ void
 CQCamera3DCanvas::
 mouseMoveEvent(QMouseEvent *e)
 {
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   mouseData_.move.x = e->x();
   mouseData_.move.y = e->y();
@@ -1558,7 +1806,7 @@ wheelEvent(QWheelEvent *e)
 
   auto dw = e->angleDelta().y()/250.0;
 
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   camera->zoom(dw*d);
 
@@ -1579,7 +1827,7 @@ void
 CQCamera3DCanvas::
 cameraKeyPress(QKeyEvent *e)
 {
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   auto k = e->key();
 
@@ -1669,7 +1917,7 @@ objectKeyPress(QKeyEvent *e)
 
   if (! object) return;
 
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   auto k = e->key();
 
@@ -1812,7 +2060,7 @@ void
 CQCamera3DCanvas::
 calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
 {
-  auto *camera = currentCamera();
+  auto *camera = getCurrentCamera();
 
   auto projectionMatrix  = camera->perspectiveMatrix();
   auto iProjectionMatrix = projectionMatrix.inverse();
@@ -1838,7 +2086,7 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   //---
 
   // set pixel (mouse) position in GL coords
-  auto aspect = camera->aspect();
+  auto aspect = this->aspect();
 
   double x1, y1;
 
@@ -1942,7 +2190,7 @@ cameraChanged()
 
 CQCamera3DCamera *
 CQCamera3DCanvas::
-currentCamera() const
+getCurrentCamera() const
 {
   if (cameraInd_ >= 0 && cameraInd_ < int(cameras_.size()))
     return cameras_[cameraInd_];
@@ -2013,20 +2261,32 @@ updateOverlay2D()
 
 void
 CQCamera3DCanvas::
-setCurrentObject(CQCamera3DGeomObject *object)
+setCurrentObject(CQCamera3DGeomObject *object, bool update)
 {
   currentObject_ = object;
 
-  Q_EMIT stateChanged();
+  if (update)
+    Q_EMIT stateChanged();
 }
 
 void
 CQCamera3DCanvas::
-setCurrentFace(CGeomFace3D *face)
+setCurrentFace(CGeomFace3D *face, bool update)
 {
   currentFace_ = face;
 
-  Q_EMIT stateChanged();
+  if (update)
+    Q_EMIT stateChanged();
+}
+
+void
+CQCamera3DCanvas::
+setCurrentVertex(CGeomVertex3D *vertex, bool update)
+{
+  currentVertex_ = vertex;
+
+  if (update)
+    Q_EMIT stateChanged();
 }
 
 bool

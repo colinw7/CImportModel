@@ -7,10 +7,10 @@
 
 class CQCamera3DApp;
 
+class CQTreeWidget;
 class CGeomObject3D;
 class CGeomNodeData;
 
-class QTreeWidget;
 class QTreeWidgetItem;
 
 class CQCamera3DBonesList : public QFrame {
@@ -53,7 +53,7 @@ class CQCamera3DBonesList : public QFrame {
   using NodeItems = std::map<int, QTreeWidgetItem *>;
 
   CQCamera3DApp* app_  { nullptr };
-  QTreeWidget*   tree_ { nullptr };
+  CQTreeWidget*  tree_ { nullptr };
 
   int boneInd_ { -1 };
 

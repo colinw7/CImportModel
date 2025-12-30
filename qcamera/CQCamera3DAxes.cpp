@@ -173,7 +173,7 @@ drawGeometry()
 
   //---
 
-  auto *camera = canvas_->currentCamera();
+  auto *camera = canvas_->getCurrentCamera();
 
   // camera projection
   auto projectionMatrix = camera->perspectiveMatrix();

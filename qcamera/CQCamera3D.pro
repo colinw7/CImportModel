@@ -53,6 +53,8 @@ CQPoint3DEdit.cpp \
 CQPoint4DEdit.cpp \
 CQMatrix3D.cpp \
 CQTextLabel.cpp \
+CQTreeWidget.cpp \
+CQRubberBand.cpp \
 
 HEADERS += \
 CDisplayRange2D.h \
@@ -96,6 +98,8 @@ CQPoint3DEdit.h \
 CQPoint4DEdit.h \
 CQMatrix3D.h \
 CQTextLabel.h \
+CQTreeWidget.h \
+CQRubberBand.h \
 \
 CWindowRange2D.h \
 stb_truetype.h \

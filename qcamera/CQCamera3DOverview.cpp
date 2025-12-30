@@ -8,8 +8,10 @@
 #include <CQCamera3DUtil.h>
 
 #include <CQPixmapCache.h>
+#include <CQRubberBand.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
+#include <CGeomNodeData.h>
 #include <CLine3D.h>
 #include <CMatrix2D.h>
 
@@ -46,16 +48,23 @@ CQCamera3DOverview(CQCamera3DApp *app) :
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
-
-  connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
-  connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
+  auto *camera = canvas->getCurrentCamera();
 
   setFocusPolicy(Qt::StrongFocus);
 
   setMouseTracking(true);
 
   lightPixmap_ = CQPixmapCacheInst->getSizedPixmap("LIGHT", QSize(32, 32));
+
+  rubberBand_ = new CQRubberBand(this);
+
+  //---
+
+  connect(app_, SIGNAL(animNameChanged()), this, SLOT(update()));
+  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
+
+  connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
+  connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
 }
 
 void
@@ -112,7 +121,7 @@ paintEvent(QPaintEvent *)
   //---
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   projectionMatrix_ = CMatrix3DH(camera->perspectiveMatrix());
   viewMatrix_       = CMatrix3DH(camera->viewMatrix());
@@ -215,6 +224,59 @@ drawModel()
 
   bool filled = (modelType() == ModelType::SOLID);
 
+  //---
+
+  auto animName = app_->animName().toStdString();
+  auto animTime = app_->animTime();
+
+  auto useAnim = (animName != "");
+
+  //---
+
+  auto adjustAnimPoint = [&](const CGeomVertex3D &vertex, const CPoint3D &p,
+                             std::map<int, CMatrix3D> &nodeMatrices) {
+    const auto &jointData = vertex.getJointData();
+
+    struct NodeWeight {
+      int    nodeId { -1 };
+      double weight { 0.0 };
+    };
+
+    std::vector<NodeWeight> nodeWeights;
+
+    for (int i = 0; i < 4; ++i) {
+      if (jointData.nodeDatas[i].node >= 0) {
+        NodeWeight nodeWeight;
+
+        nodeWeight.nodeId = jointData.nodeDatas[i].node;
+        nodeWeight.weight = jointData.nodeDatas[i].weight;
+
+        nodeWeights.push_back(nodeWeight);
+      }
+    }
+
+    if (! nodeWeights.empty()) {
+      auto p1 = CPoint3D(0, 0, 0);
+
+      for (const auto &nodeWeight : nodeWeights) {
+        auto boneTransform = nodeMatrices[nodeWeight.nodeId];
+
+        p1 += nodeWeight.weight*(boneTransform*p);
+      }
+
+      return p1;
+    }
+    else
+      return p;
+  };
+
+  //---
+
+  if (useAnim)
+    updateNodeMatrices();
+
+  //---
+
   // draw model
   faces_.clear();
 
@@ -231,6 +293,15 @@ drawModel()
     assert(object1);
 
     modelMatrix_ = CMatrix3DH(object1->getHierTransform());
+
+    //---
+
+    auto &nodeMatrices = objectNodeMatrices_[object->getInd()];
+
+    if (useAnim)
+      object->updateNodesAnimationData(animName, animTime);
+
+    //---
 
     auto *objectMaterial = object->getMaterialP();
 
@@ -254,7 +325,24 @@ drawModel()
         const auto &vertex = object->getVertex(v);
         const auto &model  = vertex.getModel();
 
-        faceData.points.push_back(model);
+        auto p = model;
+
+        //---
+
+        if (useAnim)
+          p = adjustAnimPoint(vertex, p, nodeMatrices);
+
+        //---
+
+        faceData.points.push_back(p);
+
+        if (vertex.isSelected()) {
+          painter_->setPen(QColor(255, 0, 0, 255));
+
+          drawPoint(CVector3D(p), "");
+
+          painter_->setPen(QColor(0, 0, 0, 32));
+        }
       }
 
       //---
@@ -296,7 +384,7 @@ drawCamera()
     return;
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   auto pos    = camera->position();
   auto origin = camera->origin();
@@ -344,6 +432,39 @@ drawCamera()
   painter_->setPen(Qt::red);
 
   drawCircle(origin, r);
+}
+
+void
+CQCamera3DOverview::
+updateNodeMatrices()
+{
+  auto animName = app_->animName().toStdString();
+  auto animTime = app_->animTime();
+
+  auto rootObjects = app_->getRootObjects();
+
+  for (auto *rootObject : rootObjects) {
+    if (! rootObject->getVisible())
+      continue;
+
+    auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
+
+    rootObject->updateNodesAnimationData(animName, animTime);
+
+    auto meshMatrix        = rootObject->getMeshGlobalTransform();
+    auto inverseMeshMatrix = meshMatrix.inverse();
+
+    //---
+
+    for (const auto &pn : rootObject->getNodes()) {
+      auto &node = const_cast<CGeomNodeData &>(pn.second);
+
+      if (! node.isJoint())
+        continue;
+
+      nodeMatrices[node.index()] = node.calcNodeAnimMatrix(inverseMeshMatrix);
+    }
+  }
 }
 
 void
@@ -558,12 +679,16 @@ mousePressEvent(QMouseEvent *e)
   bool isShift   = (e->modifiers() & Qt::ShiftModifier);
 //bool isControl = (e->modifiers() & Qt::ControlModifier);
 
+  pressPixel_ = e->pos();
+  movePixel_  = pressPixel_;
+
   if (e->button() == Qt::LeftButton) {
     if      (mouseType() == CQCamera3DMouseType::CAMERA) {
       setCameraPosition(e->x(), e->y(), isShift);
     }
     else if (mouseType() == CQCamera3DMouseType::OBJECT) {
-      selectObject(e->x(), e->y());
+      rubberBand_->setBounds(pressPixel_, movePixel_);
+      rubberBand_->show();
     }
     else if (mouseType() == CQCamera3DMouseType::LIGHT) {
       setLightPosition(e->x(), e->y(), isShift);
@@ -576,8 +701,24 @@ mousePressEvent(QMouseEvent *e)
 
 void
 CQCamera3DOverview::
-mouseReleaseEvent(QMouseEvent *)
+mouseReleaseEvent(QMouseEvent *e)
 {
+  movePixel_ = e->pos();
+
+  if (mouseButton_ == Qt::LeftButton) {
+    if (mouseType() == CQCamera3DMouseType::OBJECT) {
+      int dx = std::abs(pressPixel_.x() - movePixel_.x());
+      int dy = std::abs(pressPixel_.y() - movePixel_.y());
+
+      if (dx < 4 && dy < 4)
+        selectObjectAt(pressPixel_);
+      else
+        selectObjectIn(pressPixel_, rubberBand_->bounds());
+
+      rubberBand_->hide();
+    }
+  }
+
   pressed_ = false;
 }
 
@@ -588,6 +729,8 @@ mouseMoveEvent(QMouseEvent *e)
   int x = e->x();
   int y = e->y();
 
+  movePixel_ = e->pos();
+
   bool isShift   = (e->modifiers() & Qt::ShiftModifier);
 //bool isControl = (e->modifiers() & Qt::ControlModifier);
 
@@ -597,9 +740,10 @@ mouseMoveEvent(QMouseEvent *e)
         setCameraPosition(x, y, isShift);
       }
       else if (mouseType() == CQCamera3DMouseType::OBJECT) {
+        rubberBand_->setBounds(pressPixel_, movePixel_);
       }
       else if (mouseType() == CQCamera3DMouseType::LIGHT) {
-        setLightPosition(e->x(), e->y(), isShift);
+        setLightPosition(x, y, isShift);
       }
     }
   }
@@ -629,7 +773,7 @@ CQCamera3DOverview::
 keyPressEvent(QKeyEvent *e)
 {
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   auto k = e->key();
 
@@ -669,41 +813,99 @@ keyPressEvent(QKeyEvent *e)
 
 void
 CQCamera3DOverview::
-selectObject(int x, int y)
+selectObjectAt(const QPoint &p)
 {
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   auto pos = camera->position();
 
-  CPoint2D p;
+  CPoint2D p1;
 
-  if (pressRange(xrange_, x, y, p))
-    selectObjectXY(CPoint3D(p.x, p.y, pos.z())); // XY
-  if (pressRange(yrange_, x, y, p))
-    selectObjectZY(CPoint3D(pos.x(), p.y, p.x)); // ZY
-  if (pressRange(zrange_, x, y, p))
-    selectObjectXZ(CPoint3D(p.x, pos.y(), p.y)); // XZ
+  if      (pressRange(xrange_, p.x(), p.y(), p1))
+    selectObjectAt1(ViewType::XY, CPoint3D(p1.x, p1.y, pos.z())); // XY
+  else if (pressRange(yrange_, p.x(), p.y(), p1))
+    selectObjectAt1(ViewType::ZY, CPoint3D(pos.x(), p1.y, p1.x)); // ZY
+  else if (pressRange(zrange_, p.x(), p.y(), p1))
+    selectObjectAt1(ViewType::XZ, CPoint3D(p1.x, pos.y(), p1.y)); // XZ
 }
 
 void
 CQCamera3DOverview::
-selectObjectXY(const CPoint3D &p)
+selectObjectIn(const QPoint &p, const QRect &r)
 {
   auto *canvas = app_->canvas();
 
-  QPointF p1(p.x, p.y);
+  ViewType viewType { ViewType::NONE };
+
+  CPoint2D p1;
+
+  if      (pressRange(xrange_, p.x(), p.y(), p1))
+    viewType = ViewType::XY;
+  else if (pressRange(yrange_, p.x(), p.y(), p1))
+    viewType = ViewType::ZY;
+  else if (pressRange(zrange_, p.x(), p.y(), p1))
+    viewType = ViewType::XZ;
+  else
+    return;
+
+  auto pr1 = pixelToView(viewType, r.topLeft    ());
+  auto pr2 = pixelToView(viewType, r.bottomRight());
+
+  auto r1 = QRectF(QPointF(pr1.x, pr1.y), QPointF(pr2.x, pr2.y)).normalized();
+
+  auto selectType = this->selectType();
+
+  if      (selectType == SelectType::OBJECT) {
+  }
+  else if (selectType == SelectType::FACE) {
+  }
+  else if (selectType == SelectType::EDGE) {
+  }
+  else if (selectType == SelectType::POINT) {
+    CQCamera3DCanvas::ObjectSelectInds selectInds;
+
+    for (const auto &faceData : faces_) {
+      int i = 0;
+
+      for (const auto &pf : faceData.points) {
+        auto pf1 = viewQPoint(viewType, pf);
+
+        if (r1.contains(pf1)) {
+          auto vInd = faceData.face->getVertex(i);
+
+          selectInds[faceData.face->getObject()].insert(vInd);
+        }
+
+        ++i;
+      }
+    }
+
+    canvas->selectVertices(selectInds);
+  }
+}
+
+void
+CQCamera3DOverview::
+selectObjectAt1(ViewType viewType, const CPoint3D &p)
+{
+  auto *canvas = app_->canvas();
+
+  auto p1 = viewQPoint(viewType, p);
 
   std::map<double, CGeomFace3D *> faces;
 
-  for (const auto &face : faces_) {
+  for (const auto &faceData : faces_) {
     QPolygonF poly;
 
-    for (const auto &p : face.points)
-      poly.push_back(QPointF(p.x, p.y));
+    for (const auto &pf : faceData.points) {
+      auto pf1 = viewQPoint(viewType, pf);
+
+      poly.push_back(pf1);
+    }
 
     if (poly.containsPoint(p1, Qt::WindingFill))
-      faces[polygonArea(poly)] = face.face;
+      faces[polygonArea(poly)] = faceData.face;
   }
 
   if (faces.empty()) {
@@ -711,84 +913,97 @@ selectObjectXY(const CPoint3D &p)
     return;
   }
 
-  auto selectType = canvas->selectType();
+  auto selectType = this->selectType();
 
   auto *face = faces.begin()->second;
 
-  if      (selectType == CQCamera3DCanvas::SelectType::OBJECT)
+  if      (selectType == SelectType::OBJECT) {
     canvas->selectObject(face->getObject());
-  else if (selectType == CQCamera3DCanvas::SelectType::FACE)
+  }
+  else if (selectType == SelectType::FACE) {
     canvas->selectFace(face);
+  }
+  else if (selectType == SelectType::EDGE) {
+  }
+  else if (selectType == SelectType::POINT) {
+    auto pm = viewPoint(viewType, p);
+
+    int    minInd  = -1;
+    double minDist = 0.0;
+
+    face = nullptr;
+
+    for (const auto &faceData : faces_) {
+      int i = 0;
+
+      for (const auto &pf : faceData.points) {
+        auto pf1 = viewPoint(viewType, pf);
+
+        auto d = pf1.distanceTo(pm);
+
+        if (! face || d < minDist) {
+          face    = faceData.face;
+          minInd  = i;
+          minDist = d;
+        }
+
+        ++i;
+      }
+    }
+
+    auto  vInd = face->getVertex(minInd);
+    auto &v    = face->getObject()->getVertex(vInd);
+
+    canvas->selectVertex(&v);
+  }
 }
 
-void
+CPoint2D
 CQCamera3DOverview::
-selectObjectZY(const CPoint3D &p)
+pixelToView(ViewType viewType, const QPointF &p) const
 {
-  auto *canvas = app_->canvas();
+  CPoint2D p1;
 
-  QPointF p1(p.z, p.y);
-
-  std::map<double, CGeomFace3D *> faces;
-
-  for (const auto &face : faces_) {
-    QPolygonF poly;
-
-    for (const auto &p : face.points)
-      poly.push_back(QPointF(p.z, p.y));
-
-    if (poly.containsPoint(p1, Qt::WindingFill))
-      faces[polygonArea(poly)] = face.face;
+  if      (viewType == ViewType::XY) {
+    (void) pressRange(xrange_, p.x(), p.y(), p1);
   }
-
-  if (faces.empty()) {
-    canvas->deselectAll();
-    return;
+  else if (viewType == ViewType::ZY) {
+    (void) pressRange(yrange_, p.x(), p.y(), p1);
   }
+  else if (viewType == ViewType::XZ) {
+    (void) pressRange(zrange_, p.x(), p.y(), p1);
+  }
+  else
+    assert(false);
 
-  auto selectType = canvas->selectType();
-
-  auto *face = faces.begin()->second;
-
-  if      (selectType == CQCamera3DCanvas::SelectType::OBJECT)
-    canvas->selectObject(face->getObject());
-  else if (selectType == CQCamera3DCanvas::SelectType::FACE)
-    canvas->selectFace(face);
+  return p1;
 }
 
-void
+QPointF
 CQCamera3DOverview::
-selectObjectXZ(const CPoint3D &p)
+viewQPoint(ViewType viewType, const CPoint3D &p) const
 {
-  auto *canvas = app_->canvas();
+  auto p1 = viewPoint(viewType, p);
 
-  QPointF p1(p.x, p.z);
+  return QPointF(p1.x, p1.y);
+}
 
-  std::map<double, CGeomFace3D *> faces;
+CPoint2D
+CQCamera3DOverview::
+viewPoint(ViewType viewType, const CPoint3D &p) const
+{
+  CPoint2D p1;
 
-  for (const auto &face : faces_) {
-    QPolygonF poly;
+  if      (viewType == ViewType::XY)
+    p1 = CPoint2D(p.x, p.y);
+  else if (viewType == ViewType::ZY)
+    p1 = CPoint2D(p.z, p.y);
+  else if (viewType == ViewType::XZ)
+    p1 = CPoint2D(p.x, p.z);
+  else
+    assert(false);
 
-    for (const auto &p : face.points)
-      poly.push_back(QPointF(p.x, p.z));
-
-    if (poly.containsPoint(p1, Qt::WindingFill))
-      faces[polygonArea(poly)] = face.face;
-  }
-
-  if (faces.empty()) {
-    canvas->deselectAll();
-    return;
-  }
-
-  auto selectType = canvas->selectType();
-
-  auto *face = faces.begin()->second;
-
-  if      (selectType == CQCamera3DCanvas::SelectType::OBJECT)
-    canvas->selectObject(face->getObject());
-  else if (selectType == CQCamera3DCanvas::SelectType::FACE)
-    canvas->selectFace(face);
+  return p1;
 }
 
 void
@@ -796,7 +1011,7 @@ CQCamera3DOverview::
 setCameraPosition(int x, int y, bool setOrigin)
 {
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   auto pos = camera->position();
 

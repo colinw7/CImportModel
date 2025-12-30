@@ -5,9 +5,9 @@
 
 class CQCamera3DCanvas;
 
+class CQTreeWidget;
 class CGeomObject3D;
 
-class QTreeWidget;
 class QTreeWidgetItem;
 
 class CQCamera3DObjectsList : public QFrame {
@@ -39,7 +39,7 @@ class CQCamera3DObjectsList : public QFrame {
   using ObjectItem = std::map<CGeomObject3D *, QTreeWidgetItem *>;
 
   CQCamera3DCanvas* canvas_      { nullptr };
-  QTreeWidget*      tree_        { nullptr };
+  CQTreeWidget*     tree_        { nullptr };
   ObjectItem        objectItem_;
   int               selectedInd_ { -1 };
 };

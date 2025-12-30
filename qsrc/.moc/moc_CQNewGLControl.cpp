@@ -1071,8 +1071,8 @@ int CQNewGLAxesControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     return _id;
 }
 struct qt_meta_stringdata_CQNewGLObjectsControl_t {
-    QByteArrayData data[24];
-    char stringdata0[303];
+    QByteArrayData data[23];
+    char stringdata0[285];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -1084,36 +1084,35 @@ static const qt_meta_stringdata_CQNewGLObjectsControl_t qt_meta_stringdata_CQNew
 QT_MOC_LITERAL(0, 0, 21), // "CQNewGLObjectsControl"
 QT_MOC_LITERAL(1, 22, 13), // "updateWidgets"
 QT_MOC_LITERAL(2, 36, 0), // ""
-QT_MOC_LITERAL(3, 37, 17), // "updateModelMatrix"
-QT_MOC_LITERAL(4, 55, 18), // "objectSelectedSlot"
-QT_MOC_LITERAL(5, 74, 10), // "selectSlot"
-QT_MOC_LITERAL(6, 85, 12), // "deselectSlot"
-QT_MOC_LITERAL(7, 98, 8), // "showSlot"
-QT_MOC_LITERAL(8, 107, 8), // "hideSlot"
-QT_MOC_LITERAL(9, 116, 11), // "currentSlot"
-QT_MOC_LITERAL(10, 128, 9), // "solidSlot"
-QT_MOC_LITERAL(11, 138, 13), // "wireframeSlot"
-QT_MOC_LITERAL(12, 152, 10), // "flipYZSlot"
-QT_MOC_LITERAL(13, 163, 15), // "invertDepthSlot"
-QT_MOC_LITERAL(14, 179, 10), // "centerSlot"
-QT_MOC_LITERAL(15, 190, 8), // "sizeSlot"
-QT_MOC_LITERAL(16, 199, 13), // "translateSlot"
-QT_MOC_LITERAL(17, 213, 10), // "rotateSlot"
-QT_MOC_LITERAL(18, 224, 14), // "diffuseMapSlot"
-QT_MOC_LITERAL(19, 239, 13), // "normalMapSlot"
-QT_MOC_LITERAL(20, 253, 15), // "specularMapSlot"
-QT_MOC_LITERAL(21, 269, 15), // "emissiveMapSlot"
-QT_MOC_LITERAL(22, 285, 7), // "addSlot"
-QT_MOC_LITERAL(23, 293, 9) // "resetSlot"
+QT_MOC_LITERAL(3, 37, 18), // "objectSelectedSlot"
+QT_MOC_LITERAL(4, 56, 10), // "selectSlot"
+QT_MOC_LITERAL(5, 67, 12), // "deselectSlot"
+QT_MOC_LITERAL(6, 80, 8), // "showSlot"
+QT_MOC_LITERAL(7, 89, 8), // "hideSlot"
+QT_MOC_LITERAL(8, 98, 11), // "currentSlot"
+QT_MOC_LITERAL(9, 110, 9), // "solidSlot"
+QT_MOC_LITERAL(10, 120, 13), // "wireframeSlot"
+QT_MOC_LITERAL(11, 134, 10), // "flipYZSlot"
+QT_MOC_LITERAL(12, 145, 15), // "invertDepthSlot"
+QT_MOC_LITERAL(13, 161, 10), // "centerSlot"
+QT_MOC_LITERAL(14, 172, 8), // "sizeSlot"
+QT_MOC_LITERAL(15, 181, 13), // "translateSlot"
+QT_MOC_LITERAL(16, 195, 10), // "rotateSlot"
+QT_MOC_LITERAL(17, 206, 14), // "diffuseMapSlot"
+QT_MOC_LITERAL(18, 221, 13), // "normalMapSlot"
+QT_MOC_LITERAL(19, 235, 15), // "specularMapSlot"
+QT_MOC_LITERAL(20, 251, 15), // "emissiveMapSlot"
+QT_MOC_LITERAL(21, 267, 7), // "addSlot"
+QT_MOC_LITERAL(22, 275, 9) // "resetSlot"
 
     },
     "CQNewGLObjectsControl\0updateWidgets\0"
-    "\0updateModelMatrix\0objectSelectedSlot\0"
-    "selectSlot\0deselectSlot\0showSlot\0"
-    "hideSlot\0currentSlot\0solidSlot\0"
-    "wireframeSlot\0flipYZSlot\0invertDepthSlot\0"
-    "centerSlot\0sizeSlot\0translateSlot\0"
-    "rotateSlot\0diffuseMapSlot\0normalMapSlot\0"
+    "\0objectSelectedSlot\0selectSlot\0"
+    "deselectSlot\0showSlot\0hideSlot\0"
+    "currentSlot\0solidSlot\0wireframeSlot\0"
+    "flipYZSlot\0invertDepthSlot\0centerSlot\0"
+    "sizeSlot\0translateSlot\0rotateSlot\0"
+    "diffuseMapSlot\0normalMapSlot\0"
     "specularMapSlot\0emissiveMapSlot\0addSlot\0"
     "resetSlot"
 };
@@ -1125,7 +1124,7 @@ static const uint qt_meta_data_CQNewGLObjectsControl[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      22,   14, // methods
+      21,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -1133,31 +1132,29 @@ static const uint qt_meta_data_CQNewGLObjectsControl[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,  124,    2, 0x0a /* Public */,
-       3,    0,  125,    2, 0x08 /* Private */,
-       4,    0,  126,    2, 0x08 /* Private */,
-       5,    0,  127,    2, 0x08 /* Private */,
-       6,    0,  128,    2, 0x08 /* Private */,
-       7,    0,  129,    2, 0x08 /* Private */,
-       8,    0,  130,    2, 0x08 /* Private */,
-       9,    0,  131,    2, 0x08 /* Private */,
-      10,    1,  132,    2, 0x08 /* Private */,
-      11,    1,  135,    2, 0x08 /* Private */,
-      12,    1,  138,    2, 0x08 /* Private */,
-      13,    1,  141,    2, 0x08 /* Private */,
-      14,    0,  144,    2, 0x08 /* Private */,
-      15,    0,  145,    2, 0x08 /* Private */,
-      16,    0,  146,    2, 0x08 /* Private */,
-      17,    0,  147,    2, 0x08 /* Private */,
-      18,    0,  148,    2, 0x08 /* Private */,
-      19,    0,  149,    2, 0x08 /* Private */,
-      20,    0,  150,    2, 0x08 /* Private */,
-      21,    0,  151,    2, 0x08 /* Private */,
-      22,    0,  152,    2, 0x08 /* Private */,
-      23,    0,  153,    2, 0x08 /* Private */,
+       1,    0,  119,    2, 0x0a /* Public */,
+       3,    0,  120,    2, 0x08 /* Private */,
+       4,    0,  121,    2, 0x08 /* Private */,
+       5,    0,  122,    2, 0x08 /* Private */,
+       6,    0,  123,    2, 0x08 /* Private */,
+       7,    0,  124,    2, 0x08 /* Private */,
+       8,    0,  125,    2, 0x08 /* Private */,
+       9,    1,  126,    2, 0x08 /* Private */,
+      10,    1,  129,    2, 0x08 /* Private */,
+      11,    1,  132,    2, 0x08 /* Private */,
+      12,    1,  135,    2, 0x08 /* Private */,
+      13,    0,  138,    2, 0x08 /* Private */,
+      14,    0,  139,    2, 0x08 /* Private */,
+      15,    0,  140,    2, 0x08 /* Private */,
+      16,    0,  141,    2, 0x08 /* Private */,
+      17,    0,  142,    2, 0x08 /* Private */,
+      18,    0,  143,    2, 0x08 /* Private */,
+      19,    0,  144,    2, 0x08 /* Private */,
+      20,    0,  145,    2, 0x08 /* Private */,
+      21,    0,  146,    2, 0x08 /* Private */,
+      22,    0,  147,    2, 0x08 /* Private */,
 
  // slots: parameters
-    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -1190,27 +1187,26 @@ void CQNewGLObjectsControl::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         (void)_t;
         switch (_id) {
         case 0: _t->updateWidgets(); break;
-        case 1: _t->updateModelMatrix(); break;
-        case 2: _t->objectSelectedSlot(); break;
-        case 3: _t->selectSlot(); break;
-        case 4: _t->deselectSlot(); break;
-        case 5: _t->showSlot(); break;
-        case 6: _t->hideSlot(); break;
-        case 7: _t->currentSlot(); break;
-        case 8: _t->solidSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 9: _t->wireframeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 10: _t->flipYZSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 11: _t->invertDepthSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 12: _t->centerSlot(); break;
-        case 13: _t->sizeSlot(); break;
-        case 14: _t->translateSlot(); break;
-        case 15: _t->rotateSlot(); break;
-        case 16: _t->diffuseMapSlot(); break;
-        case 17: _t->normalMapSlot(); break;
-        case 18: _t->specularMapSlot(); break;
-        case 19: _t->emissiveMapSlot(); break;
-        case 20: _t->addSlot(); break;
-        case 21: _t->resetSlot(); break;
+        case 1: _t->objectSelectedSlot(); break;
+        case 2: _t->selectSlot(); break;
+        case 3: _t->deselectSlot(); break;
+        case 4: _t->showSlot(); break;
+        case 5: _t->hideSlot(); break;
+        case 6: _t->currentSlot(); break;
+        case 7: _t->solidSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 8: _t->wireframeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 9: _t->flipYZSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 10: _t->invertDepthSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 11: _t->centerSlot(); break;
+        case 12: _t->sizeSlot(); break;
+        case 13: _t->translateSlot(); break;
+        case 14: _t->rotateSlot(); break;
+        case 15: _t->diffuseMapSlot(); break;
+        case 16: _t->normalMapSlot(); break;
+        case 17: _t->specularMapSlot(); break;
+        case 18: _t->emissiveMapSlot(); break;
+        case 19: _t->addSlot(); break;
+        case 20: _t->resetSlot(); break;
         default: ;
         }
     }
@@ -1245,13 +1241,13 @@ int CQNewGLObjectsControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 22)
+        if (_id < 21)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 22;
+        _id -= 21;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 22)
+        if (_id < 21)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 22;
+        _id -= 21;
     }
     return _id;
 }

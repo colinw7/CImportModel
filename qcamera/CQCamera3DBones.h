@@ -13,6 +13,7 @@
 
 class CQCamera3DApp;
 class CGeomFace3D;
+class CGeomNodeData;
 class CVector3D;
 
 class CQCamera3DBones : public QFrame {
@@ -34,7 +35,16 @@ class CQCamera3DBones : public QFrame {
   void setEqualScale(bool b) { equalScale_ = b; updateRange(); }
 
   bool isShowModel() const { return showModel_; }
-  void setShowModel(bool b) { showModel_ = b; }
+  void setShowModel(bool b) { showModel_ = b; update(); }
+
+  bool isShowBoneNodes() const { return showBoneNodes_; }
+  void setShowBoneNodes(bool b) { showBoneNodes_ = b; update(); }
+
+  bool isShowPointJoints() const { return showPointJoints_; }
+  void setShowPointJoints(bool b) { showPointJoints_ = b; update(); }
+
+  bool isOnlyJoints() const { return onlyJoints_; }
+  void setOnlyJoints(bool b) { onlyJoints_ = b; update(); }
 
   //---
 
@@ -74,7 +84,17 @@ class CQCamera3DBones : public QFrame {
 
   bool pressRange(const CDisplayRange2D &range, int x, int y, CPoint2D &p) const;
 
+  CMatrix3D getNodeTransform(CGeomNodeData &nodeData) const;
+
  private:
+  using NodeMatrices       = std::map<int, CMatrix3D>;
+  using ObjectNodeMatrices = std::map<uint, NodeMatrices>;
+
+  using NodeCenters = std::map<uint, CPoint3D>;
+  using ObjectNodes = std::map<uint, NodeCenters>;
+
+  //---
+
   CQCamera3DApp* app_ { nullptr };
 
   CDisplayRange2D xrange_;
@@ -86,7 +106,10 @@ class CQCamera3DBones : public QFrame {
 
   bool equalScale_ { true };
 
-  bool showModel_ { true };
+  bool showModel_       { false };
+  bool showBoneNodes_   { false };
+  bool showPointJoints_ { false };
+  bool onlyJoints_      { false };
 
   bool pressed_     { false };
   int  mouseButton_ { 0 };
@@ -102,17 +125,12 @@ class CQCamera3DBones : public QFrame {
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
 
-  using NodeMatrices       = std::map<int, CMatrix3D>;
-  using ObjectNodeMatrices = std::map<uint, NodeMatrices>;
-
   std::string animName_;
   double      animTime_ { 0.0 };
   bool        useAnim_  { false };
 
   ObjectNodeMatrices objectNodeMatrices_;
 
-  using NodeCenters = std::map<uint, CPoint3D>;
-  using ObjectNodes = std::map<uint, NodeCenters>;
 
   ObjectNodes objectNodes_;
 };

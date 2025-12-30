@@ -2215,9 +2215,6 @@ void
 CQNewGLObjectsControl::
 connectSlots(bool b)
 {
-  CQUtil::connectDisconnect(b, canvas(), SIGNAL(modelMatrixChanged()),
-                            this, SLOT(updateModelMatrix()));
-
   CQUtil::connectDisconnect(b, objectsList_, SIGNAL(currentItemChanged()),
                             this, SLOT(objectSelectedSlot()));
 
@@ -2255,23 +2252,6 @@ connectSlots(bool b)
                             this, SLOT(specularMapSlot()));
   CQUtil::connectDisconnect(b, emissiveTextureEdit_, SIGNAL(textureChanged()),
                             this, SLOT(emissiveMapSlot()));
-}
-
-void
-CQNewGLObjectsControl::
-updateModelMatrix()
-{
-  connectSlots(false);
-
-#if 0
-  auto tv = canvas()->modelTranslate();
-  auto rv = canvas()->modelRotate();
-
-  translateEdit_->setValue(CPoint3D(tv.x(), tv.y(), tv.z()));
-  rotateEdit_   ->setValue(CPoint3D(rv.x(), rv.y(), rv.z()));
-#endif
-
-  connectSlots(true);
 }
 
 void
@@ -2354,10 +2334,6 @@ updateSelected(int ind)
   //---
 
   connectSlots(true);
-
-  //---
-
-  updateModelMatrix();
 }
 
 void

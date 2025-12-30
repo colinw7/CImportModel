@@ -415,6 +415,9 @@ class CImportGLTF : public CImportBase {
     long                 camera { -1 }; // "camera"
     std::vector<IndName> children;      // "children"
 
+    // order in skins
+    int order { -1 };
+
     // inverseBindMatrix from skins
     OptMat4 inverseBindMatrix;
 

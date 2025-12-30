@@ -186,7 +186,7 @@ main(int argc, char **argv)
     }
   }
 
-  modelApp->resize(canvas->windowWidth(), canvas->windowHeight());
+  modelApp->resize(canvas->pixelWidth(), canvas->pixelHeight());
 
   canvas->setInitTextures(initTextures);
 

@@ -561,7 +561,6 @@ class CQNewGLObjectsControl : public CQNewGLControlFrame {
   void updateSelected(int ind);
 
  private Q_SLOTS:
-  void updateModelMatrix();
   void objectSelectedSlot();
 
   void selectSlot();

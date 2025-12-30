@@ -72,13 +72,17 @@ void
 CQCamera3DOverlay2D::
 drawGeometry()
 {
+  glDisable(GL_DEPTH_TEST);
+
+  //---
+
   auto *program = shaderProgram();
 
   program->bind();
 
   //---
 
-  auto *camera = canvas_->currentCamera();
+  auto *camera = canvas_->getCurrentCamera();
 
   // camera projection
   auto projectionMatrix = camera->perspectiveMatrix();

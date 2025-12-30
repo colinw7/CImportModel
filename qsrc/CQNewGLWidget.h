@@ -61,11 +61,14 @@ class CQNewGLWidget : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
-  int windowWidth() const { return windowWidth_; }
-  void setWindowWidth(int i) { windowWidth_ = i; }
+  int pixelWidth() const { return pixelWidth_; }
+  void setPixelWidth(int i) { pixelWidth_ = i; }
 
-  int windowHeight() const { return windowHeight_; }
-  void setWindowHeight(int i) { windowHeight_ = i; }
+  int pixelHeight() const { return pixelHeight_; }
+  void setPixelHeight(int i) { pixelHeight_ = i; }
+
+  double aspect() const { return aspect_; }
+  void setAspect(double r) { aspect_ = r; }
 
   //---
 
@@ -137,8 +140,10 @@ class CQNewGLWidget : public QGLWidget, public QOpenGLExtraFunctions {
   // textures
   GLTextures glTextures_;
 
-  int windowWidth_  { 2000 };
-  int windowHeight_ { 1500 };
+  int pixelWidth_  { 2000 };
+  int pixelHeight_ { 1500 };
+
+  double aspect_ { 1.0 };
 
   bool blend_ { false };
 };

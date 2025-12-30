@@ -199,17 +199,33 @@ CQCamera3DControl(CQCamera3DApp *app) :
 {
   setObjectName("control");
 
-  auto *canvas = app_->canvas();
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   //---
 
-  setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+  auto *canvas = app_->canvas();
+
+  //---
 
   auto *layout = new QVBoxLayout(this);
 
   //---
 
   QBoxLayout *currentLayout = nullptr;
+
+  std::vector<QBoxLayout *> layoutStack;
+
+  auto startLayout = [&](QBoxLayout *layout) {
+    layoutStack.push_back(currentLayout);
+
+    currentLayout = layout;
+  };
+
+  auto endLayout = [&]() {
+    currentLayout = layoutStack.back();
+
+    layoutStack.pop_back();
+  };
 
   auto addLabelEdit = [&](const QString &label, auto *w) {
     auto *frame = new QFrame;
@@ -238,8 +254,6 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   //---
 
-  std::vector<QBoxLayout *> layoutStack;
-
   auto startGroup = [&](const QString &name, bool horizontal=false) {
     auto *group = new QGroupBox(name);
 
@@ -252,15 +266,11 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
     currentLayout->addWidget(group);
 
-    layoutStack.push_back(currentLayout);
-
-    currentLayout = layout;
+    startLayout(layout);
   };
 
   auto endGroup = [&]() {
-    currentLayout = layoutStack.back();
-
-    layoutStack.pop_back();
+    endLayout();
   };
 
   auto startFrame = [&](bool horizontal=false) {
@@ -275,15 +285,11 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
     currentLayout->addWidget(frame);
 
-    layoutStack.push_back(currentLayout);
-
-    currentLayout = layout;
+    startLayout(layout);
   };
 
   auto endFrame = [&]() {
-    currentLayout = layoutStack.back();
-
-    layoutStack.pop_back();
+    endLayout();
   };
 
   //---
@@ -330,6 +336,10 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   showWireframeCheck_ = addCheck("Wireframe");
   showSolidCheck_     = addCheck("Solid");
+  showPointsCheck_    = addCheck("Points");
+
+  pointSizeEdit_ = addLabelEdit("Point Size", new CQRealSpin);
+  lineWidthEdit_ = addLabelEdit("Line Width", new CQRealSpin);
 
   endGroup();
 
@@ -584,20 +594,49 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   //---
 
-  startGroup("Transform");
+  QTabWidget *currentTab = nullptr;
 
-  selectionData_.matrixEdit = new CQMatrix3D;
-  selectionLayout->addWidget(selectionData_.matrixEdit);
+  auto startTab = [&](const QString &name) {
+    currentTab = CQUtil::makeWidget<QTabWidget>(name);
+
+    currentLayout->addWidget(currentTab);
+  };
+
+  auto endTab = [&]() {
+    currentTab = nullptr;
+  };
+
+  auto startTabPage = [&](const QString &name) {
+    auto *page   = CQUtil::makeWidget<QFrame>(name);
+    auto *layout = new QVBoxLayout(page );
+
+    currentTab->addTab(page, name);
+
+    startLayout(layout);
+  };
+
+  auto endTabPage = [&]() {
+    endLayout();
+  };
+
+  startTab("objData");
+
+  startTabPage("Transform");
 
   selectionData_.translationEdit = addLabelEdit("Translation", new CQPoint3DEdit);
   selectionData_.rotationEdit    = addLabelEdit("Rotation"   , new CQPoint3DEdit);
   selectionData_.scaleEdit       = addLabelEdit("Scale"      , new CQPoint3DEdit);
 
-  endGroup();
+  selectionData_.matrixEdit = new CQMatrix3D;
+  currentLayout->addWidget(selectionData_.matrixEdit);
+
+  addStretch();
+
+  endTabPage();
 
   //---
 
-  startGroup("Textures");
+  startTabPage("Textures");
 
   selectionData_.diffuseTextureEdit =
     addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
@@ -625,11 +664,13 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   endFrame();
 
-  endGroup();
+  addStretch();
+
+  endTabPage();
 
   //---
 
-  startGroup("Material");
+  startTabPage("Material");
 
   selectionData_.materialNameEdit = addLabelEdit("Name", new QLineEdit);
 
@@ -643,11 +684,16 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   currentLayout->addWidget(loadMaterialMapButton);
   currentLayout->addWidget(saveMaterialMapButton);
-  currentLayout->addStretch(1);
+
+  addStretch();
 
   endFrame();
 
-  endGroup();
+  addStretch();
+
+  endTabPage();
+
+  endTab();
 
   //---
 
@@ -831,11 +877,11 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   overviewData_.equalScale = addLabelEdit("Equal Scale", new QCheckBox);
 
-  overviewData_.selectTypeCombo = addLabelEdit("Select", new QComboBox);
-  overviewData_.selectTypeCombo->addItems(selectTypeInd.names());
-
   overviewData_.mouseTypeCombo = addLabelEdit("Mouse", new QComboBox);
   overviewData_.mouseTypeCombo->addItems(mouseTypeInd.names());
+
+  overviewData_.selectTypeCombo = addLabelEdit("Select", new QComboBox);
+  overviewData_.selectTypeCombo->addItems(selectTypeInd.names());
 
   startGroup("Model");
 
@@ -904,11 +950,15 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   currentLayout = bonesTabLayout;
 
-  bonesData_.modelCheck = addLabelEdit("Show Model", new QCheckBox);
+  bonesData_.modelCheck     = addLabelEdit("Show Model", new QCheckBox);
+  bonesData_.boneNodesCheck = addLabelEdit("Show Bone Nodes", new QCheckBox);
+  bonesData_.pointJoints    = addLabelEdit("Show Point Joints", new QCheckBox);
 
   bonesData_.bonesList = new CQCamera3DBonesList(app_);
 
   currentLayout->addWidget(bonesData_.bonesList);
+
+  bonesData_.jointCheck = addLabelEdit("Joint", new QCheckBox);
 
   startGroup("Default");
 
@@ -1030,6 +1080,10 @@ updateWidgets()
   // General
   showWireframeCheck_->setChecked(canvas->isWireframe());
   showSolidCheck_    ->setChecked(canvas->isSolid());
+  showPointsCheck_   ->setChecked(canvas->isPoints());
+
+  pointSizeEdit_->setValue(canvas->pointSize());
+  lineWidthEdit_->setValue(canvas->lineWidth());
 
   showNormalsCheck_->setChecked(canvas->isShowNormals());
   normalsSizeEdit_ ->setValue(canvas->normalsSize());
@@ -1240,6 +1294,39 @@ updateWidgets()
       selectionData_.objectInfoText->setText(objStr);
     }
   }
+  else if (selectType == CQCamera3DSelectType::EDGE) {
+  }
+  else if (selectType == CQCamera3DSelectType::POINT) {
+    auto *vertex = canvas->currentVertex();
+
+    if (vertex) {
+      selectionData_.indLabel->setText(QString("%1").arg(vertex->getInd()));
+
+      selectionData_.visCheck->setChecked(vertex->isSelected());
+
+      auto *rootObject = vertex->getObject()->getRootObject();
+
+      const auto &jointData = vertex->getJointData();
+
+      QString objStr;
+
+      for (int i = 0; i < 4; ++i) {
+        const auto &jointNodeData = jointData.nodeDatas[i];
+
+        int nodeId = -1;
+
+        if (jointNodeData.node >= 0)
+          nodeId = rootObject->mapNodeIndex(jointNodeData.node);
+
+        if (nodeId >= 0) {
+          objStr += QString("Joint: %1(%2) %3\n").
+            arg(jointNodeData.node).arg(nodeId).arg(jointNodeData.weight);
+        }
+      }
+
+      selectionData_.objectInfoText->setText(objStr);
+    }
+  }
 
   // Materials
   materialsData_.materialList->updateMaterials();
@@ -1249,8 +1336,8 @@ updateWidgets()
 
   overviewData_.equalScale->setChecked(overview->isEqualScale());
 
-  overviewData_.selectTypeCombo->setCurrentIndex(selectTypeInd.typeToInd(overview->selectType()));
   overviewData_.mouseTypeCombo ->setCurrentIndex(mouseTypeInd .typeToInd(overview->mouseType ()));
+  overviewData_.selectTypeCombo->setCurrentIndex(selectTypeInd.typeToInd(overview->selectType()));
 
   overviewData_.modelTypeCombo->setCurrentIndex(
     overviewModelTypeInd.typeToInd(overview->modelType()));
@@ -1261,7 +1348,9 @@ updateWidgets()
   // Bones
   auto *bones = app_->bones();
 
-  bonesData_.modelCheck->setChecked(bones->isShowModel());
+  bonesData_.modelCheck    ->setChecked(bones->isShowModel());
+  bonesData_.boneNodesCheck->setChecked(bones->isShowBoneNodes());
+  bonesData_.pointJoints   ->setChecked(bones->isShowPointJoints());
 
   // Animation
   animData_.timeEdit->setRange(animData_.animCombo->tmin(), animData_.animCombo->tmax());
@@ -1322,6 +1411,10 @@ connectSlots(bool b)
   // General
   connectCheckBox(showWireframeCheck_, SLOT(showWireframeSlot(int)));
   connectCheckBox(showSolidCheck_    , SLOT(showSolidSlot(int)));
+  connectCheckBox(showPointsCheck_   , SLOT(showPointsSlot(int)));
+
+  connectRealSpin(pointSizeEdit_, SLOT(pointSizeSlot(double)));
+  connectRealSpin(lineWidthEdit_, SLOT(lineWidthSlot(double)));
 
   connectCheckBox (showNormalsCheck_, SLOT(showNormalsSlot(int)));
   connectRealSpin (normalsSizeEdit_ , SLOT(normalsSizeSlot(double)));
@@ -1445,8 +1538,8 @@ connectSlots(bool b)
   // Overview
   connectCheckBox(overviewData_.equalScale, SLOT(overviewEqualScaleSlot(int)));
 
-  connectComboBox(overviewData_.selectTypeCombo, SLOT(overviewSelectTypeSlot(int)));
   connectComboBox(overviewData_.mouseTypeCombo , SLOT(overviewMouseTypeSlot(int)));
+  connectComboBox(overviewData_.selectTypeCombo, SLOT(overviewSelectTypeSlot(int)));
 
   connectComboBox(overviewData_.modelTypeCombo, SLOT(overviewModelTypeSlot(int)));
 
@@ -1457,7 +1550,9 @@ connectSlots(bool b)
   connectComboBox(uvData_.typeCombo, SLOT(uvTextureTypeSlot(int)));
 
   // Bones
-  connectCheckBox(bonesData_.modelCheck, SLOT(bonesModelSlot(int)));
+  connectCheckBox(bonesData_.modelCheck    , SLOT(bonesModelSlot(int)));
+  connectCheckBox(bonesData_.boneNodesCheck, SLOT(bonesBoneNodeSlot(int)));
+  connectCheckBox(bonesData_.pointJoints   , SLOT(bonesPointJointsSlot(int)));
 
   CQUtil::connectDisconnect(b, canvas, SIGNAL(objectsChanged()),
                             bonesData_.bonesList, SLOT(updateWidgets()));
@@ -1511,6 +1606,39 @@ showSolidSlot(int i)
   auto *canvas = app_->canvas();
 
   canvas->setSolid(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+showPointsSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setPoints(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+pointSizeSlot(double r)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setPointSize(r);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+lineWidthSlot(double r)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setLineWidth(r);
 
   canvas->update();
 }
@@ -1639,6 +1767,14 @@ objectVisSlot(int i)
 
     if (face)
       face->setVisible(i);
+  }
+  else if (selectType == CQCamera3DSelectType::EDGE) {
+  }
+  else if (selectType == CQCamera3DSelectType::POINT) {
+    auto *vertex = canvas->currentVertex();
+
+    if (vertex)
+      vertex->setVisible(i);
   }
 
   updateObjects();
@@ -2004,6 +2140,10 @@ objectColorSlot(const QColor &c)
     if (face)
       face->setColor(QColorToRGBA(c));
   }
+  else if (selectType == CQCamera3DSelectType::EDGE) {
+  }
+  else if (selectType == CQCamera3DSelectType::POINT) {
+  }
 
   updateObjects();
 }
@@ -2193,7 +2333,7 @@ getCamera() const
 {
   auto *canvas = app_->canvas();
 
-  return canvas->currentCamera();
+  return canvas->getCurrentCamera();
 }
 
 void
@@ -3127,6 +3267,28 @@ bonesModelSlot(int i)
 
 void
 CQCamera3DControl::
+bonesBoneNodeSlot(int i)
+{
+  auto *bones = app_->bones();
+
+  bones->setShowBoneNodes(i);
+
+  bones->update();
+}
+
+void
+CQCamera3DControl::
+bonesPointJointsSlot(int i)
+{
+  auto *bones = app_->bones();
+
+  bones->setShowPointJoints(i);
+
+  bones->update();
+}
+
+void
+CQCamera3DControl::
 currentBoneSlot()
 {
   updateBones();
@@ -3138,6 +3300,8 @@ updateBones()
 {
   auto *node = bonesData_.bonesList->currentBoneNode();
   if (! node) return;
+
+  bonesData_.jointCheck->setChecked(node->isJoint());
 
   bonesData_.translationEdit->setValue(node->localTranslation().point());
   bonesData_.rotationEdit   ->setValue(node->localRotation   ().point());

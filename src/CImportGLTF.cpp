@@ -943,14 +943,18 @@ CImportGLTF::
 processSkins()
 {
   // set inverseBindMatrix for node
+  int is = 0;
+
   for (const auto &ps : jsonData_.skins) {
     const auto &skin = ps.second;
 
     auto *meshData = getMeshData(skin.inverseBindMatrices);
     if (! meshData) continue;
 
-    if (isDebug())
+    if (isDebug()) {
+      std::cerr << " Skin " << is << ": ";
       printMeshData(*meshData);
+    }
 
     size_t im = 0;
     auto   nm = meshData->mat4.size();
@@ -964,10 +968,13 @@ processSkins()
         continue;
 
       node->isJoint           = true;
+      node->order             = int(im);
       node->inverseBindMatrix = meshData->mat4[im];
 
       ++im;
     }
+
+    ++is;
   }
 }
 
@@ -1393,8 +1400,14 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
         for (size_t ic = 0; ic < node1->children.size(); ++ic)
           nodeData.setChild(uint(ic), int(node1->children[ic].ind));
 
-        if (! rootObject_->hasNode(int(ind)))
-          rootObject_->addNode(int(ind), nodeData);
+        auto ind1 = int(ind);
+
+        if (! rootObject_->hasNode(ind1))
+          rootObject_->addNode(ind1, nodeData);
+
+        auto &nodeData1 = rootObject_->editNode(ind1);
+
+        nodeData1.setIndex(node1->order);
 
         node1->added   = true;
         node1->skinned = true;
@@ -5540,5 +5553,5 @@ printSkin(const Skin &skin, const IndName &indName) const
     std::cerr << "\n";
   }
 
-  std::cerr << " name" << skin.name << "]\n";
+  std::cerr << "  name: '" << skin.name << "'\n";
 }

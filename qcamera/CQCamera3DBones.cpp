@@ -24,7 +24,7 @@ CQCamera3DBones(CQCamera3DApp *app) :
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
   connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
@@ -77,7 +77,7 @@ paintEvent(QPaintEvent *)
   //---
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   projectionMatrix_ = CMatrix3DH(camera->perspectiveMatrix());
   viewMatrix_       = CMatrix3DH(camera->viewMatrix());
@@ -177,6 +177,58 @@ void
 CQCamera3DBones::
 drawModel()
 {
+  struct JointNode {
+    CGeomObject3D* object { nullptr };
+    int            nodeId { -1 };
+  };
+
+  std::vector<JointNode      > selectedJointNodes;
+  std::vector<CGeomVertex3D *> selectedBoneVertices;
+
+  int currentBoneNode   = app_->currentBoneNode();
+  int currentBoneObject = app_->currentBoneObject();
+
+  //---
+
+  auto adjustAnimPoint = [&](const CGeomVertex3D &vertex, const CPoint3D &p,
+                             std::map<int, CMatrix3D> &nodeMatrices) {
+    const auto &jointData = vertex.getJointData();
+
+    struct NodeWeight {
+      int    nodeId { -1 };
+      double weight { 0.0 };
+    };
+
+    std::vector<NodeWeight> nodeWeights;
+
+    for (int i = 0; i < 4; ++i) {
+      if (jointData.nodeDatas[i].node >= 0) {
+        NodeWeight nodeWeight;
+
+        nodeWeight.nodeId = jointData.nodeDatas[i].node;
+        nodeWeight.weight = jointData.nodeDatas[i].weight;
+
+        nodeWeights.push_back(nodeWeight);
+      }
+    }
+
+    if (! nodeWeights.empty()) {
+      auto p1 = CPoint3D(0, 0, 0);
+
+      for (const auto &nodeWeight : nodeWeights) {
+        auto boneTransform = nodeMatrices[nodeWeight.nodeId];
+
+        p1 += nodeWeight.weight*(boneTransform*p);
+      }
+
+      return p1;
+    }
+    else
+      return p;
+  };
+
+  //---
+
   // draw model
   painter_->setPen(QColor(0, 0, 0, 32));
   painter_->setBrush(Qt::NoBrush);
@@ -191,6 +243,8 @@ drawModel()
     assert(object1);
 
     modelMatrix_ = CMatrix3DH(object1->getHierTransform());
+
+    //---
 
     auto &nodeMatrices = objectNodeMatrices_[object->getInd()];
 
@@ -217,37 +271,35 @@ drawModel()
 
         //---
 
-        if (useAnim_) {
-          const auto &jointData = vertex.getJointData();
+        if (useAnim_)
+          p = adjustAnimPoint(vertex, p, nodeMatrices);
 
-          struct NodeWeight {
-            int    nodeId { -1 };
-            double weight { 0.0 };
-          };
+        //---
 
-          std::vector<NodeWeight> nodeWeights;
+        auto *rootObject = vertex.getObject()->getRootObject();
 
-          for (int i = 0; i < 4; ++i) {
-            if (jointData.nodeDatas[i].node >= 0) {
-              NodeWeight nodeWeight;
+        const auto &jointData = vertex.getJointData();
 
-              nodeWeight.nodeId = jointData.nodeDatas[i].node;
-              nodeWeight.weight = jointData.nodeDatas[i].weight;
+        for (int i = 0; i < 4; ++i) {
+          const auto &jointNodeData = jointData.nodeDatas[i];
 
-              nodeWeights.push_back(nodeWeight);
+          int nodeId = -1;
+
+          if (jointNodeData.node >= 0)
+            nodeId = rootObject->mapNodeIndex(jointNodeData.node);
+
+          if (nodeId >= 0) {
+            JointNode jointNode;
+
+            jointNode.object = object;
+            jointNode.nodeId = nodeId;
+
+            if (vertex.isSelected())
+              selectedJointNodes.push_back(jointNode);
+
+            if (int(object->getInd()) == currentBoneObject && nodeId == currentBoneNode) {
+              selectedBoneVertices.push_back(const_cast<CGeomVertex3D *>(&vertex));
             }
-          }
-
-          if (! nodeWeights.empty()) {
-            auto p1 = CPoint3D(0, 0, 0);
-
-            for (const auto &nodeWeight : nodeWeights) {
-              auto boneTransform = nodeMatrices[nodeWeight.nodeId];
-
-              p1 += nodeWeight.weight*(boneTransform*p);
-            }
-
-            p = p1;
           }
         }
 
@@ -261,22 +313,56 @@ drawModel()
       drawPolygon(points);
     }
   }
+
+  //---
+
+  if (isShowPointJoints()) {
+    painter_->setPen(Qt::red);
+    painter_->setBrush(Qt::white);
+
+    for (auto &jointNode : selectedJointNodes) {
+      auto &node = jointNode.object->getRootObject()->getNode(jointNode.nodeId);
+
+      if (isOnlyJoints() && ! node.isJoint())
+        continue;
+
+      auto m = getNodeTransform(const_cast<CGeomNodeData &>(node));
+      auto c = m*CPoint3D(0.0, 0.0, 0.0);
+
+      drawCircle(CVector3D(c), 0.1);
+    }
+  }
+
+  //---
+
+  if (isShowBoneNodes()) {
+    painter_->setPen(Qt::green);
+    painter_->setBrush(Qt::white);
+
+    for (auto *v : selectedBoneVertices) {
+      const auto &model = v->getModel();
+
+      auto p = model;
+
+      if (useAnim_) {
+        auto *object = scene->getObjectP(currentBoneObject);
+
+        auto &nodeMatrices = objectNodeMatrices_[object->getInd()];
+
+        p = adjustAnimPoint(*v, p, nodeMatrices);
+      }
+
+      drawCircle(CVector3D(p), 0.1);
+    }
+  }
 }
 
 void
 CQCamera3DBones::
 drawBones()
 {
-  int currentBoneNode = app_->currentBoneNode();
-
-  auto getNodeTransform = [&](CGeomNodeData &nodeData) {
-    //return nodeData.inverseBindMatrix().inverse();
-
-    if (useAnim_)
-      return nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
-    else
-      return nodeData.object()->getNodeHierTransform(nodeData);
-  };
+  int currentBoneNode   = app_->currentBoneNode();
+  int currentBoneObject = app_->currentBoneObject();
 
   painter_->setPen(Qt::black);
 
@@ -303,19 +389,16 @@ drawBones()
 
     //---
 
-    const auto &nodeIds = rootObject->getNodeIds();
+    for (const auto &pn : rootObject->getNodes()) {
+      auto &node = const_cast<CGeomNodeData &>(pn.second);
 
-    for (const auto &nodeId : nodeIds) {
-      auto &node = const_cast<CGeomNodeData &>(rootObject->getNode(nodeId));
-      if (! node.isValid()) continue;
-
-      if (! node.isJoint())
+      if (isOnlyJoints() && ! node.isJoint())
         continue;
 
-      if (node.ind() == currentBoneNode)
-        painter_->setBrush(Qt::red);
-      else
-        painter_->setBrush(Qt::white);
+      bool isSelected =
+       (int(rootObject->getInd()) == currentBoneObject && node.ind() == currentBoneNode);
+
+      painter_->setBrush(isSelected ? Qt::red: Qt::white);
 
       //---
 
@@ -332,7 +415,7 @@ drawBones()
       if (node.parent() >= 0) {
         auto &pnode = const_cast<CGeomNodeData &>(rootObject->getNode(node.parent()));
 
-        if (pnode.isValid() && pnode.isJoint()) {
+        if (pnode.isValid() && (! isOnlyJoints() || pnode.isJoint())) {
           auto m1 = getNodeTransform(pnode);
           auto c1 = m1*CPoint3D(0.0, 0.0, 0.0);
 
@@ -596,7 +679,7 @@ keyPressEvent(QKeyEvent *)
 {
 #if 0
   auto *canvas = app_->canvas();
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   auto k = e->key();
 
@@ -729,4 +812,19 @@ pressRange(const CDisplayRange2D &range, int x, int y, CPoint2D &p) const
   p = CPoint2D(x1, y1);
 
   return true;
+}
+
+CMatrix3D
+CQCamera3DBones::
+getNodeTransform(CGeomNodeData &nodeData) const
+{
+#if 0
+  if (nodeData.isJoint())
+    return nodeData.inverseBindMatrix().inverse();
+#endif
+
+  if (useAnim_)
+    return nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
+  else
+    return nodeData.object()->getNodeHierTransform(nodeData);
 }

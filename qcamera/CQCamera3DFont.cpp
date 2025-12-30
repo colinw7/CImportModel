@@ -378,7 +378,7 @@ render(CQCamera3DCanvas *canvas)
 
   //---
 
-  auto *camera = canvas->currentCamera();
+  auto *camera = canvas->getCurrentCamera();
 
   // camera projection
   auto projectionMatrix = camera->perspectiveMatrix();

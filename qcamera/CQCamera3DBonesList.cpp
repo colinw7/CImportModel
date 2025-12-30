@@ -3,11 +3,11 @@
 #include <CQCamera3DApp.h>
 
 #include <CQUtil.h>
+#include <CQTreeWidget.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomNodeData.h>
 
-#include <QTreeWidget>
 #include <QVBoxLayout>
 #include <set>
 
@@ -21,7 +21,7 @@ CQCamera3DBonesList(CQCamera3DApp *app) :
 
   //--
 
-  tree_ = new QTreeWidget;
+  tree_ = new CQTreeWidget;
 
   tree_->setSelectionMode(QTreeWidget::SingleSelection);
 
@@ -58,10 +58,10 @@ updateWidgets()
   for (auto *object : rootObjects) {
     nodeItems_.clear();
 
-    const auto &nodeIds = object->getNodeIds();
+    for (const auto &pn : object->getNodes()) {
+      const auto &node = pn.second;
 
-    for (const auto &nodeId : nodeIds) {
-      createNodeItem(object, nodeId);
+      createNodeItem(object, node.ind());
     }
   }
 

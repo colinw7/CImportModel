@@ -59,7 +59,7 @@ CQCamera3DOverlay::
 drawGeometry()
 {
   glEnable(GL_CULL_FACE);
-
+  glDisable(GL_DEPTH_TEST);
   glFrontFace(GL_CCW);
 
   //---
@@ -79,7 +79,7 @@ drawGeometry()
 
   //---
 
-  auto *camera = canvas_->currentCamera();
+  auto *camera = canvas_->getCurrentCamera();
 
   // camera projection
   auto projectionMatrix = camera->perspectiveMatrix();
