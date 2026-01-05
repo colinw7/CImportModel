@@ -674,6 +674,7 @@ class CImportFBX : public CImportBase {
   struct TextureData;
   struct MaterialData;
   struct AnimationDeformerData;
+  struct AnimationCurveNodeData;
 
   using TextureList       = std::vector<TextureData *>;
   using TextureMap        = std::map<std::string, TextureData *>;
@@ -726,6 +727,8 @@ class CImportFBX : public CImportBase {
     AnimationDeformerData* deformerData { nullptr };
 
     CGeomObject3D* object { nullptr };
+
+    std::vector<AnimationDeformerData *> animationDeformers;
   };
 
   struct TRSData {
@@ -745,14 +748,15 @@ class CImportFBX : public CImportBase {
     TextureMap     textureMap;
     IdMaterialData materialData;
 
-    std::vector<AnimationDeformerData*> deformerData;
-
     ModelData*               parent { nullptr };
     std::vector<ModelData *> children;
 
     GeometryData* geometryData { nullptr };
 
     std::vector<GeometryData *> geometryDataList;
+
+    std::vector<AnimationCurveNodeData *> animationCurveNodes;
+    std::vector<AnimationDeformerData *>  animationDeformers;
   };
 
   struct VideoData;
@@ -851,6 +855,8 @@ class CImportFBX : public CImportBase {
 
   std::string getObjectName();
 
+  void printDeformer(AnimationDeformerData *deformer, int depth) const;
+
   void printMaterialData(MaterialData *materialData) const;
 
   void infoMsg(const std::string &msg) const;
@@ -917,6 +923,8 @@ class CImportFBX : public CImportBase {
     std::vector<float> keyValueFloat;
 
     AnimationCurveNodeData* animationCurveNode { nullptr };
+
+    std::vector<AnimationCurveNodeData *> animationCurveNodes;
   };
 
   struct AnimationCurveNodeData {
@@ -930,6 +938,7 @@ class CImportFBX : public CImportBase {
   struct AnimationDeformerData {
     std::string         name;
     std::string         type;
+    OptReal             accuracy;
     std::vector<int>    indexes;
     std::vector<double> weights;
 
@@ -941,8 +950,7 @@ class CImportFBX : public CImportBase {
   };
 
   struct AnimationLayerData {
-    std::string           name;
-    std::vector<CPoint3D> points;
+    std::string name;
 
     AnimationStackData*                   animationStack { nullptr };
     std::vector<AnimationCurveNodeData *> animationCurveNodes;

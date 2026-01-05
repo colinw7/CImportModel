@@ -16,8 +16,8 @@ struct CQCamera3DFaceData {
   int          len             { 0 };
   CPoint3D     position        { 0, 0, 0 };
   CQGLTexture *diffuseTexture  { nullptr };
-  CQGLTexture *specularTexture { nullptr };
   CQGLTexture *normalTexture   { nullptr };
+  CQGLTexture *specularTexture { nullptr };
   CQGLTexture *emissiveTexture { nullptr };
   CRGBA        ambient         { 0, 0, 0 };
   CRGBA        diffuse         { 1, 1, 1 };
@@ -34,7 +34,7 @@ struct CQCamera3DFaceDataList {
       faceDatas.push_back(faceData);
   }
 
-  int                          pos { 0 };
+  int                             pos { 0 };
   std::vector<CQCamera3DFaceData> faceDatas;
 };
 

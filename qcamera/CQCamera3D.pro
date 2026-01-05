@@ -15,7 +15,9 @@ QMAKE_CXXFLAGS += \
 MOC_DIR = .moc
 
 CONFIG += c++17
+CONFIG += debug
 CONFIG += silent
+CONFIG -= app_bundle
 
 SOURCES += \
 CQCamera3DAnnotation.cpp \
@@ -127,9 +129,9 @@ INCLUDEPATH += \
 ../../COS/include \
 
 PRE_TARGETDEPS = \
-$(LIB_DIR)/libCImportModel.a \
-$(LIB_DIR)/libCGeometry3D.a \
-$(LIB_DIR)/libCQUtil.a \
+../../CImportModel/lib/libCImportModel.a \
+../../CGeometry3D/lib/libCGeometry3D.a \
+../../CQUtil/lib/libCQUtil.a \
 
 unix:LIBS += \
 -L../lib \

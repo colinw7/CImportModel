@@ -1478,45 +1478,38 @@ readFileData(FileData &fileData)
 
   //---
 
-  if (! animationStackData_.empty()) {
-    std::cerr << "Animation Stacks\n";
-    for (const auto &pas : animationStackData_) {
-      auto *animationStack = pas.second;
+  if (isDebug()) {
+    if (! animationStackData_.empty()) {
+      std::cerr << "Animation Stacks\n";
+      for (const auto &pas : animationStackData_) {
+        auto *animationStack = pas.second;
 
-      std::cerr << " Anim: " << animationStack->name << "\n";
+        std::cerr << " Stack: " << animationStack->name << "\n";
 
-      for (auto *animationLayer : animationStack->animationLayers) {
-        std::cerr << "  Layer: " << animationLayer->name << "\n";
+        for (auto *animationLayer : animationStack->animationLayers) {
+          std::cerr << "  Layer: " << animationLayer->name << "\n";
 
-#if 0
-        for (auto *animationCurveNode : animationLayer->animationCurveNodes) {
-          std::cerr << "   Curve:" << animationCurveNode->type << " " <<
-                       animationCurveNode->p << "\n";
+          for (auto *animationCurveNode : animationLayer->animationCurveNodes) {
+            std::cerr << "   Curve: " << animationCurveNode->type << " " <<
+                         animationCurveNode->p << "\n";
+          }
         }
-#endif
+      }
+    }
+
+    //---
+
+    if (! animationDeformerData_.empty()) {
+      std::cerr << "Animation Deformers\n";
+
+      for (const auto &pad : animationDeformerData_) {
+        auto *animationDeformer = pad.second;
+
+        if (! animationDeformer->parent)
+          printDeformer(animationDeformer, 1);
       }
     }
   }
-
-  //---
-
-#if 0
-  if (! animationDeformerData_.empty()) {
-    std::cerr << "Animation Deformers\n";
-    for (const auto &pad : animationDeformerData_) {
-      auto *animationDeformer = pad.second;
-
-      std::cerr << " Deformer: " << animationDeformer->name << "\n";
-
-      if (! animationDeformer->children.empty()) {
-        std::cerr << " ";
-        for (const auto &animationDeformer1 : animationDeformer->children)
-          std::cerr << " " << animationDeformer1->name;
-        std::cerr << "\n";
-      }
-    }
-  }
-#endif
 
   //---
 
@@ -1533,6 +1526,32 @@ readFileData(FileData &fileData)
 #endif
 
   return true;
+}
+
+void
+CImportFBX::
+printDeformer(AnimationDeformerData *deformer, int depth) const
+{
+  auto padStr = [&]() {
+    std::string str;
+
+    for (int i = 0; i < depth; ++i)
+      str += "  ";
+
+    return str;
+  };
+
+  std::cerr << padStr() << "Deformer: " << deformer->name << "\n";
+
+  auto ni = deformer->indexes.size();
+  assert(ni == deformer->weights.size());
+
+  for (size_t i = 0; i < ni; ++i)
+    std::cerr << padStr() <<
+      "I: " << deformer->indexes[i] << " W: " << deformer->weights[i] << "\n";
+
+  for (const auto &deformer1 : deformer->children)
+    printDeformer(deformer1, depth + 1);
 }
 
 void
@@ -2734,7 +2753,7 @@ processDataTree(PropDataTree *tree)
               if (pad1 != animationDeformerData_.end()) {
                 auto *deformerData = (*pad1).second;
 
-                modelData->deformerData.push_back(deformerData);
+                modelData->animationDeformers.push_back(deformerData);
 
                 //connectInfo();
 
@@ -2872,8 +2891,6 @@ processDataTree(PropDataTree *tree)
 
                 //connectInfo();
 
-                animationLayerData->points.push_back(animationCurveNode->p);
-
                 continue;
               }
 
@@ -2884,6 +2901,8 @@ processDataTree(PropDataTree *tree)
 
                 assert(! animationCurveNode->modelData);
                 animationCurveNode->modelData = modelData1;
+
+                modelData1->animationCurveNodes.push_back(animationCurveNode);
 
                 //connectInfo();
 
@@ -2908,6 +2927,8 @@ processDataTree(PropDataTree *tree)
 
                 assert(! animationCurve->animationCurveNode);
                 animationCurve->animationCurveNode = animationCurveNode;
+
+                animationCurve->animationCurveNodes.push_back(animationCurveNode);
 
                 //connectInfo();
 
@@ -2959,6 +2980,8 @@ processDataTree(PropDataTree *tree)
                 assert(! animationDeformer->modelData);
                 animationDeformer->modelData = modelData1;
 
+                modelData1->animationDeformers.push_back(animationDeformer);
+
                 //connectInfo();
 
                 continue;
@@ -2971,6 +2994,8 @@ processDataTree(PropDataTree *tree)
 
                 assert(! animationDeformer->geometryData);
                 animationDeformer->geometryData = geometryData1;
+
+                geometryData1->animationDeformers.push_back(animationDeformer);
 
                 //connectInfo();
 
@@ -3228,6 +3253,8 @@ processDataTree(PropDataTree *tree)
               unhandledTree(treeName3);
           }
 
+          animationCurveNodeData->p = p;
+
           //std::cerr << blockData.id << " " << p << "\n";
 
           animationCurveNodeData_[blockData.id] = animationCurveNodeData;
@@ -3279,6 +3306,7 @@ processDataTree(PropDataTree *tree)
               animationDeformerData->indexes = getPropertyIntArray(pd2.second);
             }
             else if (pd2.first == "Link_DeformAcuracy") {
+              animationDeformerData->accuracy = getPropertyReal(pd2.second);
             }
             else if (pd2.first == "Mode") {
             }

@@ -408,18 +408,7 @@ processData()
 
       rootObject_->setNodeGlobalTransform(nodeInd, node.hierTransform);
 //    rootObject_->setNodeGlobalTransform(nodeInd, calcNodeGlobalTransform(&node));
-
-#if 0
-      if (node.object) {
-        auto transform = node.mtranslate.matrix()*node.mrotate.matrix()*node.mscale.matrix();
-
-        node.object->setLocalTransform (transform);
-        node.object->setGlobalTransform(node.hierTransform);
-      }
-#endif
     }
-    else
-      std::cerr << "No node for " << nodeInd << "\n";
   }
 
   //---
@@ -534,22 +523,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
 
   // 1 component
   if      (meshData.type == "SCALAR") {
-    if      (meshData.componentType == Constants::TYPE_UNSIGNED_BYTE) {
-      if (byteStride <= 0)
-        byteStride = 1;
-
-      if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid " + meshData.type + " count");
-
-      int id1 = 0;
-
-      for (long i = 0; i < meshData.count; ++i) {
-        auto l = readByte(data, id1); id1 += byteStride;
-
-        meshData.iscalars.push_back(l);
-      }
-    }
-    else if (meshData.componentType == Constants::TYPE_UNSIGNED_SHORT) {
+    if      (meshData.componentType == Constants::TYPE_UNSIGNED_SHORT) {
       if (byteStride <= 0)
         byteStride = 2;
 
@@ -575,6 +549,21 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
 
       for (long i = 0; i < meshData.count; ++i) {
         auto l = readInt(data, id1); id1 += byteStride;
+
+        meshData.iscalars.push_back(l);
+      }
+    }
+    else if (meshData.componentType == Constants::TYPE_UNSIGNED_BYTE) {
+      if (byteStride <= 0)
+        byteStride = 1;
+
+      if (byteLength < meshData.count*byteStride)
+        return errorMsg("Invalid " + meshData.type + " count");
+
+      int id1 = 0;
+
+      for (long i = 0; i < meshData.count; ++i) {
+        auto l = readByte(data, id1); id1 += byteStride;
 
         meshData.iscalars.push_back(l);
       }
@@ -605,11 +594,9 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
   }
   // 2 components
   else if (meshData.type == "VEC2") {
-    int dim = 2;
-
     if (meshData.componentType == Constants::TYPE_FLOAT) {
       if (byteStride <= 0)
-        byteStride = dim*4;
+        byteStride = 2*4;
 
       if (byteLength < meshData.count*byteStride)
         return errorMsg("Invalid " + meshData.type + " count");
@@ -631,12 +618,10 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
   }
   // 3 components
   else if (meshData.type == "VEC3") {
-    int dim = 3;
+      if (byteStride <= 0)
+        byteStride = 3*4;
 
     if (meshData.componentType == Constants::TYPE_FLOAT) {
-      if (byteStride <= 0)
-        byteStride = dim*4;
-
       if (byteLength < meshData.count*byteStride)
         return errorMsg("Invalid " + meshData.type + " count");
 
@@ -658,31 +643,9 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
   }
   // 4 components
   else if (meshData.type == "VEC4") {
-    int dim = 4;
-
-    if      (meshData.componentType == Constants::TYPE_UNSIGNED_BYTE) {
+    if      (meshData.componentType == Constants::TYPE_UNSIGNED_SHORT) {
       if (byteStride <= 0)
-        byteStride = dim*1;
-
-      if (byteLength < meshData.count*byteStride)
-        return errorMsg("Invalid " + meshData.type + " count");
-
-      int id1 = 0;
-
-      for (long i = 0; i < meshData.count; ++i) {
-        Vec4 v;
-
-        v.x = readByte(data, id1    );
-        v.y = readByte(data, id1 + 1);
-        v.z = readByte(data, id1 + 2);
-        v.w = readByte(data, id1 + 3); id1 += byteStride;
-
-        meshData.vec4.push_back(v);
-      }
-    }
-    else if (meshData.componentType == Constants::TYPE_UNSIGNED_SHORT) {
-      if (byteStride <= 0)
-        byteStride = dim*2;
+        byteStride = 4*2;
 
       if (byteLength < meshData.count*byteStride)
         return errorMsg("Invalid " + meshData.type + " count");
@@ -702,7 +665,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
     }
     else if (meshData.componentType == Constants::TYPE_FLOAT) {
       if (byteStride <= 0)
-        byteStride = dim*4;
+        byteStride = 4*4;
 
       if (byteLength < meshData.count*byteStride)
         return errorMsg("Invalid " + meshData.type + " count");
@@ -716,6 +679,26 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
         v.y = readFloat(data, id1 +  4);
         v.z = readFloat(data, id1 +  8);
         v.w = readFloat(data, id1 + 12); id1 += byteStride;
+
+        meshData.vec4.push_back(v);
+      }
+    }
+    else if (meshData.componentType == Constants::TYPE_UNSIGNED_BYTE) {
+      if (byteStride <= 0)
+        byteStride = 4*1;
+
+      if (byteLength < meshData.count*byteStride)
+        return errorMsg("Invalid " + meshData.type + " count");
+
+      int id1 = 0;
+
+      for (long i = 0; i < meshData.count; ++i) {
+        Vec4 v;
+
+        v.x = readByte(data, id1     );
+        v.y = readByte(data, id1 +  4);
+        v.z = readByte(data, id1 +  8);
+        v.w = readByte(data, id1 + 12); id1 += byteStride;
 
         meshData.vec4.push_back(v);
       }
@@ -736,11 +719,9 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
   }
   // 16 componenents
   else if (meshData.type == "MAT4") {
-    int dim = 16;
-
     if      (meshData.componentType == Constants::TYPE_FLOAT) {
       if (byteStride <= 0)
-        byteStride = dim*4;
+        byteStride = 4*16;
 
       if (byteLength < meshData.count*byteStride)
         return errorMsg("Invalid " + meshData.type + " count");
@@ -750,7 +731,7 @@ readMeshData(const AccessorData &accessorData, MeshData &meshData) const
       for (long i = 0; i < meshData.count; ++i) {
         Mat4 m;
 
-        for (int j = 0; j < dim; ++j)
+        for (int j = 0; j < 16; ++j)
           m.v[j] = readFloat(data, id1 + j*4);
 
         m.calcMatrix();
@@ -970,8 +951,8 @@ processSkins()
     auto *meshData = getMeshData(skin.inverseBindMatrices);
     if (! meshData) continue;
 
-    if (isDump()) {
-      std::cerr << " Skin Inverse Bind " << is << ": ";
+    if (isDebug()) {
+      std::cerr << " Skin " << is << ": ";
       printMeshData(*meshData);
     }
 
@@ -1007,15 +988,6 @@ getSkin(const IndName &indName, Skin &skin) const
   skin = (*ps).second;
 
   return true;
-}
-
-long
-CImportGLTF::
-mapSkinNode(const Skin &skin, int node) const
-{
-  assert(node >= 0 && node < int(skin.joints.size()));
-
-  return skin.joints[node];
 }
 
 void
@@ -1100,8 +1072,8 @@ processAnim()
         CGeomAnimationData animationData;
 
         if (isDebug())
-          debugMsg("  Channel: Sampler=" + std::to_string(channel.sampler) + " Node=" +
-                   channel.node.to_string() + " Path=" + channel.path);
+          debugMsg("  Channel: " + std::to_string(channel.sampler) + " " +
+                   channel.node.to_string() + " " + channel.path);
 
         //---
 
@@ -1147,18 +1119,14 @@ processAnim()
         //---
 
         if (isDebug()) {
-          debugMsg("   Sampler: Input=" + std::to_string(sampler.input) + " Output=" +
-                   std::to_string(sampler.output) + " Interpolation=" + sampler.interpolation);
+          debugMsg("   Sampler: " + std::to_string(sampler.input) + " " +
+                   std::to_string(sampler.output) + " " + sampler.interpolation);
 
-          if (isDump()) {
-            std::cerr << "    Input Accessor: ";
-            printMeshData(*imeshData);
-          }
+          std::cerr << "    Input Accessor: ";
+          printMeshData(*imeshData);
 
-          if (isDump()) {
-            std::cerr << "    Output Accessor: ";
-            printMeshData(*omeshData);
-          }
+          std::cerr << "    Output Accessor: ";
+          printMeshData(*omeshData);
         }
 
         if (imeshData->type != "SCALAR" || imeshData->componentType != Constants::TYPE_FLOAT ||
@@ -1397,19 +1365,15 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
   if (! getMesh(node->mesh, mesh))
     return false;
 
-  if (! processMesh(node, mesh))
+  if (! processMesh(node->object, mesh))
     return false;
 
 //node->object->transform(hierTranslate);
-
-  node->object->setMeshName(mesh.name);
 
   //---
 
   // add skin (bones/nodes)
   if (! node->skin.isEmpty()) {
-    int maxIndex = -1;
-
     // TODO: support multiple skins ?
     Skin skin;
     if (getSkin(node->skin, skin)) {
@@ -1443,13 +1407,7 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
         auto &nodeData1 = rootObject_->editNode(ind1);
 
-        if (nodeData1.index() != node1->order) {
-          assert(nodeData1.index() == -1);
-
-          nodeData1.setIndex(node1->order);
-
-          maxIndex = std::max(maxIndex, node1->order);
-        }
+        nodeData1.setIndex(node1->order);
 
         node1->added   = true;
         node1->skinned = true;
@@ -1518,15 +1476,7 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       nodeData.setName(node1->name);
 
-      auto ind1 = int(indName.ind);
-
-      rootObject_->addNode(ind1, nodeData);
-
-      auto &nodeData1 = rootObject_->editNode(ind1);
-
-      assert(nodeData1.index() == -1);
-
-      nodeData1.setIndex(++maxIndex);
+      rootObject_->addNode(int(indName.ind), nodeData);
 
       node1->added = true;
     }
@@ -1631,22 +1581,9 @@ calcNodeGlobalTransform(Node *node) const
 
 bool
 CImportGLTF::
-processMesh(Node *node, const Mesh &mesh)
+processMesh(CGeomObject3D *object, const Mesh &mesh)
 {
-  auto *object = node->object;
-
-  Skin skin;
-
-  if (! node->skin.isEmpty())
-    (void) getSkin(node->skin, skin);
-
-  uint ip = 0;
-
   for (const auto &primitive : mesh.primitives) {
-    auto ipStart = ip;
-
-    //---
-
     std::vector<long> indices;
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
@@ -1659,10 +1596,12 @@ processMesh(Node *node, const Mesh &mesh)
       if (! indMeshData)
         return errorMsg("Invalid indices mesh");
 
-      if (isDump()) {
-        debugMsg(" INDICES");
+#if 0
+      if (isDebug()) {
+        debugMsg(" indices");
         printMeshData(*indMeshData);
       }
+#endif
 
       indices = indMeshData->iscalars;
     }
@@ -1672,10 +1611,12 @@ processMesh(Node *node, const Mesh &mesh)
       if (! positionMeshData)
         return errorMsg("Invalid mesh POSITION");
 
-      if (isDump()) {
+#if 0
+      if (isDebug()) {
         debugMsg(" POSITION");
         printMeshData(*positionMeshData);
       }
+#endif
 
       positions = positionMeshData->vec3;
     }
@@ -1685,10 +1626,12 @@ processMesh(Node *node, const Mesh &mesh)
       if (! normalMeshData)
         return errorMsg("Invalid mesh NORMAL");
 
-      if (isDump()) {
+#if 0
+      if (isDebug()) {
         debugMsg(" NORMAL");
         printMeshData(*normalMeshData);
       }
+#endif
 
       normals = normalMeshData->vec3;
     }
@@ -1698,10 +1641,12 @@ processMesh(Node *node, const Mesh &mesh)
       if (! texCoord0MeshData)
         return errorMsg("Invalid mesh TEXCOORD_0");
 
-      if (isDump()) {
+#if 0
+      if (isDebug()) {
         debugMsg(" TEXCOORD_0");
         printMeshData(*texCoord0MeshData);
       }
+#endif
 
       texCoords0 = texCoord0MeshData->vec2;
     }
@@ -1711,10 +1656,12 @@ processMesh(Node *node, const Mesh &mesh)
       if (! joints0MeshData)
         return errorMsg("Invalid mesh JOINTS_0");
 
-      if (isDump()) {
+#if 0
+      if (isDebug()) {
         debugMsg(" JOINTS_0");
         printMeshData(*joints0MeshData);
       }
+#endif
 
       joints0 = joints0MeshData->vec4;
     }
@@ -1722,12 +1669,14 @@ processMesh(Node *node, const Mesh &mesh)
     if (! primitive.weights0.isEmpty()) {
       auto *weights0MeshData = getMeshData(primitive.weights0);
       if (! weights0MeshData)
-        return errorMsg("Invalid mesh WEIGHTS_0");
+        return errorMsg("Invalid mesh WEIGHTS0");
 
-      if (isDump()) {
-        debugMsg(" WEIGHTS_0");
+#if 0
+      if (isDebug()) {
+        debugMsg(" WEIGHTS0");
         printMeshData(*weights0MeshData);
       }
+#endif
 
       weights0 = weights0MeshData->vec4;
     }
@@ -1782,7 +1731,6 @@ processMesh(Node *node, const Mesh &mesh)
 
     for (const auto &p : positions) {
       auto ind = object->addVertex(CPoint3D(p.x, p.y, p.z));
-      assert(ind == ip); ++ip;
 
 #if 0
       if (isDebug())
@@ -1818,45 +1766,33 @@ processMesh(Node *node, const Mesh &mesh)
       //---
 
       if (nj > 0) {
-        auto ind1 = ind - ipStart;
-
         JointData jointData;
 
-        Vec4 j, w;
+        Vec4 j;
 
-        if (ind1 < nj)
-          j = joints0[ind1];
-        else
-          std::cerr << "Invalid joint index\n";
+        if (ind < nj)
+          j = joints0[ind];
 
-        if (ind1 < nw)
-          w = weights0[ind1];
-        else
-          std::cerr << "Invalid weight index\n";
+        if (nw > 0) {
+          if (ind < nw)
+            jointData.w = weights0[ind];
 
-        jointData.nodes[0].ind = int(j.x); jointData.nodes[0].weight = w.x;
-        jointData.nodes[1].ind = int(j.y); jointData.nodes[1].weight = w.y;
-        jointData.nodes[2].ind = int(j.z); jointData.nodes[2].weight = w.z;
-        jointData.nodes[3].ind = int(j.w); jointData.nodes[3].weight = w.w;
+          jointData.nodes[0].ind = int(j.x); jointData.nodes[0].weight = jointData.w.x;
+          jointData.nodes[1].ind = int(j.y); jointData.nodes[1].weight = jointData.w.y;
+          jointData.nodes[2].ind = int(j.z); jointData.nodes[2].weight = jointData.w.z;
+          jointData.nodes[3].ind = int(j.w); jointData.nodes[3].weight = jointData.w.w;
 
-#if 0
-        Node *nodes[4];
-        for (int i = 0; i < 4; ++i) {
+          Node *nodes[4];
+          for (int i = 0; i < 4; ++i) {
+            if (! getNode(jointData.nodes[i].ind, nodes[i]))
+              continue; // joint 0
 
-#if 0
-          if (! getNode(jointData.nodes[i].ind, nodes[i]))
-            continue; // joint 0
-#else
-          if (! getOrderedNode(jointData.nodes[i].ind, nodes[i]))
-            continue; // joint 0
-#endif
+            jointData.nodes[i].inverseBindMatrix = nodes[i]->inverseBindMatrix;
 
-          jointData.nodes[i].inverseBindMatrix = nodes[i]->inverseBindMatrix;
-
-          jointData.skinMatrix +=
-            jointData.nodes[i].inverseBindMatrix->matrix()*jointData.nodes[i].weight;
+            jointData.skinMatrix +=
+              jointData.nodes[i].inverseBindMatrix->matrix()*jointData.nodes[i].weight;
+          }
         }
-#endif
 
         CGeomVertex3D::JointData jointData1;
 
@@ -1869,34 +1805,7 @@ processMesh(Node *node, const Mesh &mesh)
 
         v.setJointData(jointData1);
 
-//      objectJoints_[ind1] = jointData;
-
-        if (isDebug()) {
-          std::cerr << "Vertex " << v.getInd() << " Joints:\n";
-
-          for (int i = 0; i < 4; ++i) {
-            const auto &nodeData = jointData1.nodeDatas[i];
-
-            std::cerr << "  Node: " << nodeData.node;
-
-#if 1
-            auto node1 = mapSkinNode(skin, nodeData.node);
-
-            Node *skinNode = nullptr;
-            getNode(node1, skinNode);
-#else
-            Node *skinNode = nullptr;
-            getNode(nodeData.node, skinNode);
-#endif
-
-            if (skinNode)
-              std::cerr << " (" << skinNode->indName << " '" << skinNode->name << "')";
-            else
-              std::cerr << " (no node)";
-
-            std::cerr << " = " << nodeData.weight << "\n";
-          }
-        }
+        objectJoints_[ind] = jointData;
       }
     }
 
@@ -1912,7 +1821,7 @@ processMesh(Node *node, const Mesh &mesh)
           i3 < 0 || i3 >= int(np))
         continue;
 
-      object->addITriangle(uint(i1 + ipStart), uint(i2 + ipStart), uint(i3 + ipStart));
+      object->addITriangle(uint(i1), uint(i2), uint(i3));
 
 #if 0
       if (isDebug())
@@ -1924,28 +1833,10 @@ processMesh(Node *node, const Mesh &mesh)
     //---
 
     if (! primitive.material.isEmpty()) {
-      Material *material { nullptr };
+      Material material;
 
       if (! getMaterial(primitive.material, material))
         return errorMsg("Invalid mesh material");
-
-      bool updateMaterial = false;
-
-      if (! material->materialP) {
-        auto *materialP = scene_->getMaterial(material->name);
-
-        if (! materialP) {
-          materialP = new CGeomMaterial;
-
-          materialP->setName(material->name);
-
-          scene_->addMaterial(materialP);
-
-          updateMaterial = true;
-        }
-
-        material->materialP = materialP;
-      }
 
 #if 0
       if (isDebug())
@@ -1954,29 +1845,17 @@ processMesh(Node *node, const Mesh &mesh)
 
       //---
 
-      // diffuse color
-      std::optional<CRGBA> diffuseColor;
+      // diffuse
+      if (material.diffuse)
+        object->setFaceDiffuse(colorRGBA(material.diffuse.value()));
 
-      if (material->diffuse)
-        diffuseColor = colorRGBA(material->diffuse.value());
+      if (material.baseColorFactor)
+        object->setFaceDiffuse(colorRGBA(material.baseColorFactor.value()));
 
-      if (material->baseColorFactor)
-        diffuseColor = colorRGBA(material->baseColorFactor.value());
-
-      if (diffuseColor) {
-        object->setFaceDiffuse(*diffuseColor);
-
-        if (updateMaterial)
-          material->materialP->setDiffuse(*diffuseColor);
-      }
-
-      //---
-
-      // diffuse texture
-      if (material->baseColorTexture.index >= 0) {
+      if (material.baseColorTexture.index >= 0) {
         Texture texture;
 
-        auto textureName = IndName(material->baseColorTexture.index);
+        auto textureName = IndName(material.baseColorTexture.index);
 
         if (! getTexture(textureName, texture))
           return errorMsg("Invalid base color texture");
@@ -1997,24 +1876,19 @@ processMesh(Node *node, const Mesh &mesh)
           texture1->setName(textureName.to_string());
 
           object->setDiffuseTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setDiffuseTexture(texture1);
         }
         else {
-          warnMsg("Unhandled base color texture " + material->baseColorTexture.index);
+          warnMsg("Unhandled base color texture " + material.baseColorTexture.index);
         }
       }
 
-      //---
-
-      // normal texture
-      if (material->normalTexture.index >= 0) {
+      // normal
+      if (material.normalTexture.index >= 0) {
         Texture texture;
 
-        auto textureName = IndName(material->normalTexture.index);
+        auto textureName = IndName(material.normalTexture.index);
 
-        if (! getTexture(IndName(material->normalTexture.index), texture))
+        if (! getTexture(IndName(material.normalTexture.index), texture))
           return errorMsg("Invalid normal texture");
 
         if (! texture.source.isEmpty()) {
@@ -2033,39 +1907,23 @@ processMesh(Node *node, const Mesh &mesh)
           texture1->setName(textureName.to_string());
 
           object->setNormalTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setNormalTexture(texture1);
         }
         else {
-          warnMsg("Unhandled normal texture " + material->normalTexture.index);
+          warnMsg("Unhandled normal texture " + material.normalTexture.index);
         }
       }
 
-      //---
-
-      // specular color
-      std::optional<CRGBA> specularColor;
-
-      if (material->specular)
-        specularColor = colorRGBA(material->specular.value());
-
-      if (specularColor) {
-        object->setFaceSpecular(*specularColor);
-
-        if (updateMaterial)
-          material->materialP->setSpecular(*specularColor);
+      // specular
+      if (material.specular) {
+        object->setFaceSpecular(colorRGBA(material.specular.value()));
       }
 
-      //---
-
-      // specular texture
-      if (material->specularTexture.index >= 0) {
+      if (material.specularTexture.index >= 0) {
         Texture texture;
 
-        auto textureName = IndName(material->specularTexture.index);
+        auto textureName = IndName(material.specularTexture.index);
 
-        if (! getTexture(IndName(material->specularTexture.index), texture))
+        if (! getTexture(IndName(material.specularTexture.index), texture))
           return errorMsg("Invalid specular texture");
 
         if (! texture.source.isEmpty()) {
@@ -2084,39 +1942,19 @@ processMesh(Node *node, const Mesh &mesh)
           texture1->setName(textureName.to_string());
 
           object->setSpecularTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setSpecularTexture(texture1);
         }
         else {
-          warnMsg("Unhandled specular texture " + material->specularTexture.index);
+          warnMsg("Unhandled specular texture " + material.specularTexture.index);
         }
       }
 
-      //---
-
-      // emissive color
-      std::optional<CRGBA> emissionColor;
-
-      if (material->emissiveFactor)
-        emissionColor = vectorRGBA(material->emissiveFactor.value());
-
-      if (emissionColor) {
-        object->setFaceEmission(*emissionColor);
-
-        if (updateMaterial)
-          material->materialP->setEmission(*emissionColor);
-      }
-
-      //---
-
-      // emissive texture
-      if (material->emissiveTexture.index >= 0) {
+      // emissive
+      if (material.emissiveTexture.index >= 0) {
         Texture texture;
 
-        auto textureName = IndName(material->emissiveTexture.index);
+        auto textureName = IndName(material.emissiveTexture.index);
 
-        if (! getTexture(IndName(material->emissiveTexture.index), texture))
+        if (! getTexture(IndName(material.emissiveTexture.index), texture))
           return errorMsg("Invalid emissive texture");
 
         if (! texture.source.isEmpty()) {
@@ -2135,23 +1973,15 @@ processMesh(Node *node, const Mesh &mesh)
           texture1->setName(textureName.to_string());
 
           object->setEmissiveTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setEmissiveTexture(texture1);
         }
         else {
-          warnMsg("Unhandled emissive texture " + material->emissiveTexture.index);
+          warnMsg("Unhandled emissive texture " + material.emissiveTexture.index);
         }
       }
 
-      //----
-
-      if (updateMaterial)
-        material->materialP->setTwoSided(material->doubleSided);
-
-      //---
-
-      object->setMaterialP(material->materialP);
+      if (material.emissiveFactor) {
+        object->setFaceEmission(vectorRGBA(material.emissiveFactor.value()));
+      }
     }
   }
 
@@ -2303,12 +2133,12 @@ getBuffer(const IndName &indName, Buffer &buffer) const
 
 bool
 CImportGLTF::
-getMaterial(const IndName &indName, Material* &material) const
+getMaterial(const IndName &indName, Material &material) const
 {
   auto pm = jsonData_.materials.find(indName);
   if (pm == jsonData_.materials.end()) return false;
 
-  material = const_cast<Material *>(&(*pm).second);
+  material = (*pm).second;
 
   return true;
 }
@@ -2335,22 +2165,6 @@ getNode(const IndName &indName, Node* &node) const
   node = const_cast<Node *>(&(*pn).second);
 
   return true;
-}
-
-bool
-CImportGLTF::
-getOrderedNode(int order, Node* &node) const
-{
-  for (const auto &pn : jsonData_.nodes) {
-    const auto &node1 = pn.second;
-
-    if (node1.order == order) {
-      node = const_cast<Node *>(&node1);
-      return true;
-    }
-  }
-
-  return false;
 }
 
 bool
@@ -2875,6 +2689,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     return errorMsg("Invalid " + pnv4.first + " ind/name");
                 }
                 else if (pnv4.first == "TANGENT") { // VEC4
+                //TODOValue("Unhandled primitive " + pnv4.first, pnv4.second);
                   if (! valueIndName(pnv4.second, primitive.tangent))
                     return errorMsg("Invalid " + pnv4.first + " ind/name");
                 }
@@ -2891,6 +2706,8 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
                     return errorMsg("Invalid " + pnv4.first + " ind/name");
                 }
                 else if (pnv4.first == "COLOR_0") { // VEC3 or VEC4
+                //TODOValue("Unhandled primitive " + pnv4.first, pnv4.second);
+
                   if (! valueIndName(pnv4.second, primitive.color0))
                     return errorMsg("Invalid " + pnv4.first + " ind/name");
                 }
@@ -3507,7 +3324,7 @@ parseJson(const std::string &jsonStr, JsonData &jsonData) const
       else if (pnv2.first == "alphaCutoff") {
         // TODO
         if (! valueOptNumber(pnv2.second, material.alphaCutoff))
-          return errorMsg("Invalid " + id + "/alphaCutoff value");
+          return errorMsg("Invalid " + id + "/doubleSided value");
 
         //TODOValue("Invalid " + id + "/alphaCutoff", pnv2.second);
       }
@@ -5337,10 +5154,6 @@ void
 CImportGLTF::
 printMeshData(const MeshData &meshData) const
 {
-  std::cerr << "Id: " << meshData.indName << ", ";
-  std::cerr << "Type: " << meshData.type << ", ";
-  std::cerr << "Component: " << meshData.componentType << ", ";
-
   if (! meshData.min.empty()) {
     std::cerr << "Min:";
     for (const auto &v : meshData.min) {
@@ -5358,37 +5171,37 @@ printMeshData(const MeshData &meshData) const
   }
 
   if      (meshData.vec4.size() > 0) {
-    std::cerr << "VEC4 (#" << meshData.vec4.size() << ") :";
+    std::cerr << "VEC4:";
     for (const auto &v : meshData.vec4) {
       std::cerr << " {" << v.x << "," << v.y << "," << v.z << "," << v.w << "}";
     }
   }
   else if (meshData.vec3.size() > 0) {
-    std::cerr << "VEC3 (#" << meshData.vec3.size() << ") :";
+    std::cerr << "VEC3:";
     for (const auto &v : meshData.vec3) {
       std::cerr << " {" << v.x << "," << v.y << "," << v.z << "}";
     }
   }
   else if (meshData.vec2.size() > 0) {
-    std::cerr << "VEC2 (#" << meshData.vec2.size() << ") :";
+    std::cerr << "VEC2:";
     for (const auto &v : meshData.vec2) {
       std::cerr << " {" << v.x << "," << v.y << "}";
     }
   }
   else if (meshData.iscalars.size() > 0) {
-    std::cerr << "SCALAR (I) (#" << meshData.iscalars.size() << ") :";
+    std::cerr << "SCALAR (I):";
     for (const auto &s : meshData.iscalars) {
       std::cerr << " " << s;
     }
   }
   else if (meshData.fscalars.size() > 0) {
-    std::cerr << "SCALAR (F) (#" << meshData.fscalars.size() << ") :";
+    std::cerr << "SCALAR (F):";
     for (const auto &s : meshData.fscalars) {
       std::cerr << " " << s;
     }
   }
   else if (meshData.mat4.size() > 0) {
-    std::cerr << "MAT4 (#" << meshData.mat4.size() << ") :";
+    std::cerr << "MAT4:";
     for (const auto &s : meshData.mat4) {
       std::cerr << " " << s;
     }
@@ -5608,10 +5421,10 @@ printMaterial(const Material &material, const IndName &indName) const
   printTexture(material.thicknessTexture, "thicknessTexture");
 
   if (material.doubleSided)
-    std::cerr << "  doubleSided: true\n";
+    std::cerr << "   doubleSided: true\n";
 
   if (material.alphaMode != "")
-    std::cerr << "  alphaMode: " << material.alphaMode << "\n";
+    std::cerr << "   alphaMode: " << material.alphaMode << "\n";
 
   printOptValue("alphaCutoff", material.alphaCutoff);
 
@@ -5723,14 +5536,6 @@ printPrimitive(const Primitive &primitive, int ia) const
     std::cerr << "    TEXCOORD_2: " << primitive.texCoord2 << "\n";
   if (! primitive.material.isEmpty())
     std::cerr << "    material: " << primitive.material << "\n";
-  if (! primitive.color0.isEmpty())
-    std::cerr << "    COLOR_0: " << primitive.color0 << "\n";
-  if (! primitive.joints0.isEmpty())
-    std::cerr << "    JOINTS_0: " << primitive.joints0 << "\n";
-  if (! primitive.weights0.isEmpty())
-    std::cerr << "    WEIGHTS_0: " << primitive.weights0 << "\n";
-  if (! primitive.tangent.isEmpty())
-    std::cerr << "    TANGENT: " << primitive.tangent << "\n";
 }
 
 void
@@ -5739,19 +5544,10 @@ printSkin(const Skin &skin, const IndName &indName) const
 {
   std::cerr << " skin[" << indName << "]\n";
 
-  std::cerr << "  inverseBindMatrices: Mesh #" << skin.inverseBindMatrices << "\n";
-
-  if (isDump()) {
-    auto *meshData = getMeshData(skin.inverseBindMatrices);
-
-    if (meshData) {
-      std::cerr << "  Inverse Bind: ";
-      printMeshData(*meshData);
-    }
-  }
+  std::cerr << "  inverseBindMatrices: " << skin.inverseBindMatrices << "\n";
 
   if (! skin.joints.empty()) {
-    std::cerr << "  joints (#" << skin.joints.size() << ") :";
+    std::cerr << "  joints:";
     for (auto i : skin.joints)
       std::cerr << " " << i;
     std::cerr << "\n";

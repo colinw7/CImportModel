@@ -28,13 +28,17 @@ void
 CQCamera3DAnimChooser::
 setAnimName(const QString &name)
 {
-  auto animNames = app_->getAnimNames(tmin_, tmax_);
+  auto animNames = app_->getAnimNames();
 
   int ind = 0;
 
   for (const auto &animName : animNames) {
-    if (animName == name) {
+    if (animName.name == name) {
+      tmin_ = animName.tmin;
+      tmax_ = animName.tmax;
+
       setCurrentIndex(ind + 1);
+
       return;
     }
 
@@ -65,10 +69,10 @@ updateWidgets()
 
   int ind = 0;
 
-  auto animNames = app_->getAnimNames(tmin_, tmax_);
+  auto animNames = app_->getAnimNames();
 
   for (const auto &animName : animNames) {
-    addItem(animName, QVariant(ind++));
+    addItem(animName.name, QVariant(ind++));
   }
 
   setCurrentIndex(currentInd);
@@ -91,14 +95,20 @@ CQCamera3DAnimChooser::
 currentIndexChanged(int ind)
 {
   animName_ = "";
+  tmin_     = 0.0;
+  tmax_     = 0.0;
 
-  auto animNames = app_->getAnimNames(tmin_, tmax_);
+  auto animNames = app_->getAnimNames();
 
   int ind1 = 1;
 
   for (const auto &animName : animNames) {
     if (ind == ind1) {
-      animName_ = animName;
+      tmin_ = animName.tmin;
+      tmax_ = animName.tmax;
+
+      animName_ = animName.name;
+
       break;
     }
 

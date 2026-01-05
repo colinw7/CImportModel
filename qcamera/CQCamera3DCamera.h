@@ -35,7 +35,13 @@ class CQCamera3DCamera : public QObject {
 
   // pixel aspect
   double aspect() const { return aspect_; }
-  void setAspect(double r) { aspect_ = r; Q_EMIT stateChanged(); }
+
+  void setAspect(double r) {
+    if (r != aspect_) { // check for change
+      aspect_ = r;
+      Q_EMIT stateChanged();
+    }
+  }
 
   // near z
   double near() const { return near_; }

@@ -37,65 +37,6 @@ class CQCamera3DOverview : public QFrame {
   using SelectType = CQCamera3DSelectType;
   using MouseType  = CQCamera3DMouseType;
 
-  struct ViewData {
-    CDisplayRange2D range;
-    QRectF          rect;
-    int             ind  { -1 };
-    ViewType        type { ViewType::NONE };
-    QString         name;
-
-    CPoint2D pixelToView(const QPointF &p) const {
-      CPoint2D p1;
-
-      if      (type == ViewType::XY) {
-        (void) pressRange(p.x(), p.y(), p1);
-      }
-      else if (type == ViewType::ZY) {
-        (void) pressRange(p.x(), p.y(), p1);
-      }
-      else if (type == ViewType::XZ) {
-        (void) pressRange(p.x(), p.y(), p1);
-      }
-      else
-        assert(false);
-
-      return p1;
-    }
-
-    bool pressRange(int x, int y, CPoint2D &p) const {
-      double xmin, ymin, xmax, ymax;
-      range.getPixelRange(&xmin, &ymin, &xmax, &ymax);
-
-      if (xmin > xmax) std::swap(xmin, xmax);
-      if (ymin > ymax) std::swap(ymin, ymax);
-
-      if (x < xmin || y < ymin || x > xmax || y > ymax)
-        return false;
-
-      double x1, y1;
-      range.pixelToWindow(x, y, &x1, &y1);
-
-      p = CPoint2D(x1, y1);
-
-      return true;
-    }
-
-    CPoint2D viewPoint(const CPoint3D &p) const {
-      CPoint2D p1;
-
-      if      (type == ViewType::XY)
-        p1 = CPoint2D(p.x, p.y);
-      else if (type == ViewType::ZY)
-        p1 = CPoint2D(p.z, p.y);
-      else if (type == ViewType::XZ)
-        p1 = CPoint2D(p.x, p.z);
-      else
-        assert(false);
-
-      return p1;
-    }
-  };
-
  public:
   CQCamera3DOverview(CQCamera3DApp *app);
 
@@ -134,13 +75,18 @@ class CQCamera3DOverview : public QFrame {
  private:
   void updateRange();
 
+  CPoint2D pixelToView(ViewType viewType, const QPointF &p) const;
+
+  QPointF viewQPoint(ViewType viewType, const CPoint3D &p) const;
+  CPoint2D viewPoint(ViewType viewType, const CPoint3D &p) const;
+
   void setCameraPosition(int x, int y, bool angle);
   void setLightPosition(int x, int y, bool setDirection);
 
-  void selectObjectAt(const QPoint &p, bool clear) ;
-  void selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear);
+  void selectObjectAt(const QPoint &p) ;
+  void selectObjectAt1(ViewType viewType, const CPoint3D &p);
 
-  void selectObjectIn(const QPoint &p, const QRect &r, bool clear);
+  void selectObjectIn(const QPoint &p, const QRect &r);
 
   void selectObjectXY(const CPoint3D &p);
   void selectObjectZY(const CPoint3D &p);
@@ -152,8 +98,7 @@ class CQCamera3DOverview : public QFrame {
   void drawCamera();
   void drawLights();
 
-  void drawModelPolygon(const std::vector<CPoint3D> &points) const;
-  void drawModelPoint(const CPoint3D &p, const QString &label) const;
+  void drawPolygon(const std::vector<CPoint3D> &points) const;
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
 
@@ -165,12 +110,7 @@ class CQCamera3DOverview : public QFrame {
 
   void drawPixmap(const CPoint3D &p, const QPixmap &pixmap) const;
 
-//bool pressRange(const ViewData &view, int x, int y, CPoint2D &p) const;
-
-  CPoint2D pixelToView(ViewType viewType, const QPointF &p) const;
-
-  QPointF viewQPoint(ViewType viewType, const CPoint3D &p) const;
-  CPoint2D viewPoint(ViewType viewType, const CPoint3D &p) const;
+  bool pressRange(const CDisplayRange2D &range, int x, int y, CPoint2D &p) const;
 
  private:
   struct FaceData {
@@ -178,54 +118,46 @@ class CQCamera3DOverview : public QFrame {
     std::vector<CPoint3D> points;
   };
 
-  using ObjectNodeMatrices = CQCamera3DApp::ObjectNodeMatrices;
+  using NodeMatrices       = std::map<int, CMatrix3D>;
+  using ObjectNodeMatrices = std::map<uint, NodeMatrices>;
 
   //---
 
   CQCamera3DApp* app_ { nullptr };
 
-  ViewData xview_;
-  ViewData yview_;
-  ViewData zview_;
-  ViewData pview_;
-
-  std::vector<ViewData *> views_;  // all views
-  std::vector<ViewData *> views2_; // 2d views
+  CDisplayRange2D xrange_;
+  CDisplayRange2D yrange_;
+  CDisplayRange2D zrange_;
+  CDisplayRange2D prange_;
 
   int ind_ { -1 };
 
   bool equalScale_ { true };
 
   SelectType selectType_ { SelectType::OBJECT };
-  MouseType  mouseType_  { MouseType::OBJECT };
+  MouseType  mouseType_  { MouseType::CAMERA };
 
   ModelType modelType_     { ModelType::WIREFRAME };
   bool      cameraVisible_ { true };
   bool      lightsVisible_ { true };
 
-  struct MouseData {
-    bool   pressed   { false };
-    bool   isShift   { false };
-    bool   isControl { false };
-    int    button    { 0 };
-    QPoint pressPixel;
-    QPoint movePixel;
-  };
-
-  MouseData mouseData_;
+  bool   pressed_     { false };
+  int    mouseButton_ { 0 };
+  QPoint pressPixel_;
+  QPoint movePixel_;
 
   std::vector<FaceData> faces_;
 
   // draw data
   QPainter *painter_ { nullptr };
 
-  bool   bboxSet_ { false };
+  QRectF xrect_, yrect_, zrect_, prect_;
+
   double xs_ { 0.0 }, ys_ { 0.0 }, zs_ { 0.0 };
 
   CMatrix3DH projectionMatrix_;
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
-  CMatrix3DH meshMatrix_;
 
   ObjectNodeMatrices objectNodeMatrices_;
 

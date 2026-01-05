@@ -2,6 +2,7 @@
 #define CQGLBuffer_H
 
 #include <CBBox3D.h>
+#include <CPoint4D.h>
 #include <CRGBA.h>
 
 #include <QOpenGLShaderProgram>
@@ -10,6 +11,7 @@
 #include <QColor>
 
 #include <vector>
+#include <optional>
 #include <cassert>
 
 class CQGLBuffer {
@@ -24,6 +26,8 @@ class CQGLBuffer {
     Point(float x, float y, float z) :
      x(x), y(y), z(z) {
     }
+
+    CPoint3D point() const { return CPoint3D(x, y, z); }
   };
 
   struct Color {
@@ -36,6 +40,8 @@ class CQGLBuffer {
     Color(float r, float g, float b) :
      r(r), g(g), b(b) {
     }
+
+    CPoint3D point() const { return CPoint3D(r, g, b); }
   };
 
   struct TexturePoint {
@@ -47,6 +53,8 @@ class CQGLBuffer {
     TexturePoint(float x, float y) :
      x(x), y(y) {
     }
+
+    CPoint2D point() const { return CPoint2D(x, y); }
   };
 
   struct Vector {
@@ -60,6 +68,8 @@ class CQGLBuffer {
     Vector(float x, float y, float z, float w) :
      x(x), y(y), z(z), w(w) {
     }
+
+    CPoint4D point() const { return CPoint4D(x, y, z, w); }
   };
 
   struct IVector {
@@ -73,6 +83,8 @@ class CQGLBuffer {
     IVector(int x, int y, int z, int w) :
      x(x), y(y), z(z), w(w) {
     }
+
+    CPoint4D point() const { return CPoint4D(x, y, z, w); }
   };
 
   using Points        = std::vector<Point>;
@@ -144,6 +156,7 @@ class CQGLBuffer {
 
     data_.dataValid = false;
 
+    data_.inds         .clear();
     data_.points       .clear();
     data_.normals      .clear();
     data_.colors       .clear();
@@ -155,6 +168,7 @@ class CQGLBuffer {
     data_.indicesSet = false;
   }
 
+  void clearInds         () { data_.inds         .clear(); data_.dataValid = false; }
   void clearPoints       () { data_.points       .clear(); data_.dataValid = false; }
   void clearNormals      () { data_.normals      .clear(); data_.dataValid = false; }
   void clearColors       () { data_.colors       .clear(); data_.dataValid = false; }
@@ -168,6 +182,25 @@ class CQGLBuffer {
   }
 
   //---
+
+  void addInd(uint ind) {
+    data_.inds.push_back(ind);
+  }
+
+  uint numInds() const { return data_.inds.size(); }
+
+  int mapInd(uint ind) const {
+    int i = -1;
+
+    for (auto &ind1 : data_.inds) {
+      ++i;
+
+      if (int(ind) == ind1)
+        return i;
+    }
+
+    return i;
+  }
 
   void addPoint(float x, float y, float z) {
     addPoint(Point(x, y, z));
@@ -252,10 +285,12 @@ class CQGLBuffer {
   //---
 
   struct PointData {
-    Point        point;
-    Point        normal;
-    Color        color;
-    TexturePoint texturePoint;
+    std::optional<Point>        point;
+    std::optional<Point>        normal;
+    std::optional<Color>        color;
+    std::optional<TexturePoint> texturePoint;
+    std::optional<IVector>      boneId;
+    std::optional<Vector>       boneWeight;
   };
 
   void getPointData(int i, PointData &data) {
@@ -263,6 +298,11 @@ class CQGLBuffer {
     if (hasNormalPart ()) data.normal       = data_.normals[i];
     if (hasColorPart  ()) data.color        = data_.colors[i];
     if (hasTexturePart()) data.texturePoint = data_.texturePoints[i];
+
+    if (hasBonesPart()) {
+      data.boneId     = data_.boneIds[i];
+      data.boneWeight = data_.boneWeights[i];
+    }
   }
 
   //---
@@ -559,14 +599,15 @@ class CQGLBuffer {
     unsigned int  numIndData { 0 };
     unsigned int  span       { 0 };
     bool          dataValid  { false };
-    Points        points;
-    Points        normals;
-    Colors        colors;
-    TexturePoints texturePoints;
-    BoneIds       boneIds;
-    BoneWeights   boneWeights;
-    Indices       indices;
-    bool          indicesSet { false };
+    Indices       inds;                    // vertex inds
+    Points        points;                  // vertex point
+    Points        normals;                 // vertex normal
+    Colors        colors;                  // vertex color
+    TexturePoints texturePoints;           // vertex texture point
+    BoneIds       boneIds;                 // vertex bone id
+    BoneWeights   boneWeights;             // vertex bone weight
+    Indices       indices;                 // vertex point indices
+    bool          indicesSet { false };    // is vertex point indices set
   };
 
   Data data_;

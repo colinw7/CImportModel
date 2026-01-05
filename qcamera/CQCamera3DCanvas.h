@@ -228,13 +228,17 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   bool selectObject(CGeomObject3D *object, bool update=true);
 
-  bool selectFaces(const std::vector<CGeomFace3D *> &faces, bool update=true);
-  bool selectFace(CGeomFace3D *face, bool update=true);
+  bool selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update);
+  bool selectFace(CGeomFace3D *face, bool clear, bool update);
 
   bool selectVertex(CGeomVertex3D *vertex, bool update=true);
   bool selectVertices(const ObjectSelectInds &vertices, bool update=true);
 
   bool deselectAll(bool update=true);
+
+  std::vector<CGeomObject3D *> getSelectedObjects () const;
+  std::vector<CGeomFace3D *>   getSelectedFaces   () const;
+  ObjectSelectInds             getSelectedVertices() const;
 
   //---
 
@@ -272,7 +276,7 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
     if (currentObject_)
       return currentObject_;
 
-    return (includeRoot ? rootObject() : nullptr);
+    return (includeRoot ? defaultRootObject() : nullptr);
   }
 
   void setCurrentObject(CQCamera3DGeomObject *object, bool update);
@@ -283,7 +287,7 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   CGeomVertex3D *currentVertex() const { return currentVertex_; }
   void setCurrentVertex(CGeomVertex3D *vertex, bool update);
 
-  CQCamera3DGeomObject *rootObject() const;
+  CQCamera3DGeomObject *defaultRootObject() const;
 
   //---
 
@@ -362,6 +366,8 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
   CQGLTexture *makeTexture(const CImagePtr &image) const;
 
  public Q_SLOTS:
+  void updateObjectsData();
+
   void addObjectsData();
 
  private Q_SLOTS:
@@ -537,7 +543,7 @@ class CQCamera3DCanvas : public QGLWidget, public QOpenGLExtraFunctions {
 
   // interaction
 
-  MouseType mouseType_  { MouseType ::CAMERA };
+  MouseType mouseType_  { MouseType ::OBJECT };
   double    mouseScale_ { 0.05 };
 
   SelectType selectType_ { SelectType::OBJECT };

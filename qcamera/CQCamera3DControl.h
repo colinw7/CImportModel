@@ -27,7 +27,6 @@ class QComboBox;
 class QCheckBox;
 class QToolButton;
 class QLineEdit;
-class QLabel;
 
 class CQCamera3DControl : public QFrame {
   Q_OBJECT
@@ -44,6 +43,7 @@ class CQCamera3DControl : public QFrame {
 
   void mainTabSlot(int);
 
+  // General
   void showWireframeSlot(int);
   void showSolidSlot(int);
   void showPointsSlot(int i);
@@ -164,8 +164,11 @@ class CQCamera3DControl : public QFrame {
   void saveMaterialMapSlot();
 
   void selectParentSlot();
+  void selectFacesSlot();
+  void selectPointsSlot();
   void selectRelatedSlot();
   void deselectSlot();
+  void selectDumpSlot();
 
   // Objects
   void objectSelectSlot();
@@ -211,8 +214,15 @@ class CQCamera3DControl : public QFrame {
   void bonesModelSlot(int);
   void bonesBoneNodeSlot(int i);
   void bonesPointJointsSlot(int i);
+  void bonesOnlyJointsSlot(int i);
+
+  void bonesTranslationSlot();
+  void bonesRotationSlot();
+  void bonesScaleSlot();
+
   void currentBoneSlot();
   void updateBones();
+  void updateCurrentBone();
   void updateAnim();
 
   // Animation
@@ -220,6 +230,7 @@ class CQCamera3DControl : public QFrame {
 
   void animNameSlot();
   void animTimeSlot(double t);
+  void animTimeStepSlot(double t);
 
   void playSlot();
   void pauseSlot();
@@ -340,10 +351,14 @@ class CQCamera3DControl : public QFrame {
     CQTextLabel* indLabel  { nullptr };
     QCheckBox*   visCheck  { nullptr };
 
-    CQMatrix3D*    matrixEdit      { nullptr };
+    CQPoint3DEdit* centerEdit     { nullptr };
+    CQPoint3DEdit* sizeEdit       { nullptr };
+    CQMatrix3D*    meshMatrixEdit { nullptr };
+
     CQPoint3DEdit* translationEdit { nullptr };
     CQPoint3DEdit* rotationEdit    { nullptr };
     CQPoint3DEdit* scaleEdit       { nullptr };
+    CQMatrix3D*    matrixEdit      { nullptr };
 
     CQColorEdit* colorEdit { nullptr };
 
@@ -407,11 +422,14 @@ class CQCamera3DControl : public QFrame {
 
   // Bones
   struct BonesData {
-    QCheckBox* modelCheck     { nullptr };
-    QCheckBox* boneNodesCheck { nullptr };
-    QCheckBox* pointJoints    { nullptr };
+    QCheckBox* modelCheck       { nullptr };
+    QCheckBox* boneNodesCheck   { nullptr };
+    QCheckBox* pointJointsCheck { nullptr };
+    QCheckBox* onlyJointsCheck  { nullptr };
 
-    QCheckBox* jointCheck { nullptr };
+    CQTextLabel* nodeLabel     { nullptr };
+    CQTextLabel* childrenLabel { nullptr };
+    QCheckBox*   jointCheck    { nullptr };
 
     CQCamera3DBonesList* bonesList { nullptr };
 
@@ -428,12 +446,13 @@ class CQCamera3DControl : public QFrame {
 
   // Animation
   struct AnimData {
-    CQCamera3DAnimChooser* animCombo   { nullptr };
-    CQRealSpin*            timeEdit    { nullptr };
-    CQIconButton*          playButton  { nullptr };
-    CQIconButton*          pauseButton { nullptr };
-    CQIconButton*          stepButton  { nullptr };
-    CQTextLabel*           nodeLabel   { nullptr };
+    CQCamera3DAnimChooser* animCombo    { nullptr };
+    CQRealSpin*            timeEdit     { nullptr };
+    CQRealSpin*            timeStepEdit { nullptr };
+    CQIconButton*          playButton   { nullptr };
+    CQIconButton*          pauseButton  { nullptr };
+    CQIconButton*          stepButton   { nullptr };
+    CQTextLabel*           nodeLabel    { nullptr };
 
     QComboBox*    translationInterpCombo { nullptr };
     QTableWidget* animTranslationTable   { nullptr };

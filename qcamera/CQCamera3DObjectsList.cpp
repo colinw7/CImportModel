@@ -22,6 +22,8 @@ CQCamera3DObjectsList(CQCamera3DCanvas *canvas) :
 
   tree_->setSelectionMode(QTreeWidget::SingleSelection);
 
+  tree_->setHeaderLabels(QStringList() << "Name");
+
   layout->addWidget(tree_);
 
   //---
@@ -70,6 +72,8 @@ createObjectItem(CGeomObject3D *object)
     return (*pi).second;
 
   auto name = QString::fromStdString(object->getName());
+
+  name += QString(" (%1)").arg(object->getInd());
 
   auto *parent = object->parent();
 

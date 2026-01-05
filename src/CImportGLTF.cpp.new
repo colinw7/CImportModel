@@ -1402,7 +1402,7 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
 //node->object->transform(hierTranslate);
 
-  node->object->setMeshName(mesh.name);
+//node->object->setMeshName(mesh.name);
 
   //---
 

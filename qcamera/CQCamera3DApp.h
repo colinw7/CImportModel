@@ -4,6 +4,7 @@
 #include <QFrame>
 
 #include <CGeom3DType.h>
+#include <CMatrix3D.h>
 
 class CQCamera3DCanvas;
 class CQCamera3DOverview;
@@ -17,6 +18,7 @@ class CQTabSplit;
 
 class CGeomScene3D;
 class CGeomObject3D;
+class CGeomVertex3D;
 
 enum class CQCamera3DSelectType {
   OBJECT,
@@ -47,6 +49,15 @@ class CQCamera3DApp : public QFrame {
 
     Objects objects;
   };
+
+  struct AnimData {
+    QString name;
+    double  tmin { 0.0 };
+    double  tmax { 0.0 };
+  };
+
+  using NodeMatrices       = std::map<int, CMatrix3D>;
+  using ObjectNodeMatrices = std::map<uint, NodeMatrices>;
 
  public:
   CQCamera3DApp();
@@ -101,9 +112,19 @@ class CQCamera3DApp : public QFrame {
   double animTime() const { return animTime_; }
   void setAnimTime(double r);
 
+  double animTimeStep() const { return animTimeStep_; }
+  void setAnimTimeStep(double r) { animTimeStep_ = r; }
+
   //---
 
-  std::vector<QString> getAnimNames(double &tmin, double &tmax) const;
+  ObjectNodeMatrices calcNodeMatrices() const;
+
+  CPoint3D adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
+                           NodeMatrices &nodeMatrices) const;
+
+  //---
+
+  std::vector<AnimData> getAnimNames() const;
 
   std::vector<CGeomObject3D *> getRootObjects() const;
 
@@ -153,7 +174,8 @@ class CQCamera3DApp : public QFrame {
 
   // anim
   QString animName_;
-  double  animTime_ { 0.0 };
+  double  animTime_     { 0.0 };
+  double  animTimeStep_ { 100.0 };
 };
 
 #endif

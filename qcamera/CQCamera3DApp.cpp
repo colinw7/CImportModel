@@ -12,6 +12,7 @@
 #include <CGeometry3D.h>
 #include <CImportBase.h>
 #include <CGeomScene3D.h>
+#include <CGeomNodeData.h>
 #include <CFile.h>
 
 #include <CQTabSplit.h>
@@ -298,11 +299,14 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
 
 //---
 
-std::vector<QString>
+std::vector<CQCamera3DApp::AnimData>
 CQCamera3DApp::
-getAnimNames(double &tmin, double &tmax) const
+getAnimNames() const
 {
-  std::set<QString> animNameSet;
+  using Objects     = std::vector<CGeomObject3D *>;
+  using AnimObjects = std::map<QString, Objects>;
+
+  AnimObjects animObjects;
 
   auto rootObjects = this->getRootObjects();
 
@@ -310,17 +314,27 @@ getAnimNames(double &tmin, double &tmax) const
     std::vector<std::string> animNames1;
     rootObject->getAnimationNames(animNames1);
 
-    for (const auto &animName1 : animNames1)
-      animNameSet.insert(QString::fromStdString(animName1));
+    for (const auto &animName1 : animNames1) {
+      auto animName2 = QString::fromStdString(animName1);
 
-    if (! animNames1.empty())
-      rootObject->getAnimationTranslationRange(animNames1[0], tmin, tmax);
+      animObjects[animName2].push_back(rootObject);
+    }
   }
 
-  std::vector<QString> animNames;
+  std::vector<AnimData> animNames;
 
-  for (const auto &animName : animNameSet)
-    animNames.push_back(animName);
+  for (const auto &pa : animObjects) {
+    AnimData animData;
+
+    animData.name = pa.first;
+
+    auto *rootObject = pa.second[0];
+
+    rootObject->getAnimationTranslationRange(animData.name.toStdString(),
+                                             animData.tmin, animData.tmax);
+
+    animNames.push_back(animData);
+  }
 
   return animNames;
 }
@@ -349,4 +363,95 @@ getRootObjects() const
   }
 
   return rootObjects;
+}
+
+//---
+
+CQCamera3DApp::ObjectNodeMatrices
+CQCamera3DApp::
+calcNodeMatrices() const
+{
+  ObjectNodeMatrices objectNodeMatrices;
+
+  auto animName = this->animName().toStdString();
+  auto animTime = this->animTime();
+
+  auto rootObjects = getRootObjects();
+
+  for (auto *rootObject : rootObjects) {
+    if (! rootObject->getVisible())
+      continue;
+
+    auto &nodeMatrices = objectNodeMatrices[rootObject->getInd()];
+
+    rootObject->updateNodesAnimationData(animName, animTime);
+
+    auto meshMatrix        = rootObject->getMeshGlobalTransform();
+    auto inverseMeshMatrix = meshMatrix.inverse();
+
+    //---
+
+    for (const auto &pn : rootObject->getNodes()) {
+      auto &node = const_cast<CGeomNodeData &>(pn.second);
+      //if (! node.isJoint()) continue;
+
+      nodeMatrices[node.index()] = node.calcNodeAnimMatrix(inverseMeshMatrix);
+    }
+  }
+
+  return objectNodeMatrices;
+}
+
+CPoint3D
+CQCamera3DApp::
+adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p, NodeMatrices &nodeMatrices) const
+{
+  const auto &jointData = vertex.getJointData();
+
+  struct NodeWeight {
+    int    nodeId { -1 };
+    double weight { 0.0 };
+  };
+
+  std::vector<NodeWeight> nodeWeights;
+
+  double total = 0.0;
+
+  for (int i = 0; i < 4; ++i) {
+    if (jointData.nodeDatas[i].node >= 0 && jointData.nodeDatas[i].weight > 0.0) {
+      NodeWeight nodeWeight;
+
+      nodeWeight.nodeId = jointData.nodeDatas[i].node;
+      nodeWeight.weight = jointData.nodeDatas[i].weight;
+
+      nodeWeights.push_back(nodeWeight);
+
+      total += nodeWeight.weight;
+    }
+  }
+
+  auto f = (total > 0.0 ? 1.0/total : 1.0);
+
+  if (! nodeWeights.empty()) {
+    for (auto &nodeWeight : nodeWeights)
+      nodeWeight.weight *= f;
+
+    auto p1 = CPoint3D(0, 0, 0);
+
+    for (const auto &nodeWeight : nodeWeights) {
+      auto pm = nodeMatrices.find(nodeWeight.nodeId);
+
+      if (pm != nodeMatrices.end()) {
+        const auto &boneTransform = (*pm).second;
+
+        p1 += nodeWeight.weight*(boneTransform*p);
+      }
+      else
+        p1 += nodeWeight.weight*p;
+    }
+
+    return p1;
+  }
+  else
+    return p;
 }

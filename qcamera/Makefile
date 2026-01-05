@@ -14,9 +14,9 @@ EQ            = =
 
 CC            = @echo compiling $< && gcc
 CXX           = @echo compiling $< && g++
-DEFINES       = -DQT_NO_DEBUG -DQT_SVG_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB
-CFLAGS        = -pipe -O2 -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
-CXXFLAGS      = -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qcamera" -O2 -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
+DEFINES       = -DQT_SVG_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB
+CFLAGS        = -pipe -g -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
+CXXFLAGS      = -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qcamera" -g -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
 INCPATH       = -I. -I../../CImportModel/include -I../../CGeometry3D/include -I../../CMaterial/include -I../../CGLTexture/includ -Ie -I../../CQGLUtil/include -I../../CQApp/include -I../../CQMetaEdit/include -I../../CQUtil/include -I../../CQSlider/include -I../../CQColorEdit/include -I../../CImageLib/include -I../../CFont/include -I../../CConfig/include -I../../CXML/include -I../../CFile/include -I../../CFileType/include -I../../CMath/include -I../../CStrUtil/include -I../../CUtil/include -I../../COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I.moc -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
@@ -39,7 +39,7 @@ COMPRESS      = gzip -9f
 DISTNAME      = CQCamera3D1.0.0
 DISTDIR = /home/colinw/git/CImportModel/qcamera/.tmp/CQCamera3D1.0.0
 LINK          = @echo linking $@ && g++
-LFLAGS        = -Wl,-O1
+LFLAGS        = 
 LIBS          = $(SUBLIBS) -L../lib -L../../CQMetaEdit/lib -L../../CImportModel/lib -L../../CVoxel/lib -L../../CGeometry3D/lib -L../../CQUtil/lib -L../../CXML/lib -L../../CConfig/lib -L../../CImageLib/lib -L../../CFont/lib -L../../CJson/lib -L../../CFileUtil/lib -L../../CFile/lib -L../../CUtil/lib -L../../CMath/lib -L../../CRGBName/lib -L../../CStrUtil/lib -L../../CRegExp/lib -L../../COS/lib -lCQMetaEdit -lCImportModel -lCVoxel -lCGeometry3D -lCQUtil -lCXML -lCConfig -lCImageLib -lCFont -lCJson -lCFileUtil -lCFile -lCUtil -lCMath -lCRGBName -lCStrUtil -lCRegExp -lCOS -lglut -lGLU -ljpeg -lpng -ltre -lz /usr/lib/x86_64-linux-gnu/libQt5Svg.so /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so /usr/lib/x86_64-linux-gnu/libQt5Widgets.so /usr/lib/x86_64-linux-gnu/libQt5Gui.so /usr/lib/x86_64-linux-gnu/libQt5Xml.so /usr/lib/x86_64-linux-gnu/libQt5Core.so -lGL -lpthread   
 AR            = ar cqs
 RANLIB        = 
@@ -333,7 +333,7 @@ TARGET        = CQCamera3D
 first: all
 ####### Build rules
 
-CQCamera3D: $(LIB_DIR)/libCImportModel.a $(LIB_DIR)/libCGeometry3D.a $(LIB_DIR)/libCQUtil.a $(OBJECTS)  
+CQCamera3D: ../../CImportModel/lib/libCImportModel.a ../../CGeometry3D/lib/libCGeometry3D.a ../../CQUtil/lib/libCQUtil.a $(OBJECTS)  
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 Makefile: CQCamera3D.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -576,13 +576,24 @@ compiler_moc_predefs_clean:
 	-$(DEL_FILE) .moc/moc_predefs.h
 .moc/moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 	@echo generating .moc/moc_predefs.h
-	@g++ -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qcamera" -O2 -std=gnu++1z -Wall -Wextra -dM -E -o .moc/moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
+	@g++ -pipe -std=c++17 -DBUILD_DIR="/home/colinw/git/CImportModel/qcamera" -g -std=gnu++1z -Wall -Wextra -dM -E -o .moc/moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
 compiler_moc_header_make_all: .moc/moc_CQCamera3DApp.cpp .moc/moc_CQCamera3DBones.cpp .moc/moc_CQCamera3DCamera.cpp .moc/moc_CQCamera3DCanvas.cpp .moc/moc_CQCamera3DControl.cpp .moc/moc_CQCamera3DOverview.cpp .moc/moc_CQCamera3DStatus.cpp .moc/moc_CQCamera3DAnimChooser.cpp .moc/moc_CQCamera3DTextureChooser.cpp .moc/moc_CQCamera3DBonesList.cpp .moc/moc_CQCamera3DLightList.cpp .moc/moc_CQCamera3DMaterialList.cpp .moc/moc_CQCamera3DObjectsList.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQPoint4DEdit.cpp .moc/moc_CQMatrix3D.cpp .moc/moc_CQTreeWidget.cpp .moc/moc_CQRubberBand.cpp
 compiler_moc_header_clean:
 	-$(DEL_FILE) .moc/moc_CQCamera3DApp.cpp .moc/moc_CQCamera3DBones.cpp .moc/moc_CQCamera3DCamera.cpp .moc/moc_CQCamera3DCanvas.cpp .moc/moc_CQCamera3DControl.cpp .moc/moc_CQCamera3DOverview.cpp .moc/moc_CQCamera3DStatus.cpp .moc/moc_CQCamera3DAnimChooser.cpp .moc/moc_CQCamera3DTextureChooser.cpp .moc/moc_CQCamera3DBonesList.cpp .moc/moc_CQCamera3DLightList.cpp .moc/moc_CQCamera3DMaterialList.cpp .moc/moc_CQCamera3DObjectsList.cpp .moc/moc_CQPoint3DEdit.cpp .moc/moc_CQPoint4DEdit.cpp .moc/moc_CQMatrix3D.cpp .moc/moc_CQTreeWidget.cpp .moc/moc_CQRubberBand.cpp
 .moc/moc_CQCamera3DApp.cpp: CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQCamera3DApp.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qcamera/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qcamera -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qcamera/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQMetaEdit/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQCamera3DApp.h -o .moc/moc_CQCamera3DApp.cpp
@@ -590,25 +601,26 @@ compiler_moc_header_clean:
 .moc/moc_CQCamera3DBones.cpp: CQCamera3DBones.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
 		CWindowRange2D.h \
 		../../CMath/include/CMathRound.h \
 		../../CMath/include/CMatrix2D.h \
-		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CVector2D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CBBox3D.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQCamera3DBones.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qcamera/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qcamera -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qcamera/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQMetaEdit/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQCamera3DBones.h -o .moc/moc_CQCamera3DBones.cpp
@@ -634,10 +646,9 @@ compiler_moc_header_clean:
 .moc/moc_CQCamera3DCanvas.cpp: CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -646,6 +657,7 @@ compiler_moc_header_clean:
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -680,25 +692,25 @@ compiler_moc_header_clean:
 .moc/moc_CQCamera3DOverview.cpp: CQCamera3DOverview.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
 		CWindowRange2D.h \
 		../../CMath/include/CMathRound.h \
 		../../CMath/include/CMatrix2D.h \
-		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CVector2D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
 		.moc/moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	@echo moc CQCamera3DOverview.h && /usr/lib/qt5/bin/moc $(DEFINES) --include /home/colinw/git/CImportModel/qcamera/.moc/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/colinw/git/CImportModel/qcamera -I/home/colinw/git/CImportModel/include -I/home/colinw/git/CGeometry3D/include -I/home/colinw/git/CMaterial/include -I/home/colinw/git/CGLTexture/includ -I/home/colinw/git/CImportModel/qcamera/e -I/home/colinw/git/CQGLUtil/include -I/home/colinw/git/CQApp/include -I/home/colinw/git/CQMetaEdit/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CQSlider/include -I/home/colinw/git/CQColorEdit/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CXML/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CFileType/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/usr/include/c++/13/backward -I/usr/lib/gcc/x86_64-linux-gnu/13/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include CQCamera3DOverview.h -o .moc/moc_CQCamera3DOverview.cpp
@@ -810,15 +822,15 @@ CQCamera3DAnnotation.o: CQCamera3DAnnotation.cpp CQCamera3DAnnotation.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -868,11 +880,9 @@ CQCamera3DAnnotation.o: CQCamera3DAnnotation.cpp CQCamera3DAnnotation.h \
 
 CQCamera3DApp.o: CQCamera3DApp.cpp CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -881,6 +891,8 @@ CQCamera3DApp.o: CQCamera3DApp.cpp CQCamera3DApp.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -961,6 +973,8 @@ CQCamera3DApp.o: CQCamera3DApp.cpp CQCamera3DApp.h \
 		../../CImageLib/include/CImageMgr.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		../../CImportModel/include/CImportBase.h \
+		../../CGeometry3D/include/CGeomNodeData.h \
+		../../CGeometry3D/include/CGeomAnimationData.h \
 		../../CQUtil/include/CQTabSplit.h \
 		../../CQUtil/include/CQIconButton.h \
 		../../CQUtil/include/CQGroupBox.h \
@@ -985,15 +999,15 @@ CQCamera3DAxes.o: CQCamera3DAxes.cpp CQCamera3DAxes.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1021,6 +1035,7 @@ CQCamera3DAxes.o: CQCamera3DAxes.cpp CQCamera3DAxes.h \
 		../../CMath/include/CGLVector2D.h \
 		CQCamera3DShapes.h \
 		CQGLBuffer.h \
+		../../CMath/include/CPoint4D.h \
 		CQGLUtil.h \
 		../../CUtil/include/CInterval.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DAxes.o CQCamera3DAxes.cpp
@@ -1028,29 +1043,29 @@ CQCamera3DAxes.o: CQCamera3DAxes.cpp CQCamera3DAxes.h \
 CQCamera3DBones.o: CQCamera3DBones.cpp CQCamera3DBones.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
 		CWindowRange2D.h \
 		../../CMath/include/CMathRound.h \
 		../../CMath/include/CMatrix2D.h \
-		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CVector2D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CBBox3D.h \
 		CQCamera3DCanvas.h \
 		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
-		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CPlane3D.h \
 		../../CMath/include/CLine3D.h \
 		../../CMath/include/CMathGeom3D.h \
@@ -1091,6 +1106,7 @@ CQCamera3DBones.o: CQCamera3DBones.cpp CQCamera3DBones.h \
 		CQCamera3DStatus.h \
 		CQCamera3DGeomObject.h \
 		CQCamera3DUtil.h \
+		CQRubberBand.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
 		../../CGeometry3D/include/CGeomZBuffer.h \
@@ -1122,10 +1138,9 @@ CQCamera3DBones.o: CQCamera3DBones.cpp CQCamera3DBones.h \
 CQCamera3DCanvas.o: CQCamera3DCanvas.cpp CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -1134,6 +1149,7 @@ CQCamera3DCanvas.o: CQCamera3DCanvas.cpp CQCamera3DCanvas.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1230,11 +1246,9 @@ CQCamera3DCanvas.o: CQCamera3DCanvas.cpp CQCamera3DCanvas.h \
 CQCamera3DControl.o: CQCamera3DControl.cpp CQCamera3DControl.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -1243,6 +1257,8 @@ CQCamera3DControl.o: CQCamera3DControl.cpp CQCamera3DControl.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1306,6 +1322,7 @@ CQCamera3DControl.o: CQCamera3DControl.cpp CQCamera3DControl.h \
 		CQCamera3DAnimChooser.h \
 		CQCamera3DBonesList.h \
 		CQCamera3DUtil.h \
+		CQGLBuffer.h \
 		../../CImportModel/include/CImportBase.h \
 		../../CGeometry3D/include/CGeometry3D.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
@@ -1397,6 +1414,7 @@ CQCamera3DFont.o: CQCamera3DFont.cpp CQCamera3DFont.h \
 		CQCamera3DCamera.h \
 		../../CMath/include/CQuaternion.h \
 		CQGLBuffer.h \
+		../../CMath/include/CPoint4D.h \
 		CQGLUtil.h \
 		stb_truetype.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DFont.o CQCamera3DFont.cpp
@@ -1447,11 +1465,9 @@ CQCamera3DLight.o: CQCamera3DLight.cpp CQCamera3DLight.h \
 CQCamera3DMain.o: CQCamera3DMain.cpp CQCamera3DMain.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -1460,6 +1476,8 @@ CQCamera3DMain.o: CQCamera3DMain.cpp CQCamera3DMain.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1546,15 +1564,15 @@ CQCamera3DNormals.o: CQCamera3DNormals.cpp CQCamera3DNormals.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1650,7 +1668,8 @@ CQCamera3DObject.o: CQCamera3DObject.cpp CQCamera3DObject.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h
+		../../CMath/include/CISize2D.h \
+		../../CMath/include/CPoint4D.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DObject.o CQCamera3DObject.cpp
 
 CQCamera3DOverlay2D.o: CQCamera3DOverlay2D.cpp CQCamera3DOverlay2D.h \
@@ -1666,15 +1685,15 @@ CQCamera3DOverlay2D.o: CQCamera3DOverlay2D.cpp CQCamera3DOverlay2D.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1734,15 +1753,15 @@ CQCamera3DOverlay.o: CQCamera3DOverlay.cpp CQCamera3DOverlay.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1793,25 +1812,25 @@ CQCamera3DOverlay.o: CQCamera3DOverlay.cpp CQCamera3DOverlay.h \
 CQCamera3DOverview.o: CQCamera3DOverview.cpp CQCamera3DOverview.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
 		CWindowRange2D.h \
 		../../CMath/include/CMathRound.h \
 		../../CMath/include/CMatrix2D.h \
-		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CVector2D.h \
-		../../CMath/include/CMathGen.h \
-		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMathUtil.h \
-		../../COS/include/COSNaN.h \
 		../../CMath/include/CBBox2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CMath/include/CPoint3D.h \
-		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CVector3D.h \
-		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CMatrix3D.h \
-		../../CMath/include/CGaussianMatrix.h \
 		CQCamera3DCanvas.h \
 		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
@@ -1858,6 +1877,9 @@ CQCamera3DOverview.o: CQCamera3DOverview.cpp CQCamera3DOverview.h \
 		CQCamera3DUtil.h \
 		../../CQUtil/include/CQPixmapCache.h \
 		CQRubberBand.h \
+		../../CQUtil/include/CQUtilGeom.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
 		../../CGeometry3D/include/CGeomScene3D.h \
 		../../CGeometry3D/include/CGeomAxes3D.h \
 		../../CGeometry3D/include/CGeomZBuffer.h \
@@ -1865,8 +1887,6 @@ CQCamera3DOverview.o: CQCamera3DOverview.cpp CQCamera3DOverview.h \
 		../../CImageLib/include/CImage.h \
 		../../CUtil/include/CRGBACombineDef.h \
 		../../CUtil/include/CAlignType.h \
-		../../CMath/include/CIBBox2D.h \
-		../../CMath/include/CIVector2D.h \
 		../../CFile/include/CFileType.h \
 		../../CImageLib/include/CImageResizeType.h \
 		../../CImageLib/include/CImageConvolveData.h \
@@ -1890,10 +1910,9 @@ CQCamera3DShaderProgram.o: CQCamera3DShaderProgram.cpp CQCamera3DShaderProgram.h
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -1902,6 +1921,7 @@ CQCamera3DShaderProgram.o: CQCamera3DShaderProgram.cpp CQCamera3DShaderProgram.h
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -1924,7 +1944,8 @@ CQCamera3DShaderProgram.o: CQCamera3DShaderProgram.cpp CQCamera3DShaderProgram.h
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
 		../../CUtil/include/CRGBName.h \
-		CQGLBuffer.h
+		CQGLBuffer.h \
+		../../CMath/include/CPoint4D.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DShaderProgram.o CQCamera3DShaderProgram.cpp
 
 CQCamera3DShape.o: CQCamera3DShape.cpp CQCamera3DShape.h \
@@ -2018,6 +2039,7 @@ CQCamera3DShapes.o: CQCamera3DShapes.cpp CQCamera3DShapes.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
 		CQGLBuffer.h \
+		../../CMath/include/CPoint4D.h \
 		../../CGeometry3D/include/CGeomObject3D.h \
 		../../CGeometry3D/include/CGeomFace3D.h \
 		../../CGeometry3D/include/CGeomVertex3D.h \
@@ -2037,7 +2059,6 @@ CQCamera3DShapes.o: CQCamera3DShapes.cpp CQCamera3DShapes.h \
 		../../CMath/include/CScale3D.h \
 		../../CMath/include/CRotate3D.h \
 		../../CMath/include/CQuaternion.h \
-		../../CMath/include/CPoint4D.h \
 		../../CGeometry3D/include/CGeomCone3D.h \
 		../../CGeometry3D/include/CGeomCylinder3D.h \
 		../../CGeometry3D/include/CGeomPyramid3D.h \
@@ -2085,17 +2106,9 @@ CQCamera3DShapes.o: CQCamera3DShapes.cpp CQCamera3DShapes.h \
 CQCamera3DStatus.o: CQCamera3DStatus.cpp CQCamera3DStatus.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		CQTextLabel.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DStatus.o CQCamera3DStatus.cpp
-
-CQCamera3DUVMap.o: CQCamera3DUVMap.cpp CQCamera3DUVMap.h \
-		CQCamera3DApp.h \
-		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2104,6 +2117,25 @@ CQCamera3DUVMap.o: CQCamera3DUVMap.cpp CQCamera3DUVMap.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		CQTextLabel.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DStatus.o CQCamera3DStatus.cpp
+
+CQCamera3DUVMap.o: CQCamera3DUVMap.cpp CQCamera3DUVMap.h \
+		CQCamera3DApp.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -2182,11 +2214,9 @@ CQCamera3DUVMap.o: CQCamera3DUVMap.cpp CQCamera3DUVMap.h \
 CQCamera3DTextures.o: CQCamera3DTextures.cpp CQCamera3DTextures.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2195,6 +2225,8 @@ CQCamera3DTextures.o: CQCamera3DTextures.cpp CQCamera3DTextures.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -2273,18 +2305,9 @@ CQCamera3DTextures.o: CQCamera3DTextures.cpp CQCamera3DTextures.h \
 CQCamera3DAnimChooser.o: CQCamera3DAnimChooser.cpp CQCamera3DAnimChooser.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CQUtil/include/CQUtil.h \
-		../../CQUtil/include/CQUtilMeta.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DAnimChooser.o CQCamera3DAnimChooser.cpp
-
-CQCamera3DTextureChooser.o: CQCamera3DTextureChooser.cpp CQCamera3DTextureChooser.h \
-		CQCamera3DApp.h \
-		../../CUtil/include/CGeom3DType.h \
-		CQCamera3DCanvas.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2293,6 +2316,26 @@ CQCamera3DTextureChooser.o: CQCamera3DTextureChooser.cpp CQCamera3DTextureChoose
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CQUtil/include/CQUtil.h \
+		../../CQUtil/include/CQUtilMeta.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DAnimChooser.o CQCamera3DAnimChooser.cpp
+
+CQCamera3DTextureChooser.o: CQCamera3DTextureChooser.cpp CQCamera3DTextureChooser.h \
+		CQCamera3DApp.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		CQCamera3DCanvas.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -2327,13 +2370,6 @@ CQCamera3DBonesList.o: CQCamera3DBonesList.cpp CQCamera3DBonesList.h \
 		CQCamera3DControl.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CQUtil/include/CQUtil.h \
-		../../CQUtil/include/CQUtilMeta.h \
-		CQTreeWidget.h \
-		../../CGeometry3D/include/CGeomScene3D.h \
-		../../CGeometry3D/include/CGeomObject3D.h \
-		../../CGeometry3D/include/CGeomFace3D.h \
-		../../CGeometry3D/include/CGeomVertex3D.h \
 		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
@@ -2342,6 +2378,13 @@ CQCamera3DBonesList.o: CQCamera3DBonesList.cpp CQCamera3DBonesList.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CQUtil/include/CQUtil.h \
+		../../CQUtil/include/CQUtilMeta.h \
+		CQTreeWidget.h \
+		../../CGeometry3D/include/CGeomScene3D.h \
+		../../CGeometry3D/include/CGeomObject3D.h \
+		../../CGeometry3D/include/CGeomFace3D.h \
+		../../CGeometry3D/include/CGeomVertex3D.h \
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
 		../../CUtil/include/CRGBName.h \
@@ -2406,10 +2449,9 @@ CQCamera3DLightList.o: CQCamera3DLightList.cpp CQCamera3DLightList.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2418,6 +2460,7 @@ CQCamera3DLightList.o: CQCamera3DLightList.cpp CQCamera3DLightList.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -2468,10 +2511,9 @@ CQCamera3DMaterialList.o: CQCamera3DMaterialList.cpp CQCamera3DMaterialList.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2480,6 +2522,7 @@ CQCamera3DMaterialList.o: CQCamera3DMaterialList.cpp CQCamera3DMaterialList.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \
@@ -2555,10 +2598,9 @@ CQCamera3DObjectsList.o: CQCamera3DObjectsList.cpp CQCamera3DObjectsList.h \
 		CQCamera3DCanvas.h \
 		CQCamera3DApp.h \
 		../../CUtil/include/CGeom3DType.h \
-		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
@@ -2567,6 +2609,7 @@ CQCamera3DObjectsList.o: CQCamera3DObjectsList.cpp CQCamera3DObjectsList.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
 		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CMath/include/CBBox3D.h \
 		../../CMath/include/CBBox2D.h \

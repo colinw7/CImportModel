@@ -83,9 +83,15 @@ addBufferNormals(CQCamera3DObjectData *objectData)
     CQGLBuffer::PointData pointData;
     srcBuffer->getPointData(ip, pointData);
 
-    auto n = CVector3D(pointData.normal.x, pointData.normal.y, pointData.normal.z);
+    CPoint3D  p1;
+    CVector3D n;
 
-    auto p1 = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
+    if (pointData.point)
+      p1 = CPoint3D(pointData.point->x, pointData.point->y, pointData.point->z);
+
+    if (pointData.normal) continue;
+      n = CVector3D(pointData.normal->x, pointData.normal->y, pointData.normal->z);
+
     auto p2 = p1 + lineSize*n.normalize();
 
     auto pm1 = modelMatrix*p1;

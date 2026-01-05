@@ -12,6 +12,7 @@ out vec3 Normal;
 out vec3 Color;
 out vec2 TexCoords;
 
+uniform mat4 meshMatrix;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
@@ -36,6 +37,8 @@ void main() {
     position = applyBonePointTransform(vec4(position, 1.0));
     norm     = normalize(applyBonePointTransform(vec4(norm, 0.0)));
   }
+
+  position = vec3(meshMatrix*vec4(position, 1.0));
 
   FragPos = vec3(model*vec4(position, 1.0));
   Normal  = mat3(transpose(inverse(model)))*norm;

@@ -7,6 +7,7 @@
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DUtil.h>
 
+#include <CQRubberBand.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomNodeData.h>
@@ -26,15 +27,37 @@ CQCamera3DBones(CQCamera3DApp *app) :
   auto *canvas = app_->canvas();
   auto *camera = canvas->getCurrentCamera();
 
-  connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
-  connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
-
   setFocusPolicy(Qt::StrongFocus);
 
   setMouseTracking(true);
 
+  //---
+
+  rubberBand_ = new CQRubberBand(this);
+
+  //---
+
+  xview_.ind = 0; xview_.type = ViewType::XY    ; xview_.name = "XY";
+  yview_.ind = 1; yview_.type = ViewType::ZY    ; yview_.name = "ZY";
+  zview_.ind = 2; zview_.type = ViewType::XZ    ; zview_.name = "XZ";
+  pview_.ind = 3; pview_.type = ViewType::THREED; pview_.name = "3D";
+
+  views_.push_back(&xview_);
+  views_.push_back(&yview_);
+  views_.push_back(&zview_);
+  views_.push_back(&pview_);
+
+  views2_.push_back(&xview_);
+  views2_.push_back(&yview_);
+  views2_.push_back(&zview_);
+
+  //---
+
   connect(app_, SIGNAL(animNameChanged()), this, SLOT(update()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
+
+  connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
+  connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
 }
 
 void
@@ -54,14 +77,13 @@ updateRange()
   int x1 = 0, x2 = x1 + w, x3 = x2 + w;
   int y1 = 0, y2 = y1 + h, y3 = y2 + h;
 
-  xrange_.setPixelRange(x1, y1, x2, y2); // XY
-  yrange_.setPixelRange(x2, y1, x3, y2); // ZY
-  zrange_.setPixelRange(x1, y2, x2, y3); // XZ
-  prange_.setPixelRange(x2, y2, x3, y3); // 3D
+  xview_.range.setPixelRange(x1, y1, x2, y2); // XY
+  yview_.range.setPixelRange(x2, y1, x3, y2); // ZY
+  zview_.range.setPixelRange(x1, y2, x2, y3); // XZ
+  pview_.range.setPixelRange(x2, y2, x3, y3); // 3D
 
-  xrange_.setEqualScale(isEqualScale());
-  yrange_.setEqualScale(isEqualScale());
-  zrange_.setEqualScale(isEqualScale());
+  for (auto *view : views2_)
+    view->range.setEqualScale(isEqualScale());
 
   update();
 }
@@ -85,18 +107,44 @@ paintEvent(QPaintEvent *)
   //---
 
   // set window ranges from object bbox
-  auto bbox = canvas->bbox();
+  if (! bboxSet_) {
+    if (isAutoFit()) {
+      updateBonesBBox();
 
-  auto c = bbox.getCenter();
+      //---
 
-  xs_ = bbox.getXSize();
-  ys_ = bbox.getYSize();
-  zs_ = bbox.getZSize();
+      CPoint2D c, s;
 
-  xrange_.setWindowRange(c.x - xs_, c.y - ys_, c.x + xs_, c.y + ys_); // XY
-  yrange_.setWindowRange(c.z + zs_, c.y - ys_, c.z - zs_, c.y + ys_); // ZY
-  zrange_.setWindowRange(c.x - xs_, c.z + zs_, c.x + xs_, c.z - zs_); // XZ
-  prange_.setWindowRange(-1, -1, 1, 1); // 3D
+      c = xview_.bbox.getCenter();
+      s = xview_.bbox.getSize().point();
+      xview_.range.setWindowRange(c.x - s.x, c.y - s.y, c.x + s.x, c.y + s.y); // XY
+
+      c = yview_.bbox.getCenter();
+      s = yview_.bbox.getSize().point();
+      yview_.range.setWindowRange(c.x - s.x, c.y - s.y, c.x + s.x, c.y + s.y); // ZY
+
+      c = zview_.bbox.getCenter();
+      s = zview_.bbox.getSize().point();
+      zview_.range.setWindowRange(c.x - s.x, c.y - s.y, c.x + s.x, c.y + s.y); // XZ
+    }
+    else {
+      bbox_ = canvas->bbox();
+
+      auto c = bbox_.getCenter();
+
+      xs_ = bbox_.getXSize();
+      ys_ = bbox_.getYSize();
+      zs_ = bbox_.getZSize();
+
+      xview_.range.setWindowRange(c.x - xs_, c.y - ys_, c.x + xs_, c.y + ys_); // XY
+      yview_.range.setWindowRange(c.z + zs_, c.y - ys_, c.z - zs_, c.y + ys_); // ZY
+      zview_.range.setWindowRange(c.x - xs_, c.z + zs_, c.x + xs_, c.z - zs_); // XZ
+    }
+
+    pview_.range.setWindowRange(-1, -1, 1, 1); // 3D
+
+    bboxSet_ = true;
+  }
 
   //---
 
@@ -105,20 +153,22 @@ paintEvent(QPaintEvent *)
 
   //---
 
-  auto drawPixelBorder = [&](const CDisplayRange2D &range, int ind, QRectF &r) {
+  auto drawPixelBorder = [&](ViewData &view) {
+    bool current = (view.ind == ind_);
+
     QPen pen;
-    pen.setColor(ind == ind_ ? Qt::red : Qt::black);
-    pen.setWidthF(ind == ind_ ? 2 : 0);
+    pen.setColor(current ? Qt::red : Qt::black);
+    pen.setWidthF(current ? 2 : 0);
     painter.setPen(pen);
 
-    QBrush brush(ind == ind_ ? QColor(220, 220, 240) : QColor(255, 255, 255));
+    QBrush brush(current ? QColor(220, 220, 240) : QColor(255, 255, 255));
     painter.setBrush(brush);
 
     double pxmin, pymin, pxmax, pymax;
-    range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
+    view.range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
 
-    r = QRectF(pxmin, pymin, pxmax - pxmin - 1, pymax - pymin - 1);
-    painter.drawRect(r);
+    view.rect = QRectF(pxmin, pymin, pxmax - pxmin - 1, pymax - pymin - 1);
+    painter.drawRect(view.rect);
 
     pen.setWidthF(0);
     painter.setPen(pen);
@@ -132,17 +182,21 @@ paintEvent(QPaintEvent *)
   painter.setPen(Qt::black);
   painter.setBrush(Qt::NoBrush);
 
-  drawPixelBorder(xrange_, 0, xrect_);
-  drawPixelBorder(yrange_, 1, yrect_);
-  drawPixelBorder(zrange_, 2, zrect_);
-  drawPixelBorder(prange_, 3, prect_);
+  for (auto *view : views_)
+    drawPixelBorder(*view);
 
   //---
 
   animName_ = app_->animName().toStdString();
   animTime_ = app_->animTime();
 
-  useAnim_ = (animName_ != "");
+  //useAnim_ = (animName_ != "");
+  useAnim_ = true;
+
+  //---
+
+  if (useAnim_)
+    updateNodeMatrices();
 
   //---
 
@@ -158,19 +212,18 @@ paintEvent(QPaintEvent *)
 
   QFontMetrics fm(font());
 
-  auto drawTitle = [&](const CDisplayRange2D &range, const QRectF &rect, const QString &text) {
-    painter.setClipRect(rect);
+  auto drawTitle = [&](const ViewData &view) {
+    painter.setClipRect(view.rect);
 
     double pxmin, pymin, pxmax, pymax;
-    range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
+    view.range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
 
-    auto r = QRectF(pxmin + 4, pymin + 4, fm.horizontalAdvance(text) + 4, fm.height() + 4);
-    painter.drawText(r, text);
+    auto r = QRectF(pxmin + 4, pymin + 4, fm.horizontalAdvance(view.name) + 4, fm.height() + 4);
+    painter.drawText(r, view.name);
   };
 
-  drawTitle(xrange_, xrect_, "XY");
-  drawTitle(yrange_, yrect_, "ZY");
-  drawTitle(zrange_, zrect_, "XZ");
+  for (auto *view : views2_)
+    drawTitle(*view);
 }
 
 void
@@ -190,45 +243,6 @@ drawModel()
 
   //---
 
-  auto adjustAnimPoint = [&](const CGeomVertex3D &vertex, const CPoint3D &p,
-                             std::map<int, CMatrix3D> &nodeMatrices) {
-    const auto &jointData = vertex.getJointData();
-
-    struct NodeWeight {
-      int    nodeId { -1 };
-      double weight { 0.0 };
-    };
-
-    std::vector<NodeWeight> nodeWeights;
-
-    for (int i = 0; i < 4; ++i) {
-      if (jointData.nodeDatas[i].node >= 0) {
-        NodeWeight nodeWeight;
-
-        nodeWeight.nodeId = jointData.nodeDatas[i].node;
-        nodeWeight.weight = jointData.nodeDatas[i].weight;
-
-        nodeWeights.push_back(nodeWeight);
-      }
-    }
-
-    if (! nodeWeights.empty()) {
-      auto p1 = CPoint3D(0, 0, 0);
-
-      for (const auto &nodeWeight : nodeWeights) {
-        auto boneTransform = nodeMatrices[nodeWeight.nodeId];
-
-        p1 += nodeWeight.weight*(boneTransform*p);
-      }
-
-      return p1;
-    }
-    else
-      return p;
-  };
-
-  //---
-
   // draw model
   painter_->setPen(QColor(0, 0, 0, 32));
   painter_->setBrush(Qt::NoBrush);
@@ -242,14 +256,17 @@ drawModel()
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
-    modelMatrix_ = CMatrix3DH(object1->getHierTransform());
+    auto *rootObject = object->getRootObject();
 
     //---
 
-    auto &nodeMatrices = objectNodeMatrices_[object->getInd()];
+    modelMatrix_ = CMatrix3DH(object1->getHierTransform());
 
-    if (useAnim_)
-      object->updateNodesAnimationData(animName_, animTime_);
+    auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+
+    //---
+
+    auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
 
     //---
 
@@ -272,12 +289,17 @@ drawModel()
         //---
 
         if (useAnim_)
-          p = adjustAnimPoint(vertex, p, nodeMatrices);
+          p = app_->adjustAnimPoint(vertex, p, nodeMatrices);
+
+        p = meshMatrix*p;
 
         //---
 
-        auto *rootObject = vertex.getObject()->getRootObject();
+        points.push_back(p);
 
+        //---
+
+        // add vertex joint nodes
         const auto &jointData = vertex.getJointData();
 
         for (int i = 0; i < 4; ++i) {
@@ -302,57 +324,118 @@ drawModel()
             }
           }
         }
-
-        //---
-
-        points.push_back(p);
       }
 
       //---
 
-      drawPolygon(points);
+      drawModelPolygon(points);
     }
   }
 
   //---
 
+  // draw joint points
   if (isShowPointJoints()) {
     painter_->setPen(Qt::red);
     painter_->setBrush(Qt::white);
 
     for (auto &jointNode : selectedJointNodes) {
-      auto &node = jointNode.object->getRootObject()->getNode(jointNode.nodeId);
+      auto *rootObject = jointNode.object->getRootObject();
+
+      auto &node = rootObject->getNode(jointNode.nodeId);
 
       if (isOnlyJoints() && ! node.isJoint())
         continue;
 
-      auto m = getNodeTransform(const_cast<CGeomNodeData &>(node));
+      auto m = getNodeTransform(rootObject, const_cast<CGeomNodeData &>(node));
+
       auto c = m*CPoint3D(0.0, 0.0, 0.0);
 
-      drawCircle(CVector3D(c), 0.1);
+      auto s = bbox_.getMaxSize()/100.0;
+
+      drawCircle(CVector3D(c), s);
     }
   }
 
   //---
 
+  // draw bone nodes
   if (isShowBoneNodes()) {
     painter_->setPen(Qt::green);
     painter_->setBrush(Qt::white);
 
     for (auto *v : selectedBoneVertices) {
+      auto *object = v->getObject();
+    //auto *object = scene->getObjectP(currentBoneObject);
+
+      auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+
       const auto &model = v->getModel();
 
       auto p = model;
 
       if (useAnim_) {
-        auto *object = scene->getObjectP(currentBoneObject);
+        auto *rootObject = object->getRootObject();
 
-        auto &nodeMatrices = objectNodeMatrices_[object->getInd()];
+        auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
 
-        p = adjustAnimPoint(*v, p, nodeMatrices);
+        p = app_->adjustAnimPoint(*v, p, nodeMatrices);
       }
 
-      drawCircle(CVector3D(p), 0.1);
+      p = meshMatrix*p;
+
+      auto s = bbox_.getMaxSize()/100.0;
+
+      drawCircle(CVector3D(p), s);
+    }
+  }
+}
+
+void
+CQCamera3DBones::
+updateNodeMatrices()
+{
+  objectNodeMatrices_ = app_->calcNodeMatrices();
+}
+
+void
+CQCamera3DBones::
+updateBonesBBox()
+{
+  bbox_ = CBBox3D();
+
+  xview_.bbox = CBBox2D();
+  yview_.bbox = CBBox2D();
+  zview_.bbox = CBBox2D();
+
+  auto rootObjects = app_->getRootObjects();
+
+  for (auto *rootObject : rootObjects) {
+    if (! rootObject->getVisible())
+      continue;
+
+    for (const auto &pn : rootObject->getNodes()) {
+      auto &node = const_cast<CGeomNodeData &>(pn.second);
+
+      if (isOnlyJoints() && ! node.isJoint())
+        continue;
+
+      //---
+
+    //auto *object = node.object()->getMeshObject();
+
+    //auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+      auto meshMatrix = CMatrix3DH::identity();
+
+      //---
+
+      auto m = rootObject->getNodeHierTransform(node);
+
+      auto c = m*CPoint3D(0.0, 0.0, 0.0);
+
+      c = meshMatrix*c;
+
+      updateBBox(c);
     }
   }
 }
@@ -377,15 +460,9 @@ drawBones()
     auto *rootObject1 = dynamic_cast<CQCamera3DGeomObject *>(rootObject);
     assert(rootObject1);
 
+    //---
+
     modelMatrix_ = CMatrix3DH(rootObject1->getHierTransform());
-
-    auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
-
-    if (useAnim_)
-      rootObject->updateNodesAnimationData(animName_, animTime_);
-
-    auto meshMatrix        = rootObject->getMeshGlobalTransform();
-    auto inverseMeshMatrix = meshMatrix.inverse();
 
     //---
 
@@ -395,6 +472,15 @@ drawBones()
       if (isOnlyJoints() && ! node.isJoint())
         continue;
 
+      //---
+
+      auto *object = node.object()->getMeshObject();
+
+      auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+    //auto meshMatrix = CMatrix3DH::identity();
+
+      //---
+
       bool isSelected =
        (int(rootObject->getInd()) == currentBoneObject && node.ind() == currentBoneNode);
 
@@ -402,13 +488,20 @@ drawBones()
 
       //---
 
-      auto m = getNodeTransform(node);
+      auto m = getNodeTransform(rootObject, node);
 
       auto c = m*CPoint3D(0.0, 0.0, 0.0);
 
-      auto s = 0.1;
+      c = meshMatrix*c;
+
+      auto s = bbox_.getMaxSize()/100.0;
 
       drawCube(c, s);
+
+#if 0
+      if (isSelected)
+        drawModelPoint(CVector3D(c), QString::fromStdString(node.name()));
+#endif
 
       objectNodes_[rootObject->getInd()][node.ind()] = c;
 
@@ -416,16 +509,20 @@ drawBones()
         auto &pnode = const_cast<CGeomNodeData &>(rootObject->getNode(node.parent()));
 
         if (pnode.isValid() && (! isOnlyJoints() || pnode.isJoint())) {
-          auto m1 = getNodeTransform(pnode);
+          auto *pobject = pnode.object()->getMeshObject();
+
+          auto pmeshMatrix = CMatrix3DH(pobject->getMeshGlobalTransform());
+        //auto pmeshMatrix = CMatrix3DH::identity();
+
+          auto m1 = getNodeTransform(rootObject, pnode);
+
           auto c1 = m1*CPoint3D(0.0, 0.0, 0.0);
 
-          drawLine(c, c1);
+          c1 = pmeshMatrix*c1;
+
+          drawModelLine(c, c1);
         }
       }
-
-      //---
-
-      nodeMatrices[node.index()] = node.calcNodeAnimMatrix(inverseMeshMatrix);
     }
   }
 }
@@ -477,17 +574,24 @@ drawCube(const CPoint3D &c, double s) const
 
 void
 CQCamera3DBones::
-drawPolygon(const std::vector<CPoint3D> &points) const
+drawModelPolygon(const std::vector<CPoint3D> &points) const
 {
-  auto drawPolygon2D = [&](const CDisplayRange2D &range, const QRectF &rect,
-                           const std::vector<CPoint2D> &points) {
-    painter_->setClipRect(rect);
+  drawPolygon(points, /*model*/true);
+}
+
+void
+CQCamera3DBones::
+drawPolygon(const std::vector<CPoint3D> &points, bool model) const
+{
+  auto drawPolygon2D = [&](const ViewData &view, const std::vector<CPoint2D> &points) {
+    painter_->setClipRect(view.rect);
 
     std::vector<QPointF> ppoints;
 
     for (const auto &p : points) {
       double px, py;
-      range.windowToPixel(p.x, p.y, &px, &py);
+      view.range.windowToPixel(p.x, p.y, &px, &py);
+
       ppoints.push_back(QPointF(px, py));
     }
 
@@ -497,7 +601,12 @@ drawPolygon(const std::vector<CPoint3D> &points) const
   std::vector<CPoint2D> xpoints, ypoints, zpoints, ppoints;
 
   for (const auto &p : points) {
-    auto p1 = modelMatrix_*p;
+    CPoint3D p1;
+
+    if (model)
+      p1 = modelMatrix_*p;
+    else
+      p1 = p;
 
     xpoints.push_back(CPoint2D(p1.getX(), p1.getY())); // XY
     ypoints.push_back(CPoint2D(p1.getZ(), p1.getY())); // ZY
@@ -508,24 +617,24 @@ drawPolygon(const std::vector<CPoint3D> &points) const
     ppoints.push_back(CPoint2D(p2.getX(), p2.getY()));
   }
 
-  drawPolygon2D(xrange_, xrect_, xpoints);
-  drawPolygon2D(yrange_, yrect_, ypoints);
-  drawPolygon2D(zrange_, zrect_, zpoints);
-  drawPolygon2D(prange_, prect_, ppoints);
+  drawPolygon2D(xview_, xpoints);
+  drawPolygon2D(yview_, ypoints);
+  drawPolygon2D(zview_, zpoints);
+  drawPolygon2D(pview_, ppoints);
 }
 
 void
 CQCamera3DBones::
-drawLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label) const
+drawModelLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label) const
 {
-  auto drawLine2D = [&](const CDisplayRange2D &range, const QRectF &rect, const CPoint2D &p1,
+  auto drawLine2D = [&](const ViewData &view, const CPoint2D &p1,
                         const CPoint2D &p2, const QString &label) {
-    painter_->setClipRect(rect);
+    painter_->setClipRect(view.rect);
 
     double px1, py1;
-    range.windowToPixel(p1.x, p1.y, &px1, &py1);
+    view.range.windowToPixel(p1.x, p1.y, &px1, &py1);
     double px2, py2;
-    range.windowToPixel(p2.x, p2.y, &px2, &py2);
+    view.range.windowToPixel(p2.x, p2.y, &px2, &py2);
 
     painter_->drawLine(px1, py1, px2, py2);
 
@@ -539,9 +648,9 @@ drawLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label) const
   auto x1 = p11.getX(), y1 = p11.getY(), z1 = p11.getZ();
   auto x2 = p21.getX(), y2 = p21.getY(), z2 = p21.getZ();
 
-  drawLine2D(xrange_, xrect_, CPoint2D(x1, y1), CPoint2D(x2, y2), label); // XY
-  drawLine2D(yrange_, yrect_, CPoint2D(z1, y1), CPoint2D(z2, y2), label); // ZY
-  drawLine2D(zrange_, zrect_, CPoint2D(x1, z1), CPoint2D(x2, z2), label); // XZ
+  drawLine2D(xview_, CPoint2D(x1, y1), CPoint2D(x2, y2), label); // XY
+  drawLine2D(yview_, CPoint2D(z1, y1), CPoint2D(z2, y2), label); // ZY
+  drawLine2D(zview_, CPoint2D(x1, z1), CPoint2D(x2, z2), label); // XZ
 
   p11 = projectionMatrix_*viewMatrix_*modelMatrix_*p1;
   p21 = projectionMatrix_*viewMatrix_*modelMatrix_*p2;
@@ -549,50 +658,49 @@ drawLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label) const
   x1 = p11.getX(), y1 = p11.getY();
   x2 = p21.getX(), y2 = p21.getY();
 
-  drawLine2D(prange_, prect_, CPoint2D(x1, y1), CPoint2D(x2, y2), label);
+  drawLine2D(pview_, CPoint2D(x1, y1), CPoint2D(x2, y2), label);
 }
 
 void
 CQCamera3DBones::
 drawCircle(const CVector3D &origin, double r)
 {
-  auto drawCircle2D = [&](CDisplayRange2D &range, const QRectF &rect,
-                          const CPoint2D &o, double r) {
-    painter_->setClipRect(rect);
+  auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r) {
+    painter_->setClipRect(view.rect);
 
     double px1, py1;
-    range.windowToPixel(o.x - r, o.y - r, &px1, &py1);
+    view.range.windowToPixel(o.x - r, o.y - r, &px1, &py1);
     double px2, py2;
-    range.windowToPixel(o.x + r, o.y + r, &px2, &py2);
+    view.range.windowToPixel(o.x + r, o.y + r, &px2, &py2);
 
     painter_->drawEllipse(QRectF(px1, py1, px2 - px1, py2 - py1));
   };
 
-  drawCircle2D(xrange_, xrect_, CPoint2D(origin.x(), origin.y()), r); // XY
-  drawCircle2D(yrange_, yrect_, CPoint2D(origin.z(), origin.y()), r); // ZY
-  drawCircle2D(zrange_, zrect_, CPoint2D(origin.x(), origin.z()), r); // XZ
+  drawCircle2D(xview_, CPoint2D(origin.x(), origin.y()), r); // XY
+  drawCircle2D(yview_, CPoint2D(origin.z(), origin.y()), r); // ZY
+  drawCircle2D(zview_, CPoint2D(origin.x(), origin.z()), r); // XZ
 }
 
 void
 CQCamera3DBones::
 drawPoint(const CVector3D &p, const QString &label) const
 {
-  auto drawPoint2D = [&](const CDisplayRange2D &range, const QRectF &rect,
-                         const CPoint2D &p, const QString &label) {
-    painter_->setClipRect(rect);
+  auto drawPoint2D = [&](const ViewData &view, const CPoint2D &p, const QString &label) {
+    painter_->setClipRect(view.rect);
 
     double px, py;
-    range.windowToPixel(p.x, p.y, &px, &py);
+    view.range.windowToPixel(p.x, p.y, &px, &py);
 
     painter_->drawLine(px - 4, py, px + 4, py);
     painter_->drawLine(px, py - 4, px, py + 4);
 
-    painter_->drawText(px, py, label);
+    if (label != "")
+      painter_->drawText(px, py, label);
   };
 
-  drawPoint2D(xrange_, xrect_, CPoint2D(p.getX(), p.getY()), label); // XY
-  drawPoint2D(yrange_, yrect_, CPoint2D(p.getZ(), p.getY()), label); // ZY
-  drawPoint2D(zrange_, zrect_, CPoint2D(p.getX(), p.getZ()), label); // XZ
+  drawPoint2D(xview_, CPoint2D(p.getX(), p.getY()), label); // XY
+  drawPoint2D(yview_, CPoint2D(p.getZ(), p.getY()), label); // ZY
+  drawPoint2D(zview_, CPoint2D(p.getX(), p.getZ()), label); // XZ
 }
 
 void
@@ -601,19 +709,18 @@ drawPixmap(const CPoint3D &p, const QPixmap &pixmap) const
 {
   auto s = pixmap.width();
 
-  auto drawPixmap2D = [&](const CDisplayRange2D &range, const QRectF &rect,
-                          const CPoint2D &p, const QPixmap &pixmap) {
-    painter_->setClipRect(rect);
+  auto drawPixmap2D = [&](const ViewData &view, const CPoint2D &p, const QPixmap &pixmap) {
+    painter_->setClipRect(view.rect);
 
     double px, py;
-    range.windowToPixel(p.x, p.y, &px, &py);
+    view.range.windowToPixel(p.x, p.y, &px, &py);
 
     painter_->drawPixmap(px - s/2, py - s/2, pixmap);
   };
 
-  drawPixmap2D(xrange_, xrect_, CPoint2D(p.getX(), p.getY()), pixmap); // XY
-  drawPixmap2D(yrange_, yrect_, CPoint2D(p.getZ(), p.getY()), pixmap); // ZY
-  drawPixmap2D(zrange_, zrect_, CPoint2D(p.getX(), p.getZ()), pixmap); // XZ
+  drawPixmap2D(xview_, CPoint2D(p.getX(), p.getY()), pixmap); // XY
+  drawPixmap2D(yview_, CPoint2D(p.getZ(), p.getY()), pixmap); // ZY
+  drawPixmap2D(zview_, CPoint2D(p.getX(), p.getZ()), pixmap); // XZ
 }
 
 void
@@ -623,8 +730,12 @@ mousePressEvent(QMouseEvent *e)
 //bool isShift   = (e->modifiers() & Qt::ShiftModifier);
 //bool isControl = (e->modifiers() & Qt::ControlModifier);
 
+  pressPixel_ = e->pos();
+  movePixel_  = pressPixel_;
+
   if (e->button() == Qt::LeftButton) {
-    selectNode(e->x(), e->y());
+    rubberBand_->setBounds(pressPixel_, movePixel_);
+    rubberBand_->show();
   }
 
   pressed_     = true;
@@ -633,8 +744,16 @@ mousePressEvent(QMouseEvent *e)
 
 void
 CQCamera3DBones::
-mouseReleaseEvent(QMouseEvent *)
+mouseReleaseEvent(QMouseEvent *e)
 {
+  movePixel_ = e->pos();
+
+  if (mouseButton_ == Qt::LeftButton) {
+    selectNode(pressPixel_.x(), pressPixel_.y());
+
+    rubberBand_->hide();
+  }
+
   pressed_ = false;
 }
 
@@ -645,11 +764,14 @@ mouseMoveEvent(QMouseEvent *e)
   int x = e->x();
   int y = e->y();
 
+  movePixel_ = e->pos();
+
 //bool isShift   = (e->modifiers() & Qt::ShiftModifier);
 //bool isControl = (e->modifiers() & Qt::ControlModifier);
 
   if (pressed_) {
     if (mouseButton_ == Qt::LeftButton) {
+      rubberBand_->setBounds(pressPixel_, movePixel_);
     }
   }
 
@@ -663,9 +785,9 @@ mouseMoveEvent(QMouseEvent *e)
   ind_ = -1;
 
   CPoint2D p;
-  if (pressRange(xrange_, x, y, p)) { ind_ = 0; showPoint(CPoint3D(p.x, p.y, 0.0)); } // XY
-  if (pressRange(yrange_, x, y, p)) { ind_ = 1; showPoint(CPoint3D(0.0, p.y, p.x)); } // ZY
-  if (pressRange(zrange_, x, y, p)) { ind_ = 2; showPoint(CPoint3D(p.x, 0.0, p.y)); } // XZ
+  if (xview_.pressRange(x, y, p)) { ind_ = xview_.ind; showPoint(CPoint3D(p.x, p.y, 0.0)); } // XY
+  if (yview_.pressRange(x, y, p)) { ind_ = yview_.ind; showPoint(CPoint3D(0.0, p.y, p.x)); } // ZY
+  if (zview_.pressRange(x, y, p)) { ind_ = zview_.ind; showPoint(CPoint3D(p.x, 0.0, p.y)); } // XZ
 
   if (! pressed_) {
     if (ind_ != ind)
@@ -675,24 +797,37 @@ mouseMoveEvent(QMouseEvent *e)
 
 void
 CQCamera3DBones::
-keyPressEvent(QKeyEvent *)
+keyPressEvent(QKeyEvent *e)
 {
-#if 0
   auto *canvas = app_->canvas();
-  auto *camera = canvas->getCurrentCamera();
+//auto *camera = canvas->getCurrentCamera();
 
   auto k = e->key();
 
 //bool isShift   = (e->modifiers() & Qt::ShiftModifier);
 //bool isControl = (e->modifiers() & Qt::ControlModifier);
 
-  auto bbox = canvas->bbox();
+//auto bbox = canvas->bbox();
 
-  auto d = bbox.getMaxSize()/100.0;
+//auto d = bbox.getMaxSize()/100.0;
+
+  if      (k == Qt::Key_Plus) {
+    for (auto *v : views_)
+      v->range.zoomIn(1.1);
+  }
+  else if (k == Qt::Key_Minus) {
+    for (auto *v : views_)
+      v->range.zoomOut(1.1);
+  }
+  else if (k == Qt::Key_Home) {
+    for (auto *v : views_)
+      v->range.reset();
+
+    bboxSet_ = false;
+  }
 
   canvas->update();
   update();
-#endif
 }
 
 void
@@ -701,11 +836,11 @@ selectNode(int x, int y)
 {
   CPoint2D p;
 
-  if (pressRange(xrange_, x, y, p))
+  if (xview_.pressRange(x, y, p))
     selectNodeXY(CPoint2D(p.x, p.y)); // XY
-  if (pressRange(yrange_, x, y, p))
+  if (yview_.pressRange(x, y, p))
     selectNodeZY(CPoint2D(p.x, p.y)); // ZY
-  if (pressRange(zrange_, x, y, p))
+  if (zview_.pressRange(x, y, p))
     selectNodeXZ(CPoint2D(p.x, p.y)); // XZ
 }
 
@@ -793,6 +928,7 @@ selectNodeXZ(const CPoint2D &p)
   }
 }
 
+#if 0
 bool
 CQCamera3DBones::
 pressRange(const CDisplayRange2D &range, int x, int y, CPoint2D &p) const
@@ -813,18 +949,56 @@ pressRange(const CDisplayRange2D &range, int x, int y, CPoint2D &p) const
 
   return true;
 }
+#endif
+
+void
+CQCamera3DBones::
+updateBBox(const CPoint3D &c)
+{
+  bbox_ += c;
+
+  xview_.bbox += CPoint2D(c.x, c.y);
+  yview_.bbox += CPoint2D(c.z, c.y);
+  zview_.bbox += CPoint2D(c.x, c.z);
+}
 
 CMatrix3D
 CQCamera3DBones::
-getNodeTransform(CGeomNodeData &nodeData) const
+getNodeTransform(CGeomObject3D * /*rootObject*/, CGeomNodeData &nodeData) const
 {
 #if 0
-  if (nodeData.isJoint())
-    return nodeData.inverseBindMatrix().inverse();
-#endif
+  std::optional<CMatrix3D> m1, m2, m3;
 
-  if (useAnim_)
+  if (nodeData.isJoint())
+    m1 = nodeData.inverseBindMatrix().inverse();
+
+  if (animName_ != "")
+    m2 = nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
+  else
+    m2 = nodeData.object()->getNodeHierTransform(nodeData);
+
+  auto pn = objectNodeMatrices_.find(rootObject->getInd());
+
+  if (pn != objectNodeMatrices_.end()) {
+    auto &nodeMatrices = (*pn).second;
+
+    auto pn1 = nodeMatrices.find(nodeData.index());
+
+    if (pn1 != nodeMatrices.end())
+      m3 = (*pn1).second;
+  }
+
+  if (m3)
+    return (*m3).inverse();
+
+  if (m1)
+    return *m1;
+
+  return *m2;
+#else
+  if (animName_ != "")
     return nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
   else
     return nodeData.object()->getNodeHierTransform(nodeData);
+#endif
 }

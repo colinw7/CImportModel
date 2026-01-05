@@ -72,8 +72,8 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
   connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
 
-  connect(app_, SIGNAL(animNameChanged()), this, SLOT(addObjectsData()));
-  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(addObjectsData()));
+  connect(app_, SIGNAL(animNameChanged()), this, SLOT(updateObjectsData()));
+  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(updateObjectsData()));
 }
 
 void
@@ -505,6 +505,13 @@ resizeGL(int width, int height)
   glViewport(0, 0, width, height);
 
   setAspect(double(width)/double(height));
+
+  //---
+
+  // update camera
+  auto *camera = getCurrentCamera();
+
+  camera->setAspect(aspect());
 }
 
 void
@@ -523,13 +530,6 @@ paintGL()
   enableCullFace   ();
   enableFrontFace  ();
   enablePolygonLine();
-
-  //---
-
-  // set camera
-  auto *camera = getCurrentCamera();
-
-  camera->setAspect(aspect());
 
   //---
 
@@ -609,9 +609,28 @@ shaderProgram()
 
 void
 CQCamera3DCanvas::
+updateObjectsData()
+{
+  addObjectsData();
+
+  update();
+}
+
+void
+CQCamera3DCanvas::
 addObjectsData()
 {
   bbox_ = CBBox3D();
+
+  //---
+
+#if 0
+  auto animName = app_->animName();
+
+  bool isAnim = (animName != "");
+#endif
+
+  //---
 
   int    boneNodeIds[4];
   double boneWeights[4];
@@ -626,7 +645,10 @@ addObjectsData()
 
     auto *objectData = initObjectData(io, object);
 
-    auto modelMatrix = object1->getHierTransform();
+    //---
+
+    auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+    auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
 
     //---
 
@@ -724,7 +746,8 @@ addObjectsData()
         const auto &vertex = object->getVertex(v);
         const auto &model  = vertex.getModel();
 
-        auto model1 = modelMatrix*model;
+        auto model1 = meshMatrix *model;
+        auto model2 = modelMatrix*model1;
 
         //---
 
@@ -760,6 +783,8 @@ addObjectsData()
 
         //---
 
+        buffer->addInd(vertex.getInd());
+
         buffer->addPoint(float(model.x), float(model.y), float(model.z));
 
         buffer->addNormal(float(normal1.getX()), float(normal1.getY()), float(normal1.getZ()));
@@ -794,7 +819,7 @@ addObjectsData()
 
         ++iv;
 
-        bbox1 += model1;
+        bbox1 += model2;
       }
 
       pos += faceData.len;
@@ -810,6 +835,9 @@ addObjectsData()
       addFaceData(face);
 
       auto *faceMaterial = const_cast<CGeomFace3D *>(face)->getMaterialP();
+
+      if (! faceMaterial && objectMaterial)
+        faceMaterial = objectMaterial;
 
       if (faceMaterial && faceMaterial->isTwoSided())
         addFaceData(face, /*reverse*/true);
@@ -843,13 +871,15 @@ initCamera()
 
   auto s2 = std::sqrt(2.0);
 
-  auto origin = CVector3D(center.x, center.y, center.z);
-  auto pos    = CVector3D(center.x, center.y, center.z + s2*maxSize);
-
-  auto v = CVector3D(origin, pos);
-  auto a = std::atan2(v.z(), v.x());
-
   for (auto *camera : cameras_) {
+    auto maxSize1 = s2*maxSize + camera->near();
+
+    auto origin = CVector3D(center.x, center.y, center.z);
+    auto pos    = CVector3D(center.x, center.y, center.z + maxSize1);
+
+    auto v = CVector3D(origin, pos);
+    auto a = std::atan2(v.z(), v.x());
+
     //camera->setOrigin(origin);
     camera->setPosition(pos);
 
@@ -878,9 +908,11 @@ updateStatus()
   auto *face   = currentFace();
 
   if      (object) {
-    auto name = QString::fromStdString(object->getName());
+    auto name     = QString::fromStdString(object->getName());
+    auto meshName = QString::fromStdString(object->getMeshName());
 
-    bboxStr += QString(", Object: %1 (#%2)").arg(name).arg(object->getInd());
+    bboxStr += QString(", Object: %1 (Mesh: %2, #%3)").
+      arg(name).arg(meshName).arg(object->getInd());
   }
   else if (face) {
     bboxStr += QString(", Face: %1").arg(face->getInd());
@@ -931,18 +963,22 @@ drawObjectsData()
 
   //---
 
-  int io = 0;
-
   auto *scene = app_->getScene();
 
   for (auto *object : scene->getObjects()) {
-    if (! object->getVisible()) {
-      ++io;
+    if (! object->getVisible())
       continue;
-    }
 
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
+
+    //---
+
+    // mesh matrix
+    auto meshMatrix = object->getMeshGlobalTransform();
+    program->setUniformValue("meshMatrix", CQGLUtil::toQMatrix(meshMatrix));
+
+    //---
 
     // model matrix
     //auto modelMatrix = CMatrix3DH::identity();
@@ -965,7 +1001,7 @@ drawObjectsData()
 
     bool objectSelected = object->getHierSelected();
 
-    auto *objectData = initObjectData(io, object);
+    auto *objectData = getObjectData(object);
 
     objectData->buffer()->bind();
 
@@ -1106,8 +1142,6 @@ drawObjectsData()
     //---
 
     objectData->buffer()->unbind();
-
-    ++io;
   }
 
   //---
@@ -1192,6 +1226,7 @@ void
 CQCamera3DCanvas::
 updateNodeMatrices(CGeomObject3D *object)
 {
+  // anim data always on root object
   auto *rootObject = object->getRootObject();
 
   if (rootObject == paintData_.rootObject)
@@ -1213,25 +1248,20 @@ updateNodeMatrices(CGeomObject3D *object)
   for (int i = 0; i < PaintData::NUM_NODE_MATRICES; i++)
     nodeMatrices.push_back(CMatrix3D::identity());
 
-  struct WorkData {
-    const CGeomNodeData *parent    { nullptr };
-    const CGeomNodeData *node      { nullptr };
-    CMatrix3D            transform { CMatrix3D::identity() };
-  };
-
   auto meshMatrix        = rootObject->getMeshGlobalTransform();
   auto inverseMeshMatrix = meshMatrix.inverse();
 
   for (const auto &pn : rootObject->getNodes()) {
     auto &node = const_cast<CGeomNodeData &>(pn.second);
-
-    if (! node.isJoint())
-      continue;
+    //if (! node.isJoint()) continue;
 
     int nodeId = node.index();
+    if (nodeId < 0) continue;
 
-    if (nodeId >= PaintData::NUM_NODE_MATRICES)
-      break;
+    if (nodeId >= PaintData::NUM_NODE_MATRICES) {
+      std::cerr << "Too few node matrices for node " << nodeId << "\n";
+      continue;
+    }
 
     nodeMatrices[nodeId] = node.calcNodeAnimMatrix(inverseMeshMatrix);
   }
@@ -1250,23 +1280,25 @@ updateNodeMatrices(CGeomObject3D *object)
 
 CQCamera3DGeomObject *
 CQCamera3DCanvas::
-rootObject() const
+defaultRootObject() const
 {
+  CQCamera3DGeomObject *rootGeomObject { nullptr };
+
+  // get root object of first visible object
   auto *scene = app_->getScene();
 
   for (auto *object : scene->getObjects()) {
     if (! object->getVisible())
       continue;
 
-    while (object->parent())
-      object = object->parent();
+    auto *rootObject = object->getRootObject();
 
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+    rootGeomObject = dynamic_cast<CQCamera3DGeomObject *>(rootObject);
 
-    return object1;
+    break;
   }
 
-  return nullptr;
+  return rootGeomObject;
 }
 
 CGeomObject3D *
@@ -1292,7 +1324,6 @@ getObjectData(CGeomObject3D *object) const
 
   return nullptr;
 }
-
 
 CQCamera3DObjectData *
 CQCamera3DCanvas::
@@ -1346,9 +1377,12 @@ selectObject(CGeomObject3D *object, bool update)
 
 bool
 CQCamera3DCanvas::
-selectFace(CGeomFace3D *face, bool update)
+selectFace(CGeomFace3D *face, bool clear, bool update)
 {
-  auto changed = deselectAll(update);
+  bool changed = false;
+
+  if (clear)
+    changed = deselectAll(update);
 
   if (! face->getSelected()) {
     face->setSelected(true);
@@ -1370,9 +1404,12 @@ selectFace(CGeomFace3D *face, bool update)
 
 bool
 CQCamera3DCanvas::
-selectFaces(const std::vector<CGeomFace3D *> &faces, bool update)
+selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update)
 {
-  auto changed = deselectAll(update);
+  auto changed = false;
+
+  if (clear)
+    changed = deselectAll(update);
 
   for (auto *face : faces) {
     if (! face->getSelected()) {
@@ -1516,6 +1553,68 @@ deselectAll(bool update)
   return changed;
 }
 
+std::vector<CGeomObject3D *>
+CQCamera3DCanvas::
+getSelectedObjects() const
+{
+  std::vector<CGeomObject3D *> selectedObjects;
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    if (object->getSelected())
+      selectedObjects.push_back(object);
+  }
+
+  return selectedObjects;
+}
+
+std::vector<CGeomFace3D *>
+CQCamera3DCanvas::
+getSelectedFaces() const
+{
+  std::vector<CGeomFace3D *> selectedFaces;
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    const auto &faces = object->getFaces();
+
+    for (auto *face : faces) {
+      if (face->getSelected())
+        selectedFaces.push_back(face);
+    }
+  }
+
+  return selectedFaces;
+}
+
+CQCamera3DCanvas::ObjectSelectInds
+CQCamera3DCanvas::
+getSelectedVertices() const
+{
+  ObjectSelectInds objectSelectInds;
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    const auto &faces = object->getFaces();
+
+    for (auto *face : faces) {
+      const auto &vertices = face->getVertices();
+
+      for (const auto &v : vertices) {
+        auto &vertex = object->getVertex(v);
+
+        if (vertex.isSelected())
+          objectSelectInds[object].insert(v);
+      }
+    }
+  }
+
+  return objectSelectInds;
+}
+
 //---
 
 void
@@ -1568,9 +1667,6 @@ mousePressEvent(QMouseEvent *e)
 
     CLine3D line(eyeLine.px1, eyeLine.px2);
 
-    CBBox3D mbbox, vbbox, pbbox;
-    CBBox3D pxbbox;
-
     // intersect eye line with object faces
     auto *scene = app_->getScene();
 
@@ -1581,32 +1677,26 @@ mousePressEvent(QMouseEvent *e)
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
       assert(object1);
 
-      //auto *objectData = initObjectData(io, object);
-
+      // TODO: adjust to anim
       auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+//    auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
+      auto meshMatrix  = CMatrix3DH::identity();
 
       const auto &faces = object->getFaces();
 
       for (auto *face : faces) {
         const auto &vertices = face->getVertices();
 
-        std::vector<CPoint3D> points;
+        std::vector<CPoint3D> points, spoints;
 
         for (const auto &v : vertices) {
           const auto &vertex = object->getVertex(v);
           const auto &model  = vertex.getModel();
 
-          auto view    = viewMatrix*modelMatrix*model;
+          auto view    = viewMatrix*modelMatrix*meshMatrix*model;
           auto project = projectionMatrix*view;
 
-          //auto pixel = CPoint3D(project.x/project.z, project.y/project.z, project.z);
-          //points.push_back(pixel);
           points.push_back(project);
-
-          mbbox .add(model);
-          vbbox .add(view);
-          pbbox .add(project);
-        //pxbbox.add(pixel);
         }
 
         int np = int(points.size());
@@ -1658,13 +1748,6 @@ mousePressEvent(QMouseEvent *e)
       }
     }
 
-#if 0
-    std::cerr << "Model BBox: " << mbbox << "\n";
-    std::cerr << "View BBox: " << vbbox << "\n";
-    std::cerr << "Project BBox: " << pbbox << "\n";
-    std::cerr << "Pixel BBox: " << pxbbox << "\n";
-#endif
-
     // sort inside faces by z
     std::map<double, int> tfaces;
 
@@ -1673,6 +1756,9 @@ mousePressEvent(QMouseEvent *e)
       for (const auto &insideFace : insideFaces)
         tfaces[-insideFace.t] = insideFace.ind;
     }
+
+    //---
+    bool clear = ! isControl;
 
     bool changed = false;
 
@@ -1687,7 +1773,7 @@ mousePressEvent(QMouseEvent *e)
       if (! tfaces.empty()) {
         const auto &insideFace = insideFaces[tfaces.begin()->second];
 
-        changed = selectFace(insideFace.face, /*update*/false);
+        changed = selectFace(insideFace.face, clear, /*update*/false);
 
         setIntersectPoints(insideFace.ipoint, insideFace.ipoint);
       }
@@ -1913,7 +1999,7 @@ objectKeyPress(QKeyEvent *e)
   auto *object = currentObject();
 
   if (! object)
-    object = rootObject();
+    object = defaultRootObject();
 
   if (! object) return;
 
