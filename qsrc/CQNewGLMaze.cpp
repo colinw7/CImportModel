@@ -28,7 +28,7 @@ CQNewGLShaderProgram *
 CQNewGLMaze::
 shaderProgram()
 {
-  return canvas_->getShader("maze.vs", "maze.fs");
+  return getShader("maze.vs", "maze.fs");
 }
 
 CQGLBuffer *
@@ -50,7 +50,7 @@ initBuffer()
     if (flipV)
       image->flipH();
 
-    auto *texture = CGeometryInst->createTexture(image);
+    auto *texture = CGeometry3DInst->createTexture(image);
 
     texture->setName(filename.toStdString());
 

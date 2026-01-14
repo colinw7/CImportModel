@@ -3,14 +3,19 @@
 #include <CQCamera3DOverview.h>
 #include <CQCamera3DUVMap.h>
 #include <CQCamera3DTextures.h>
+#include <CQCamera3DMaterials.h>
 #include <CQCamera3DBones.h>
 #include <CQCamera3DControl.h>
+#include <CQCamera3DToolbar.h>
+#include <CQCamera3DSidebar.h>
 #include <CQCamera3DStatus.h>
-#include <CQCamera3DGeomObject.h>
 #include <CQCamera3DLight.h>
+#include <CQCamera3DTexture.h>
+#include <CQCamera3DGeomObject.h>
+#include <CQCamera3DGeomFace.h>
 
 #include <CGeometry3D.h>
-#include <CImportBase.h>
+#include <CImportScene.h>
 #include <CGeomScene3D.h>
 #include <CGeomNodeData.h>
 #include <CFile.h>
@@ -25,6 +30,20 @@
 #include <svg/play_svg.h>
 #include <svg/pause_svg.h>
 #include <svg/play_one_svg.h>
+
+#include <svg/point_select_svg.h>
+#include <svg/edge_select_svg.h>
+#include <svg/face_select_svg.h>
+
+#include <svg/wireframe_svg.h>
+#include <svg/solid_fill_svg.h>
+#include <svg/texture_fill_svg.h>
+
+#include <svg/select_svg.h>
+#include <svg/cursor_svg.h>
+#include <svg/move_svg.h>
+#include <svg/rotate_svg.h>
+#include <svg/scale_svg.h>
 
 #include <set>
 #include <iostream>
@@ -41,8 +60,16 @@ class CQCamera3DGeomFactory : public CGeometryFactory {
     return new CQCamera3DGeomObject(pscene, name);
   }
 
+  CGeomFace3D *createFace3D() const override {
+    return new CQCamera3DGeomFace;
+  }
+
   CGeomLight3D *createLight3D(CGeomScene3D *pscene, const std::string &name) const override {
     return new CQCamera3DLight(pscene, name);
+  }
+
+  CGeomTexture *createTexture() const override {
+    return new CQCamera3DTexture;
   }
 };
 
@@ -57,35 +84,54 @@ CQCamera3DApp()
 
   //---
 
-  CGeometryInst->setFactory(new CQCamera3DGeomFactory);
+  CGeometry3DInst->setFactory(new CQCamera3DGeomFactory);
 
-  scene_ = CGeometryInst->createScene3D();
+  scene_ = CGeometry3DInst->createScene3D();
 
   //---
 
+  // vertical layout: toolbar, central, status
   auto *layout = new QVBoxLayout(this);
+
+  toolbar_ = new CQCamera3DToolbar(this);
+
+  layout->addWidget(toolbar_);
+
+  // center frame : sidebar, views, control
+  auto *centralFrame = CQUtil::makeWidget<QFrame>("centralFrame");
+  auto *centralLayout = new QHBoxLayout(centralFrame);
+
+  layout->addWidget(centralFrame);
+
+  sidebar_ = new CQCamera3DSidebar(this);
+
+  centralLayout->addWidget(sidebar_);
 
   auto *frame = CQUtil::makeWidget<CQTabSplit>("topTab");
 
-  layout->addWidget(frame);
+  centralLayout->addWidget(frame);
 
   tab_ = CQUtil::makeWidget<CQTabSplit>("centerTab");
 
   tab_->setState(CQTabSplit::State::TAB);
 
-  canvas_   = new CQCamera3DCanvas(this);
-  overview_ = new CQCamera3DOverview(this);
-  uvMap_    = new CQCamera3DUVMap(this);
-  textures_ = new CQCamera3DTextures(this);
-  bones_    = new CQCamera3DBones(this);
+  canvas_    = new CQCamera3DCanvas(this);
+  overview_  = new CQCamera3DOverview(this);
+  uvMap_     = new CQCamera3DUVMap(this);
+  textures_  = new CQCamera3DTextures(this);
+  materials_ = new CQCamera3DMaterials(this);
+  bones_     = new CQCamera3DBones(this);
+  animation_ = new QFrame(this);
 
-  tab_->addWidget(canvas_  , "3D"      );
-  tab_->addWidget(overview_, "Overview");
-  tab_->addWidget(uvMap_   , "UV"      );
-  tab_->addWidget(textures_, "Textures");
-  tab_->addWidget(bones_   , "Bones"   );
+  tab_->addWidget(canvas_   , "3D"       );
+  tab_->addWidget(overview_ , "Overview" );
+  tab_->addWidget(uvMap_    , "UV"       );
+  tab_->addWidget(textures_ , "Textures" );
+  tab_->addWidget(materials_, "Materials");
+  tab_->addWidget(bones_    , "Bones"    );
+  tab_->addWidget(animation_, "Animation");
 
-  control_  = new CQCamera3DControl(this);
+  control_ = new CQCamera3DControl(this);
 
   frame->addWidget(tab_    , "Model"  );
   frame->addWidget(control_, "Control");
@@ -114,6 +160,8 @@ connectSlots(bool b)
 
   CQUtil::connectDisconnect(b, canvas_, SIGNAL(textureAdded()),
                             this, SIGNAL(textureAdded()));
+  CQUtil::connectDisconnect(b, canvas_, SIGNAL(materialAdded()),
+                            this, SIGNAL(materialAdded()));
 }
 
 void
@@ -121,6 +169,13 @@ CQCamera3DApp::
 tabSlot(int i)
 {
   control_->setCurrentControl(i);
+
+  if      (i == 0)
+    sidebar_->setView(CQCamera3DSidebar::View::CANVAS);
+  else if (i == 1)
+    sidebar_->setView(CQCamera3DSidebar::View::OVERVIEW);
+  else
+    sidebar_->setView(CQCamera3DSidebar::View::NONE);
 }
 
 void
@@ -132,6 +187,42 @@ setCurrentView(int i)
   tab_->setCurrentIndex(i);
 
   connectSlots(true);
+}
+
+//---
+
+void
+CQCamera3DApp::
+setCurrentTexture(const QString &name)
+{
+  currentTexture_ = name;
+
+  Q_EMIT currentTextureChanged();
+}
+
+//---
+
+void
+CQCamera3DApp::
+setCurrentMaterial(const QString &name)
+{
+  currentMaterial_ = name;
+
+  Q_EMIT currentMaterialChanged();
+}
+
+CGeomMaterial *
+CQCamera3DApp::
+getMaterialByName(const std::string &name) const
+{
+  auto *scene = getScene();
+
+  for (auto *material : scene->getMaterials()) {
+    if (name == material->name())
+      return material;
+  }
+
+  return nullptr;
 }
 
 //---
@@ -206,18 +297,26 @@ void
 CQCamera3DApp::
 setAnimName(const QString &s)
 {
-  animName_ = s;
+  if (s != animName_) {
+    animName_ = s;
 
-  Q_EMIT animNameChanged();
+    objectNodeMatricesValid_ = false;
+
+    Q_EMIT animNameChanged();
+  }
 }
 
 void
 CQCamera3DApp::
 setAnimTime(double r)
 {
-  animTime_ = r;
+  if (r != animTime_) {
+    animTime_ = r;
 
-  Q_EMIT animTimeChanged();
+    objectNodeMatricesValid_ = false;
+
+    Q_EMIT animTimeChanged();
+  }
 }
 
 //---
@@ -265,7 +364,7 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
   }
 
   if (numTop > 1) {
-    auto *parentObj = CGeometryInst->createObject3D(scene_, modelName.toStdString());
+    auto *parentObj = CGeometry3DInst->createObject3D(scene_, modelName.toStdString());
 
     scene_->addObject(parentObj);
 
@@ -292,9 +391,42 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
     scene_->addMaterial(material);
   }
 
+  for (auto *texture : scene->textures()) {
+    scene_->addTexture(texture);
+  }
+
   Q_EMIT modelAdded();
 
   return true;
+}
+
+//---
+
+CGeomTexture *
+CQCamera3DApp::
+getTextureByName(const std::string &name) const
+{
+  auto name1   = name;
+  bool flipped = false;
+
+  auto len = name1.size();
+
+  if (len > 5 && name1.substr(len - 5) == ".flip") {
+    name1   = name1.substr(0, len - 5);
+    flipped = true;
+  }
+
+  auto *scene = this->getScene();
+
+  auto *texture = scene->getTextureByName(name1);
+  if (! texture) return nullptr;
+
+  auto *texture1 = dynamic_cast<CQCamera3DTexture *>(texture);
+  assert(texture1);
+
+  texture1->setFlipped(flipped);
+
+  return texture;
 }
 
 //---
@@ -367,6 +499,33 @@ getRootObjects() const
 
 //---
 
+const CQCamera3DApp::NodeMatrices &
+CQCamera3DApp::
+getObjectNodeMatrices(CGeomObject3D *object) const
+{
+  const auto &objectNodeMatrices = getNodeMatrices();
+
+  auto po = objectNodeMatrices.find(object->getInd());
+  assert(po != objectNodeMatrices.end());
+
+  return (*po).second;
+}
+
+const CQCamera3DApp::ObjectNodeMatrices &
+CQCamera3DApp::
+getNodeMatrices() const
+{
+  auto *th = const_cast<CQCamera3DApp *>(this);
+
+  if (! th->objectNodeMatricesValid_) {
+    th->objectNodeMatrices_ = calcNodeMatrices();
+
+    th->objectNodeMatricesValid_ = true;
+  }
+
+  return objectNodeMatrices_;
+}
+
 CQCamera3DApp::ObjectNodeMatrices
 CQCamera3DApp::
 calcNodeMatrices() const
@@ -382,9 +541,14 @@ calcNodeMatrices() const
     if (! rootObject->getVisible())
       continue;
 
+    auto animName1 = rootObject->animName();
+
+    if (animName1 == "")
+      animName1 = animName;
+
     auto &nodeMatrices = objectNodeMatrices[rootObject->getInd()];
 
-    rootObject->updateNodesAnimationData(animName, animTime);
+    rootObject->updateNodesAnimationData(animName1, animTime);
 
     auto meshMatrix        = rootObject->getMeshGlobalTransform();
     auto inverseMeshMatrix = meshMatrix.inverse();
@@ -404,7 +568,8 @@ calcNodeMatrices() const
 
 CPoint3D
 CQCamera3DApp::
-adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p, NodeMatrices &nodeMatrices) const
+adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
+                const NodeMatrices &nodeMatrices) const
 {
   const auto &jointData = vertex.getJointData();
 
@@ -454,4 +619,49 @@ adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p, NodeMatrices &no
   }
   else
     return p;
+}
+
+//---
+
+bool
+CQCamera3DApp::
+writeScene(CGeomScene3D *scene) const
+{
+  CFile file("temp.scene");
+
+  CImportScene im;
+
+  return im.write(&file, scene);
+}
+
+//---
+
+CBBox3D
+CQCamera3DApp::
+transformBBox(const CBBox3D &bbox, const CMatrix3D &matrix) const
+{
+  const auto &pmin = bbox.getMin();
+  const auto &pmax = bbox.getMax();
+
+  std::vector<CPoint3D> points;
+
+  auto addPoint = [&](double x, double y, double z) {
+    points.push_back(CPoint3D(x, y, z));
+  };
+
+  addPoint(pmin.getX(), pmin.getY(), pmin.getZ());
+  addPoint(pmax.getX(), pmin.getY(), pmin.getZ());
+  addPoint(pmax.getX(), pmax.getY(), pmin.getZ());
+  addPoint(pmin.getX(), pmax.getY(), pmin.getZ());
+  addPoint(pmin.getX(), pmin.getY(), pmax.getZ());
+  addPoint(pmax.getX(), pmin.getY(), pmax.getZ());
+  addPoint(pmax.getX(), pmax.getY(), pmax.getZ());
+  addPoint(pmin.getX(), pmax.getY(), pmax.getZ());
+
+  CBBox3D bbox1;
+
+  for (const auto &p : points)
+    bbox1.add(matrix*p);
+
+  return bbox1;
 }

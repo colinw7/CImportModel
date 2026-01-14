@@ -22,8 +22,19 @@ class CQCamera3DCamera : public QObject {
 
   //---
 
+  const uint &id() const { return id_; }
+  void setId(const uint &v) { id_ = v; }
+
+  //---
+
   bool isVisible() const { return visible_; }
   void setVisible(bool b) { visible_ = b; }
+
+  bool isPerspective() const { return perspective_; }
+  void setPerspective(bool b) { perspective_ = b; }
+
+  const QString &name() const { return name_; }
+  void setName(const QString &s) { name_ = s; }
 
   //---
 
@@ -260,11 +271,30 @@ class CQCamera3DCamera : public QObject {
 
   //---
 
-  // get perspective matrix
-  CMatrix3DH perspectiveMatrix() const {
-    return CMatrix3DH::perspective(fov_, aspect_, near_, far_);
+ public:
+  // get world matrix
+  CMatrix3DH worldMatrix() const {
+    if (isPerspective())
+      return perspectiveMatrix();
+    else
+      return orthoMatrix();
   }
 
+ private:
+  // get perspective matrix
+  CMatrix3DH perspectiveMatrix() const {
+    return CMatrix3DH::perspective(fov(), aspect(), near(), far());
+  }
+
+  // get ortho matrix
+  CMatrix3DH orthoMatrix() const {
+    auto pov = CVector3D(origin_, position_);
+    auto r   = pov.length()/2.0;
+
+    return CMatrix3DH::ortho(/*left*/-r, /*right*/r, /*bottom*/-r, /*top*/r, near(), far());
+  }
+
+ public:
   // get view matrix
   CMatrix3DH viewMatrix() const {
     if (! matrixValid_)
@@ -473,12 +503,26 @@ class CQCamera3DCamera : public QObject {
     calcVectors();
   }
 
+ public:
+  void print() const {
+    std::cerr << "Origin:   " << origin_ << "\n";
+    std::cerr << "Position: " << position_ << "\n";
+    std::cerr << "Pitch:    " << pitch_ << "\n";
+    std::cerr << "Yaw:      " << yaw_ << "\n";
+    std::cerr << "Roll:     " << roll_ << "\n";
+  }
+
  Q_SIGNALS:
   // send when state (data values) changed
   void stateChanged();
 
  private:
-  bool visible_ { true };
+  uint id_ { 0 };
+
+  bool visible_     { true };
+  bool perspective_ { true };
+
+  QString name_;
 
   double fov_    { 45.0 };     // field of view
   double aspect_ { 1.0 };      // pixel aspect

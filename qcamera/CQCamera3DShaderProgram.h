@@ -4,12 +4,12 @@
 #include <QOpenGLShaderProgram>
 #include <QString>
 
-class CQCamera3DCanvas;
+class CQCamera3DApp;
 class CQGLBuffer;
 
 class CQCamera3DShaderProgram : public QOpenGLShaderProgram {
  public:
-  CQCamera3DShaderProgram(CQCamera3DCanvas *canvas);
+  CQCamera3DShaderProgram(CQCamera3DApp *app);
 
   void addShaders(const QString &vertex, const QString &fragment);
 
@@ -19,7 +19,7 @@ class CQCamera3DShaderProgram : public QOpenGLShaderProgram {
   CQGLBuffer *createBuffer();
 
  private:
-  CQCamera3DCanvas* canvas_ { nullptr };
+  CQCamera3DApp* app_ { nullptr };
 };
 
 #endif

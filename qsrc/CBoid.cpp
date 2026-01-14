@@ -612,7 +612,7 @@ CBoid::
 getObject()
 {
   if (! object_) {
-    object_ = CGeometryInst->createObject3D(nullptr, "boid");
+    object_ = CGeometry3DInst->createObject3D(nullptr, "boid");
 
     CGeomPyramid3D::addGeometry(object_, 0.0, 0.0, 0.0, 0.5, 1);
 

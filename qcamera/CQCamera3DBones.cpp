@@ -101,7 +101,7 @@ paintEvent(QPaintEvent *)
   auto *canvas = app_->canvas();
   auto *camera = canvas->getCurrentCamera();
 
-  projectionMatrix_ = CMatrix3DH(camera->perspectiveMatrix());
+  projectionMatrix_ = CMatrix3DH(camera->worldMatrix());
   viewMatrix_       = CMatrix3DH(camera->viewMatrix());
 
   //---
@@ -187,16 +187,8 @@ paintEvent(QPaintEvent *)
 
   //---
 
-  animName_ = app_->animName().toStdString();
-  animTime_ = app_->animTime();
-
-  //useAnim_ = (animName_ != "");
+  //useAnim_ = (app_->animName() != "");
   useAnim_ = true;
-
-  //---
-
-  if (useAnim_)
-    updateNodeMatrices();
 
   //---
 
@@ -266,7 +258,7 @@ drawModel()
 
     //---
 
-    auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
+    const auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
 
     //---
 
@@ -377,7 +369,7 @@ drawModel()
       if (useAnim_) {
         auto *rootObject = object->getRootObject();
 
-        auto &nodeMatrices = objectNodeMatrices_[rootObject->getInd()];
+        auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
 
         p = app_->adjustAnimPoint(*v, p, nodeMatrices);
       }
@@ -389,13 +381,6 @@ drawModel()
       drawCircle(CVector3D(p), s);
     }
   }
-}
-
-void
-CQCamera3DBones::
-updateNodeMatrices()
-{
-  objectNodeMatrices_ = app_->calcNodeMatrices();
 }
 
 void
@@ -422,7 +407,7 @@ updateBonesBBox()
 
       //---
 
-    //auto *object = node.object()->getMeshObject();
+    //auto *object = node.rootObject()->getMeshObject();
 
     //auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
       auto meshMatrix = CMatrix3DH::identity();
@@ -474,10 +459,9 @@ drawBones()
 
       //---
 
-      auto *object = node.object()->getMeshObject();
+      auto *meshObject = node.rootObject()->getMeshObject();
 
-      auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
-    //auto meshMatrix = CMatrix3DH::identity();
+      auto meshMatrix = CMatrix3DH(meshObject->getMeshGlobalTransform());
 
       //---
 
@@ -509,10 +493,9 @@ drawBones()
         auto &pnode = const_cast<CGeomNodeData &>(rootObject->getNode(node.parent()));
 
         if (pnode.isValid() && (! isOnlyJoints() || pnode.isJoint())) {
-          auto *pobject = pnode.object()->getMeshObject();
+          auto *pmeshObject = pnode.rootObject()->getMeshObject();
 
-          auto pmeshMatrix = CMatrix3DH(pobject->getMeshGlobalTransform());
-        //auto pmeshMatrix = CMatrix3DH::identity();
+          auto pmeshMatrix = CMatrix3DH(pmeshObject->getMeshGlobalTransform());
 
           auto m1 = getNodeTransform(rootObject, pnode);
 
@@ -964,29 +947,36 @@ updateBBox(const CPoint3D &c)
 
 CMatrix3D
 CQCamera3DBones::
-getNodeTransform(CGeomObject3D * /*rootObject*/, CGeomNodeData &nodeData) const
+getNodeTransform(CGeomObject3D *rootObject, CGeomNodeData &nodeData) const
 {
+  auto animName = rootObject->animName();
+  auto animTime = app_->animTime();
+
+  if (animName == "")
+    animName = app_->animName().toStdString();
+
+  auto *object = nodeData.object();
+
+  if (! object)
+    object = rootObject;
+
 #if 0
   std::optional<CMatrix3D> m1, m2, m3;
 
   if (nodeData.isJoint())
     m1 = nodeData.inverseBindMatrix().inverse();
 
-  if (animName_ != "")
-    m2 = nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
+  if (animName != "")
+    m2 = object->getNodeAnimHierTransform(nodeData, animName, animTime);
   else
-    m2 = nodeData.object()->getNodeHierTransform(nodeData);
+    m2 = object->getNodeHierTransform(nodeData);
 
-  auto pn = objectNodeMatrices_.find(rootObject->getInd());
+  auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
 
-  if (pn != objectNodeMatrices_.end()) {
-    auto &nodeMatrices = (*pn).second;
+  auto pn1 = nodeMatrices.find(nodeData.index());
 
-    auto pn1 = nodeMatrices.find(nodeData.index());
-
-    if (pn1 != nodeMatrices.end())
-      m3 = (*pn1).second;
-  }
+  if (pn1 != nodeMatrices.end())
+    m3 = (*pn1).second;
 
   if (m3)
     return (*m3).inverse();
@@ -996,9 +986,9 @@ getNodeTransform(CGeomObject3D * /*rootObject*/, CGeomNodeData &nodeData) const
 
   return *m2;
 #else
-  if (animName_ != "")
-    return nodeData.object()->getNodeAnimHierTransform(nodeData, animName_, animTime_);
+  if (animName != "")
+    return object->getNodeAnimHierTransform(nodeData, animName, animTime);
   else
-    return nodeData.object()->getNodeHierTransform(nodeData);
+    return object->getNodeHierTransform(nodeData);
 #endif
 }

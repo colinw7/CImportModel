@@ -18,7 +18,7 @@ CQNewGLShaderProgram *
 CQNewGLBBox::
 shaderProgram()
 {
-  return canvas_->getShader("bbox.vs", "bbox.fs");
+  return getShader("bbox.vs", "bbox.fs");
 }
 
 void

@@ -138,7 +138,6 @@ class CQCamera3DBones : public QFrame {
 
   void drawBones();
   void drawModel();
-  void updateNodeMatrices();
 
   void drawCube(const CPoint3D &c, double s) const;
 
@@ -166,8 +165,6 @@ class CQCamera3DBones : public QFrame {
   CMatrix3D getNodeTransform(CGeomObject3D *rootObject, CGeomNodeData &nodeData) const;
 
  private:
-  using ObjectNodeMatrices = CQCamera3DApp::ObjectNodeMatrices;
-
   using NodeCenters       = std::map<uint, CPoint3D>;
   using ObjectNodeCenters = std::map<uint, NodeCenters>;
 
@@ -209,12 +206,9 @@ class CQCamera3DBones : public QFrame {
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
 
-  std::string animName_;
-  double      animTime_ { 0.0 };
-  bool        useAnim_  { false };
+  bool useAnim_ { false };
 
-  ObjectNodeMatrices objectNodeMatrices_;
-  ObjectNodeCenters  objectNodes_;
+  ObjectNodeCenters objectNodes_;
 
   CQRubberBand* rubberBand_ { nullptr };
 };

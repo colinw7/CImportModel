@@ -467,6 +467,8 @@ class CImportGLTF : public CImportBase {
     long        target { -1 };
     long        type { -1 };
     std::string name;
+
+    CGeomTexture* texture { nullptr };
   };
 
   struct Camera : IndData {
@@ -641,10 +643,12 @@ class CImportGLTF : public CImportBase {
   bool getBufferView(const IndName &indName, BufferView &bufferView) const;
   bool getBuffer    (const IndName &indName, Buffer &buffer) const;
   bool getMaterial  (const IndName &indName, Material* &material) const;
-  bool getTexture   (const IndName &indName, Texture &texture) const;
+  bool getTexture   (const IndName &indName, Texture* &texture) const;
   bool getNode      (const IndName &indName, Node* &node) const;
   bool getAccessor  (const IndName &indName, Accessor &accessor) const;
   bool getMesh      (const IndName &indName, Mesh &mesh) const;
+
+  bool resolveTexture(const IndName &textureName, Texture *texture);
 
   bool getOrderedNode(int order, Node* &node) const;
 

@@ -5,11 +5,15 @@
 
 #include <CGeom3DType.h>
 #include <CMatrix3D.h>
+#include <CBBox3D.h>
 
 class CQCamera3DCanvas;
+class CQCamera3DToolbar;
+class CQCamera3DSidebar;
 class CQCamera3DOverview;
 class CQCamera3DUVMap;
 class CQCamera3DTextures;
+class CQCamera3DMaterials;
 class CQCamera3DBones;
 class CQCamera3DControl;
 class CQCamera3DStatus;
@@ -19,6 +23,8 @@ class CQTabSplit;
 class CGeomScene3D;
 class CGeomObject3D;
 class CGeomVertex3D;
+class CGeomTexture;
+class CGeomMaterial;
 
 enum class CQCamera3DSelectType {
   OBJECT,
@@ -27,10 +33,21 @@ enum class CQCamera3DSelectType {
   POINT
 };
 
+enum class CQCamera3DEditType {
+  SELECT,
+  CURSOR,
+  MOVE,
+  ROTATE,
+  SCALE
+};
+
 enum class CQCamera3DMouseType {
   CAMERA,
+  LIGHT,
   OBJECT,
-  LIGHT
+  FACE,
+  EDGE,
+  POINT
 };
 
 class CQCamera3DApp : public QFrame {
@@ -75,13 +92,16 @@ class CQCamera3DApp : public QFrame {
 
   //---
 
-  CQCamera3DCanvas*   canvas  () const { return canvas_  ; }
-  CQCamera3DOverview* overview() const { return overview_; }
-  CQCamera3DUVMap*    uvMap   () const { return uvMap_   ; }
-  CQCamera3DTextures* textures() const { return textures_; }
-  CQCamera3DBones*    bones   () const { return bones_   ; }
-  CQCamera3DControl*  control () const { return control_ ; }
-  CQCamera3DStatus*   status  () const { return status_  ; }
+  CQCamera3DToolbar*   toolbar  () const { return toolbar_  ; }
+  CQCamera3DSidebar*   sidebar  () const { return sidebar_  ; }
+  CQCamera3DCanvas*    canvas   () const { return canvas_   ; }
+  CQCamera3DOverview*  overview () const { return overview_ ; }
+  CQCamera3DUVMap*     uvMap    () const { return uvMap_    ; }
+  CQCamera3DTextures*  textures () const { return textures_ ; }
+  CQCamera3DMaterials* materials() const { return materials_; }
+  CQCamera3DBones*     bones    () const { return bones_    ; }
+  CQCamera3DControl*   control  () const { return control_  ; }
+  CQCamera3DStatus*    status   () const { return status_   ; }
 
   //---
 
@@ -97,6 +117,18 @@ class CQCamera3DApp : public QFrame {
 
   double time() const { return time_; }
   void setTime(double t) { time_ = t; }
+
+  //---
+
+  const QString &currentTexture() const { return currentTexture_; }
+  void setCurrentTexture(const QString &s);
+
+  //---
+
+  const QString &currentMaterial() const { return currentMaterial_; }
+  void setCurrentMaterial(const QString &s);
+
+  CGeomMaterial *getMaterialByName(const std::string &name) const;
 
   //---
 
@@ -117,16 +149,32 @@ class CQCamera3DApp : public QFrame {
 
   //---
 
+  const NodeMatrices &getObjectNodeMatrices(CGeomObject3D *object) const;
+
+  const ObjectNodeMatrices &getNodeMatrices() const;
+
   ObjectNodeMatrices calcNodeMatrices() const;
 
   CPoint3D adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
-                           NodeMatrices &nodeMatrices) const;
+                           const NodeMatrices &nodeMatrices) const;
 
   //---
 
   std::vector<AnimData> getAnimNames() const;
 
   std::vector<CGeomObject3D *> getRootObjects() const;
+
+  //---
+
+  CGeomTexture *getTextureByName(const std::string &name) const;
+
+  //---
+
+  bool writeScene(CGeomScene3D *scene) const;
+
+  //---
+
+  CBBox3D transformBBox(const CBBox3D &bbox, const CMatrix3D &matrix) const;
 
  private:
   void connectSlots(bool b);
@@ -138,9 +186,18 @@ class CQCamera3DApp : public QFrame {
 
  Q_SIGNALS:
   void timerStep();
+
   void modelAdded();
+
   void textureAdded();
+  void currentTextureChanged();
+
+  void currentMaterialChanged();
+  void materialAdded();
+  void materialChanged();
+
   void boneNodeChanged();
+
   void animNameChanged();
   void animTimeChanged();
 
@@ -153,20 +210,33 @@ class CQCamera3DApp : public QFrame {
   //---
 
   // widgets
-  CQTabSplit*         tab_      { nullptr };
-  CQCamera3DCanvas*   canvas_   { nullptr };
-  CQCamera3DOverview* overview_ { nullptr };
-  CQCamera3DUVMap*    uvMap_    { nullptr };
-  CQCamera3DTextures* textures_ { nullptr };
-  CQCamera3DBones*    bones_    { nullptr };
-  CQCamera3DControl*  control_  { nullptr };
-  CQCamera3DStatus*   status_   { nullptr };
+  CQTabSplit* tab_ { nullptr };
+
+  CQCamera3DToolbar*   toolbar_   { nullptr };
+  CQCamera3DSidebar*   sidebar_   { nullptr };
+  CQCamera3DCanvas*    canvas_    { nullptr };
+  CQCamera3DOverview*  overview_  { nullptr };
+  CQCamera3DUVMap*     uvMap_     { nullptr };
+  CQCamera3DTextures*  textures_  { nullptr };
+  CQCamera3DMaterials* materials_ { nullptr };
+  CQCamera3DBones*     bones_     { nullptr };
+  QFrame*              animation_ { nullptr };
+
+  CQCamera3DControl* control_ { nullptr };
+
+  CQCamera3DStatus* status_ { nullptr };
 
   // timer
   QTimer* timer_        { nullptr };
   bool    timerRunning_ { false };
   uint    ticks_        { 0 };
   double  time_         { 0.0 };
+
+  // textures
+  QString currentTexture_;
+
+  // material
+  QString currentMaterial_;
 
   // bones
   int currentBoneObject_ { -1 };
@@ -176,6 +246,9 @@ class CQCamera3DApp : public QFrame {
   QString animName_;
   double  animTime_     { 0.0 };
   double  animTimeStep_ { 100.0 };
+
+  ObjectNodeMatrices objectNodeMatrices_;
+  bool               objectNodeMatricesValid_ { false };
 };
 
 #endif

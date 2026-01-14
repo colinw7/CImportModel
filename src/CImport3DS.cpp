@@ -100,7 +100,7 @@ CImport3DS(CGeomScene3D *scene, const std::string &) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 }
@@ -217,7 +217,7 @@ readMatEntry(CImport3DSChunk *chunk)
 {
   CImport3DSChunk chunk1(chunk);
 
-  material_ = CGeometryInst->createMaterial();
+  material_ = CGeometry3DInst->createMaterial();
 
   materials_.push_back(material_);
 
@@ -593,7 +593,7 @@ readNamedObject(CImport3DSChunk *chunk, CGeomObject3D* &object)
     std::cout << pad << "  Name: " << name << "\n";
   }
 
-  object = CGeometryInst->createObject3D(scene_, name);
+  object = CGeometry3DInst->createObject3D(scene_, name);
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {

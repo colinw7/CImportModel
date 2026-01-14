@@ -26,7 +26,7 @@ CQNewGLModel() :
 {
   buildDir_ = QUOTE(BUILD_DIR);
 
-  scene_ = CGeometryInst->createScene3D();
+  scene_ = CGeometry3DInst->createScene3D();
 
   //---
 

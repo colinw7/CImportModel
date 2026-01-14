@@ -71,6 +71,12 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   using InitTextureDatas = std::vector<InitTextureData>;
 
+  struct EyeLine {
+    CPoint3D  ep1;
+    CPoint3D  ep2;
+    CVector3D ev;
+  };
+
   //---
 
   using Cameras  = std::vector<CQNewGLCamera *>;
@@ -332,9 +338,13 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   void keyPressEvent(QKeyEvent *event) override;
 
+  void cameraKeyPress(QKeyEvent *event);
+  void lightKeyPress(QKeyEvent *event);
+  void objectKeyPress(QKeyEvent *event);
+
   void setMousePos(double x, double y, bool add, bool show);
 
-  void calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev);
+  void calcEyeLine(const CPoint2D &pos, EyeLine &eyeLine);
 
   //---
 
@@ -672,17 +682,6 @@ class CQNewGLCanvas : public CQNewGLWidget {
 
   CVector3D eyeVector1_;
   CVector3D eyeVector2_;
-
-  // mouse
-  struct MouseData {
-    double          pressX { 0.0 };
-    double          pressY { 0.0 };
-    double          moveX  { 0.0 };
-    double          moveY  { 0.0 };
-    Qt::MouseButton button { Qt::NoButton };
-  };
-
-  MouseData mouseData_;
 };
 
 #endif

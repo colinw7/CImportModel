@@ -190,19 +190,6 @@ class CQNewGLBones : public CQNewGLWidget {
 
   // axes
   CQNewGLAxes* axes_ { nullptr };
-
-  //---
-
-  // mouse
-  struct MouseData {
-    double          pressX { 0.0 };
-    double          pressY { 0.0 };
-    double          moveX  { 0.0 };
-    double          moveY  { 0.0 };
-    Qt::MouseButton button { Qt::NoButton };
-  };
-
-  MouseData mouseData_;
 };
 
 #endif

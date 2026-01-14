@@ -20,7 +20,7 @@ CQNewGLShaderProgram *
 CQNewGLAxes::
 shaderProgram()
 {
-  return widget_->getShader("axis.vs", "axis.fs");
+  return getShader("axis.vs", "axis.fs");
 }
 
 void

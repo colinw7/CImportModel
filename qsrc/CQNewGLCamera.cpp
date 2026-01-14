@@ -18,7 +18,7 @@ CQNewGLShaderProgram *
 CQNewGLCamera::
 shaderProgram()
 {
-  return widget_->getShader("camera.vs", "camera.fs");
+  return getShader("camera.vs", "camera.fs");
 }
 
 void

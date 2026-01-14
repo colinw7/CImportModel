@@ -22,7 +22,7 @@ CQNewGLShaderProgram *
 CQNewGLShape::
 shaderProgram()
 {
-  return canvas_->getShader("shape.vs", "shape.fs");
+  return getShader("shape.vs", "shape.fs");
 }
 
 void

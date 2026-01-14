@@ -79,7 +79,7 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
@@ -88,7 +88,7 @@ CImportGLTF(CGeomScene3D *scene, const std::string &name) :
   if (name1 == "")
     name1 = "gltf";
 
-  object_  = CGeometryInst->createObject3D(scene_, name1);
+  object_  = CGeometry3DInst->createObject3D(scene_, name1);
   pobject_ = ObjectP(object_);
 
   scene_->addObject(object_);
@@ -1451,38 +1451,13 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
           maxIndex = std::max(maxIndex, node1->order);
         }
 
+        nodeData1.setObject(node1->object);
+
         node1->added   = true;
         node1->skinned = true;
       }
     }
 
-#if 0
-    // TODO: add missing nodes ?
-    for (auto &pn : jsonData_.nodes) {
-      auto &node1 = pn.second;
-      if (node1.added) continue;
-
-      auto ind = pn.first.ind;
-
-      CGeomNodeData nodeData;
-
-      nodeData.parent = (node1.parent ? int(node1.parent->indName.ind) : -1);
-
-      if (node1.inverseBindMatrix)
-        nodeData.inverseBindMatrix = node1.inverseBindMatrix->matrix().toCMatrix();
-
-      nodeData.resizeChildren(uint(node1.children.size()));
-
-      for (size_t ic = 0; ic < node1.children.size(); ++ic)
-        nodeData.setChild(uint(ic), int(node1.children[ic].ind);
-
-      nodeData.name = node1.name;
-
-      rootObject_->addNode(int(ind), nodeData);
-
-      node1.added = true;
-    }
-#else
     // process scenes (scene root nodes)
     std::vector<IndName> nodeIds;
 
@@ -1528,9 +1503,10 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       nodeData1.setIndex(++maxIndex);
 
+      nodeData1.setObject(node1->object);
+
       node1->added = true;
     }
-#endif
   }
   else {
     for (auto &pn : jsonData_.nodes) {
@@ -1557,6 +1533,12 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
 
       rootObject_->addNode(int(ind), nodeData);
 
+      if (node1.object) {
+        auto &nodeData1 = rootObject_->editNode(int(ind));
+
+        nodeData1.setObject(node1.object);
+      }
+
       node1.added = true;
     }
   }
@@ -1575,13 +1557,19 @@ createNodeObj(Node *node)
   if (name == "")
     name = "node" + node->indName.to_string();
 
-  node->object = CGeometryInst->createObject3D(scene_, node->name);
+  node->object = CGeometry3DInst->createObject3D(scene_, node->name);
 
   scene_->addObject(node->object);
 
   node->object->setMeshNode(int(node->indName.ind));
 
 //node->object->transform(node->hierTransform.inverse());
+
+  auto ind = int(node->indName.ind);
+
+  auto &nodeData1 = rootObject_->editNode(ind);
+
+  nodeData1.setObject(node->object);
 }
 
 CMatrix3D
@@ -1935,7 +1923,7 @@ processMesh(Node *node, const Mesh &mesh)
         auto *materialP = scene_->getMaterial(material->name);
 
         if (! materialP) {
-          materialP = new CGeomMaterial;
+          materialP = CGeometry3DInst->createMaterial();
 
           materialP->setName(material->name);
 
@@ -1974,72 +1962,38 @@ processMesh(Node *node, const Mesh &mesh)
 
       // diffuse texture
       if (material->baseColorTexture.index >= 0) {
-        Texture texture;
+        Texture *texture { nullptr };
 
         auto textureName = IndName(material->baseColorTexture.index);
 
         if (! getTexture(textureName, texture))
           return errorMsg("Invalid base color texture");
 
-        if (! texture.source.isEmpty()) {
-          auto pi = jsonData_.images.find(texture.source);
+        resolveTexture(textureName, texture);
 
-          if (pi == jsonData_.images.end())
-            return errorMsg("Invalid base color texture image");
+        object->setDiffuseTexture(texture->texture);
 
-          const auto &image = (*pi).second;
-
-          if (! resolveImage(image))
-            return false;
-
-          auto *texture1 = CGeometryInst->createTexture(image.image);
-
-          texture1->setName(textureName.to_string());
-
-          object->setDiffuseTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setDiffuseTexture(texture1);
-        }
-        else {
-          warnMsg("Unhandled base color texture " + material->baseColorTexture.index);
-        }
+        if (updateMaterial)
+          material->materialP->setDiffuseTexture(texture->texture);
       }
 
       //---
 
       // normal texture
       if (material->normalTexture.index >= 0) {
-        Texture texture;
+        Texture *texture { nullptr };
 
         auto textureName = IndName(material->normalTexture.index);
 
         if (! getTexture(IndName(material->normalTexture.index), texture))
           return errorMsg("Invalid normal texture");
 
-        if (! texture.source.isEmpty()) {
-          auto pi = jsonData_.images.find(texture.source);
+        resolveTexture(textureName, texture);
 
-          if (pi == jsonData_.images.end())
-            return errorMsg("Invalid normal texture source");
+        object->setNormalTexture(texture->texture);
 
-          const auto &image = (*pi).second;
-
-          if (! resolveImage(image))
-            return false;
-
-          auto *texture1 = CGeometryInst->createTexture(image.image);
-
-          texture1->setName(textureName.to_string());
-
-          object->setNormalTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setNormalTexture(texture1);
-        }
-        else {
-          warnMsg("Unhandled normal texture " + material->normalTexture.index);
-        }
+        if (updateMaterial)
+          material->materialP->setNormalTexture(texture->texture);
       }
 
       //---
@@ -2061,36 +2015,19 @@ processMesh(Node *node, const Mesh &mesh)
 
       // specular texture
       if (material->specularTexture.index >= 0) {
-        Texture texture;
+        Texture *texture { nullptr };
 
         auto textureName = IndName(material->specularTexture.index);
 
         if (! getTexture(IndName(material->specularTexture.index), texture))
           return errorMsg("Invalid specular texture");
 
-        if (! texture.source.isEmpty()) {
-          auto pi = jsonData_.images.find(texture.source);
+        resolveTexture(textureName, texture);
 
-          if (pi == jsonData_.images.end())
-            return errorMsg("Invalid specular texture source");
+        object->setSpecularTexture(texture->texture);
 
-          const auto &image = (*pi).second;
-
-          if (! resolveImage(image))
-            return false;
-
-          auto *texture1 = CGeometryInst->createTexture(image.image);
-
-          texture1->setName(textureName.to_string());
-
-          object->setSpecularTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setSpecularTexture(texture1);
-        }
-        else {
-          warnMsg("Unhandled specular texture " + material->specularTexture.index);
-        }
+        if (updateMaterial)
+          material->materialP->setSpecularTexture(texture->texture);
       }
 
       //---
@@ -2112,36 +2049,19 @@ processMesh(Node *node, const Mesh &mesh)
 
       // emissive texture
       if (material->emissiveTexture.index >= 0) {
-        Texture texture;
+        Texture *texture { nullptr };
 
         auto textureName = IndName(material->emissiveTexture.index);
 
         if (! getTexture(IndName(material->emissiveTexture.index), texture))
           return errorMsg("Invalid emissive texture");
 
-        if (! texture.source.isEmpty()) {
-          auto pi = jsonData_.images.find(texture.source);
+        resolveTexture(textureName, texture);
 
-          if (pi == jsonData_.images.end())
-            return errorMsg("Invalid emissive texture source");
+        object->setEmissiveTexture(texture->texture);
 
-          const auto &image = (*pi).second;
-
-          if (! resolveImage(image))
-            return false;
-
-          auto *texture1 = CGeometryInst->createTexture(image.image);
-
-          texture1->setName(textureName.to_string());
-
-          object->setEmissiveTexture(texture1);
-
-          if (updateMaterial)
-            material->materialP->setEmissiveTexture(texture1);
-        }
-        else {
-          warnMsg("Unhandled emissive texture " + material->emissiveTexture.index);
-        }
+        if (updateMaterial)
+          material->materialP->setEmissiveTexture(texture->texture);
       }
 
       //----
@@ -2315,12 +2235,44 @@ getMaterial(const IndName &indName, Material* &material) const
 
 bool
 CImportGLTF::
-getTexture(const IndName &indName, Texture &texture) const
+getTexture(const IndName &indName, Texture* &texture) const
 {
   auto pt = jsonData_.textures.find(indName);
   if (pt == jsonData_.textures.end()) return false;
 
-  texture = (*pt).second;
+  texture = const_cast<Texture *>(&(*pt).second);
+
+  return true;
+}
+
+bool
+CImportGLTF::
+resolveTexture(const IndName &textureName, Texture *texture)
+{
+  if (texture->texture)
+    return true;
+
+  if (! texture->source.isEmpty()) {
+    auto pi = jsonData_.images.find(texture->source);
+
+    if (pi == jsonData_.images.end())
+      return errorMsg("Invalid base color texture image");
+
+    const auto &image = (*pi).second;
+
+    if (! resolveImage(image))
+      return false;
+
+    texture->texture = CGeometry3DInst->createTexture(image.image);
+
+    texture->texture->setName(textureName.to_string());
+
+    scene_->addTexture(texture->texture);
+  }
+  else {
+    warnMsg("Unhandled base color texture " + textureName.ind);
+    return false;
+  }
 
   return true;
 }

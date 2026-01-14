@@ -103,6 +103,10 @@ class CImportBase {
 
   std::string remapFile(const std::string &oldName) const;
 
+  //---
+
+  virtual bool write(CFile *, CGeomScene3D *) const { return false; }
+
  protected:
   CPoint3D adjustPoint(const CPoint3D &p) const {
     auto x = p.x, y = p.y, z = p.z;

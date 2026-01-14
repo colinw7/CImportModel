@@ -87,7 +87,7 @@ CQNewGLShaderProgram *
 CQNewGLFractal::
 shaderProgram()
 {
-  return widget_->getShader("particle.vs", "particle.fs");
+  return getShader("particle.vs", "particle.fs");
 }
 
 void
@@ -142,7 +142,7 @@ initBuffer()
     if (flipV)
       image->flipH();
 
-    auto *texture = CGeometryInst->createTexture(image);
+    auto *texture = CGeometry3DInst->createTexture(image);
 
     texture->setName(filename.toStdString());
 

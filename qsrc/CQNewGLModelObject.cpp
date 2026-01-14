@@ -13,35 +13,35 @@ CQNewGLShaderProgram *
 CQNewGLModelObject::
 shaderProgram()
 {
-  return widget_->getShader("model.vs", "model.fs");
+  return getShader("model.vs", "model.fs");
 }
 
 CQNewGLShaderProgram *
 CQNewGLModelObject::
 normalShaderProgram()
 {
-  return widget_->getShader("normal.vs", "normal.fs");
+  return getShader("normal.vs", "normal.fs");
 }
 
 CQNewGLShaderProgram *
 CQNewGLModelObject::
 bonesShaderProgram()
 {
-  return widget_->getShader("bones.vs", "bones.fs");
+  return getShader("bones.vs", "bones.fs");
 }
 
 CQNewGLShaderProgram *
 CQNewGLModelObject::
 boneShaderProgram()
 {
-  return widget_->getShader("bone.vs", "bone.fs");
+  return getShader("bone.vs", "bone.fs");
 }
 
 CQNewGLShaderProgram *
 CQNewGLModelObject::
 annotationShaderProgram()
 {
-  return widget_->getShader("annotation.vs", "annotation.fs");
+  return getShader("annotation.vs", "annotation.fs");
 }
 
 const CQNewGLModelObject::Children &

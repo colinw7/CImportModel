@@ -1,5 +1,6 @@
 #include <CQCamera3DObjectsList.h>
 #include <CQCamera3DCanvas.h>
+#include <CQCamera3DObjectData.h>
 #include <CQCamera3DApp.h>
 #include <CQCamera3DGeomObject.h>
 

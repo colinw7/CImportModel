@@ -16,7 +16,7 @@ CQNewGLShaderProgram *
 CQNewGLWireframe::
 shaderProgram()
 {
-  return canvas_->getShader("wireframe.vs", "wireframe.fs");
+  return getShader("wireframe.vs", "wireframe.fs");
 }
 
 void

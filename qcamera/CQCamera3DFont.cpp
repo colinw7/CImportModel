@@ -17,7 +17,7 @@
 #include <memory>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include <stb_truetype.h>
+#include <stb/stb_truetype.h>
 
 #include <fstream>
 
@@ -45,7 +45,7 @@ void
 CQCamera3DFont::
 init()
 {
-  shaderProgram_ = new CQCamera3DShaderProgram(canvas_);
+  shaderProgram_ = new CQCamera3DShaderProgram(canvas_->app());
 
   shaderProgram_->addShaders("font.vs", "font.fs");
 }
@@ -381,7 +381,7 @@ render(CQCamera3DCanvas *canvas)
   auto *camera = canvas->getCurrentCamera();
 
   // camera projection
-  auto projectionMatrix = camera->perspectiveMatrix();
+  auto projectionMatrix = camera->worldMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
 
   // camera/view transformation

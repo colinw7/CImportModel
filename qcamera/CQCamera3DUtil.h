@@ -2,6 +2,7 @@
 #define CQCamera3DUtil_H
 
 #include <CRGBA.h>
+#include <CGLVector3D.h>
 
 #include <QVector3D>
 

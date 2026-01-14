@@ -59,11 +59,11 @@ CImportFBX(CGeomScene3D *scene, const std::string &name) :
   auto name1 = (name.size() ? name : "f3d");
 
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name1);
+  object_ = CGeometry3DInst->createObject3D(scene_, name1);
 
   scene_->addObject(object_);
 
@@ -217,9 +217,11 @@ readAscii()
 
             image->flipH();
 
-            textureData->texture = CGeometryInst->createTexture(image);
+            textureData->texture = CGeometry3DInst->createTexture(image);
 
             textureData->texture->setName(textureData->fileName);
+
+            scene_->addTexture(textureData->texture);
           }
         }
       }
@@ -4117,7 +4119,7 @@ addGeometryObject(GeometryData *geometryData)
   if (name == "")
     name = getObjectName();
 
-  geometryData->object = CGeometryInst->createObject3D(scene_, name);
+  geometryData->object = CGeometry3DInst->createObject3D(scene_, name);
 
   //---
 
@@ -4140,7 +4142,7 @@ addGeometryObject(GeometryData *geometryData)
     material = scene_->getMaterial(materialData->name);
 
     if (! material) {
-      material = new CGeomMaterial;
+      material = CGeometry3DInst->createMaterial();
 
       material->setName(materialData->name);
 
@@ -5251,9 +5253,11 @@ loadTexture(TextureData *textureData, std::string &fileName)
 
   image->flipH();
 
-  textureData->texture = CGeometryInst->createTexture(image);
+  textureData->texture = CGeometry3DInst->createTexture(image);
 
   textureData->texture->setName(fileName);
+
+  scene_->addTexture(textureData->texture);
 
   return true;
 }

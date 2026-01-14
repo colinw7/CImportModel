@@ -12,10 +12,15 @@
 #include <QVBoxLayout>
 
 CQCamera3DMaterialList::
-CQCamera3DMaterialList(CQCamera3DCanvas *canvas) :
- QFrame(nullptr), canvas_(canvas)
+CQCamera3DMaterialList(CQCamera3DApp *app) :
+ QFrame(nullptr), app_(app)
 {
   setObjectName("materialList");
+
+  connect(app_, SIGNAL(modelAdded()), this, SLOT(needsUpdateSlot()));
+  connect(app_, SIGNAL(materialAdded()), this, SLOT(needsUpdateSlot()));
+
+  //---
 
   auto *layout = new QVBoxLayout(this);
 
@@ -28,6 +33,15 @@ CQCamera3DMaterialList(CQCamera3DCanvas *canvas) :
   //---
 
   connectSlots(true);
+}
+
+void
+CQCamera3DMaterialList::
+needsUpdateSlot()
+{
+  valid_ = false;
+
+  updateMaterials();
 }
 
 void
@@ -45,11 +59,9 @@ updateMaterials()
 
   //---
 
-  auto *canvas = this->canvas_;
-
   list_->clear();
 
-  auto *scene = canvas->app()->getScene();
+  auto *scene = app_->getScene();
 
   auto *item = new QListWidgetItem("");
 
@@ -78,9 +90,7 @@ void
 CQCamera3DMaterialList::
 connectSlots(bool b)
 {
-  auto *canvas = this->canvas_;
-
-  CQUtil::connectDisconnect(b, canvas->app(), SIGNAL(modelAdded()), this, SLOT(invalidate()));
+  CQUtil::connectDisconnect(b, app_, SIGNAL(modelAdded()), this, SLOT(invalidate()));
 
   if (b) {
     connect(list_, &QListWidget::currentItemChanged,
@@ -109,8 +119,7 @@ getCurrentMaterial() const
   if (selectedInd_ < 0)
     return nullptr;
 
-  auto *canvas = this->canvas_;
-  auto *scene  = canvas->app()->getScene();
+  auto *scene  = app_->getScene();
 
   return scene->getMaterialById(selectedInd_);
 }
@@ -134,8 +143,7 @@ getSelectedMaterial() const
   if (ind < 0)
     return nullptr;
 
-  auto *canvas = this->canvas_;
-  auto *scene  = canvas->app()->getScene();
+  auto *scene  = app_->getScene();
 
   return scene->getMaterialById(ind);
 }

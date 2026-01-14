@@ -1,5 +1,6 @@
 #include <CQCamera3DObject.h>
 #include <CQCamera3DShaderProgram.h>
+#include <CQCamera3DCanvas.h>
 #include <CQCamera3DFont.h>
 
 #include <CQGLBuffer.h>
@@ -21,7 +22,7 @@ getShader(const QString &vertex, const QString &fragment)
   auto ps = shaders_.find(id);
 
   if (ps == shaders_.end()) {
-    auto *shaderProgram = new CQCamera3DShaderProgram(canvas_);
+    auto *shaderProgram = new CQCamera3DShaderProgram(canvas_->app());
 
     shaderProgram->addShaders(vertex, fragment);
 
@@ -60,7 +61,7 @@ initBuffer()
 
   buffer_->clearBuffers();
 
-  faceDataList_.faceDatas.clear();
+  faceDataList_.clear();
 
   return buffer_;
 }

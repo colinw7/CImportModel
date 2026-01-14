@@ -1277,7 +1277,6 @@ CQNewGLBones.o: CQNewGLBones.cpp CQNewGLBones.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -1430,7 +1429,6 @@ CQNewGLCanvas.o: CQNewGLCanvas.cpp CQNewGLCanvas.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		../../CGeometry3D/include/CGeomNodeData.h \
@@ -1551,7 +1549,6 @@ CQNewGLControl.o: CQNewGLControl.cpp CQNewGLControl.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		../../CGeometry3D/include/CGeomNodeData.h \
@@ -1655,7 +1652,6 @@ CQNewGLDrawTree.o: CQNewGLDrawTree.cpp CQNewGLDrawTree.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -1750,11 +1746,11 @@ CQNewGLEmitter.o: CQNewGLEmitter.cpp CQNewGLEmitter.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		CFireworks.h \
 		../../CMath/include/CParticle2D.h \
+		../../CUtil/include/accessor.h \
 		CFlocking.h \
 		CBoid.h \
 		CFlockingUtil.h \
@@ -1802,7 +1798,7 @@ CQNewGLFont.o: CQNewGLFont.cpp CQNewGLFont.h \
 		CQNewGLModel.h \
 		CQNewGLUtil.h \
 		CQGLUtil.h \
-		stb_truetype.h
+		stb/stb_truetype.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLFont.o CQNewGLFont.cpp
 
 CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
@@ -1891,7 +1887,6 @@ CQNewGLFractal.o: CQNewGLFractal.cpp CQNewGLFractal.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CGeometry3D/include/CGeomMask.h \
 		CLorenzCalc.h \
@@ -2121,7 +2116,6 @@ CQNewGLMain.o: CQNewGLMain.cpp CQNewGLModel.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -2217,7 +2211,6 @@ CQNewGLMaze.o: CQNewGLMaze.cpp CQNewGLMaze.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -2319,7 +2312,6 @@ CQNewGLModel.o: CQNewGLModel.cpp CQNewGLModel.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -2602,7 +2594,6 @@ CQNewGLShape.o: CQNewGLShape.cpp CQNewGLShape.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -2832,7 +2823,6 @@ CQNewGLTerrain.o: CQNewGLTerrain.cpp CQNewGLTerrain.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -2966,7 +2956,6 @@ CQNewGLUVMap.o: CQNewGLUVMap.cpp CQNewGLUVMap.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -3310,9 +3299,8 @@ CQNewGLShapesList.o: CQNewGLShapesList.cpp CQNewGLShapesList.h \
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQNewGLShapesList.o CQNewGLShapesList.cpp
 
 CQNewGLAnimChooser.o: CQNewGLAnimChooser.cpp CQNewGLAnimChooser.h \
-		CQNewGLControl.h \
-		CQNewGLShape.h \
-		CQNewGLObject.h \
+		CQNewGLCanvas.h \
+		CQNewGLShaderProgram.h \
 		CQNewGLFaceData.h \
 		../../CUtil/include/CRGBA.h \
 		../../CUtil/include/CRGB.h \
@@ -3320,29 +3308,27 @@ CQNewGLAnimChooser.o: CQNewGLAnimChooser.cpp CQNewGLAnimChooser.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CBBox3D.h \
+		CQNewGLWidget.h \
+		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CMathGen.h \
 		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CVector3D.h \
 		../../CMath/include/CMathUtil.h \
 		../../COS/include/COSNaN.h \
 		../../CMath/include/CMathMacros.h \
-		../../CMath/include/CBBox2D.h \
-		../../CMath/include/CVector2D.h \
-		../../CMath/include/CSize2D.h \
-		../../CMath/include/CISize2D.h \
-		../../CMath/include/CMatrix3D.h \
 		../../CMath/include/CGaussianMatrix.h \
-		CQNewGLCanvas.h \
-		CQNewGLShaderProgram.h \
-		CQNewGLWidget.h \
-		../../CMath/include/CGLMatrix3D.h \
 		../../CMath/include/CGLVector3D.h \
 		../../CImageLib/include/CImagePtr.h \
 		../../CUtil/include/CGeom3DType.h \
 		CGLCamera.h \
 		../../CMath/include/CQuaternion.h \
 		CQGLBuffer.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
 		CQNewGLModel.h \
 		../../CQUtil/include/CQUtil.h \
 		../../CQUtil/include/CQUtilMeta.h
@@ -3589,7 +3575,6 @@ CFlocking.o: CFlocking.cpp CFlocking.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -3670,7 +3655,6 @@ CFlock.o: CFlock.cpp CFlocking.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -3749,7 +3733,6 @@ CBoid.o: CBoid.cpp CFlocking.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \
@@ -3908,7 +3891,6 @@ CWaterSurface.o: CWaterSurface.cpp CWaterSurface.h \
 		../../CMath/include/C2Bezier2D.h \
 		../../CGeometry3D/include/CGeomCamera3D.h \
 		../../CMath/include/CMatrix3DH.h \
-		../../CUtil/include/accessor.h \
 		../../CGeometry3D/include/CGeomTexture.h \
 		../../CFile/include/CFile.h \
 		../../CFile/include/CFileBase.h \

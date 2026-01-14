@@ -17,7 +17,7 @@ CQNewGLShaderProgram *
 CQNewGLPath::
 shaderProgram()
 {
-  return canvas_->getShader("path.vs", "path.fs");
+  return getShader("path.vs", "path.fs");
 }
 
 void

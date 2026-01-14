@@ -3,13 +3,13 @@
 
 #include <QComboBox>
 
-class CQNewGLControl;
+class CQNewGLModel;
 
 class CQNewGLAnimChooser : public QComboBox {
   Q_OBJECT
 
  public:
-  CQNewGLAnimChooser(CQNewGLControl *control);
+  CQNewGLAnimChooser(CQNewGLModel *app);
 
   QString animName() const { return animName_; }
   void setAnimName(const QString &name);
@@ -30,11 +30,11 @@ class CQNewGLAnimChooser : public QComboBox {
   void currentIndexChanged(int);
 
  private:
-  CQNewGLControl* control_ { nullptr };
-  QString         animName_;
-  bool            needsUpdate_ { true };
-  double          tmin_ { 0.0 };
-  double          tmax_ { 1.0 };
+  CQNewGLModel* app_ { nullptr };
+  QString       animName_;
+  bool          needsUpdate_ { true };
+  double        tmin_ { 0.0 };
+  double        tmax_ { 1.0 };
 };
 
 #endif

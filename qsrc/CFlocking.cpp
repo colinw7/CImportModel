@@ -81,7 +81,7 @@ getObject()
     double h = CFlock::getWorld().getYSize()/2;
     double l = CFlock::getWorld().getZSize()/2;
 
-    object_ = CGeometryInst->createObject3D(nullptr, "object");
+    object_ = CGeometry3DInst->createObject3D(nullptr, "object");
 
     uint vertex1 = object_->addVertex(CPoint3D(-w, -h, -l));
     uint vertex2 = object_->addVertex(CPoint3D( w, -h, -l));

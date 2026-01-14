@@ -63,7 +63,7 @@ CQNewGLShaderProgram *
 CQNewGLEmitter::
 shaderProgram()
 {
-  return canvas_->getShader("particle.vs", "particle.fs");
+  return getShader("particle.vs", "particle.fs");
 }
 
 void
@@ -172,7 +172,7 @@ updateTexture()
     if (flipV)
       image->flipH();
 
-    auto *texture = CGeometryInst->createTexture(image);
+    auto *texture = CGeometry3DInst->createTexture(image);
 
     texture->setName(filename.toStdString());
 

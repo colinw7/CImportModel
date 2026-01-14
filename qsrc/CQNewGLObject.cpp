@@ -23,6 +23,13 @@ app() const
 
 //---
 
+CQNewGLShaderProgram *
+CQNewGLObject::
+getShader(const QString &vertex, const QString &fragment)
+{
+  return widget_->getShader(vertex, fragment);
+}
+
 void
 CQNewGLObject::
 bindShader()

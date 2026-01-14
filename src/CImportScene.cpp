@@ -42,14 +42,22 @@ class LineWords {
     if (i >= words_.size())
       return def;
 
-    return int(CStrUtil::toInteger(words_[i].getWord()));
+    int ii;
+    if (! CStrUtil::toInteger(words_[i].getWord(), &ii))
+      return def;
+
+    return ii;
   }
 
   double getReal(uint i, double def=0.0) const {
     if (i >= words_.size())
       return def;
 
-    return CStrUtil::toReal(words_[i].getWord());
+    double r;
+    if (! CStrUtil::toReal(words_[i].getWord(), &r))
+      return def;
+
+    return r;
   }
 
   size_t size() const { return words_.size(); }
@@ -67,7 +75,7 @@ CImportScene(CGeomScene3D *scene, const std::string &) :
   modelDir_ = QUOTE(MODEL_DIR);
 
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 }
@@ -113,9 +121,9 @@ read(CFile &file)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -192,9 +200,9 @@ readScene()
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -222,7 +230,7 @@ readScene()
       case SCENE_WINDOW_CMD:
         break;
       case SCENE_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -240,7 +248,7 @@ addObject(const std::string &name)
 
   if (! primitive) {
     if      (name == "Sphere") {
-      primitive = CGeometryInst->createObject3D(scene_, "sphere");
+      primitive = CGeometry3DInst->createObject3D(scene_, "sphere");
 
       CGeomSphere3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0);
 
@@ -248,25 +256,25 @@ addObject(const std::string &name)
       CGeomSphere3D::addNormals(primitive, 1.0);
     }
     else if (name == "Cube" || name == "Box") {
-      primitive = CGeometryInst->createObject3D(scene_, "cube");
+      primitive = CGeometry3DInst->createObject3D(scene_, "cube");
 
       CGeomBox3D::addGeometry(primitive, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
     }
     else if (name == "Cone") {
-      primitive = CGeometryInst->createObject3D(scene_, "cone");
+      primitive = CGeometry3DInst->createObject3D(scene_, "cone");
 
       CGeomCone3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0, 1.0);
       CGeomCone3D::addNormals(primitive, 1.0, 1.0);
     }
     else if (name == "Cylinder") {
-      primitive = CGeometryInst->createObject3D(scene_, "cylinder");
+      primitive = CGeometry3DInst->createObject3D(scene_, "cylinder");
 
       CGeomCylinder3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0, 1.0);
 
       CGeomCylinder3D::addNormals(primitive, 1.0, 1.0);
     }
     else if (name == "Torus") {
-      primitive = CGeometryInst->createObject3D(scene_, "torus");
+      primitive = CGeometry3DInst->createObject3D(scene_, "torus");
 
       CGeomTorus3D::addGeometry(primitive,
                                 0.0, 0.0, 0.0, // center
@@ -274,14 +282,14 @@ addObject(const std::string &name)
                                 1.0, 0.2, 36, 36);
     }
     else if (name == "Pyramid") {
-      primitive = CGeometryInst->createObject3D(scene_, "pyramid");
+      primitive = CGeometry3DInst->createObject3D(scene_, "pyramid");
 
       CGeomPyramid3D::addGeometry(primitive,
                                   0.0, 0.0, 0.0, // center
                                   1.0, 1.0); // w, h
     }
     else if (name == "Hyperboloid") {
-      primitive = CGeometryInst->createObject3D(scene_, "hyperboloid");
+      primitive = CGeometry3DInst->createObject3D(scene_, "hyperboloid");
 
       CGeomHyperboloid3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), CPoint3D(1.0, 1.0, 1.0));
 
@@ -311,9 +319,10 @@ readPrimitive(const std::string &name)
     PRIMITIVE_LINES_CMD     = 3,
     PRIMITIVE_SUB_LINES_CMD = 4,
     PRIMITIVE_POINTS_CMD    = 5,
-    PRIMITIVE_ROTATE_CMD    = 6,
-    PRIMITIVE_OBJECT_CMD    = 7,
-    PRIMITIVE_END_CMD       = 8
+    PRIMITIVE_NORMALS_CMD   = 6,
+    PRIMITIVE_ROTATE_CMD    = 7,
+    PRIMITIVE_OBJECT_CMD    = 8,
+    PRIMITIVE_END_CMD       = 9
   };
 
   static const char *
@@ -323,6 +332,7 @@ readPrimitive(const std::string &name)
     "Lines",
     "SubLines",
     "Points",
+    "Normals",
     "Rotate",
     "Object",
     "End",
@@ -331,7 +341,7 @@ readPrimitive(const std::string &name)
 
   //---
 
-  auto *primitive = CGeometryInst->createObject3D(scene_, name);
+  auto *primitive = CGeometry3DInst->createObject3D(scene_, name);
 
   primitive->setName(name);
 
@@ -339,9 +349,9 @@ readPrimitive(const std::string &name)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -356,14 +366,14 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_SUB_FACES_CMD: {
-        auto face_num = words.getInteger(1);
+        auto faceNum = words.getInteger(1);
 
-        if (face_num <= 0 || face_num > int(primitive->getNumFaces())) {
-          errorMsg("SubFace Face " + std::to_string(face_num) + " Not Found");
+        if (faceNum <= 0 || faceNum > int(primitive->getNumFaces())) {
+          errorMsg("SubFace Face " + std::to_string(faceNum) + " Not Found");
           break;
         }
 
-        readFaces(primitive, int(face_num - 1));
+        readFaces(primitive, int(faceNum - 1));
 
         break;
       }
@@ -373,19 +383,24 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_SUB_LINES_CMD: {
-        auto face_num = words.getInteger(1);
+        auto faceNum = words.getInteger(1);
 
-        if (face_num <= 0 || face_num > int(primitive->getNumFaces())) {
-          errorMsg("SubLine Face " + std::to_string(face_num) + " Not Found");
+        if (faceNum <= 0 || faceNum > int(primitive->getNumFaces())) {
+          errorMsg("SubLine Face " + std::to_string(faceNum) + " Not Found");
           break;
         }
 
-        readLines(primitive, int(face_num - 1));
+        readLines(primitive, int(faceNum - 1));
 
         break;
       }
       case PRIMITIVE_POINTS_CMD: {
         readVertices(primitive);
+
+        break;
+      }
+      case PRIMITIVE_NORMALS_CMD: {
+        readNormals(primitive);
 
         break;
       }
@@ -445,7 +460,7 @@ readPrimitive(const std::string &name)
         break;
       }
       case PRIMITIVE_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -505,15 +520,15 @@ readObject(const std::string &name)
 
   //---
 
-  auto *object = CGeometryInst->createObject3D(scene_, name);
+  auto *object = CGeometry3DInst->createObject3D(scene_, name);
 
   object->setName(name);
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -529,7 +544,7 @@ readObject(const std::string &name)
 
         if (! primitive) {
           if      (name1 == "Sphere") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomSphere3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0);
 
@@ -537,25 +552,25 @@ readObject(const std::string &name)
             CGeomSphere3D::addNormals(primitive, 1.0);
           }
           else if (name1 == "Cube" || name == "Box") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomBox3D::addGeometry(primitive, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
           }
           else if (name1 == "Cone") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomCone3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0, 1.0);
             CGeomCone3D::addNormals(primitive, 1.0, 1.0);
           }
           else if (name1 == "Cylinder") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomCylinder3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0), 1.0, 1.0);
 
             CGeomCylinder3D::addNormals(primitive, 1.0, 1.0);
           }
           else if (name == "Torus") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomTorus3D::addGeometry(primitive,
                                       0.0, 0.0, 0.0, // center
@@ -563,14 +578,14 @@ readObject(const std::string &name)
                                       1.0, 0.2, 36, 36);
           }
           else if (name == "Pyramid") {
-            primitive = CGeometryInst->createObject3D(scene_, name);
+            primitive = CGeometry3DInst->createObject3D(scene_, name);
 
             CGeomPyramid3D::addGeometry(primitive,
                                         0.0, 0.0, 0.0, // center
                                         1.0, 1.0); // w, h
           }
           else if (name == "Hyperboloid") {
-            primitive = CGeometryInst->createObject3D(scene_, "hyperboloid");
+            primitive = CGeometry3DInst->createObject3D(scene_, "hyperboloid");
 
             CGeomHyperboloid3D::addGeometry(primitive, CPoint3D(0.0, 0.0, 0.0),
                                             CPoint3D(1.0, 1.0, 1.0));
@@ -676,14 +691,7 @@ readObject(const std::string &name)
       case OBJECT_MATERIAL_CMD: {
         const auto &materialName = words.getWord(1);
 
-        CGeomMaterial *material = nullptr;
-
-        for (auto *material1 :  materials_) {
-          if (material1->name() == materialName) {
-            material = material1;
-            break;
-          }
-        }
+        auto *material = getMaterial(materialName);
 
         if (material)
           object->setMaterialP(material);
@@ -700,7 +708,7 @@ readObject(const std::string &name)
         break;
       }
       case OBJECT_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -714,7 +722,7 @@ readObject(const std::string &name)
 
 void
 CImportScene::
-readFaces(CGeomObject3D *object, int pface_num)
+readFaces(CGeomObject3D *object, int pfaceNum)
 {
   enum Cmds {
     FACES_END_CMD = 1
@@ -730,9 +738,9 @@ readFaces(CGeomObject3D *object, int pface_num)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -742,7 +750,7 @@ readFaces(CGeomObject3D *object, int pface_num)
 
     switch (command_num) {
       case FACES_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default: {
@@ -763,42 +771,84 @@ readFaces(CGeomObject3D *object, int pface_num)
 
         auto num_points = points.size();
 
-        std::vector<uint> face_points;
+        std::vector<uint> facePoints;
 
         if (orientation_ == 1) {
           for (size_t j = 0; j < num_points; ++j) {
-            int point_num = points[j] - 1;
+            int faceNum = points[j];
 
-            face_points.push_back(uint(point_num));
+            if (faceNum <= 0) {
+              errorMsg("Invalid Face Num " + std::to_string(faceNum));
+              continue;
+            }
+
+            auto faceNum1 = faceNum - 1;
+
+            facePoints.push_back(faceNum1);
           }
         }
         else {
-          for (int j = int(num_points) - 1; j >= 0; --j) {
-            int point_num = points[uint(j)] - 1;
+          // TODO: std::reverse(points);
 
-            face_points.push_back(uint(point_num));
+          for (int j = int(num_points) - 1; j >= 0; --j) {
+            int faceNum = points[uint(j)];
+
+            if (faceNum <= 0) {
+              errorMsg("Invalid Face Num " + std::to_string(faceNum));
+              continue;
+            }
+
+            auto faceNum1 = faceNum - 1;
+
+            facePoints.push_back(faceNum1);
           }
         }
 
-        uint face_num;
+        //---
 
-        if (pface_num != -1)
-          face_num = object->addFaceSubFace(uint(pface_num), face_points);
+        uint faceNum;
+
+        if (pfaceNum != -1)
+          faceNum = object->addFaceSubFace(uint(pfaceNum), facePoints);
         else
-          face_num = object->addFace(face_points);
+          faceNum = object->addFace(facePoints);
+
+        //---
 
         if (i < int(words.size()) && words.getWord(i) == ":") {
           i++;
 
-          auto face_color = words.getInteger(i);
+          auto word = words.getWord(i);
 
-          if (face_color >= 0 && face_color < int(colors_.size())) {
-            CRGBA rgba = CRGBName::toRGBA(colors_[uint(face_color)]);
+          if (word.size() > 2 && word.substr(0, 2) == "M=") {
+            auto materialName = word.substr(2);
 
-            if (pface_num != -1)
-              object->setSubFaceColor(uint(pface_num), face_num, rgba);
+            auto *material = getMaterial(materialName);
+
+            if (material) {
+              if (pfaceNum != -1)
+                errorMsg("Sub face material not supported");
+              else {
+                auto *face = object->getFaceP(faceNum);
+
+                face->setMaterialP(material);
+              }
+            }
+          }
+          else {
+            auto faceColor = words.getInteger(i, -1);
+
+            CRGBA rgba;
+
+            if (faceColor >= 0 && faceColor < int(colors_.size()))
+              rgba = CRGBName::toRGBA(colors_[uint(faceColor)]);
             else
-              object->setFaceColor(face_num, rgba);
+              rgba = wordToColor(words.getWord(i));
+
+            if (pfaceNum != -1)
+              object->setSubFaceColor(uint(pfaceNum), faceNum, rgba);
+            else
+              object->setFaceColor(faceNum, rgba);
           }
         }
 
@@ -810,7 +860,7 @@ readFaces(CGeomObject3D *object, int pface_num)
 
 void
 CImportScene::
-readLines(CGeomObject3D *object, int pface_num)
+readLines(CGeomObject3D *object, int pfaceNum)
 {
   enum Cmds {
     LINES_END_CMD = 1
@@ -826,9 +876,9 @@ readLines(CGeomObject3D *object, int pface_num)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -838,15 +888,15 @@ readLines(CGeomObject3D *object, int pface_num)
 
     switch (command_num) {
       case LINES_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default: {
         auto start = words.getInteger(0);
         auto end   = words.getInteger(1);
 
-        if (pface_num != -1)
-          object->addFaceSubLine(uint(pface_num), uint(start), uint(end));
+        if (pfaceNum != -1)
+          object->addFaceSubLine(uint(pfaceNum), uint(start), uint(end));
         else
           object->addLine(uint(start), uint(end));
 
@@ -874,9 +924,9 @@ readVertices(CGeomObject3D *object)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -886,7 +936,7 @@ readVertices(CGeomObject3D *object)
 
     switch (command_num) {
       case POINTS_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default: {
@@ -902,6 +952,57 @@ readVertices(CGeomObject3D *object)
   }
 }
 
+void
+CImportScene::
+readNormals(CGeomObject3D *object)
+{
+  enum Cmds {
+    NORMALS_END_CMD = 1
+  };
+
+  static const char *
+  normals_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
+  std::string line;
+
+  bool endCommand = false;
+
+  uint ind = 0;
+
+  while (! endCommand && file_->readLine(line)) {
+    if (isSkipLine(line))
+      continue;
+
+    auto words = LineWords(line);
+
+    int command_num = lookupCommand(words.getWord(0), normals_commands);
+
+    switch (command_num) {
+      case NORMALS_END_CMD:
+        endCommand = true;
+
+        break;
+      default: {
+        auto x = words.getReal(0);
+        auto y = words.getReal(1);
+        auto z = words.getReal(2);
+
+        auto &vertex = object->getVertex(ind);
+
+        vertex.setNormal(CVector3D(x, y, z));
+
+        ++ind;
+
+        break;
+      }
+    }
+  }
+}
 void
 CImportScene::
 readRotate(CGeomObject3D *object, int num_patches)
@@ -922,9 +1023,9 @@ readRotate(CGeomObject3D *object, int num_patches)
 
   std::vector<CPoint2D> points;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -934,7 +1035,7 @@ readRotate(CGeomObject3D *object, int num_patches)
 
     switch (command_num) {
       case ROTATE_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default: {
@@ -985,9 +1086,9 @@ readColors()
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -997,7 +1098,7 @@ readColors()
 
     switch (command_num) {
       case COLORS_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -1026,9 +1127,9 @@ readTextures()
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -1038,7 +1139,7 @@ readTextures()
 
     switch (command_num) {
       case TEXTURES_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default: {
@@ -1050,9 +1151,17 @@ readTextures()
 
         auto image = CImageMgrInst->createImage(src);
 
-        auto *texture = CGeometryInst->createTexture(image);
+        auto *texture = CGeometry3DInst->createTexture(image);
 
-        texture->setName(filename);
+        texture->setFilename(filename);
+
+        if (words.size() > 1) {
+          auto name = words.getWord(1);
+
+          texture->setName(name);
+        }
+        else
+          texture->setName(filename);
 
         textures_.push_back(texture);
 
@@ -1067,17 +1176,23 @@ CImportScene::
 readMaterial(const std::string &name)
 {
   enum Cmds {
-    MATERIAL_DIFFUSE_CMD          = 1,
-    MATERIAL_DIFFUSE_TEXTURE_CMD  = 2,
-    MATERIAL_NORMAL_TEXTURE_CMD   = 3,
-    MATERIAL_SPECULAR_TEXTURE_CMD = 4,
-    MATERIAL_EMISSION_TEXTURE_CMD = 5,
-    MATERIAL_END_CMD              = 6
+    MATERIAL_AMBIENT_CMD          = 1,
+    MATERIAL_DIFFUSE_CMD          = 2,
+    MATERIAL_SPECULAR_CMD         = 3,
+    MATERIAL_EMISSION_CMD         = 4,
+    MATERIAL_DIFFUSE_TEXTURE_CMD  = 5,
+    MATERIAL_NORMAL_TEXTURE_CMD   = 6,
+    MATERIAL_SPECULAR_TEXTURE_CMD = 7,
+    MATERIAL_EMISSION_TEXTURE_CMD = 8,
+    MATERIAL_END_CMD              = 9
   };
 
   static const char *
   material_commands[] = {
+    "Ambient",
     "Diffuse",
+    "Specular",
+    "Emission",
     "DiffuseTexture",
     "NormalTexture",
     "SpecularTexture",
@@ -1091,7 +1206,7 @@ readMaterial(const std::string &name)
   auto *material = scene_->getMaterial(name);
 
   if (! material) {
-    material = CGeometryInst->createMaterial();
+    material = CGeometry3DInst->createMaterial();
 
     material->setName(name);
 
@@ -1113,9 +1228,9 @@ readMaterial(const std::string &name)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -1124,10 +1239,31 @@ readMaterial(const std::string &name)
     int command_num = lookupCommand(words.getWord(0), material_commands);
 
     switch (command_num) {
+      case MATERIAL_AMBIENT_CMD: {
+        auto rgba = wordToColor(words.getWord(1));
+
+        material->setAmbient(rgba);
+
+        break;
+      }
       case MATERIAL_DIFFUSE_CMD: {
         auto rgba = wordToColor(words.getWord(1));
 
         material->setDiffuse(rgba);
+
+        break;
+      }
+      case MATERIAL_SPECULAR_CMD: {
+        auto rgba = wordToColor(words.getWord(1));
+
+        material->setSpecular(rgba);
+
+        break;
+      }
+      case MATERIAL_EMISSION_CMD: {
+        auto rgba = wordToColor(words.getWord(1));
+
+        material->setEmission(rgba);
 
         break;
       }
@@ -1164,7 +1300,7 @@ readMaterial(const std::string &name)
         break;
       }
       case MATERIAL_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -1174,6 +1310,22 @@ readMaterial(const std::string &name)
   }
 
   materials_.push_back(material);
+}
+
+CGeomMaterial *
+CImportScene::
+getMaterial(const std::string &name) const
+{
+  CGeomMaterial *material = nullptr;
+
+  for (auto *material1 :  materials_) {
+    if (material1->name() == name) {
+      material = material1;
+      break;
+    }
+  }
+
+  return material;
 }
 
 //----
@@ -1266,7 +1418,7 @@ readCSG(const std::string &name)
 
   //---
 
-  auto *object = CGeometryInst->createObject3D(scene_, name);
+  auto *object = CGeometry3DInst->createObject3D(scene_, name);
 
   //---
 
@@ -1285,9 +1437,9 @@ readCSG(const std::string &name)
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -1359,7 +1511,7 @@ readCSG(const std::string &name)
         break;
       }
       case CSG_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -1457,9 +1609,9 @@ readTransforms()
 
   std::string line;
 
-  bool end_command = false;
+  bool endCommand = false;
 
-  while (! end_command && file_->readLine(line)) {
+  while (! endCommand && file_->readLine(line)) {
     if (isSkipLine(line))
       continue;
 
@@ -1528,7 +1680,7 @@ readTransforms()
         break;
       }
       case TRANSFORMS_END_CMD:
-        end_command = true;
+        endCommand = true;
 
         break;
       default:
@@ -1628,6 +1780,177 @@ getRGBA(int color) const
   else
     return CRGBA(1.0, 0.0, 0.0, 1.0);
 }
+
+//---
+
+bool
+CImportScene::
+write(CFile *file, CGeomScene3D *scene) const
+{
+  file_ = file;
+
+  //----
+
+  // write textures
+  file_->write("Textures\n");
+
+  for (auto *texture : scene->textures())
+    writeTexture(texture);
+
+  file_->write("End\n");
+
+  //----
+
+  // write materials
+  for (auto *material : scene->getMaterials())
+    writeMaterial(material);
+
+  //----
+
+  // write primitives
+  for (auto *object : scene->getObjects()) {
+    writeObject(object);
+  }
+
+  //----
+
+  // write objects
+  file_->write("Scene\n");
+
+  for (auto *object : scene->getObjects()) {
+    const auto &vertices = object->getVertices();
+    if (vertices.empty()) continue;
+
+    file_->write("  Object " + object->getName() + "\n");
+  }
+
+  file_->write("End\n");
+
+  return true;
+}
+
+void
+CImportScene::
+writeTexture(CGeomTexture *texture) const
+{
+  auto fileName = texture->fileName();
+
+  if (fileName == "")
+    fileName = texture->name();
+
+  file_->write("  " + fileName + " " + texture->name() + "\n");
+}
+
+void
+CImportScene::
+writeMaterial(CGeomMaterial *material) const
+{
+  auto getTextureId = [](CGeomTexture *texture) {
+    return std::to_string(texture->id() + 1);
+  };
+
+  file_->write("Material " + material->name() + "\n");
+
+  if (material->ambient())
+    file_->write("  Ambient " + material->ambient()->stringEncode() + "\n");
+
+  if (material->diffuse())
+    file_->write("  Diffuse " + material->diffuse()->stringEncode() + "\n");
+
+  if (material->specular())
+    file_->write("  Specular " + material->specular()->stringEncode() + "\n");
+
+  if (material->emission())
+    file_->write("  Emission " + material->emission()->stringEncode() + "\n");
+
+  if (material->ambientTexture())
+    file_->write("  AmbientTexture " + getTextureId(material->ambientTexture()) + "\n");
+
+  if (material->diffuseTexture())
+    file_->write("  DiffuseTexture " + getTextureId(material->diffuseTexture()) + "\n");
+
+  if (material->specularTexture())
+    file_->write("  SpecularTexture " + getTextureId(material->specularTexture()) + "\n");
+
+  if (material->emissiveTexture())
+    file_->write("  EmissionTexture " + getTextureId(material->emissiveTexture()) + "\n");
+
+  file_->write("End\n");
+}
+
+void
+CImportScene::
+writeObject(CGeomObject3D *object) const
+{
+  const auto &vertices = object->getVertices();
+  if (vertices.empty()) return;
+
+  file_->write("Primitive " + object->getName() + "\n");
+
+  file_->write("  Points\n");
+
+  for (auto *vertex : vertices) {
+    const auto &model = vertex->getModel();
+
+    file_->write("    ");
+    file_->write(std::to_string(model.x) + " ");
+    file_->write(std::to_string(model.y) + " ");
+    file_->write(std::to_string(model.z));
+    file_->write("\n");
+  }
+
+  file_->write("  End\n");
+
+  file_->write("  Normals\n");
+
+  for (auto *vertex : vertices) {
+    const auto &normal = vertex->getNormal();
+
+    file_->write("    ");
+    file_->write(std::to_string(normal.x()) + " ");
+    file_->write(std::to_string(normal.y()) + " ");
+    file_->write(std::to_string(normal.z()));
+    file_->write("\n");
+  }
+
+  file_->write("  End\n");
+
+  file_->write("  Faces\n");
+
+  for (auto *face : object->getFaces()) {
+    file_->write("   ");
+
+    const auto &vinds = face->getVertices();
+
+    for (const auto &v : vinds) {
+      file_->write(" " + std::to_string(v + 1));
+    }
+
+    if (face->color())
+      file_->write(" : " + face->color()->stringEncode());
+
+    file_->write("\n");
+  }
+
+  file_->write("  End\n");
+
+  file_->write("End\n");
+
+  //---
+
+  file_->write("Object " + object->getName() + "\n");
+
+  file_->write("  Primitive " + object->getName() + "\n");
+
+  if (object->getMaterialP())
+    file_->write("  Material " + object->getMaterialP()->name() + "\n");
+  else
+    file_->write("  Face_Color " + object->getFaceColor().stringEncode() + "\n");
+
+  file_->write("End\n");
+}
+
+//---
 
 void
 CImportScene::

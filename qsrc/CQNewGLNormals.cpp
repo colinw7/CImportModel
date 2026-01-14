@@ -16,7 +16,7 @@ CQNewGLShaderProgram *
 CQNewGLNormals::
 shaderProgram()
 {
-  return canvas_->getShader("normal.vs", "normal.fs");
+  return getShader("normal.vs", "normal.fs");
 }
 
 void

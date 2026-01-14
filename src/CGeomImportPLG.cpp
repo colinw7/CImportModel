@@ -6,11 +6,11 @@ CGeomImportPLG(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object_ = CGeometry3DInst->createObject3D(scene_, name);
 
   scene_->addObject(object_);
 
@@ -34,7 +34,7 @@ void
 CGeomImportPLG::
 addITriangle(int i1, int i2, int i3, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
-  auto *material = new CGeomMaterial;
+  auto *material = CGeometry3DInst->createMaterial();
 
   material->setColor(rgba);
 
@@ -47,7 +47,7 @@ void
 CGeomImportPLG::
 addITriangles(uint *inds, uint num_inds, CDrawType3D, CShadeType3D, const CRGBA &rgba)
 {
-  auto *material = new CGeomMaterial;
+  auto *material = CGeometry3DInst->createMaterial();
 
   material->setColor(rgba);
 

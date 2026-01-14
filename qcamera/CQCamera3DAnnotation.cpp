@@ -6,7 +6,6 @@
 
 #include <CGeomObject3D.h>
 #include <CGeomSphere3D.h>
-#include <CGeomCylinder3D.h>
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
 
@@ -74,7 +73,7 @@ drawGeometry()
   auto *camera = canvas_->getCurrentCamera();
 
   // camera projection
-  auto projectionMatrix = camera->perspectiveMatrix();
+  auto projectionMatrix = camera->worldMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
 
   // camera/view transformation

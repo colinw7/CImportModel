@@ -1,4 +1,5 @@
 #include <CQCamera3DCanvas.h>
+#include <CQCamera3DObjectData.h>
 #include <CQCamera3DApp.h>
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DFaceData.h>
@@ -6,24 +7,37 @@
 #include <CQCamera3DLight.h>
 #include <CQCamera3DShape.h>
 #include <CQCamera3DAnnotation.h>
+#include <CQCamera3DBillboard.h>
 #include <CQCamera3DNormals.h>
+#include <CQCamera3DBasis.h>
+#include <CQCamera3DBBox.h>
 #include <CQCamera3DOverlay.h>
 #include <CQCamera3DOverlay2D.h>
 #include <CQCamera3DControl.h>
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DAxes.h>
 #include <CQCamera3DFont.h>
+#include <CQCamera3DTexture.h>
 #include <CQCamera3DGeomObject.h>
+#include <CQCamera3DGeomFace.h>
 #include <CQCamera3DUtil.h>
 
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
 #include <CQGLUtil.h>
+
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomTexture.h>
 #include <CGeomNodeData.h>
 #include <CGeometry3D.h>
+#include <CGeomCircle3D.h>
+#include <CGeomCube3D.h>
+#include <CGeomCylinder3D.h>
+#include <CGeomPyramid3D.h>
+#include <CGeomSphere3D.h>
+#include <CGeomTorus3D.h>
+
 #include <CStrUtil.h>
 
 #include <QMouseEvent>
@@ -31,25 +45,35 @@
 
 CQCamera3DCanvas::
 CQCamera3DCanvas(CQCamera3DApp *app) :
- app_(app)
+ CQCamera3DWidget(app)
 {
   setObjectName("canvas");
 
-  setFocusPolicy(Qt::StrongFocus);
-
-  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
   //---
 
-  for (int i = 0; i < 2; ++i) {
+  auto addCamera = [&](const QString &name, bool perspective=true) {
     auto *camera = new CQCamera3DCamera;
+
+    camera->setId(cameras_.size() + 1);
+
+    camera->setName(name);
+
+    camera->setPerspective(perspective);
 
     connect(camera, SIGNAL(stateChanged()), this, SLOT(cameraChanged()));
 
     cameras_.push_back(camera);
-  }
 
-  setCameraInd(0);
+    return camera;
+  };
+
+  perspectiveCamera_ = addCamera("perspective");
+
+  setCurrentCamera(cameras_[0]);
+
+  topCamera_   = addCamera("top"  , /*perspective*/ false);
+  frontCamera_ = addCamera("front", /*perspective*/ false);
+  rightCamera_ = addCamera("right", /*perspective*/ false);
 
   //---
 
@@ -63,56 +87,52 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   annotation_ = new CQCamera3DAnnotation(this);
 #endif
 
+  billboard_ = new CQCamera3DBillboard(this);
+
   normals_ = new CQCamera3DNormals(this);
 
+  basis_ = new CQCamera3DBasis(this);
+
+  bboxOverlay_ = new CQCamera3DBBox(this);
+
   overlay_   = new CQCamera3DOverlay  (this);
-  overlay2D_ = new CQCamera3DOverlay2D(this);
+//overlay2D_ = new CQCamera3DOverlay2D(this);
 
   //---
 
   connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
 
   connect(app_, SIGNAL(animNameChanged()), this, SLOT(updateObjectsData()));
-  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(updateObjectsData()));
+  connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
 }
 
 void
 CQCamera3DCanvas::
-enableDepthTest()
+updateQuadCameras()
 {
-  if (isDepthTest())
-    glEnable(GL_DEPTH_TEST);
-  else
-    glDisable(GL_DEPTH_TEST);
-}
+  auto center  = CVector3D(bbox_.getCenter());
+  auto maxSize = bbox_.getMaxSize();
 
-void
-CQCamera3DCanvas::
-enableCullFace()
-{
-  if (isCullFace())
-    glEnable(GL_CULL_FACE);
-  else
-    glDisable(GL_CULL_FACE);
-}
+  topCamera_->setPitch(-M_PI/2.0);
+  topCamera_->setYaw(M_PI/2.0);
+  topCamera_->setRoll(0.0);
 
-void
-CQCamera3DCanvas::
-enableFrontFace()
-{
-  glFrontFace(isFrontFace() ? GL_CW : GL_CCW);
-}
+  topCamera_->setPosition(CVector3D(center.x(), center.y() + maxSize, center.z()));
+  topCamera_->setOrigin  (center);
 
-void
-CQCamera3DCanvas::
-enablePolygonLine()
-{
-  if (isPolygonLine())
-    glEnable(GL_POLYGON_OFFSET_LINE);
-  else
-    glDisable(GL_POLYGON_OFFSET_LINE);
+  frontCamera_->setPitch(0.0);
+  frontCamera_->setYaw(0.0);
+  frontCamera_->setRoll(0.0);
 
-  glPolygonOffset(-1.0f, -1.0f);
+  frontCamera_->setPosition(CVector3D(center.x() - maxSize, center.y(), center.z()));
+  frontCamera_->setOrigin(center);
+
+  rightCamera_->setPitch(0.0);
+  rightCamera_->setYaw(M_PI/2.0);
+  rightCamera_->setRoll(0.0);
+
+  rightCamera_->setPosition(CVector3D(center.x(), center.y(), center.z() + maxSize));
+  rightCamera_->setOrigin  (center);
 }
 
 void
@@ -125,7 +145,7 @@ addLight()
 
   auto *scene = app_->getScene();
 
-  auto *light = CGeometryInst->createLight3D(scene, name.toStdString());
+  auto *light = CGeometry3DInst->createLight3D(scene, name.toStdString());
 
   auto *light1 = dynamic_cast<CQCamera3DLight *>(light);
 
@@ -171,8 +191,6 @@ initializeGL()
 {
   initializeOpenGLFunctions();
 
-  glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
-
   //---
 
   font_ = new CQCamera3DFont(this);
@@ -203,6 +221,8 @@ initializeGL()
   updateShapes();
 
   updateAnnotation();
+
+  updateBillboard();
 
   //---
 
@@ -307,27 +327,27 @@ loadTextureMap(const std::string &fileName)
 
     const auto &data = (*pt).second;
 
-    auto *texture = getGeomTextureByName(data.diffuse);
+    auto *texture = app_->getTextureByName(data.diffuse);
 
     if (texture)
       object->setDiffuseTexture(texture);
 
     if (data.normal != "") {
-      auto *texture = getGeomTextureByName(data.normal);
+      auto *texture = app_->getTextureByName(data.normal);
 
       if (texture)
         object->setNormalTexture(texture);
     }
 
     if (data.specular != "") {
-      auto *texture = getGeomTextureByName(data.specular);
+      auto *texture = app_->getTextureByName(data.specular);
 
       if (texture)
         object->setSpecularTexture(texture);
     }
 
     if (data.emissive != "") {
-      auto *texture = getGeomTextureByName(data.emissive);
+      auto *texture = app_->getTextureByName(data.emissive);
 
       if (texture)
         object->setEmissiveTexture(texture);
@@ -420,27 +440,27 @@ loadMaterialMap(const std::string &fileName)
 
     const auto &data = (*pm).second;
 
-    auto *texture = getGeomTextureByName(data.diffuse);
+    auto *texture = app_->getTextureByName(data.diffuse);
 
     if (texture)
       material->setDiffuseTexture(texture);
 
     if (data.normal != "") {
-      auto *texture = getGeomTextureByName(data.normal);
+      auto *texture = app_->getTextureByName(data.normal);
 
       if (texture)
         material->setNormalTexture(texture);
     }
 
     if (data.specular != "") {
-      auto *texture = getGeomTextureByName(data.specular);
+      auto *texture = app_->getTextureByName(data.specular);
 
       if (texture)
         material->setSpecularTexture(texture);
     }
 
     if (data.emissive != "") {
-      auto *texture = getGeomTextureByName(data.emissive);
+      auto *texture = app_->getTextureByName(data.emissive);
 
       if (texture)
         material->setEmissiveTexture(texture);
@@ -460,38 +480,43 @@ addTextureFile(const std::string &fileName)
     return;
 
   auto fileName1 = fileName;
+  bool flipped   = false;
 
   auto len = fileName1.size();
 
-  if (len > 5 && fileName1.substr(len - 5) == ".flip")
+  if (len > 5 && fileName1.substr(len - 5) == ".flip") {
     fileName1 = fileName1.substr(0, len - 5);
+    flipped   = true;
+  }
 
   auto name1 = fileName1;
-  auto name2 = fileName1 + ".flip";
+//auto name2 = fileName1 + ".flip";
 
-  auto *texture1 = getTextureByName(name1);
-  auto *texture2 = getTextureByName(name2);
+  auto *texture1 = app_->getTextureByName(name1);
+//auto *texture2 = app_->getTextureByName(name2);
 
-  if (! texture1 || ! texture2) {
+  if (! texture1) {
+    auto *scene = app_->getScene();
+
     CImageFileSrc src(fileName1);
 
     auto image = CImageMgrInst->createImage(src);
+    if (! image->isValid()) return;
 
-    auto *gtexture1 = CGeometryInst->createTexture(image);
+    auto *gtexture1 = CGeometry3DInst->createTexture(image);
+
+    auto *gtexture2 = dynamic_cast<CQCamera3DTexture *>(gtexture1);
+    assert(gtexture2);
 
     gtexture1->setName(name1);
 
-    (void) getTexture(gtexture1, /*add*/true);
+    (void) initGLTexture(gtexture2);
 
-    auto image1 = image->dup();
+    scene->addTexture(gtexture1);
 
-    image1->flipH();
+    gtexture2->setFlipped(flipped);
 
-    auto *gtexture2 = CGeometryInst->createTexture(image1);
-
-    gtexture2->setName(name2);
-
-    (void) getTexture(gtexture2, /*add*/true);
+    Q_EMIT textureAdded();
   }
 }
 
@@ -509,9 +534,8 @@ resizeGL(int width, int height)
   //---
 
   // update camera
-  auto *camera = getCurrentCamera();
-
-  camera->setAspect(aspect());
+  for (auto *camera : cameras_)
+    camera->setAspect(aspect());
 }
 
 void
@@ -519,9 +543,55 @@ CQCamera3DCanvas::
 paintGL()
 {
   // clear canvas
+  glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
+
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glViewport(0, 0, pixelWidth(), pixelHeight());
+  //---
+
+  int w = pixelWidth();
+  int h = pixelHeight();
+
+  if (! isQuadView()) {
+    glViewport(0, 0, w, h);
+    drawContents(perspectiveCamera_);
+  }
+  else {
+    int xm = w/2;
+    int ym = h/2;
+
+    // top
+    glViewport(0, 0, xm, ym);
+    drawContents(topCamera_);
+
+    // 3d
+    glViewport(xm, 0, w - xm, ym);
+    drawContents(perspectiveCamera_);
+
+    // front
+    glViewport(0, ym, xm, h - ym);
+    drawContents(frontCamera_);
+
+    // right
+    glViewport(xm, ym, w - xm, h - ym);
+    drawContents(rightCamera_);
+  }
+}
+
+void
+CQCamera3DCanvas::
+drawContents(CQCamera3DCamera *camera)
+{
+  cameraData_.camera = camera;
+
+  // camera projection
+  cameraData_.worldMatrix = cameraData_.camera->worldMatrix();
+
+  // camera/view transformation
+  cameraData_.viewMatrix = cameraData_.camera->viewMatrix();
+
+  // view pos
+  cameraData_.viewPos = cameraData_.camera->position();
 
   //---
 
@@ -553,30 +623,66 @@ paintGL()
   //---
 
   // draw normals
-  if (isShowNormals()) {
+  if (normals_->isPointNormals() || normals_->isFaceNormals()) {
     normals_->updateGeometry();
 
     normals_->drawGeometry();
+  }
+
+  // draw basis
+  if (isShowBasis()) {
+    basis_->updateGeometry();
+
+    basis_->drawGeometry();
+  }
+
+  // draw bbox
+  if (isShowBBox()) {
+    bboxOverlay_->updateGeometry();
+
+    bboxOverlay_->drawGeometry();
   }
 
 #if 0
   annotation_->drawGeometry();
 #endif
 
+  billboard_->drawGeometry();
+
   //---
 
-  overlay2D_->drawGeometry();
-  overlay_  ->drawGeometry();
+//overlay2D_->drawGeometry();
+
+  if (! isQuadView())
+    overlay_->drawGeometry();
 }
 
 void
 CQCamera3DCanvas::
-setCameraInd(int i)
+setCurrentCamera(CQCamera3DCamera *camera)
 {
-  cameraInd_ = i;
+  setCurrentCameraInd(camera->id());
+}
 
-  for (int i = 0; i < 2; ++i)
-    cameras_[i]->setVisible(i == cameraInd_);
+void
+CQCamera3DCanvas::
+setCurrentCameraInd(uint ind)
+{
+  cameraInd_ = ind;
+
+  bool found = false;
+
+  for (auto *camera : cameras_) {
+    bool found1 = (camera->id() == ind);
+
+    camera->setVisible(found1);
+
+    if (found1)
+      found = found1;
+  }
+
+  if (! found)
+    cameraInd_ = 1;
 }
 
 bool
@@ -599,7 +705,7 @@ CQCamera3DCanvas::
 shaderProgram()
 {
   if (! shaderProgram_) {
-    shaderProgram_ = new CQCamera3DShaderProgram(this);
+    shaderProgram_ = new CQCamera3DShaderProgram(app_);
 
     shaderProgram_->addShaders("model.vs", "model.fs");
   }
@@ -621,14 +727,6 @@ CQCamera3DCanvas::
 addObjectsData()
 {
   bbox_ = CBBox3D();
-
-  //---
-
-#if 0
-  auto animName = app_->animName();
-
-  bool isAnim = (animName != "");
-#endif
 
   //---
 
@@ -709,26 +807,16 @@ addObjectsData()
       }
 
       if (diffuseTexture1)
-        faceData.diffuseTexture = getTexture(diffuseTexture1, /*add*/true);
+        faceData.diffuseTexture = getGLTexture(diffuseTexture1, /*add*/true);
 
       if (normalTexture1)
-        faceData.normalTexture = getTexture(normalTexture1, /*add*/true);
+        faceData.normalTexture = getGLTexture(normalTexture1, /*add*/true);
 
       if (specularTexture1)
-        faceData.specularTexture = getTexture(specularTexture1, /*add*/true);
+        faceData.specularTexture = getGLTexture(specularTexture1, /*add*/true);
 
       if (emissiveTexture1)
-        faceData.emissiveTexture = getTexture(emissiveTexture1, /*add*/true);
-
-      //---
-
-      // set face normal
-      CVector3D normal;
-
-      if (face->getNormalSet())
-        normal = face->getNormal();
-      else
-        face->calcNormal(normal);
+        faceData.emissiveTexture = getGLTexture(emissiveTexture1, /*add*/true);
 
       //---
 
@@ -737,12 +825,33 @@ addObjectsData()
       if (reverse)
         std::reverse(vertices.begin(), vertices.end());
 
+      //--
+
+      // get face normal
+      CVector3D normal;
+
+      if (face->getNormalSet())
+        normal = face->getNormal();
+      else {
+        for (const auto &v : vertices) {
+          auto &vertex = object->getVertex(v);
+
+          vertex.setViewed(vertex.getModel());
+        }
+
+        face->calcNormal(normal);
+      }
+
+      //---
+
       faceData.pos = pos;
       faceData.len = int(vertices.size());
 
       int iv = 0;
 
       for (const auto &v : vertices) {
+        faceData.vertices.push_back(v);
+
         const auto &vertex = object->getVertex(v);
         const auto &model  = vertex.getModel();
 
@@ -932,20 +1041,17 @@ drawObjectsData()
   //---
 
   // camera projection
-  auto *camera = getCurrentCamera();
-
-  auto projectionMatrix = camera->perspectiveMatrix();
-  program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
+  program->setUniformValue("projection", CQGLUtil::toQMatrix(cameraData_.worldMatrix));
 
   // camera/view transformation
-  auto viewMatrix = camera->viewMatrix();
-  program->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix));
+  program->setUniformValue("view", CQGLUtil::toQMatrix(cameraData_.viewMatrix));
 
   // view pos
-  program->setUniformValue("viewPos", CQGLUtil::toVector(camera->position()));
+  program->setUniformValue("viewPos", CQGLUtil::toVector(cameraData_.viewPos));
 
   //---
 
+  // add light data to shader program
   addShaderLights(program);
 
   //---
@@ -957,9 +1063,17 @@ drawObjectsData()
 
   //---
 
-  auto animName = app_->animName();
+  bool isAnim = (app_->animName() != "");
 
-  bool isAnim = (animName != "");
+  //---
+
+  using VertexIndices           = std::vector<int>;
+  using FaceEdgeIndices         = std::map<int, VertexIndices>;
+  using SelectedObjectVertices  = std::map<int, VertexIndices>;
+  using SelectedObjectFaceEdges = std::map<int, FaceEdgeIndices>;
+
+  SelectedObjectVertices  selectedObjectVertices;
+  SelectedObjectFaceEdges selectedObjectFaceEdges;
 
   //---
 
@@ -971,6 +1085,9 @@ drawObjectsData()
 
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
+
+    auto &selectedVertices  = selectedObjectVertices [object->getInd()];
+    auto &selectedFaceEdges = selectedObjectFaceEdges[object->getInd()];
 
     //---
 
@@ -988,7 +1105,7 @@ drawObjectsData()
     //---
 
     // anim
-    program->setUniformValue("useBonePoints", isAnim);
+    program->setUniformValue("useBonePoints", isAnim); // per object ?
 
     if (isAnim) {
       updateNodeMatrices(object);
@@ -1014,7 +1131,7 @@ drawObjectsData()
 
       //---
 
-      bool useDiffuseTexture = faceData.diffuseTexture;
+      bool useDiffuseTexture = (isTextured() ? !!faceData.diffuseTexture : false);
 
       program->setUniformValue("diffuseTexture.enabled", useDiffuseTexture);
 
@@ -1027,7 +1144,7 @@ drawObjectsData()
 
       //---
 
-      bool useNormalTexture = faceData.normalTexture;
+      bool useNormalTexture = (isTextured() ? !!faceData.normalTexture : false);
 
       program->setUniformValue("normalTexture.enabled", useNormalTexture);
 
@@ -1040,7 +1157,7 @@ drawObjectsData()
 
       //---
 
-      bool useSpecularTexture = faceData.specularTexture;
+      bool useSpecularTexture = (isTextured() ? !!faceData.specularTexture : false);
 
       program->setUniformValue("specularTexture.enabled", useSpecularTexture);
 
@@ -1053,7 +1170,7 @@ drawObjectsData()
 
       //---
 
-      bool useEmissiveTexture = faceData.emissiveTexture;
+      bool useEmissiveTexture = (isTextured() ? !!faceData.emissiveTexture : false);
 
       program->setUniformValue("emissiveTexture.enabled", useEmissiveTexture);
 
@@ -1105,10 +1222,12 @@ drawObjectsData()
     glDepthMask(GL_TRUE);
 
     for (const auto &faceData : objectData->faceDatas()) {
-      if (! faceData.face->getVisible())
+      auto *face = faceData.face;
+
+      if (! face->getVisible())
         continue;
 
-      auto *faceMaterial = faceData.face->getMaterialP();
+      auto *faceMaterial = face->getMaterialP();
 
       if (faceMaterial && faceMaterial->transparency() > 0.0) {
         anyTransparent = true;
@@ -1116,6 +1235,26 @@ drawObjectsData()
       }
 
       drawFace(faceData, 0.0);
+
+      int iv = faceData.pos;
+
+      for (const auto &v : faceData.vertices) {
+        const auto &vertex = object->getVertex(v);
+
+        if (vertex.isSelected())
+          selectedVertices.push_back(iv);
+
+        ++iv;
+      }
+
+      auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(face);
+
+      auto &selectedEdges1 = selectedFaceEdges[face1->getInd()];
+
+      const auto &selectedEdges = face1->selectedEdges();
+
+      for (const auto &selectedEdge : selectedEdges)
+        selectedEdges1.push_back(faceData.pos + selectedEdge);
     }
 
     if (anyTransparent) {
@@ -1124,10 +1263,12 @@ drawObjectsData()
       glDepthMask(GL_FALSE);
 
       for (const auto &faceData : objectData->faceDatas()) {
-        if (! faceData.face->getVisible())
+        auto *face = faceData.face;
+
+        if (! face->getVisible())
           continue;
 
-        auto *faceMaterial = faceData.face->getMaterialP();
+        auto *faceMaterial = face->getMaterialP();
 
         if (! faceMaterial || faceMaterial->transparency() <= 0.0)
           continue;
@@ -1137,6 +1278,32 @@ drawObjectsData()
 
       glDisable(GL_BLEND);
       glDepthMask(GL_TRUE);
+    }
+
+    //---
+
+    if (! selectedVertices.empty()) {
+      program->setUniformValue("isWireframe", true);
+
+      for (const auto &iv : selectedVertices) {
+        glDrawArrays(GL_POINTS, iv, 1);
+      }
+    }
+
+    //---
+
+    if (! selectedFaceEdges.empty()) {
+      program->setUniformValue("isWireframe", true);
+
+      for (const auto &pf : selectedFaceEdges) {
+        const auto &vertices = pf.second;
+
+        auto nv = vertices.size();
+
+        for (uint iv = 0; iv < nv; ++iv) {
+          glDrawArrays(GL_LINES, vertices[iv], 2);
+        }
+      }
     }
 
     //---
@@ -1236,41 +1403,31 @@ updateNodeMatrices(CGeomObject3D *object)
 
   //---
 
-  auto animName = app_->animName().toStdString();
-  auto animTime = app_->animTime();
-
-  (void) rootObject->updateNodesAnimationData(animName, animTime);
+  const auto &nodeMatrices = app_->getObjectNodeMatrices(object);
 
   //---
 
-  std::vector<CMatrix3D> nodeMatrices;
+  std::vector<CMatrix3D> nodeMatrixArray;
 
   for (int i = 0; i < PaintData::NUM_NODE_MATRICES; i++)
-    nodeMatrices.push_back(CMatrix3D::identity());
+    nodeMatrixArray.push_back(CMatrix3D::identity());
 
-  auto meshMatrix        = rootObject->getMeshGlobalTransform();
-  auto inverseMeshMatrix = meshMatrix.inverse();
-
-  for (const auto &pn : rootObject->getNodes()) {
-    auto &node = const_cast<CGeomNodeData &>(pn.second);
-    //if (! node.isJoint()) continue;
-
-    int nodeId = node.index();
-    if (nodeId < 0) continue;
+  for (const auto &pn : nodeMatrices) {
+    auto nodeId = pn.first;
 
     if (nodeId >= PaintData::NUM_NODE_MATRICES) {
       std::cerr << "Too few node matrices for node " << nodeId << "\n";
       continue;
     }
 
-    nodeMatrices[nodeId] = node.calcNodeAnimMatrix(inverseMeshMatrix);
+    nodeMatrixArray[nodeId] = pn.second;
   }
 
   paintData_.nodeMatrices .resize(PaintData::NUM_NODE_MATRICES);
   paintData_.nodeQMatrices.resize(PaintData::NUM_NODE_MATRICES);
 
   int im = 0;
-  for (const auto &m : nodeMatrices) {
+  for (const auto &m : nodeMatrixArray) {
     paintData_.nodeMatrices [im] = m;
     paintData_.nodeQMatrices[im] = CQGLUtil::toQMatrix(m);
 
@@ -1313,6 +1470,21 @@ getObject(int ind) const
   return nullptr;
 }
 
+CGeomObject3D *
+CQCamera3DCanvas::
+getGeomObject(CGeomObject3D *object) const
+{
+  if (! object->getFaces().empty())
+    return object;
+
+  for (auto *child : object->children()) {
+    auto *object1 = getGeomObject(child);
+    if (object1) return object1;
+  }
+
+  return nullptr;
+}
+
 CQCamera3DObjectData *
 CQCamera3DCanvas::
 getObjectData(CGeomObject3D *object) const
@@ -1349,6 +1521,28 @@ initObjectData(int io, CGeomObject3D *object)
     Q_EMIT objectsChanged();
 
   return objectData;
+}
+
+void
+CQCamera3DCanvas::
+selectAllObjects()
+{
+  auto *scene = app_->getScene();
+
+  CGeomObject3D *object = nullptr;
+
+  for (auto *object1 : scene->getObjects()) {
+    if (! object)
+      object = object1;
+
+    object1->setSelected(true);
+  }
+
+  setCurrentObject(dynamic_cast<CQCamera3DGeomObject *>(object), /*update*/ false);
+  setCurrentFace  (nullptr, /*update*/ false);
+  setCurrentVertex(nullptr, /*update*/ false);
+
+  this->update();
 }
 
 bool
@@ -1428,6 +1622,21 @@ selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update)
   }
 
   return changed;
+}
+
+void
+CQCamera3DCanvas::
+selectFaceEdge(CGeomFace3D *face, int ind)
+{
+  deselectAll(/*update*/ false);
+
+  auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+  face1->selectEdge(ind);
+
+  this->update();
+
+  Q_EMIT stateChanged();
 }
 
 bool
@@ -1537,6 +1746,13 @@ deselectAll(bool update)
           changed = true;
         }
       }
+
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      if (face1->hasSelectedEdge()) {
+        face1->deselecttEdges();
+        changed = true;
+      }
     }
   }
 
@@ -1621,203 +1837,67 @@ void
 CQCamera3DCanvas::
 mousePressEvent(QMouseEvent *e)
 {
-  auto *camera = getCurrentCamera();
-
-  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
-  bool isControl = (e->modifiers() & Qt::ControlModifier);
+  mouseData_.pressed = true;
+  mouseData_.button  = e->button();
 
   mouseData_.press.x = e->x();
   mouseData_.press.y = e->y();
-  mouseData_.button  = e->button();
+
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
+
+  //---
 
   if      (mouseData_.button == Qt::LeftButton) {
-    // calc eye line
-    EyeLine eyeLine;
-    calcEyeLine(mouseData_.press, eyeLine);
-
-    if (isShift) {
-      setIntersectPoints(eyeLine.pv1, eyeLine.pv2);
-
-      updateAnnotation();
-      update();
-
-      return;
+    if      (editType() == EditType::SELECT) {
+      selectObjectAtMouse();
     }
+    else if (editType() == EditType::CURSOR) {
+      // get eye line in view coords
+      calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+      setEyeLineLabel();
 
-    auto posStr = QString("%1 %2 %3").arg(eyeLine.pv1.x).arg(eyeLine.pv1.y).arg(eyeLine.pv1.z);
-    app_->status()->setMouseLabel(posStr);
+      CLine3D line(eyeLine_.pp1, eyeLine_.pp2);
 
-    //---
+      //---
 
-    auto viewMatrix       = camera->viewMatrix();
-    auto projectionMatrix = camera->perspectiveMatrix();
+      // get camera right/up plane in view coordinates
+      auto *camera = getCurrentCamera();
 
-    struct InsideFace {
-      int                   ind { 0 };
-      CGeomObject3D*        object { nullptr };
-      CGeomFace3D*          face   { nullptr };
-      int                   vertex { 0 };
-      std::vector<CPoint3D> points;
-      CPoint3D              ipoint;
-      double                t { 0.0 };
-    };
+      auto c  = camera->origin();
+      auto p1 = c + camera->right();
+      auto p2 = c + camera->up();
 
-    std::vector<InsideFace> insideFaces;
-    InsideFace              insideFace;
+      auto viewMatrix = camera->viewMatrix();
 
-    CLine3D line(eyeLine.px1, eyeLine.px2);
+      auto cv1 = viewMatrix*c;
+      auto cv2 = viewMatrix*p1;
+      auto cv3 = viewMatrix*p2;
 
-    // intersect eye line with object faces
-    auto *scene = app_->getScene();
+      auto cameraPlane = CPlane3D(cv1.point(), cv2.point(), cv3.point());
 
-    for (auto *object : scene->getObjects()) {
-      if (! object->getVisible())
-        continue;
+      // intersect eye line and camera plane
+      double t = 0.0;
+      (void) cameraPlane.intersectLine(line, &t);
+      auto pi = line.point(t);
 
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
+      // decompose intersect point into vector coordinates in camera plane
+      auto pvi = CVector3D(cv1.point(), pi); // intersect vector
 
-      // TODO: adjust to anim
-      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
-//    auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
-      auto meshMatrix  = CMatrix3DH::identity();
+      auto pv1 = CVector3D(cv1, cv2).normalized(); // right vector
+      auto pv2 = cameraPlane.getNormal().crossProduct(pv1).normalized(); // up vector
 
-      const auto &faces = object->getFaces();
+      auto pd1 = pv1.dotProduct(pvi); // intersect vector as multiple of right vector
+      auto pd2 = pv2.dotProduct(pvi); // intersect vector as multiple of up vector
 
-      for (auto *face : faces) {
-        const auto &vertices = face->getVertices();
+      // use vector sizes to interpolate back to world position using camera vectors
+      auto pi3 = camera->origin() + pd1*camera->right() + pd2*camera->up();
 
-        std::vector<CPoint3D> points, spoints;
-
-        for (const auto &v : vertices) {
-          const auto &vertex = object->getVertex(v);
-          const auto &model  = vertex.getModel();
-
-          auto view    = viewMatrix*modelMatrix*meshMatrix*model;
-          auto project = projectionMatrix*view;
-
-          points.push_back(project);
-        }
-
-        int np = int(points.size());
-
-        if      (selectType() == SelectType::OBJECT || selectType() == SelectType::FACE) {
-          if (np < 3) continue;
-
-          int i2 = 1;
-          int i3 = 2;
-
-          for (int i = 0; i < np - 2; ++i) {
-            CTriangle3D triangle(points[0], points[i2], points[i3]);
-
-            double tmin, tmax;
-            if (triangle.intersect(line, &tmin, &tmax)) {
-              InsideFace insideFace1;
-
-              insideFace1.object = object;
-              insideFace1.ind    = insideFaces.size();
-              insideFace1.face   = face;
-              insideFace1.points = points;
-              insideFace1.ipoint = line.interp(tmin);
-              insideFace1.t      = tmin;
-
-              insideFaces.push_back(insideFace1);
-            }
-
-            i2 = i3;
-            i3 = i2 + 1;
-
-            if (i3 >= np)
-              i3 = 0;
-          }
-        }
-        else if (selectType() == SelectType::EDGE) {
-        }
-        else if (selectType() == SelectType::POINT) {
-          for (int i = 0; i < np; ++i) {
-            auto d = points[i].distanceTo(eyeLine.px1);
-
-            if (! insideFace.object || d < insideFace.t) {
-              insideFace.object = object;
-              insideFace.face   = face;
-              insideFace.vertex = i;
-              insideFace.t      = d;
-            }
-          }
-        }
-      }
-    }
-
-    // sort inside faces by z
-    std::map<double, int> tfaces;
-
-    if (! insideFaces.empty()) {
-      // sort by t
-      for (const auto &insideFace : insideFaces)
-        tfaces[-insideFace.t] = insideFace.ind;
-    }
-
-    //---
-    bool clear = ! isControl;
-
-    bool changed = false;
-
-    if      (selectType() == SelectType::OBJECT) {
-      if (! tfaces.empty()) {
-        const auto &insideFace = insideFaces[tfaces.begin()->second];
-
-        changed = selectObject(insideFace.object, /*update*/false);
-      }
-    }
-    else if (selectType() == SelectType::FACE) {
-      if (! tfaces.empty()) {
-        const auto &insideFace = insideFaces[tfaces.begin()->second];
-
-        changed = selectFace(insideFace.face, clear, /*update*/false);
-
-        setIntersectPoints(insideFace.ipoint, insideFace.ipoint);
-      }
-    }
-    else if (selectType() == SelectType::EDGE) {
-    }
-    else if (selectType() == SelectType::POINT) {
-      if (insideFace.object) {
-        for (auto *vertex : insideFace.object->getVertices()) {
-          if (vertex->getInd() == uint(insideFace.vertex)) {
-            changed = selectVertex(vertex, /*update*/false);
-          }
-        }
-      }
-    }
-
-    if (changed) {
-      addObjectsData();
-
-      updateAnnotation();
-
-      update();
-
-      Q_EMIT stateChanged();
+      setCursor(pi3.point());
     }
   }
   else if (mouseData_.button == Qt::RightButton) {
-    // calc eye line
-    EyeLine eyeLine;
-    calcEyeLine(mouseData_.press, eyeLine);
-
-    // set camera position/origin
-    if      (isShift)
-      camera->setPosition(CVector3D(eyeLine.pv1));
-    else if (isControl)
-      camera->setOrigin(CVector3D(eyeLine.pv1));
-
-    // draw eye line
-    eyeLine_ = eyeLine;
-
-    updateAnnotation();
-    update();
-
-    Q_EMIT stateChanged();
+    showEyelineAtMouse();
   }
 }
 
@@ -1825,13 +1905,15 @@ void
 CQCamera3DCanvas::
 mouseMoveEvent(QMouseEvent *e)
 {
-  auto *camera = getCurrentCamera();
-
   mouseData_.move.x = e->x();
   mouseData_.move.y = e->y();
 
-  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
-  bool isControl = (e->modifiers() & Qt::ControlModifier);
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
+
+  //---
+
+  auto *camera = getCurrentCamera();
 
   auto dx = CMathUtil::sign(mouseData_.move.x - mouseData_.press.x);
   auto dy = CMathUtil::sign(mouseData_.move.y - mouseData_.press.y);
@@ -1842,12 +1924,16 @@ mouseMoveEvent(QMouseEvent *e)
   auto dx1 = mouseScale()*dx*size.getX();
   auto dy1 = mouseScale()*dy*size.getX();
 
-  if      (mouseData_.button == Qt::MiddleButton) {
-    if      (isShift) {
+  if      (mouseData_.button == Qt::LeftButton) {
+  }
+  else if (mouseData_.button == Qt::MiddleButton) {
+    // TODO: move current light
+
+    if      (mouseData_.isShift) {
       camera->movePosition(0, dx1);
       camera->movePosition(1, dy1);
     }
-    else if (isControl) {
+    else if (mouseData_.isControl) {
       camera->rotatePosition(2, dx*0.05);
     }
     else {
@@ -1860,20 +1946,18 @@ mouseMoveEvent(QMouseEvent *e)
   }
   else if (mouseData_.button == Qt::RightButton) {
     // calc eye line
-    EyeLine eyeLine;
-    calcEyeLine(mouseData_.press, eyeLine);
+    calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+    setEyeLineLabel();
 
-    auto posStr = QString("%1 %2 %3").arg(eyeLine.pv1.x).arg(eyeLine.pv1.y).arg(eyeLine.pv1.z);
-    app_->status()->setMouseLabel(posStr);
-
-    if (isShift) {
+    if (mouseData_.isShift) {
       camera->moveOrigin(0, dx1);
       camera->moveOrigin(1, dy1);
     }
   }
 
-  mouseData_.press.x = e->x();
-  mouseData_.press.y = e->y();
+  //---
+
+  mouseData_.press = mouseData_.move;
 
   update();
 }
@@ -1882,6 +1966,8 @@ void
 CQCamera3DCanvas::
 mouseReleaseEvent(QMouseEvent *)
 {
+  mouseData_.pressed = false;
+  mouseData_.button  = Qt::NoButton;
 }
 
 void
@@ -1899,14 +1985,324 @@ wheelEvent(QWheelEvent *e)
   update();
 }
 
+//---
+
+void
+CQCamera3DCanvas::
+selectObjectAtMouse()
+{
+  auto *camera = getCurrentCamera();
+
+  auto useAnim = (app_->animName() != "");
+
+  //---
+
+  // calc eye line
+  calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+  setEyeLineLabel();
+
+  if (mouseData_.isShift) {
+    setIntersectPoints(eyeLine_.pv1, eyeLine_.pv2);
+
+    updateAnnotation();
+    update();
+
+    return;
+  }
+
+  //---
+
+  auto objectNodeMatrices = app_->calcNodeMatrices();
+
+  auto viewMatrix       = camera->viewMatrix();
+  auto projectionMatrix = camera->worldMatrix();
+
+  struct InsideFace {
+    uint                  ind    { 0 };
+    CGeomFace3D*          face   { nullptr };
+    int                   edge   { -1 };
+    int                   vertex { -1 };
+    std::vector<CPoint3D> points;
+    CPoint3D              ipoint;
+    double                t      { 0.0 };
+  };
+
+  std::vector<InsideFace> insideFaces;
+  InsideFace              insideFace;
+
+  double minLineDist = 0.0;
+
+  CLine3D line(eyeLine_.px1, eyeLine_.px2);
+
+  // intersect eye line with object faces
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    if (! object->getVisible())
+      continue;
+
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+    assert(object1);
+
+    //---
+
+    auto *rootObject = object->getRootObject();
+
+    auto &nodeMatrices = objectNodeMatrices[rootObject->getInd()];
+
+    //---
+
+    auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+    auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
+
+    //---
+
+    const auto &faces = object->getFaces();
+
+    for (auto *face : faces) {
+      if (! face->getVisible())
+        continue;
+
+      // get face points
+      const auto &vertices = face->getVertices();
+
+      std::vector<CPoint3D> points;
+
+      for (const auto &v : vertices) {
+        const auto &vertex = object->getVertex(v);
+        const auto &model  = vertex.getModel();
+
+        auto p = model;
+
+        //---
+
+        if (useAnim)
+          p = app_->adjustAnimPoint(vertex, p, nodeMatrices);
+
+        p = meshMatrix*p;
+
+        //---
+
+        auto view    = viewMatrix*modelMatrix*p;
+        auto project = projectionMatrix*view;
+
+        points.push_back(project);
+      }
+
+      auto np = points.size();
+
+      if      (selectType() == SelectType::OBJECT || selectType() == SelectType::FACE) {
+        if (np < 3) continue;
+
+        // add face if inside
+        uint i2 = 1;
+        uint i3 = 2;
+
+        for (uint i = 0; i < np - 2; ++i) {
+          CTriangle3D triangle(points[0], points[i2], points[i3]);
+
+          double tmin, tmax;
+          if (triangle.intersect(line, &tmin, &tmax)) {
+            InsideFace insideFace1;
+
+            insideFace1.ind    = insideFaces.size();
+            insideFace1.face   = face;
+            insideFace1.points = points;
+            insideFace1.ipoint = line.interp(tmin);
+            insideFace1.t      = tmin;
+
+            insideFaces.push_back(insideFace1);
+          }
+
+          i2 = i3;
+          i3 = i2 + 1;
+
+          if (i3 >= np)
+            i3 = 0;
+        }
+      }
+      else if (selectType() == SelectType::EDGE) {
+        if (np < 3) continue;
+
+        // intersect line with face and find nearest edge to intersect point
+        std::vector<CPoint3D> ipoints;
+
+        uint i2 = 1;
+        uint i3 = 2;
+
+        for (uint i = 0; i < np - 2; ++i) {
+          CTriangle3D triangle(points[0], points[i2], points[i3]);
+
+          double tmin, tmax;
+          if (triangle.intersect(line, &tmin, &tmax)) {
+            auto ipoint = line.interp(tmin);
+
+            ipoints.push_back(ipoint);
+          }
+
+          i2 = i3;
+          i3 = i2 + 1;
+
+          if (i3 >= np)
+            i3 = 0;
+        }
+
+        if (! ipoints.empty()) {
+          auto pi = ipoints[0];
+
+          int minInd = -1;
+
+          size_t i1 = np - 1;
+
+          for (size_t i2 = 0; i2 < np; i1 = i2++) {
+            double dist = 0.0;
+            (void) CMathGeom3D::PointLineDistance(pi, CLine3D(points[i1], points[i2]), &dist);
+
+            if (minInd < 0 || dist < minLineDist) {
+              minInd      = i1;
+              minLineDist = dist;
+            }
+          }
+
+          if (minInd >= 0) {
+            insideFace.face = face;
+            insideFace.edge = minInd;
+          }
+        }
+      }
+      else if (selectType() == SelectType::POINT) {
+        // add point if closed
+        for (uint i = 0; i < np; ++i) {
+          auto d = points[i].distanceTo(eyeLine_.px1);
+
+          if (! insideFace.face || d < insideFace.t) {
+            insideFace.face   = face;
+            insideFace.vertex = i;
+            insideFace.t      = d;
+          }
+        }
+      }
+    }
+  }
+
+  // sort inside faces by z
+  std::map<double, int> tfaces;
+
+  if (! insideFaces.empty()) {
+    // sort by t
+    for (const auto &insideFace : insideFaces)
+      tfaces[-insideFace.t] = insideFace.ind;
+  }
+
+  //---
+
+  bool clear = ! mouseData_.isControl;
+
+  bool changed = false;
+
+  if      (selectType() == SelectType::OBJECT) {
+    if (! tfaces.empty()) {
+      const auto &insideFace = insideFaces[tfaces.begin()->second];
+
+      auto *object = insideFace.face->getObject();
+
+      changed = selectObject(object, /*update*/false);
+    }
+  }
+  else if (selectType() == SelectType::FACE) {
+    if (! tfaces.empty()) {
+      const auto &insideFace = insideFaces[tfaces.begin()->second];
+
+      changed = selectFace(insideFace.face, clear, /*update*/false);
+
+      setIntersectPoints(insideFace.ipoint, insideFace.ipoint);
+    }
+  }
+  else if (selectType() == SelectType::EDGE) {
+    if (insideFace.face) {
+      selectFaceEdge(insideFace.face, insideFace.edge);
+      changed = true;
+    }
+  }
+  else if (selectType() == SelectType::POINT) {
+    if (insideFace.face) {
+      auto *object = insideFace.face->getObject();
+
+      for (auto *vertex : object->getVertices()) {
+        if (vertex->getInd() == uint(insideFace.vertex)) {
+          changed = selectVertex(vertex, /*update*/false);
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    addObjectsData();
+
+    updateAnnotation();
+
+    update();
+
+    Q_EMIT stateChanged();
+  }
+}
+
+void
+CQCamera3DCanvas::
+showEyelineAtMouse()
+{
+  auto *camera = getCurrentCamera();
+
+  // calc eye line
+  calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+  setEyeLineLabel();
+
+  // set camera position/origin
+  if      (mouseData_.isShift)
+    camera->setPosition(CVector3D(eyeLine_.pv1));
+  else if (mouseData_.isControl)
+    camera->setOrigin(CVector3D(eyeLine_.pv1));
+
+  // draw eye line
+  updateAnnotation();
+  update();
+
+  Q_EMIT stateChanged();
+}
+
+void
+CQCamera3DCanvas::
+setEyeLineLabel()
+{
+  auto posStr = QString("%1 %2 %3").arg(eyeLine_.pv1.x).arg(eyeLine_.pv1.y).arg(eyeLine_.pv1.z);
+  app_->status()->setMouseLabel(posStr);
+
+  updateShapes();
+
+  Q_EMIT eyeLineChanged();
+}
+
+//---
+
 void
 CQCamera3DCanvas::
 keyPressEvent(QKeyEvent *e)
 {
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
+
   if      (mouseType_ == MouseType::CAMERA)
     cameraKeyPress(e);
+  else if (mouseType_ == MouseType::LIGHT)
+    lightKeyPress(e);
   else if (mouseType_ == MouseType::OBJECT)
     objectKeyPress(e);
+  else if (mouseType_ == MouseType::FACE)
+    faceKeyPress(e);
+  else if (mouseType_ == MouseType::EDGE)
+    edgeKeyPress(e);
+  else if (mouseType_ == MouseType::POINT)
+    pointKeyPress(e);
 }
 
 void
@@ -1917,47 +2313,44 @@ cameraKeyPress(QKeyEvent *e)
 
   auto k = e->key();
 
-  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
-  bool isControl = (e->modifiers() & Qt::ControlModifier);
-
   auto d = bbox_.getMaxSize()/100.0;
 
   if      (k == Qt::Key_A) {
-    if (isShift)
+    if (mouseData_.isShift)
       camera->setRoll(camera->roll() - 0.1);
     else
       camera->moveRight(-d);
   }
   else if (k == Qt::Key_D) {
-    if (isShift)
+    if (mouseData_.isShift)
       camera->setRoll(camera->roll() + 0.1);
     else
       camera->moveRight(d);
   }
   else if (k == Qt::Key_S) {
-    if (isShift)
+    if (mouseData_.isShift)
       camera->setPitch(camera->pitch() - 0.1);
     else
       camera->moveAroundX(-3*d);
   }
   else if (k == Qt::Key_W) {
-    if (isShift)
+    if (mouseData_.isShift)
       camera->setPitch(camera->pitch() + 0.1);
     else
       camera->moveAroundX(3*d);
   }
   else if (k == Qt::Key_Q) {
-    if      (isShift)
+    if      (mouseData_.isShift)
       camera->setYaw(camera->yaw() + 0.1);
-    else if (isControl)
+    else if (mouseData_.isControl)
       camera->moveAroundZ(3*d);
     else
       camera->moveAroundY(10*d);
   }
   else if (k == Qt::Key_E) {
-    if      (isShift)
+    if      (mouseData_.isShift)
       camera->setYaw(camera->yaw() - 0.1);
-    else if (isControl)
+    else if (mouseData_.isControl)
       camera->moveAroundZ(-3*d);
     else
       camera->moveAroundY(-10*d);
@@ -1994,23 +2387,30 @@ cameraKeyPress(QKeyEvent *e)
 
 void
 CQCamera3DCanvas::
+lightKeyPress(QKeyEvent *)
+{
+  // TODO
+}
+
+void
+CQCamera3DCanvas::
 objectKeyPress(QKeyEvent *e)
 {
-  auto *object = currentObject();
-
-  if (! object)
-    object = defaultRootObject();
-
+  auto *object = currentObject(/*includeRoot*/true);
   if (! object) return;
 
-  auto *camera = getCurrentCamera();
-
-  auto k = e->key();
-
-  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
-  bool isControl = (e->modifiers() & Qt::ControlModifier);
-
   auto d = bbox_.getMaxSize()/100.0;
+
+  CVector3D u, v, w;
+  if (isMouseBasis())
+    getBasis(object, u, v, w);
+  else {
+    auto *camera = getCurrentCamera();
+
+    u = camera->right();
+    v = camera->up();
+    w = camera->front();
+  }
 
 //CBBox3D obbox;
 //object->getModelBBox(obbox, /*hier*/false);
@@ -2018,115 +2418,103 @@ objectKeyPress(QKeyEvent *e)
   auto scale  = 1.1;
   auto iscale = 1.0/scale;
 
-  if      (k == Qt::Key_A) {
-    auto right = camera->right();
-
-    if      (isShift) {
+  if      (e->key() == Qt::Key_A) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(iscale, 1.0, 1.0);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(-0.1, right);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(-0.1, u);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = -d*right;
+      auto t = -d*u;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_D) {
-    auto right = camera->right();
-
-    if      (isShift) {
+  else if (e->key() == Qt::Key_D) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(scale, 1.0, 1.0);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(0.1, right);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(0.1, u);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = d*right;
+      auto t = d*u;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_W) {
-    auto up = camera->up();
-
-    if      (isShift) {
+  else if (e->key() == Qt::Key_W) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(1.0, scale, 1.0);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(0.1, up);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(0.1, v);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = d*up;
+      auto t = d*v;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_S) {
-    auto up = camera->up();
-
-    if      (isShift) {
+  else if (e->key() == Qt::Key_S) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(1.0, iscale, 1.0);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(-0.1, up);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(-0.1, v);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = -d*up;
+      auto t = -d*v;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_Up) {
-    auto front = camera->front();
-
-    if      (isShift) {
+  else if (e->key() == Qt::Key_Up) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(1.0, 1.0, scale);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(0.1, front);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(0.1, w);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = d*front;
+      auto t = d*w;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_Down) {
-    auto front = camera->front();
-
-    if      (isShift) {
+  else if (e->key() == Qt::Key_Down) {
+    if      (mouseData_.isShift) {
       auto m = CMatrix3D::scale(1.0, 1.0, iscale);
       object->setScale(m*object->getScale());
     }
-    else if (isControl) {
-      auto m = CMatrix3D::rotation(-0.1, front);
+    else if (mouseData_.isControl) {
+      auto m = CMatrix3D::rotation(-0.1, w);
       object->setRotate(m*object->getRotate());
     }
     else {
-      auto t = -d*front;
+      auto t = -d*w;
 
       auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
       object->setTranslate(m*object->getTranslate());
     }
   }
-  else if (k == Qt::Key_Question) {
+  else if (e->key() == Qt::Key_Question) {
     std::cerr << "Key               Shift      Control   \n";
     std::cerr << "---  -----------  ---------  ----------\n";
     std::cerr << "A    Move Left    Scale X-   Rotate X- \n";
@@ -2144,11 +2532,142 @@ objectKeyPress(QKeyEvent *e)
 
 void
 CQCamera3DCanvas::
+faceKeyPress(QKeyEvent *e)
+{
+  auto faces = getSelectedFaces();
+  if (faces.empty()) return;
+
+  auto d = bbox_.getMaxSize()/100.0;
+
+  auto faceNormal = [](const CGeomFace3D *face) {
+    CVector3D n;
+
+    if (face->getNormalSet())
+      n = face->getNormal();
+    else
+      face->calcNormal(n);
+
+    return n;
+  };
+
+  if      (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down) {
+    auto dir = (e->key() == Qt::Key_Up ? 1 : -1);
+
+    if (editType() == EditType::MOVE) {
+      for (auto *face : faces) {
+        auto n = faceNormal(face);
+
+        face->moveBy(dir*d*n);
+      }
+
+      updateObjectsData();
+    }
+  }
+  else if (e->key() == Qt::Key_S) {
+    for (auto *face : faces)
+      face->divideCenter();
+
+    updateObjectsData();
+  }
+  else if (e->key() == Qt::Key_E) {
+    for (auto *face : faces)
+      face->extrude(10*d);
+
+    updateObjectsData();
+  }
+}
+
+void
+CQCamera3DCanvas::
+edgeKeyPress(QKeyEvent *e)
+{
+  auto faceEdges = getSelectedFaceEdges();
+  if (faceEdges.empty()) return;
+
+  const auto &pf = faceEdges.begin();
+
+  auto *face    = (*pf).first;
+  auto  edgeNum = (*pf).second[0];
+
+  auto d = bbox_.getMaxSize()/100.0;
+
+  CVector3D n;
+
+  if (face->getNormalSet())
+    n = face->getNormal();
+  else
+    face->calcNormal(n);
+
+  const auto &edge = face->edge(edgeNum);
+
+  auto *object = face->getObject();
+
+  auto &v1 = object->getVertex(edge.v1);
+  auto &v2 = object->getVertex(edge.v2);
+
+  if      (e->key() == Qt::Key_Up) {
+    if (editType() == EditType::MOVE) {
+      v1.setModel(v1.getModel() + d*n);
+      v2.setModel(v2.getModel() + d*n);
+      updateObjectsData();
+    }
+  }
+  else if (e->key() == Qt::Key_Down) {
+    if (editType() == EditType::MOVE) {
+      v1.setModel(v1.getModel() - d*n);
+      v2.setModel(v2.getModel() - d*n);
+      updateObjectsData();
+    }
+  }
+}
+
+void
+CQCamera3DCanvas::
+pointKeyPress(QKeyEvent *e)
+{
+  auto *vertex = currentVertex();
+  if (! vertex) return;
+
+  auto n = vertex->getNormal();
+
+  auto d = bbox_.getMaxSize()/100.0;
+
+  if      (e->key() == Qt::Key_Up) {
+    if (editType() == EditType::MOVE) {
+      vertex->setModel(vertex->getModel() + d*n);
+      updateObjectsData();
+    }
+  }
+  else if (e->key() == Qt::Key_Down) {
+    if (editType() == EditType::MOVE) {
+      vertex->setModel(vertex->getModel() - d*n);
+      updateObjectsData();
+    }
+  }
+}
+
+//---
+
+void
+CQCamera3DCanvas::
+setCursor(const CPoint3D &v)
+{
+  cursor_ = v;
+
+  update();
+
+  Q_EMIT stateChanged();
+}
+
+//---
+
+void
+CQCamera3DCanvas::
 calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
 {
   auto *camera = getCurrentCamera();
 
-  auto projectionMatrix  = camera->perspectiveMatrix();
+  auto projectionMatrix  = camera->worldMatrix();
   auto iProjectionMatrix = projectionMatrix.inverse();
 
   auto viewMatrix  = camera->viewMatrix();
@@ -2177,12 +2696,12 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   double x1, y1;
 
   if (aspect > 1.0) {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0, -aspect,  aspect);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,     1.0,    -1.0);
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0, -aspect,  aspect);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,     1.0,    -1.0);
   }
   else {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth_  - 1.0,   -1.0,      1.0);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight_ - 1.0,  aspect, -aspect);
+    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0,   -1.0,      1.0);
+    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,  aspect, -aspect);
   }
 
   //std::cerr << "PX: " << x1 << " " << y1 << "\n";
@@ -2190,6 +2709,7 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   //---
 
   auto pointToView = [&](const CPoint3D &p, CPoint3D &pp, CPoint3D &pv) {
+    // convert projected point to camera
     double xp, yp, zp;
     iProjectionMatrix.multiplyPoint(p.x, p.y, p.z, &xp, &yp, &zp);
 
@@ -2197,6 +2717,7 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
 
     zp = p.z;
 
+    // convert camera point to view
     double xv, yv, zv;
     iViewMatrix.multiplyPoint(xp, yp, zp, &xv, &yv, &zv);
 
@@ -2269,6 +2790,8 @@ cameraChanged()
   if (isShowPlanes())
     updateAnnotation();
 
+  shape_->updateGeometry();
+
   Q_EMIT stateChanged();
 
   update();
@@ -2278,10 +2801,19 @@ CQCamera3DCamera *
 CQCamera3DCanvas::
 getCurrentCamera() const
 {
-  if (cameraInd_ >= 0 && cameraInd_ < int(cameras_.size()))
-    return cameras_[cameraInd_];
-  else
-    return nullptr;
+  return getCameraById(cameraInd_);
+}
+
+CQCamera3DCamera *
+CQCamera3DCanvas::
+getCameraById(uint id) const
+{
+  for (auto *camera : cameras_) {
+    if (camera->id() == id)
+      return camera;
+  }
+
+  return nullptr;
 }
 
 CQCamera3DLight *
@@ -2333,6 +2865,13 @@ updateAnnotation()
 
 void
 CQCamera3DCanvas::
+updateBillboard()
+{
+  billboard_->updateGeometry();
+}
+
+void
+CQCamera3DCanvas::
 updateOverlay()
 {
   overlay_->updateGeometry();
@@ -2342,7 +2881,31 @@ void
 CQCamera3DCanvas::
 updateOverlay2D()
 {
-  overlay2D_->updateGeometry();
+//overlay2D_->updateGeometry();
+}
+
+//---
+
+CQCamera3DGeomObject *
+CQCamera3DCanvas::
+currentObject(bool includeRoot) const
+{
+  if (currentObject_)
+    return currentObject_;
+
+  return (includeRoot ? defaultRootObject() : nullptr);
+}
+
+CQCamera3DGeomObject *
+CQCamera3DCanvas::
+currentGeomObject(bool includeRoot) const
+{
+  auto *object = currentObject(includeRoot);
+
+  if (object)
+    object = dynamic_cast<CQCamera3DGeomObject *>(getGeomObject(object));
+
+  return object;
 }
 
 void
@@ -2374,6 +2937,161 @@ setCurrentVertex(CGeomVertex3D *vertex, bool update)
   if (update)
     Q_EMIT stateChanged();
 }
+
+CQCamera3DCanvas::FaceEdges
+CQCamera3DCanvas::
+getSelectedFaceEdges() const
+{
+  FaceEdges faceEdges;
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    for (auto *face : object->getFaces()) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      const auto &edges = face1->selectedEdges();
+
+      for (const auto &edge : edges)
+        faceEdges[face1].push_back(edge);
+    }
+  }
+
+  return faceEdges;
+}
+
+//---
+
+void
+CQCamera3DCanvas::
+addCircle()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "circle." + std::to_string(n + 1);
+
+  auto *circle = CGeometry3DInst->createObject3D(scene, name);
+
+  CGeomCircle3D::addGeometry(circle, cursor(), 0.1);
+
+  scene->addObject(circle);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+void
+CQCamera3DCanvas::
+addCube()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "cube." + std::to_string(n + 1);
+
+  auto *cube = CGeometry3DInst->createObject3D(scene, name);
+
+  CGeomCube3D::addGeometry(cube, cursor(), 0.1);
+
+  scene->addObject(cube);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+void
+CQCamera3DCanvas::
+addCylinder()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "cylinder." + std::to_string(n + 1);
+
+  auto *cylinder = CGeometry3DInst->createObject3D(scene, name);
+
+  CGeomCylinder3D::addGeometry(cylinder, cursor(), 0.1, 1.0);
+
+  scene->addObject(cylinder);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+void
+CQCamera3DCanvas::
+addPyramid()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "pyramid." + std::to_string(n + 1);
+
+  auto *pyramid = CGeometry3DInst->createObject3D(scene, name);
+
+  CGeomPyramid3D::addGeometry(pyramid, cursor(), 0.1, 0.1);
+
+  scene->addObject(pyramid);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+void
+CQCamera3DCanvas::
+addSphere()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "sphere." + std::to_string(n + 1);
+
+  auto *sphere = CGeometry3DInst->createObject3D(scene, name);
+
+  CGeomSphere3D::addGeometry(sphere, cursor(), 0.1);
+
+  scene->addObject(sphere);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+void
+CQCamera3DCanvas::
+addTorus()
+{
+  auto *scene = app_->getScene();
+
+  auto n = scene->getObjects().size();
+  std::string name = "torus." + std::to_string(n + 1);
+
+  auto *torus = CGeometry3DInst->createObject3D(scene, name);
+
+  auto power1 = 1.0;
+  auto power2 = 1.0;
+
+  CGeomTorus3D::addGeometry(torus, cursor(), 0.1, 0.025, power1, power2, 30, 30);
+
+  scene->addObject(torus);
+
+  addObjectsData();
+  update();
+
+  Q_EMIT objectAdded();
+}
+
+//---
 
 bool
 CQCamera3DCanvas::
@@ -2447,105 +3165,16 @@ createFontTexture(uint *texture, int w, int h, uchar *data)
   return true;
 }
 
-//---
-
-CQGLTexture *
-CQCamera3DCanvas::
-getTextureByName(const std::string &name) const
-{
-  for (const auto &pt : glTextures_) {
-    const auto &textureData = pt.second;
-
-    if (textureData.glTexture->getName() == name)
-      return textureData.glTexture;
-  }
-
-  return nullptr;
-}
-
-CGeomTexture *
-CQCamera3DCanvas::
-getGeomTextureByName(const std::string &name) const
-{
-  for (const auto &pt : glTextures_) {
-    const auto &textureData = pt.second;
-
-    if (textureData.glTexture->getName() == name)
-      return textureData.geomTexture;
-  }
-
-  return nullptr;
-}
-
-CQGLTexture *
-CQCamera3DCanvas::
-getTexture(CGeomTexture *texture, bool add)
-{
-  auto pt = glTextures_.find(texture->id());
-
-  if (pt == glTextures_.end()) {
-    if (! add)
-      return nullptr;
-
-    const auto &image = texture->image()->image();
-
-    auto *glTexture = makeTexture(image);
-
-    glTexture->setName(texture->name());
-
-    TextureData textureData;
-
-    textureData.glTexture   = glTexture;
-    textureData.geomTexture = texture;
-
-    pt = glTextures_.insert(pt, GLTextures::value_type(texture->id(), textureData));
-
-    Q_EMIT textureAdded();
-  }
-
-  const auto &textureData = (*pt).second;
-
-  return textureData.glTexture;
-}
-
-CQGLTexture *
-CQCamera3DCanvas::
-makeTexture(const CImagePtr &image) const
-{
-  auto *texture = new CQGLTexture(image);
-
-  texture->setFunctions(const_cast<CQCamera3DCanvas *>(this));
-
-  return texture;
-}
-
-//---
-
-CQCamera3DObjectData::
-CQCamera3DObjectData(CQCamera3DCanvas *canvas) :
- canvas_(canvas)
-{
-}
-
-CQGLBuffer *
-CQCamera3DObjectData::
-initBuffer()
-{
-  assert(canvas_->shaderProgram());
-
-  if (! buffer_)
-    buffer_ = canvas_->shaderProgram()->createBuffer();
-
-  buffer_->clearBuffers();
-
-  faceDatas_.clear();
-
-  return buffer_;
-}
-
 void
-CQCamera3DObjectData::
-addFaceData(const CQCamera3DFaceData &faceData)
+CQCamera3DCanvas::
+getBasis(CGeomObject3D *object, CVector3D &u, CVector3D &v, CVector3D &w) const
 {
-  faceDatas_.push_back(faceData);
+  CVector3D u1, v1, w1;
+  object->getBasis(u1, v1, w1);
+
+  const auto &modelMatrix = object->getHierTransform();
+
+  u = (modelMatrix*u1).normalized();
+  v = (modelMatrix*v1).normalized();
+  w = (modelMatrix*w1).normalized();
 }

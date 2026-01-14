@@ -7,11 +7,11 @@ CImportSTL(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object_ = CGeometry3DInst->createObject3D(scene_, name);
 
   scene_->addObject(object_);
 

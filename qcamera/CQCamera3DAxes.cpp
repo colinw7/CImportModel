@@ -176,7 +176,7 @@ drawGeometry()
   auto *camera = canvas_->getCurrentCamera();
 
   // camera projection
-  auto projectionMatrix = camera->perspectiveMatrix();
+  auto projectionMatrix = camera->worldMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
 
   // camera/view transformation

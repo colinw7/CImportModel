@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DMaterialList_t {
-    QByteArrayData data[7];
-    char stringdata0[104];
+    QByteArrayData data[8];
+    char stringdata0[120];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -37,12 +37,13 @@ QT_MOC_LITERAL(1, 23, 18), // "currentItemChanged"
 QT_MOC_LITERAL(2, 42, 0), // ""
 QT_MOC_LITERAL(3, 43, 15), // "updateMaterials"
 QT_MOC_LITERAL(4, 59, 10), // "invalidate"
-QT_MOC_LITERAL(5, 70, 16), // "itemSelectedSlot"
-QT_MOC_LITERAL(6, 87, 16) // "QListWidgetItem*"
+QT_MOC_LITERAL(5, 70, 15), // "needsUpdateSlot"
+QT_MOC_LITERAL(6, 86, 16), // "itemSelectedSlot"
+QT_MOC_LITERAL(7, 103, 16) // "QListWidgetItem*"
 
     },
     "CQCamera3DMaterialList\0currentItemChanged\0"
-    "\0updateMaterials\0invalidate\0"
+    "\0updateMaterials\0invalidate\0needsUpdateSlot\0"
     "itemSelectedSlot\0QListWidgetItem*"
 };
 #undef QT_MOC_LITERAL
@@ -53,7 +54,7 @@ static const uint qt_meta_data_CQCamera3DMaterialList[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       4,   14, // methods
+       5,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -61,12 +62,13 @@ static const uint qt_meta_data_CQCamera3DMaterialList[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   34,    2, 0x06 /* Public */,
+       1,    0,   39,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       3,    0,   35,    2, 0x0a /* Public */,
-       4,    0,   36,    2, 0x0a /* Public */,
-       5,    2,   37,    2, 0x08 /* Private */,
+       3,    0,   40,    2, 0x0a /* Public */,
+       4,    0,   41,    2, 0x0a /* Public */,
+       5,    0,   42,    2, 0x08 /* Private */,
+       6,    2,   43,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -74,7 +76,8 @@ static const uint qt_meta_data_CQCamera3DMaterialList[] = {
  // slots: parameters
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, 0x80000000 | 6, 0x80000000 | 6,    2,    2,
+    QMetaType::Void,
+    QMetaType::Void, 0x80000000 | 7, 0x80000000 | 7,    2,    2,
 
        0        // eod
 };
@@ -88,7 +91,8 @@ void CQCamera3DMaterialList::qt_static_metacall(QObject *_o, QMetaObject::Call _
         case 0: _t->currentItemChanged(); break;
         case 1: _t->updateMaterials(); break;
         case 2: _t->invalidate(); break;
-        case 3: _t->itemSelectedSlot((*reinterpret_cast< QListWidgetItem*(*)>(_a[1])),(*reinterpret_cast< QListWidgetItem*(*)>(_a[2]))); break;
+        case 3: _t->needsUpdateSlot(); break;
+        case 4: _t->itemSelectedSlot((*reinterpret_cast< QListWidgetItem*(*)>(_a[1])),(*reinterpret_cast< QListWidgetItem*(*)>(_a[2]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -132,13 +136,13 @@ int CQCamera3DMaterialList::qt_metacall(QMetaObject::Call _c, int _id, void **_a
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 4)
+        if (_id < 5)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 4;
+        _id -= 5;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 4)
+        if (_id < 5)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 4;
+        _id -= 5;
     }
     return _id;
 }

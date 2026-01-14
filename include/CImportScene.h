@@ -33,6 +33,8 @@ class CImportScene : public CImportBase {
     return scene_;
   }
 
+  bool write(CFile *file, CGeomScene3D *scene) const override;
+
  private:
   void           readScene();
   void           addObject(const std::string &name);
@@ -41,6 +43,7 @@ class CImportScene : public CImportBase {
   void           readFaces(CGeomObject3D *object, int pface_num);
   void           readLines(CGeomObject3D *object, int pface_num);
   void           readVertices(CGeomObject3D *object);
+  void           readNormals(CGeomObject3D *object);
   void           readRotate(CGeomObject3D *object, int num_patches);
   void           readColors();
   void           readTextures();
@@ -49,6 +52,8 @@ class CImportScene : public CImportBase {
   CMatrix3D      readTransforms();
   CGeomObject3D *getObject(const std::string &name);
   CGeomObject3D *getPrimitive(const std::string &name);
+
+  CGeomMaterial *getMaterial(const std::string &name) const;
 
   int lookupCommand(const std::string &command, const char **commands);
 
@@ -59,6 +64,14 @@ class CImportScene : public CImportBase {
   CRGBA getRGBA(int color) const;
 
   bool isSkipLine(const std::string &line) const;
+
+  //---
+
+  void writeMaterial(CGeomMaterial *material) const;
+  void writeTexture(CGeomTexture *texture) const;
+  void writeObject(CGeomObject3D *object) const;
+
+  //---
 
   void errorMsg(const std::string &msg) const;
 
@@ -72,13 +85,14 @@ class CImportScene : public CImportBase {
 
   CGeomScene3D* scene_ { nullptr };
   SceneP        pscene_;
-  CFile*        file_  { nullptr };
   NameObjMap    objects_;
   NameObjMap    primitives_;
   Names         colors_;
   Textures      textures_;
   Materials     materials_;
   int           orientation_ { 1 };
+
+  mutable CFile* file_ { nullptr };
 };
 
 #endif

@@ -4,8 +4,8 @@
 #include <CQGLBuffer.h>
 
 CQCamera3DShaderProgram::
-CQCamera3DShaderProgram(CQCamera3DCanvas *canvas) :
- canvas_(canvas)
+CQCamera3DShaderProgram(CQCamera3DApp *app) :
+ app_(app)
 {
 }
 
@@ -23,7 +23,7 @@ void
 CQCamera3DShaderProgram::
 addVertexShader(const QString &name)
 {
-  auto buildDir = canvas_->app()->buildDir();
+  auto buildDir = app_->buildDir();
 
   if (! addShaderFromSourceFile(QOpenGLShader::Vertex, buildDir + "/shaders/" + name))
     std::cerr << log().toStdString() << "\n";
@@ -33,7 +33,7 @@ void
 CQCamera3DShaderProgram::
 addFragmentShader(const QString &name)
 {
-  auto buildDir = canvas_->app()->buildDir();
+  auto buildDir = app_->buildDir();
 
   if (! addShaderFromSourceFile(QOpenGLShader::Fragment, buildDir + "/shaders/" + name))
     std::cerr << log().toStdString() << "\n";

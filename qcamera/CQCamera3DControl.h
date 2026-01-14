@@ -6,9 +6,12 @@
 class CQCamera3DApp;
 class CQCamera3DCamera;
 class CQCamera3DObjectsList;
-class CQCamera3DMaterialList;
 class CQCamera3DLightList;
+class CQCamera3DCameraList;
 class CQCamera3DTextureChooser;
+class CQCamera3DTextureList;
+class CQCamera3DMaterialChooser;
+class CQCamera3DMaterialList;
 class CQCamera3DAnimChooser;
 class CQCamera3DBonesList;
 
@@ -46,25 +49,34 @@ class CQCamera3DControl : public QFrame {
   // General
   void showWireframeSlot(int);
   void showSolidSlot(int);
+  void showTexturedSlot(int);
   void showPointsSlot(int i);
 
+  void quadViewSlot(int);
   void pointSizeSlot(double);
   void lineWidthSlot(double);
+  void cursorSlot();
 
-  void showNormalsSlot(int);
+  void normalsPointsSlot(int);
+  void normalsFacesSlot(int);
   void normalsSizeSlot(double r);
   void normalsColorSlot(const QColor &c);
+
+  void showBasisSlot(int);
+
+  void showBBoxSlot(int);
+  void bboxOrientSlot(int);
 
   void depthTestSlot(int);
   void cullSlot(int);
   void frontFaceSlot(int);
 
   // Camera
-  void altSlot(int);
-
   void showCameraSlot(int);
   void showEyeLineSlot(int);
   void showPlanesSlot(int);
+
+  void currentCameraSlot();
 
   void pitchSlot(double r);
   void yawSlot(double r);
@@ -92,10 +104,10 @@ class CQCamera3DControl : public QFrame {
   void aroundZSlot1();
   void aroundZSlot2();
 
-  void resetSlot();
-  void topSlot();
-  void sideSlot();
-  void frontSlot();
+  void resetCameraSlot();
+  void topCameraSlot();
+  void sideCameraSlot();
+  void frontCameraSlot();
 
   // Lights
   void currentLightSlot();
@@ -131,7 +143,9 @@ class CQCamera3DControl : public QFrame {
 
   // Mouse
   void mouseTypeSlot(int);
+  void editTypeSlot(int);
   void mouseScaleSlot(double);
+  void mouseBasisSlot(int);
 
   // Selection
   void selectTypeSlot(int);
@@ -152,6 +166,7 @@ class CQCamera3DControl : public QFrame {
   void normalTextureSlot();
   void specularTextureSlot();
   void emissiveTextureSlot();
+  void connectMaterialEdit();
 
   void swapSlot();
   void invertSlot();
@@ -162,6 +177,7 @@ class CQCamera3DControl : public QFrame {
 
   void loadMaterialMapSlot();
   void saveMaterialMapSlot();
+  void addMaterialSlot();
 
   void selectParentSlot();
   void selectFacesSlot();
@@ -180,7 +196,8 @@ class CQCamera3DControl : public QFrame {
   void addSphereSlot();
   void addTorusSlot();
 
-  void addModelSlot();
+  void loadModelSlot();
+  void saveModelSlot();
 
   // Material
   void currentMaterialSlot();
@@ -199,6 +216,10 @@ class CQCamera3DControl : public QFrame {
   void materialSpecularTextureSlot();
   void materialEmissiveTextureSlot();
 
+  // Objects
+  void currentObjectChangedSlot();
+  void objectAutoSelectSlot(int i);
+
   // Overview
   void overviewEqualScaleSlot(int i);
   void overviewSelectTypeSlot(int i);
@@ -209,6 +230,9 @@ class CQCamera3DControl : public QFrame {
 
   // UV Map
   void uvTextureTypeSlot(int i);
+
+  // Textures
+  void textureFlipSlot(int i);
 
   // Bones
   void bonesModelSlot(int);
@@ -255,28 +279,42 @@ class CQCamera3DControl : public QFrame {
   QTabWidget *mainTab_ { nullptr };
 
   // General
-  QCheckBox* showWireframeCheck_ { nullptr };
-  QCheckBox* showSolidCheck_     { nullptr };
-  QCheckBox* showPointsCheck_    { nullptr };
+  struct GeneralData {
+    QCheckBox* showWireframeCheck { nullptr };
+    QCheckBox* showSolidCheck     { nullptr };
+    QCheckBox* showTexturedCheck  { nullptr };
+    QCheckBox* showPointsCheck    { nullptr };
 
-  CQRealSpin* pointSizeEdit_ { nullptr };
-  CQRealSpin* lineWidthEdit_ { nullptr };
+    QCheckBox* quadViewCheck { nullptr };
 
-  QCheckBox*   showNormalsCheck_ { nullptr };
-  CQRealSpin*  normalsSizeEdit_  { nullptr };
-  CQColorEdit* normalsColorEdit_ { nullptr };
+    CQRealSpin*    pointSizeEdit { nullptr };
+    CQRealSpin*    lineWidthEdit { nullptr };
+    CQPoint3DEdit* cursorEdit    { nullptr };
 
-  QCheckBox* depthTestCheck_ { nullptr };
-  QCheckBox* cullFaceCheck_  { nullptr };
-  QCheckBox* frontFaceCheck_ { nullptr };
+    QCheckBox*   normalsPointsCheck { nullptr };
+    QCheckBox*   normalsFacesCheck  { nullptr };
+    CQRealSpin*  normalsSizeEdit    { nullptr };
+    CQColorEdit* normalsColorEdit   { nullptr };
+
+    QCheckBox* showBasisCheck { nullptr };
+
+    QCheckBox* showBBoxCheck   { nullptr };
+    QCheckBox* bboxOrientCheck { nullptr };
+
+    QCheckBox* depthTestCheck { nullptr };
+    QCheckBox* cullFaceCheck  { nullptr };
+    QCheckBox* frontFaceCheck { nullptr };
+  };
+
+  GeneralData generalData_;
 
   // Camera
   struct CameraData {
-    QCheckBox* altCheck { nullptr };
-
     QCheckBox* showCheck    { nullptr };
     QCheckBox* eyeLineCheck { nullptr };
     QCheckBox* planesCheck  { nullptr };
+
+    CQCamera3DCameraList* cameraList { nullptr };
 
     CQRealSpin* pitchEdit { nullptr };
     CQRealSpin* yawEdit   { nullptr };
@@ -306,7 +344,7 @@ class CQCamera3DControl : public QFrame {
 
   // Lights
   struct LightsData {
-    CQCamera3DLightList *lightsList { nullptr };
+    CQCamera3DLightList *lightList { nullptr };
 
     CQColorEdit*   ambientColorEdit     { nullptr };
     CQRealSpin*    ambientStrengthEdit  { nullptr };
@@ -342,8 +380,10 @@ class CQCamera3DControl : public QFrame {
   AxisData axisData_;
 
   // Mouse
-  QComboBox*  mouseTypeCombo_ { nullptr };
-  CQRealSpin* mouseScaleEdit_ { nullptr };
+  QComboBox*  mouseTypeCombo_  { nullptr };
+  QComboBox*  editTypeCombo_   { nullptr };
+  CQRealSpin* mouseScaleEdit_  { nullptr };
+  QCheckBox*  mouseBasisCheck_ { nullptr };
 
   // Selection
   struct SelectionData {
@@ -367,7 +407,7 @@ class CQCamera3DControl : public QFrame {
     CQCamera3DTextureChooser *specularTextureEdit { nullptr };
     CQCamera3DTextureChooser *emissiveTextureEdit { nullptr };
 
-    QLineEdit *materialNameEdit { nullptr };
+    CQCamera3DMaterialChooser *materialNameChooser { nullptr };
 
     QTextEdit* objectInfoText { nullptr };
   };
@@ -375,7 +415,22 @@ class CQCamera3DControl : public QFrame {
   SelectionData selectionData_;
 
   // Objects
-  CQCamera3DObjectsList *objectsList_ { nullptr };
+  struct ObjectsData {
+    CQCamera3DObjectsList* objectsList     { nullptr };
+    QCheckBox*             autoSelectCheck { nullptr };
+
+    bool autoSelect { false };
+  };
+
+  ObjectsData objectsData_;
+
+  // Textures
+  struct TexturesData {
+    CQCamera3DTextureList* textureList { nullptr };
+    QCheckBox*             flipCheck   { nullptr };
+  };
+
+  TexturesData texturesData_;
 
   // Materials
   struct MaterialsData {
@@ -430,6 +485,7 @@ class CQCamera3DControl : public QFrame {
     CQTextLabel* nodeLabel     { nullptr };
     CQTextLabel* childrenLabel { nullptr };
     QCheckBox*   jointCheck    { nullptr };
+    CQTextLabel* objectLabel   { nullptr };
 
     CQCamera3DBonesList* bonesList { nullptr };
 

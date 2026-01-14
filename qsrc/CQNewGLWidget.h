@@ -123,6 +123,15 @@ class CQNewGLWidget : public QGLWidget, public QOpenGLExtraFunctions {
   void textureAdded();
 
  protected:
+  struct MouseData {
+    bool            pressed   { false };
+    bool            isShift   { false };
+    bool            isControl { false };
+    Qt::MouseButton button    { Qt::NoButton };
+    CPoint2D        press     { 0.0, 0.0 };
+    CPoint2D        move      { 0.0, 0.0 };
+  };
+
   using Shaders = std::map<QString, CQNewGLShaderProgram *>;
 
   CQNewGLModel* app_ { nullptr };
@@ -146,6 +155,9 @@ class CQNewGLWidget : public QGLWidget, public QOpenGLExtraFunctions {
   double aspect_ { 1.0 };
 
   bool blend_ { false };
+
+  // mouse
+  MouseData mouseData_;
 };
 
 #endif

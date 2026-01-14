@@ -17,11 +17,11 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
-  object_ = CGeometryInst->createObject3D(scene_, name);
+  object_ = CGeometry3DInst->createObject3D(scene_, name);
 
   scene_->addObject(object_);
 
@@ -401,7 +401,7 @@ readFace(const std::string &line)
     auto *material = pscene_->getMaterial(material_->name);
 
     if (! material) {
-      material = CGeometryInst->createMaterial();
+      material = CGeometry3DInst->createMaterial();
 
       material->setName(material_->name);
 
@@ -420,10 +420,10 @@ readFace(const std::string &line)
       material->setSpecular(*material_->specularColor);
 
     auto getTexture = [&](const std::string &name, CImagePtr &image) {
-      auto *texture = pscene_->getTexture(name);
+      auto *texture = pscene_->getTextureByName(name);
 
       if (! texture) {
-        texture = CGeometryInst->createTexture(image);
+        texture = CGeometry3DInst->createTexture(image);
 
         texture->setName(name);
 

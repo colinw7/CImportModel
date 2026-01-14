@@ -18,7 +18,7 @@ CQNewGLShaderProgram *
 CQNewGLLight::
 shaderProgram()
 {
-  return widget_->getShader("light.vs", "light.fs");
+  return getShader("light.vs", "light.fs");
 }
 
 void

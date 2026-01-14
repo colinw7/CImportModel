@@ -671,7 +671,7 @@ loadInitTextures()
     if (flipV)
       image->flipH();
 
-    auto *texture1 = CGeometryInst->createTexture(image);
+    auto *texture1 = CGeometry3DInst->createTexture(image);
 
     texture1->setName(name.toStdString());
 
@@ -2815,8 +2815,7 @@ updateNodeMatrices(CGeomObject3D *object)
     CMatrix3D            transform { CMatrix3D::identity() };
   };
 
-  auto meshMatrix = rootObject->getMeshGlobalTransform();
-
+  auto meshMatrix        = rootObject->getMeshGlobalTransform();
   auto inverseMeshMatrix = meshMatrix.inverse();
 
   const auto &nodeIds = rootObject->getNodeIds();
@@ -3064,9 +3063,16 @@ void
 CQNewGLCanvas::
 mousePressEvent(QMouseEvent *e)
 {
-  mouseData_.pressX = e->x();
-  mouseData_.pressY = e->y();
-  mouseData_.button = e->button();
+  mouseData_.pressed = true;
+  mouseData_.button  = e->button();
+
+  mouseData_.press.x = e->x();
+  mouseData_.press.y = e->y();
+
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
+
+  //---
 
   bool isLeftButton = (mouseData_.button == Qt::LeftButton);
   bool showEyeLine  = ! isLeftButton && isShowEyeline();
@@ -3078,7 +3084,7 @@ mousePressEvent(QMouseEvent *e)
     eyeLine2_ = new CQNewGLPath(this);
   }
 
-  setMousePos(mouseData_.pressX, mouseData_.pressY, /*add*/false, showEyeLine);
+  setMousePos(mouseData_.press.x, mouseData_.press.y, /*add*/false, showEyeLine);
 
   //---
 
@@ -3088,11 +3094,65 @@ mousePressEvent(QMouseEvent *e)
     if (type == CQNewGLModel::Type::CAMERA) {
       auto *camera = getCurrentCamera();
 
-      camera->setLastPos(mouseData_.pressX, mouseData_.pressY);
+      camera->setLastPos(mouseData_.press.x, mouseData_.press.y);
     }
   }
 
   //---
+
+  update();
+}
+
+void
+CQNewGLCanvas::
+mouseMoveEvent(QMouseEvent *e)
+{
+  mouseData_.move.x = e->x();
+  mouseData_.move.y = e->y();
+
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
+
+  //---
+
+  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
+  bool showEyeLine  = ! isLeftButton && isShowEyeline();
+
+  setMousePos(mouseData_.move.x, mouseData_.move.y, /*add*/true, showEyeLine);
+
+  //---
+
+  if (isLeftButton) {
+    auto type = app_->type();
+
+    if      (type == CQNewGLModel::Type::CAMERA) {
+      auto *camera = getCurrentCamera();
+
+      float xoffset, yoffset;
+      camera->deltaPos(mouseData_.move.x, mouseData_.move.y, xoffset, yoffset);
+
+      camera->setLastPos(mouseData_.move.x, mouseData_.move.y);
+
+      camera->processMouseMovement(xoffset, yoffset, /*constrainPitch*/true);
+      updateCameraBuffer();
+    }
+    else if (type == CQNewGLModel::Type::LIGHT) {
+      auto *light = getCurrentLight();
+
+      auto dx = sceneSize_.getX()*(mouseData_.move.x - mouseData_.press.x)/width ();
+      auto dy = sceneSize_.getY()*(mouseData_.move.y - mouseData_.press.y)/height();
+
+      light->setPosition(light->position() + CGLVector3D(dx, dy, 0.0f));
+
+      app()->updateLights();
+    }
+    else if (type == CQNewGLModel::Type::MODEL) {
+    }
+  }
+
+  //---
+
+  mouseData_.press = mouseData_.move;
 
   update();
 }
@@ -3105,57 +3165,8 @@ mouseReleaseEvent(QMouseEvent *)
   clearEyeLines();
 #endif
 
-  mouseData_.button = Qt::NoButton;
-
-  update();
-}
-
-void
-CQNewGLCanvas::
-mouseMoveEvent(QMouseEvent *e)
-{
-  mouseData_.moveX = e->x();
-  mouseData_.moveY = e->y();
-
-  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
-  bool showEyeLine  = ! isLeftButton && isShowEyeline();
-
-  setMousePos(mouseData_.moveX, mouseData_.moveY, /*add*/true, showEyeLine);
-
-  //---
-
-  if (isLeftButton) {
-    auto type = app_->type();
-
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      auto *camera = getCurrentCamera();
-
-      float xoffset, yoffset;
-      camera->deltaPos(mouseData_.moveX, mouseData_.moveY, xoffset, yoffset);
-
-      camera->setLastPos(mouseData_.moveX, mouseData_.moveY);
-
-      camera->processMouseMovement(xoffset, yoffset, /*constrainPitch*/true);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      auto dx = sceneSize_.getX()*(mouseData_.moveX - mouseData_.pressX)/width ();
-      auto dy = sceneSize_.getY()*(mouseData_.moveY - mouseData_.pressY)/height();
-
-      light->setPosition(light->position() + CGLVector3D(dx, dy, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-    }
-  }
-
-  //---
-
-  mouseData_.pressX = mouseData_.moveX;
-  mouseData_.pressY = mouseData_.moveY;
+  mouseData_.pressed = false;
+  mouseData_.button  = Qt::NoButton;
 
   update();
 }
@@ -3164,19 +3175,20 @@ void
 CQNewGLCanvas::
 setMousePos(double xpos, double ypos, bool add, bool show)
 {
-  CPoint3D ep1, ep2;
-  CVector3D ev;
-  calcEyeLine(CPoint2D(xpos, ypos), ep1, ep2, ev);
-  //std::cerr << "Eye Line: (" << xpos << "," << ypos << ") (" << ep1 << "," << ep2 << ")\n";
+  EyeLine eyeLine;
+  calcEyeLine(CPoint2D(xpos, ypos), eyeLine);
+  //std::cerr << "Eye Line: (" << xpos << "," << ypos << ") (" <<
+  //             eyeLine.ep1 << "," << eyeLine.ep2 << ")\n";
 
   // show on toolbar
-  app_->toolbar()->setPosLabel(QString("%1 %2 %3").arg(ep1.x).arg(ep1.y).arg(ep1.z));
+  app_->toolbar()->setPosLabel(QString("%1 %2 %3").
+    arg(eyeLine.ep1.x).arg(eyeLine.ep1.y).arg(eyeLine.ep1.z));
 
 //auto *camera = getCurrentCamera();
-//ep2 = camera->origin();
+//eyeLine.ep2 = camera->origin();
 
-  auto ep3 = ep2;
-  auto ep4 = ep2;
+  auto ep3 = eyeLine.ep2;
+  auto ep4 = eyeLine.ep2;
 
   //---
 
@@ -3184,7 +3196,7 @@ setMousePos(double xpos, double ypos, bool add, bool show)
   auto *object = getCurrentObject();
 
   if (object) {
-    CLine3D line(ep1, ep2);
+    CLine3D line(eyeLine.ep1, eyeLine.ep2);
 
     auto bbox = app_->getObjectBBox(object);
 
@@ -3208,13 +3220,13 @@ setMousePos(double xpos, double ypos, bool add, bool show)
   if (show) {
     CGLPath3D path;
 
-    path.lineTo(ep1);
-    path.lineTo(ep2);
+    path.lineTo(eyeLine.ep1);
+    path.lineTo(eyeLine.ep2);
     path.lineTo(ep3);
     path.lineTo(ep4);
 
     if (add) {
-      eyeVector2_ = ev;
+      eyeVector2_ = eyeLine.ev;
 
       eyeLine2_->setPath(path);
       eyeLine2_->updateGeometry();
@@ -3247,7 +3259,7 @@ setMousePos(double xpos, double ypos, bool add, bool show)
       eyeVector1_ = eyeVector2_;
     }
     else {
-      eyeVector1_ = ev;
+      eyeVector1_ = eyeLine.ev;
 
       eyeLine1_->setPath(path);
       eyeLine1_->updateGeometry();
@@ -3257,7 +3269,7 @@ setMousePos(double xpos, double ypos, bool add, bool show)
 
 void
 CQNewGLCanvas::
-calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev)
+calcEyeLine(const CPoint2D &pos, EyeLine &eyeLine)
 {
   auto imatrix1 = projectionMatrix().inverse();
 
@@ -3293,9 +3305,9 @@ calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev)
 //imatrix2.multiplyPoint(xp1, yp1, zp1, &xv1, &yv1, &zv1);
   imatrix2.multiplyVector(xp1, yp1, zp1, &xv1, &yv1, &zv1);
 
-  ev = CVector3D(xv1, yv1, zv1).normalized();
+  eyeLine.ev = CVector3D(xv1, yv1, zv1).normalized();
 
-  ep1 = CPoint3D(xv1, yv1, zv1);
+  eyeLine.ep1 = CPoint3D(xv1, yv1, zv1);
 
   //---
 
@@ -3314,10 +3326,10 @@ calcEyeLine(const CPoint2D &pos, CPoint3D &ep1, CPoint3D &ep2, CVector3D &ev)
   float xv2, yv2, zv2;
   imatrix2.multiplyPoint(xp2, yp2, zp2, &xv2, &yv2, &zv2);
 
-  ep2 = CPoint3D(xv2, yv2, zv2);
+  eyeLine.ep2 = CPoint3D(xv2, yv2, zv2);
 #else
   auto *camera = getCurrentCamera();
-  ep2 = camera->origin().point();
+  eyeLine.ep2 = camera->origin().point();
 #endif
 }
 
@@ -3354,384 +3366,224 @@ void
 CQNewGLCanvas::
 keyPressEvent(QKeyEvent *e)
 {
-  CGLCamera::ProcessKeyData processKeyData;
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
 
-  bool isShift   = (e->modifiers() & Qt::ShiftModifier);
-  bool isControl = (e->modifiers() & Qt::ControlModifier);
+  auto type = app_->type();
 
+  if      (type == CQNewGLModel::Type::CAMERA)
+    cameraKeyPress(e);
+  else if (type == CQNewGLModel::Type::LIGHT)
+    lightKeyPress(e);
+  else if (type == CQNewGLModel::Type::MODEL)
+    objectKeyPress(e);
+}
+
+void
+CQNewGLCanvas::
+cameraKeyPress(QKeyEvent *e)
+{
   auto *camera = getCurrentCamera();
 
   auto dt = 0.1 /* camera->deltaTime() */;
 //auto da = M_PI/180.0;
 
 #if 0
-  if (isShift) {
+  if (mouseData_.isShift) {
     dt = -dt;
     da = -da;
   }
 #endif
 
+  CGLCamera::ProcessKeyData processKeyData;
+
   processKeyData.deltaTime = dt;
   processKeyData.rotate    = cameraRotate_;
-  processKeyData.strafe    = isShift;
-
-  auto type = app_->type();
+  processKeyData.strafe    = mouseData_.isShift;
 
   if      (e->key() == Qt::Key_Q) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      processKeyData.rotateAt =
-        (isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
-      camera->processKeyboard(CGLCamera::Movement::ROTATE_LEFT, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-
-        auto bbox = app_->getObjectBBox(object);
-        auto o = bbox.getCenter();
-
-        auto da = 1.0;
-
-        auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
-        CMatrix3D m2;
-        if      (isControl)
-          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), u);
-        else if (isShift)
-          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), w);
-        else
-          m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), v);
-        auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
-        object->setTransform(m1*m2*m3*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    processKeyData.rotateAt =
+      (mouseData_.isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
+    camera->processKeyboard(CGLCamera::Movement::ROTATE_LEFT, processKeyData);
   }
   else if (e->key() == Qt::Key_E) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      processKeyData.rotateAt =
-        (isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
-      camera->processKeyboard(CGLCamera::Movement::ROTATE_RIGHT, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-
-        auto bbox = app_->getObjectBBox(object);
-        auto o = bbox.getCenter();
-
-        auto da = 1.0;
-
-        auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
-        CMatrix3D m2;
-        if      (isControl)
-          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), u);
-        else if (isShift)
-          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), w);
-        else
-          m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), v);
-        auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
-        object->setTransform(m1*m2*m3*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    processKeyData.rotateAt =
+      (mouseData_.isControl ? CGLCamera::RotateAt::POSITION : CGLCamera::RotateAt::ORIGIN);
+    camera->processKeyboard(CGLCamera::Movement::ROTATE_RIGHT, processKeyData);
   }
   else if (e->key() == Qt::Key_W) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() + CGLVector3D(0.0f, 0.1f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = w*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
   }
   else if (e->key() == Qt::Key_S) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() - CGLVector3D(0.0f, 0.1f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = w*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
   }
   else if (e->key() == Qt::Key_A) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      camera->processKeyboard(CGLCamera::Movement::STRAFE_LEFT, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = u*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    camera->processKeyboard(CGLCamera::Movement::STRAFE_LEFT, processKeyData);
   }
   else if (e->key() == Qt::Key_D) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      camera->processKeyboard(CGLCamera::Movement::STRAFE_RIGHT, processKeyData);
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = u*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
-  }
-  else if (e->key() == Qt::Key_X) {
-    if (type == CQNewGLModel::Type::MODEL) {
-    }
-  }
-  else if (e->key() == Qt::Key_Y) {
-    if (type == CQNewGLModel::Type::MODEL) {
-    }
-  }
-  else if (e->key() == Qt::Key_Z) {
-    if (type == CQNewGLModel::Type::MODEL) {
-    }
+    camera->processKeyboard(CGLCamera::Movement::STRAFE_RIGHT, processKeyData);
   }
   else if (e->key() == Qt::Key_Up) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      if (! isControl)
-        camera->processKeyboard(CGLCamera::Movement::UP, processKeyData);
-      else
-        camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
-
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() + CGLVector3D(0.0f, 0.0f, 0.1f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = v*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    if (! mouseData_.isControl)
+      camera->processKeyboard(CGLCamera::Movement::UP, processKeyData);
+    else
+      camera->processKeyboard(CGLCamera::Movement::FORWARD, processKeyData);
   }
   else if (e->key() == Qt::Key_Down) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-      if (! isControl)
-        camera->processKeyboard(CGLCamera::Movement::DOWN, processKeyData);
-      else
-        camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
+    if (! mouseData_.isControl)
+      camera->processKeyboard(CGLCamera::Movement::DOWN, processKeyData);
+    else
+      camera->processKeyboard(CGLCamera::Movement::BACKWARD, processKeyData);
+  }
+  else {
+    return;
+  }
 
-      updateCameraBuffer();
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
+  updateCameraBuffer();
 
-      light->setPosition(light->position() - CGLVector3D(0.0f, 0.0f, 0.1f));
+  update();
+}
 
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
+void
+CQNewGLCanvas::
+lightKeyPress(QKeyEvent *e)
+{
+  auto *light = getCurrentLight();
 
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = v*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+  if      (e->key() == Qt::Key_W) {
+    light->setPosition(light->position() + CGLVector3D(0.0f, 0.1f, 0.0f));
+  }
+  else if (e->key() == Qt::Key_S) {
+    light->setPosition(light->position() - CGLVector3D(0.0f, 0.1f, 0.0f));
+  }
+  else if (e->key() == Qt::Key_A) {
+    light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
+  }
+  else if (e->key() == Qt::Key_D) {
+    light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
+  }
+  else if (e->key() == Qt::Key_Up) {
+    light->setPosition(light->position() + CGLVector3D(0.0f, 0.0f, 0.1f));
+  }
+  else if (e->key() == Qt::Key_Down) {
+    light->setPosition(light->position() - CGLVector3D(0.0f, 0.0f, 0.1f));
   }
   else if (e->key() == Qt::Key_Left) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = u*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    light->setPosition(light->position() + CGLVector3D(0.1f, 0.0f, 0.0f));
   }
   else if (e->key() == Qt::Key_Right) {
-    if      (type == CQNewGLModel::Type::CAMERA) {
-    }
-    else if (type == CQNewGLModel::Type::LIGHT) {
-      auto *light = getCurrentLight();
-
-      light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
-
-      app()->updateLights();
-    }
-    else if (type == CQNewGLModel::Type::MODEL) {
-      auto *object = getCurrentObject();
-
-      if (object) {
-        CVector3D u, v, w;
-        getBasis(object, u, v, w);
-        auto t = u*sceneScale_/100.0;
-
-        auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
-        object->setTransform(m*object->getTransform());
-
-        if (getCurrentCamera()->isFollowObject())
-          placeObjectCamera(object);
-
-        //updateObjectData(object);
-        updateAnnotations();
-        update();
-      }
-    }
+    light->setPosition(light->position() - CGLVector3D(0.1f, 0.0f, 0.0f));
+  }
+  else {
+    return;
   }
 
+  app()->updateLights();
+
+  update();
+}
+
+void
+CQNewGLCanvas::
+objectKeyPress(QKeyEvent *e)
+{
+  auto *object = getCurrentObject();
+  if (! object) return;
+
+  CVector3D u, v, w;
+  getBasis(object, u, v, w);
+
+  if      (e->key() == Qt::Key_Q) {
+    auto bbox = app_->getObjectBBox(object);
+    auto o = bbox.getCenter();
+
+    auto da = 1.0;
+
+    auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
+    CMatrix3D m2;
+    if      (mouseData_.isControl)
+      m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), u);
+    else if (mouseData_.isShift)
+      m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), w);
+    else
+      m2 = CMatrix3D::rotation(CMathGen::DegToRad(da), v);
+    auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
+    object->setTransform(m1*m2*m3*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_E) {
+    auto bbox = app_->getObjectBBox(object);
+    auto o = bbox.getCenter();
+
+    auto da = 1.0;
+
+    auto m1 = CMatrix3D::translation(o.getX(), o.getY(), o.getZ());
+    CMatrix3D m2;
+    if      (mouseData_.isControl)
+      m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), u);
+    else if (mouseData_.isShift)
+      m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), w);
+    else
+      m2 = CMatrix3D::rotation(-CMathGen::DegToRad(da), v);
+    auto m3 = CMatrix3D::translation(-o.getX(), -o.getY(), -o.getZ());
+    object->setTransform(m1*m2*m3*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_W) {
+    auto t = w*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_S) {
+    auto t = w*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_A) {
+    auto t = u*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_D) {
+    auto t = u*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_Up) {
+    auto t = v*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_Down) {
+    auto t = v*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_Left) {
+    auto t = u*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(-t.getX(), -t.getY(), -t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else if (e->key() == Qt::Key_Right) {
+    auto t = u*sceneScale_/100.0;
+
+    auto m = CMatrix3D::translation(t.getX(), t.getY(), t.getZ());
+    object->setTransform(m*object->getTransform());
+  }
+  else {
+    return;
+  }
+
+  if (getCurrentCamera()->isFollowObject())
+    placeObjectCamera(object);
+
+  //updateObjectData(object);
+  updateAnnotations();
   update();
 }
 

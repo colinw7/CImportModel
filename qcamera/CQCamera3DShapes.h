@@ -18,6 +18,12 @@ void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const ShapeData &data,
              CQCamera3DFaceDataList &faceDataList);
 void addCube(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const ShapeData &data,
              CQCamera3DFaceDataList &faceDataList);
+void addCube(CQGLBuffer *buffer, const CMatrix3D &m1, const CMatrix3D &m2, const CMatrix3D &m3,
+             const ShapeData &data, CQCamera3DFaceDataList &faceDataList);
+
+void addOrientBox(CQGLBuffer *buffer, const CPoint3D &c, const CVector3D &xv,
+                  const CVector3D &yv, const CVector3D &zv,
+                  const ShapeData &data, CQCamera3DFaceDataList &faceDataList);
 
 void addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
              const ShapeData &data, CQCamera3DFaceDataList &faceDataList);

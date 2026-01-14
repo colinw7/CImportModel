@@ -7,7 +7,7 @@ CImportBlend(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
 {
   if (! scene_) {
-    scene_  = CGeometryInst->createScene3D();
+    scene_  = CGeometry3DInst->createScene3D();
     pscene_ = SceneP(scene_);
   }
 
@@ -16,7 +16,7 @@ CImportBlend(CGeomScene3D *scene, const std::string &name) :
   if (name1 == "")
     name1 = "blend";
 
-  object_  = CGeometryInst->createObject3D(scene_, name);
+  object_  = CGeometry3DInst->createObject3D(scene_, name);
   pobject_ = ObjectP(object_);
 
   scene_->addObject(object_);
@@ -96,7 +96,7 @@ read(CFile &file)
   for (auto *mesh : meshes_) {
     auto meshName = "mesh." + std::to_string(i + 1);
 
-    auto *object1 = CGeometryInst->createObject3D(scene_, meshName);
+    auto *object1 = CGeometry3DInst->createObject3D(scene_, meshName);
 
     uint np = uint(mesh->points.size());
 
@@ -119,23 +119,27 @@ read(CFile &file)
           continue;
         }
 
+        if (pp.totloop < 3) {
+          std::cerr << "Bad polygon size " << pp.totloop << "\n";
+          continue;
+        }
+
         auto *mloop = &mesh->mloop[pp.loopstart];
 
-        if (pp.totloop != 3) {
-          std::cerr << "Not a triangle poly\n";
-          continue;
+        std::vector<uint> inds;
+
+        inds.resize(pp.totloop);
+
+        for (int ii = 0; ii < pp.totloop; ++ii) {
+          inds[ii] = vinds[mloop[ii].v];
+
+          if (inds[ii] >= np) {
+            std::cerr << "Bad poly loop vertex " << inds[ii] << "\n";
+            break;
+          }
         }
 
-        uint i1 = vinds[mloop[0].v];
-        uint i2 = vinds[mloop[1].v];
-        uint i3 = vinds[mloop[2].v];
-
-        if (i1 >= np || i2 >= np || i3 >= np) {
-          std::cerr << "Bad poly loop vertices\n";
-          continue;
-        }
-
-        auto faceId = object1->addITriangle(i1, i2, i3);
+        auto faceId = object1->addIPolygon(&inds[0], pp.totloop);
 
         if (hasUV) {
           auto *mloopUV = &mesh->mloopUV[pp.loopstart];

@@ -40,8 +40,12 @@ paintEvent(QPaintEvent *)
 
   auto *object = object_;
 
-  if (! object)
+  if (! object) {
     object = canvas->currentObject();
+
+    if (! object)
+      object = canvas->currentGeomObject(/*includeRoot*/true);
+  }
 
   CGeomFace3D *face = nullptr;
 

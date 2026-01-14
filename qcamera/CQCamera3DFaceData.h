@@ -9,21 +9,24 @@ class CGeomFace3D;
 class CQGLTexture;
 
 struct CQCamera3DFaceData {
-  CGeomFace3D* face            { nullptr };
-  bool         selected        { false };
-  bool         visible         { true };
-  int          pos             { 0 };
-  int          len             { 0 };
-  CPoint3D     position        { 0, 0, 0 };
-  CQGLTexture *diffuseTexture  { nullptr };
-  CQGLTexture *normalTexture   { nullptr };
-  CQGLTexture *specularTexture { nullptr };
-  CQGLTexture *emissiveTexture { nullptr };
-  CRGBA        ambient         { 0, 0, 0 };
-  CRGBA        diffuse         { 1, 1, 1 };
-  CRGBA        specular        { 0, 0, 0 };
-  CRGBA        emission        { 0, 0, 0, 0 };
-  double       shininess       { 1.0 };
+  CGeomFace3D*     face            { nullptr };
+  bool             selected        { false };
+  bool             visible         { true };
+  bool             wireframe       { false };
+  bool             lines           { false };
+  int              pos             { 0 };
+  int              len             { 0 };
+  CPoint3D         position        { 0, 0, 0 };
+  CQGLTexture*     diffuseTexture  { nullptr };
+  CQGLTexture*     normalTexture   { nullptr };
+  CQGLTexture*     specularTexture { nullptr };
+  CQGLTexture*     emissiveTexture { nullptr };
+  CRGBA            ambient         { 0, 0, 0 };
+  CRGBA            diffuse         { 1, 1, 1 };
+  CRGBA            specular        { 0, 0, 0 };
+  CRGBA            emission        { 0, 0, 0, 0 };
+  double           shininess       { 1.0 };
+  std::vector<int> vertices;
 };
 
 struct CQCamera3DFaceDataList {

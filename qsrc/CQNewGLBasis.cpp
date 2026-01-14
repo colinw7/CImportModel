@@ -21,7 +21,7 @@ CQNewGLShaderProgram *
 CQNewGLBasis::
 shaderProgram()
 {
-  return canvas_->getShader("basis.vs", "basis.fs");
+  return getShader("basis.vs", "basis.fs");
 }
 
 void

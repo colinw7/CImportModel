@@ -21,7 +21,7 @@ CQNewGLShaderProgram *
 CQNewGLSkybox::
 shaderProgram()
 {
-  return canvas_->getShader("skybox.vs", "skybox.fs");
+  return getShader("skybox.vs", "skybox.fs");
 }
 
 void

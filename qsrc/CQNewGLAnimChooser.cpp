@@ -1,20 +1,16 @@
 #include <CQNewGLAnimChooser.h>
-#include <CQNewGLControl.h>
 #include <CQNewGLCanvas.h>
 #include <CQNewGLModel.h>
 
 #include <CQUtil.h>
 
 CQNewGLAnimChooser::
-CQNewGLAnimChooser(CQNewGLControl *control) :
- control_(control)
+CQNewGLAnimChooser(CQNewGLModel *app) :
+ app_(app)
 {
   connectSlots(true);
 
-  auto *canvas = control_->canvas();
-  auto *app    = canvas->app();
-
-  connect(app, SIGNAL(modelAdded()), this, SLOT(needsUpdateSlot()));
+  connect(app_, SIGNAL(modelAdded()), this, SLOT(needsUpdateSlot()));
 
   auto w = QFontMetrics(font()).horizontalAdvance("X")*32;
   setFixedWidth(w);
@@ -33,7 +29,7 @@ void
 CQNewGLAnimChooser::
 setAnimName(const QString &name)
 {
-  auto *canvas = control_->canvas();
+  auto *canvas = app_->canvas();
 
   auto animNames = canvas->getAnimNames(tmin_, tmax_);
 
@@ -66,13 +62,13 @@ updateWidgets()
 
   int currentInd = currentIndex();
 
-  auto *canvas = control_->canvas();
-
   clear();
 
   addItem("", QVariant(-1));
 
   int ind = 0;
+
+  auto *canvas = app_->canvas();
 
   auto animNames = canvas->getAnimNames(tmin_, tmax_);
 
@@ -99,9 +95,9 @@ void
 CQNewGLAnimChooser::
 currentIndexChanged(int ind)
 {
-  auto *canvas = control_->canvas();
-
   animName_ = "";
+
+  auto *canvas = app_->canvas();
 
   auto animNames = canvas->getAnimNames(tmin_, tmax_);
 

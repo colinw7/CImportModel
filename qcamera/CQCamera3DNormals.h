@@ -17,6 +17,12 @@ class CQCamera3DNormals : public CQCamera3DObject {
   const QColor &lineColor() const { return lineColor_; }
   void setLineColor(const QColor &c) { lineColor_ = c; }
 
+  bool isPointNormals() const { return pointNormals_; }
+  void setPointNormals(bool b) { pointNormals_ = b; }
+
+  bool isFaceNormals() const { return faceNormals_; }
+  void setFaceNormals(bool b) { faceNormals_ = b; }
+
   //---
 
   void updateGeometry();
@@ -33,9 +39,11 @@ class CQCamera3DNormals : public CQCamera3DObject {
  protected:
   CQCamera3DCanvas* canvas_ { nullptr };
 
-  bool   enabled_   { true };
-  double lineSize_  { -1 };
-  QColor lineColor_ { 255, 255, 255 };
+  bool   enabled_      { true };
+  double lineSize_     { -1 };
+  QColor lineColor_    { 255, 255, 255 };
+  bool   pointNormals_ { false };
+  bool   faceNormals_  { false };
 };
 
 #endif

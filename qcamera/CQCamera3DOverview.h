@@ -11,7 +11,11 @@
 
 #include <QFrame>
 
+#include <map>
+
 class CQCamera3DApp;
+class CQCamera3DCamera;
+
 class CGeomFace3D;
 class CQRubberBand;
 class CVector3D;
@@ -34,6 +38,7 @@ class CQCamera3DOverview : public QFrame {
     THREED
   };
 
+  using EditType   = CQCamera3DEditType;
   using SelectType = CQCamera3DSelectType;
   using MouseType  = CQCamera3DMouseType;
 
@@ -104,6 +109,9 @@ class CQCamera3DOverview : public QFrame {
   bool isEqualScale() const { return equalScale_; }
   void setEqualScale(bool b) { equalScale_ = b; updateRange(); }
 
+  const EditType &editType() const { return editType_; }
+  void setEditType(const EditType &v) { editType_ = v; }
+
   const SelectType &selectType() const { return selectType_; }
   void setSelectType(const SelectType &v) { selectType_ = v; }
 
@@ -136,6 +144,7 @@ class CQCamera3DOverview : public QFrame {
 
   void setCameraPosition(int x, int y, bool angle);
   void setLightPosition(int x, int y, bool setDirection);
+  void setCursorPosition(int x, int y);
 
   void selectObjectAt(const QPoint &p, bool clear) ;
   void selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear);
@@ -147,12 +156,18 @@ class CQCamera3DOverview : public QFrame {
   void selectObjectXZ(const CPoint3D &p);
 
   void drawModel();
-  void updateNodeMatrices();
 
-  void drawCamera();
+  void drawCameras();
+  void drawCamera(CQCamera3DCamera *camera);
+
+  void drawEyeLine();
+
+  void drawCursor();
+
   void drawLights();
 
   void drawModelPolygon(const std::vector<CPoint3D> &points) const;
+  void drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const;
   void drawModelPoint(const CPoint3D &p, const QString &label) const;
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
@@ -178,8 +193,6 @@ class CQCamera3DOverview : public QFrame {
     std::vector<CPoint3D> points;
   };
 
-  using ObjectNodeMatrices = CQCamera3DApp::ObjectNodeMatrices;
-
   //---
 
   CQCamera3DApp* app_ { nullptr };
@@ -196,6 +209,7 @@ class CQCamera3DOverview : public QFrame {
 
   bool equalScale_ { true };
 
+  EditType   editType_   { EditType::SELECT };
   SelectType selectType_ { SelectType::OBJECT };
   MouseType  mouseType_  { MouseType::OBJECT };
 
@@ -214,7 +228,10 @@ class CQCamera3DOverview : public QFrame {
 
   MouseData mouseData_;
 
-  std::vector<FaceData> faces_;
+  using FaceDatas       = std::vector<FaceData>;
+  using ObjectFaceDatas = std::map<CGeomObject3D *, FaceDatas>;
+
+  ObjectFaceDatas objectFaces_;
 
   // draw data
   QPainter *painter_ { nullptr };
@@ -226,8 +243,6 @@ class CQCamera3DOverview : public QFrame {
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
   CMatrix3DH meshMatrix_;
-
-  ObjectNodeMatrices objectNodeMatrices_;
 
   QPixmap lightPixmap_;
 

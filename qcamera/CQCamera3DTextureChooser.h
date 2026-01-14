@@ -11,7 +11,7 @@ class CQCamera3DTextureChooser : public QComboBox {
  public:
   CQCamera3DTextureChooser(CQCamera3DApp *app);
 
-  QString textureName() const { return textureName_; }
+  const QString &textureName() const { return textureName_; }
   void setTextureName(const QString &name);
 
   void connectSlots(bool b);

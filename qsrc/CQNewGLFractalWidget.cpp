@@ -207,13 +207,18 @@ void
 CQNewGLFractalWidget::
 mousePressEvent(QMouseEvent *e)
 {
-  mouseData_.pressX = e->x();
-  mouseData_.pressY = e->y();
-  mouseData_.button = e->button();
+  mouseData_.pressed = true;
+  mouseData_.button  = e->button();
 
-  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
+  mouseData_.press.x = e->x();
+  mouseData_.press.y = e->y();
+
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
 
   //---
+
+  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
 
   if (isLeftButton) {
     auto type = app_->type();
@@ -221,20 +226,11 @@ mousePressEvent(QMouseEvent *e)
     if (type == CQNewGLModel::Type::CAMERA) {
       auto *camera = getCurrentCamera();
 
-      camera->setLastPos(mouseData_.pressX, mouseData_.pressY);
+      camera->setLastPos(mouseData_.press.x, mouseData_.press.y);
     }
   }
 
   //---
-
-  update();
-}
-
-void
-CQNewGLFractalWidget::
-mouseReleaseEvent(QMouseEvent *)
-{
-  mouseData_.button = Qt::NoButton;
 
   update();
 }
@@ -243,12 +239,15 @@ void
 CQNewGLFractalWidget::
 mouseMoveEvent(QMouseEvent *e)
 {
-  mouseData_.moveX = e->x();
-  mouseData_.moveY = e->y();
+  mouseData_.move.x = e->x();
+  mouseData_.move.y = e->y();
 
-  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
+  mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
+  mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
 
   //---
+
+  bool isLeftButton = (mouseData_.button == Qt::LeftButton);
 
   if (isLeftButton) {
     auto type = app_->type();
@@ -257,9 +256,9 @@ mouseMoveEvent(QMouseEvent *e)
       auto *camera = getCurrentCamera();
 
       float xoffset, yoffset;
-      camera->deltaPos(mouseData_.moveX, mouseData_.moveY, xoffset, yoffset);
+      camera->deltaPos(mouseData_.move.x, mouseData_.move.y, xoffset, yoffset);
 
-      camera->setLastPos(mouseData_.moveX, mouseData_.moveY);
+      camera->setLastPos(mouseData_.move.x, mouseData_.move.y);
 
       camera->processMouseMovement(xoffset, yoffset, /*constrainPitch*/true);
       updateCameraBuffer();
@@ -268,8 +267,17 @@ mouseMoveEvent(QMouseEvent *e)
 
   //---
 
-  mouseData_.pressX = mouseData_.moveX;
-  mouseData_.pressY = mouseData_.moveY;
+  mouseData_.press = mouseData_.move;
+
+  update();
+}
+
+void
+CQNewGLFractalWidget::
+mouseReleaseEvent(QMouseEvent *)
+{
+  mouseData_.pressed = false;
+  mouseData_.button  = Qt::NoButton;
 
   update();
 }

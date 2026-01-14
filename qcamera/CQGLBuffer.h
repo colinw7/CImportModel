@@ -199,7 +199,7 @@ class CQGLBuffer {
         return i;
     }
 
-    return i;
+    return -1;
   }
 
   void addPoint(float x, float y, float z) {
@@ -294,6 +294,8 @@ class CQGLBuffer {
   };
 
   void getPointData(int i, PointData &data) {
+    assert(i < int(data_.points.size()));
+
     if (hasPointPart  ()) data.point        = data_.points[i];
     if (hasNormalPart ()) data.normal       = data_.normals[i];
     if (hasColorPart  ()) data.color        = data_.colors[i];

@@ -69,6 +69,8 @@ class CQNewGLObject {
 
   virtual CQNewGLShaderProgram *shaderProgram() = 0;
 
+  CQNewGLShaderProgram *getShader(const QString &vertex, const QString &fragment);
+
   void bindShader();
   void unbindShader();
 

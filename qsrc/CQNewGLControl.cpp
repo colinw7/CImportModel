@@ -2871,7 +2871,7 @@ loadSlot()
       name += " (Flipped)";
     }
 
-    auto *texture1 = CGeometryInst->createTexture(image);
+    auto *texture1 = CGeometry3DInst->createTexture(image);
 
     texture1->setName(name.toStdString());
 
@@ -3188,11 +3188,13 @@ CQNewGLAnimControl(CQNewGLControl *control) :
 
   layout_ = new QVBoxLayout(this);
 
+  auto *app = control_->app();
+
   //---
 
   enabledCheck_ = addLabelEdit("Enabled", new QCheckBox);
 
-  nameCombo_ = addLabelEdit("Name", new CQNewGLAnimChooser(control));
+  nameCombo_ = addLabelEdit("Name", new CQNewGLAnimChooser(app));
   timeEdit_  = addLabelEdit("Time", new CQRealSpin);
 
 //objectsList_ = new CQNewGLObjectsList(control->canvas());
@@ -3275,8 +3277,6 @@ CQNewGLAnimControl(CQNewGLControl *control) :
   connectSlots(true);
 
   //---
-
-  auto *app = control_->app();
 
   connect(app, SIGNAL(timerStep()), this, SLOT(timerSlot()));
 }

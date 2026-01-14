@@ -25,7 +25,7 @@ CQNewGLShaderProgram *
 CQNewGLTerrain::
 shaderProgram()
 {
-  return canvas_->getShader("terrain.vs", "terrain.fs");
+  return getShader("terrain.vs", "terrain.fs");
 }
 
 void
@@ -63,7 +63,7 @@ initBuffer()
     if (flipV)
       image->flipH();
 
-    auto *texture = CGeometryInst->createTexture(image);
+    auto *texture = CGeometry3DInst->createTexture(image);
 
     texture->setName(filename.toStdString());
 

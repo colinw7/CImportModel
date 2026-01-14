@@ -35,7 +35,7 @@ CQNewGLShaderProgram *
 CQNewGLDrawTree::
 shaderProgram()
 {
-  return canvas_->getShader("tree.vs", "tree.fs");
+  return getShader("tree.vs", "tree.fs");
 }
 
 void
