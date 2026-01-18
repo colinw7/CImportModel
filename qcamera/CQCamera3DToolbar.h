@@ -21,12 +21,21 @@ class CQCamera3DToolbar : public QFrame {
   void edgeSelectSlot();
   void faceSelectSlot();
 
+  void perspectiveSlot();
+  void topSlot();
+  void bottomSlot();
+  void leftSlot();
+  void rightSlot();
+  void frontSlot();
+  void backSlot();
+
   void selectAllSlot();
   void selectNoneSlot();
 
   void addPlaneSlot();
   void addCubeSlot();
   void addCircleSlot();
+  void addSphereSlot();
   void addCylinderSlot();
   void addConeSlot();
   void addTorusSlot();

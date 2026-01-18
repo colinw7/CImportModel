@@ -163,7 +163,7 @@ mousePressEvent(QMouseEvent *e)
   update();
 
   if (texture)
-    app_->setCurrentTexture(QString::fromStdString(texture->name()));
+    app_->setCurrentTextureId(texture->id());
 
   Q_EMIT selectionChanged();
 }

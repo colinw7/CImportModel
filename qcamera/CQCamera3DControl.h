@@ -43,6 +43,7 @@ class CQCamera3DControl : public QFrame {
 
  private Q_SLOTS:
   void updateWidgets();
+  void updateTextures(bool disconnect=true);
 
   void mainTabSlot(int);
 
@@ -523,6 +524,8 @@ class CQCamera3DControl : public QFrame {
   };
 
   AnimData animData_;
+
+  bool connected_ { false };
 };
 
 #endif

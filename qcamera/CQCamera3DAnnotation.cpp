@@ -3,6 +3,8 @@
 #include <CQCamera3DCanvas.h>
 #include <CQCamera3DCamera.h>
 #include <CQCamera3DShapes.h>
+#include <CQCamera3DGeomObject.h>
+#include <CQCamera3DObjectData.h>
 
 #include <CGeomObject3D.h>
 #include <CGeomSphere3D.h>
@@ -30,8 +32,15 @@ updateGeometry()
 
   //---
 
+  auto bbox = canvas_->bbox();
+
+  auto lineWidth = bbox.getMaxSize()/1000.0;
+
   CQCamera3DShapes::ShapeData shapeData;
 
+  shapeData.color = CRGBA::red();
+
+#if 0
   auto addCube = [&](const CPoint3D &c, double r) {
     auto p1 = c - CPoint3D(r, r, r);
     auto p2 = c + CPoint3D(r, r, r);
@@ -43,13 +52,50 @@ updateGeometry()
     faceDataList_.add(faceDataList);
     faceDataList_.pos += faceDataList.pos;
   };
+#endif
+
+  auto addLine = [&](const CPoint3D &c1, const CPoint3D &c2) {
+    CQCamera3DShapes::addCylinder(buffer, c1, c2, lineWidth, shapeData, faceDataList_);
+  };
 
   //---
 
+  auto dir = canvas_->moveDirection();
+
+  if (dir != CQCamera3DCanvas::MoveDirection::NONE) {
+    auto *object = canvas_->currentObject();
+
+    CPoint3D center;
+
+    if (object) {
+      auto *objectData = canvas_->getObjectData(object);
+
+      if (objectData) {
+        auto bbox1 = objectData->bbox();
+
+        center = bbox1.getCenter();
+      }
+    }
+    else
+      center = canvas_->cursor();
+
+    if      (dir == CQCamera3DCanvas::MoveDirection::X)
+      addLine(CPoint3D(bbox.getXMin(), center.y, center.z),
+              CPoint3D(bbox.getXMax(), center.y, center.z));
+    else if (dir == CQCamera3DCanvas::MoveDirection::Y)
+      addLine(CPoint3D(center.x, bbox.getYMin(), center.x),
+              CPoint3D(center.x, bbox.getYMax(), center.x));
+    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
+      addLine(CPoint3D(center.x, center.y, bbox.getZMin()),
+              CPoint3D(center.x, center.y, bbox.getZMax()));
+  }
+
+#if 0
   CPoint3D c(0, 0, 0);
   double   r { 0.1 };
 
   addCube(c, r);
+#endif
 
   //---
 
@@ -61,6 +107,7 @@ CQCamera3DAnnotation::
 drawGeometry()
 {
   glDisable(GL_CULL_FACE);
+  glDisable(GL_DEPTH_TEST);
 
   //---
 

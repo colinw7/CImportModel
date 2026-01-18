@@ -11,8 +11,10 @@
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DLight.h>
 #include <CQCamera3DTexture.h>
+
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DGeomFace.h>
+#include <CQCamera3DGeomLine.h>
 
 #include <CGeometry3D.h>
 #include <CImportScene.h>
@@ -45,6 +47,9 @@
 #include <svg/rotate_svg.h>
 #include <svg/scale_svg.h>
 
+#include <svg/extrude_svg.h>
+#include <svg/loop_cut_svg.h>
+
 #include <set>
 #include <iostream>
 
@@ -62,6 +67,10 @@ class CQCamera3DGeomFactory : public CGeometryFactory {
 
   CGeomFace3D *createFace3D() const override {
     return new CQCamera3DGeomFace;
+  }
+
+  CGeomLine3D *createLine3D() const override {
+    return new CQCamera3DGeomLine;
   }
 
   CGeomLight3D *createLight3D(CGeomScene3D *pscene, const std::string &name) const override {
@@ -90,6 +99,16 @@ CQCamera3DApp()
 
   //---
 
+  canvas_    = new CQCamera3DCanvas(this);
+  overview_  = new CQCamera3DOverview(this);
+  uvMap_     = new CQCamera3DUVMap(this);
+  textures_  = new CQCamera3DTextures(this);
+  materials_ = new CQCamera3DMaterials(this);
+  bones_     = new CQCamera3DBones(this);
+  animation_ = new QFrame(this);
+
+  //---
+
   // vertical layout: toolbar, central, status
   auto *layout = new QVBoxLayout(this);
 
@@ -114,14 +133,6 @@ CQCamera3DApp()
   tab_ = CQUtil::makeWidget<CQTabSplit>("centerTab");
 
   tab_->setState(CQTabSplit::State::TAB);
-
-  canvas_    = new CQCamera3DCanvas(this);
-  overview_  = new CQCamera3DOverview(this);
-  uvMap_     = new CQCamera3DUVMap(this);
-  textures_  = new CQCamera3DTextures(this);
-  materials_ = new CQCamera3DMaterials(this);
-  bones_     = new CQCamera3DBones(this);
-  animation_ = new QFrame(this);
 
   tab_->addWidget(canvas_   , "3D"       );
   tab_->addWidget(overview_ , "Overview" );
@@ -193,9 +204,9 @@ setCurrentView(int i)
 
 void
 CQCamera3DApp::
-setCurrentTexture(const QString &name)
+setCurrentTextureId(int id)
 {
-  currentTexture_ = name;
+  currentTextureId_ = id;
 
   Q_EMIT currentTextureChanged();
 }
@@ -406,6 +417,7 @@ CGeomTexture *
 CQCamera3DApp::
 getTextureByName(const std::string &name) const
 {
+#if 0
   auto name1   = name;
   bool flipped = false;
 
@@ -425,6 +437,26 @@ getTextureByName(const std::string &name) const
   assert(texture1);
 
   texture1->setFlipped(flipped);
+
+  return texture;
+#else
+  auto *scene = this->getScene();
+
+  auto *texture = scene->getTextureByName(name);
+  if (! texture) return nullptr;
+
+  return texture;
+#endif
+}
+
+CGeomTexture *
+CQCamera3DApp::
+getTextureById(int id) const
+{
+  auto *scene = this->getScene();
+
+  auto *texture = scene->getTextureById(id);
+  if (! texture) return nullptr;
 
   return texture;
 }

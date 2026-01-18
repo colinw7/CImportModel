@@ -89,8 +89,13 @@ CQCamera3DToolbar(CQCamera3DApp *app) :
 
   startMenu("View");
 
-  addAction("Top");
-  addAction("Bottom");
+  addAction("Perspective", SLOT(perspectiveSlot()));
+  addAction("Top"        , SLOT(topSlot()));
+  addAction("Bottom"     , SLOT(bottomSlot()));
+  addAction("Left"       , SLOT(leftSlot()));
+  addAction("Right"      , SLOT(rightSlot()));
+  addAction("Front"      , SLOT(frontSlot()));
+  addAction("Back"       , SLOT(backSlot()));
 
   endMenu();
 
@@ -106,6 +111,7 @@ CQCamera3DToolbar(CQCamera3DApp *app) :
   addAction("Plane"   , SLOT(addPlaneSlot()));
   addAction("Cube"    , SLOT(addCubeSlot()));
   addAction("Circle"  , SLOT(addCircleSlot()));
+  addAction("Sphere"  , SLOT(addSphereSlot()));
   addAction("Cylinder", SLOT(addCylinderSlot()));
   addAction("Cone"    , SLOT(addConeSlot()));
   addAction("Torus"   , SLOT(addTorusSlot()));
@@ -150,6 +156,69 @@ faceSelectSlot()
 
 void
 CQCamera3DToolbar::
+perspectiveSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::PERSPECTIVE);
+}
+
+void
+CQCamera3DToolbar::
+topSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::TOP);
+}
+
+void
+CQCamera3DToolbar::
+bottomSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::BOTTOM);
+}
+
+void
+CQCamera3DToolbar::
+leftSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::LEFT);
+}
+
+void
+CQCamera3DToolbar::
+rightSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::RIGHT);
+}
+
+void
+CQCamera3DToolbar::
+frontSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::FRONT);
+}
+
+void
+CQCamera3DToolbar::
+backSlot()
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setViewType(CQCamera3DCanvas::ViewType::BACK);
+}
+
+void
+CQCamera3DToolbar::
 selectAllSlot()
 {
   auto *canvas = app_->canvas();
@@ -170,6 +239,7 @@ void
 CQCamera3DToolbar::
 addPlaneSlot()
 {
+  app_->canvas()->addPlane();
 }
 
 void
@@ -184,6 +254,13 @@ CQCamera3DToolbar::
 addCircleSlot()
 {
   app_->canvas()->addCircle();
+}
+
+void
+CQCamera3DToolbar::
+addSphereSlot()
+{
+  app_->canvas()->addSphere();
 }
 
 void

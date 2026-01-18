@@ -66,11 +66,13 @@ class CQCamera3DCamera : public QObject {
 
   // origin (for rotation center)
   const CVector3D &origin() const { return origin_; }
-  void setOrigin(const CVector3D &p) { origin_ = p; calcAngles(); Q_EMIT stateChanged(); }
+  void setOrigin(const CVector3D &p) {
+    origin_ = p; calcAngles(); matrixValid_ = false; Q_EMIT stateChanged(); }
 
   // position (for camera position)
   const CVector3D &position() const { return position_; }
-  void setPosition(const CVector3D &p) { position_ = p; Q_EMIT stateChanged(); }
+  void setPosition(const CVector3D &p) {
+    position_ = p; matrixValid_ = false; Q_EMIT stateChanged(); }
 
   //---
 

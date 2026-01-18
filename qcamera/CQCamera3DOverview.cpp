@@ -126,15 +126,15 @@ paintEvent(QPaintEvent *)
 {
   QPainter painter(this);
 
-  painter_ = &painter;
+  drawData_.painter = &painter;
 
   //---
 
   auto *canvas = app_->canvas();
   auto *camera = canvas->getCurrentCamera();
 
-  projectionMatrix_ = CMatrix3DH(camera->worldMatrix());
-  viewMatrix_       = CMatrix3DH(camera->viewMatrix());
+  drawData_.projectionMatrix = CMatrix3DH(camera->worldMatrix());
+  drawData_.viewMatrix       = CMatrix3DH(camera->viewMatrix());
 
   //---
 
@@ -237,93 +237,67 @@ drawModel()
   if (modelType() == ModelType::NONE)
     return;
 
-  bool filled = (modelType() == ModelType::SOLID);
+  drawData_.filled = (modelType() == ModelType::SOLID);
 
   //---
 
-  auto useAnim = (app_->animName() != "");
+  drawData_.useAnim = (app_->animName() != "");
 
   //---
 
   // draw model
-  objectFaces_.clear();
+  drawData_.objectFaces.clear();
 
-  painter_->setPen(QColor(0, 0, 0, 32));
-  painter_->setBrush(Qt::NoBrush);
+  drawData_.painter->setPen(QColor(0, 0, 0, 32));
+  drawData_.painter->setBrush(Qt::NoBrush);
 
-  auto *scene = app_->getScene();
+  class SceneVisitor : public CGeomScene3DVisitor {
+   public:
+    SceneVisitor(CQCamera3DOverview *overview, CGeomScene3D *scene, DrawData &drawData) :
+     CGeomScene3DVisitor(scene), overview_(overview), drawData_(drawData) {
+      app_ = overview->app();
+    }
 
-  for (auto *object : scene->getObjects()) {
-    if (! object->getVisible())
-      continue;
+    bool beginVisitObject(CGeomObject3D *object) override {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+      assert(object1);
 
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-    assert(object1);
+      //---
 
-    //---
+      drawData_.modelMatrix = CMatrix3DH(object1->getHierTransform());
+      drawData_.meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
 
-    modelMatrix_ = CMatrix3DH(object1->getHierTransform());
-    meshMatrix_  = CMatrix3DH(object->getMeshGlobalTransform());
+      //---
 
-    //---
+      auto *rootObject = object->getRootObject();
 
-    auto *rootObject = object->getRootObject();
+      nodeMatrices_ = &app_->getObjectNodeMatrices(rootObject);
 
-    const auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
+      //---
 
-    //---
+      objectMaterial_ = object->getMaterialP();
 
-    auto *objectMaterial = object->getMaterialP();
+      //---
 
-    //---
+      faceDatas_ = &drawData_.objectFaces[object];
 
-    const auto &faces = object->getFaces();
+      return true;
+    }
 
-    auto &faceDatas = objectFaces_[object];
+    void endVisitObject(CGeomObject3D *) override { }
 
-    for (const auto *face : faces) {
-      if (! face->getVisible())
-        continue;
+    bool beginVisitFace(CGeomFace3D *face) override {
+      faceDatas_->push_back(FaceData());
 
+      faceData_ = &faceDatas_->back();
+
+      faceData_->face = const_cast<CGeomFace3D *>(face);
+
+      return true;
+    }
+
+    void endVisitFace(CGeomFace3D *face) override {
       auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(face);
-
-      faceDatas.push_back(FaceData());
-
-      auto &faceData = faceDatas.back();
-
-      faceData.face = const_cast<CGeomFace3D *>(face);
-
-      const auto &vertices = face->getVertices();
-
-      auto vertexPoint = [&](int v) {
-        const auto &vertex = object->getVertex(v);
-        const auto &model  = vertex.getModel();
-
-        auto p = model;
-
-        //---
-
-        if (useAnim)
-          p = app_->adjustAnimPoint(vertex, p, nodeMatrices);
-
-        return meshMatrix_*p;
-      };
-
-      for (const auto &v : vertices) {
-        auto p = vertexPoint(v);
-
-        faceData.points.push_back(p);
-
-        const auto &vertex = object->getVertex(v);
-
-        if (vertex.isSelected()) {
-          painter_->setPen(QColor(255, 0, 0, 255));
-
-          drawModelPoint(p, "");
-
-          painter_->setPen(QColor(0, 0, 0, 32));
-        }
-      }
 
       const auto &selectedEdges = face1->selectedEdges();
 
@@ -333,42 +307,156 @@ drawModel()
         auto p1 = vertexPoint(edge.v1);
         auto p2 = vertexPoint(edge.v2);
 
-        painter_->setPen(QColor(255, 0, 0, 255));
+        drawData_.painter->setPen(QColor(255, 0, 0, 255));
 
-        drawModelLine(p1, p2);
+        overview_->drawModelLine(p1, p2);
 
-        painter_->setPen(QColor(0, 0, 0, 32));
+        drawData_.painter->setPen(QColor(0, 0, 0, 32));
       }
 
       //---
 
-      if (filled) {
-        auto *faceMaterial = faceData.face->getMaterialP();
+      if (drawData_.filled) {
+        auto *faceMaterial = faceData_->face->getMaterialP();
 
-        if (! faceMaterial && objectMaterial)
-          faceMaterial = objectMaterial;
+        if (! faceMaterial && objectMaterial_)
+          faceMaterial = objectMaterial_;
 
         auto color = face->color().value_or(CRGBA(1, 1, 1));
 
         if (faceMaterial && faceMaterial->diffuse())
           color = faceMaterial->diffuse().value();
 
-        painter_->setBrush(RGBAToQColor(color));
+        drawData_.painter->setBrush(RGBAToQColor(color));
       }
 
       //---
 
-      bool selected = (object->getHierSelected() || face->getSelected());
+      bool selected = (object_->getHierSelected() || face->getSelected());
 
       if (selected)
-        painter_->setPen(QColor(255, 0, 0, 255));
+        drawData_.painter->setPen(QColor(255, 0, 0, 255));
 
-      drawModelPolygon(faceData.points);
+      overview_->drawModelPolygon(faceData_->points);
 
       if (selected)
-        painter_->setPen(QColor(0, 0, 0, 32));
+        drawData_.painter->setPen(QColor(0, 0, 0, 32));
     }
-  }
+
+    void visitFaceVertex(CGeomVertex3D *vertex) override {
+      auto p = vertexPoint(vertex);
+
+      faceData_->points.push_back(p);
+
+      if (vertex->isSelected()) {
+        drawData_.painter->setPen(QColor(255, 0, 0, 255));
+
+        overview_->drawModelPoint(p, "");
+
+        drawData_.painter->setPen(QColor(0, 0, 0, 32));
+      }
+    }
+
+    void visitLine(CGeomLine3D *line) override {
+      faceDatas_->push_back(FaceData());
+
+      faceData_ = &faceDatas_->back();
+
+      faceData_->line = const_cast<CGeomLine3D *>(line);
+
+      auto v1 = line->getStartInd();
+      auto v2 = line->getEndInd  ();
+
+      std::vector<uint> vertices;
+
+      vertices.push_back(v1);
+      vertices.push_back(v2);
+
+      //--
+
+      for (const auto &v : vertices) {
+        auto p = vertexPoint(v);
+
+        faceData_->points.push_back(p);
+
+        const auto &vertex = object_->getVertex(v);
+
+        if (vertex.isSelected()) {
+          drawData_.painter->setPen(QColor(255, 0, 0, 255));
+
+          overview_->drawModelPoint(p, "");
+
+          drawData_.painter->setPen(QColor(0, 0, 0, 32));
+        }
+      }
+
+      //---
+
+      bool selected = line->getSelected();
+
+      if (selected)
+        drawData_.painter->setPen(QColor(255, 0, 0, 255));
+
+      overview_->drawModelLine(faceData_->points[0], faceData_->points[1]);
+
+      if (selected)
+        drawData_.painter->setPen(QColor(0, 0, 0, 32));
+    }
+
+    bool beginVisitSubFace(CGeomFace3D *face) override {
+      return beginVisitFace(face);
+    }
+
+    void endVisitSubFace(CGeomFace3D *face) override {
+      endVisitFace(face);
+    }
+
+    void visitSubFaceVertex(CGeomVertex3D *v) override {
+      visitFaceVertex(v);
+    }
+
+    void visitSubLine(CGeomLine3D *line) override {
+      visitLine(line);
+    }
+
+   private:
+    CPoint3D vertexPoint(int v) const {
+      auto *vertex = object_->getVertexP(v);
+
+      return vertexPoint(vertex);
+    }
+
+    CPoint3D vertexPoint(const CGeomVertex3D *vertex) const {
+      const auto &model  = vertex->getModel();
+
+      auto p = model;
+
+      //---
+
+      if (drawData_.useAnim)
+        p = app_->adjustAnimPoint(*vertex, p, *nodeMatrices_);
+
+      return drawData_.meshMatrix*p;
+    }
+
+   private:
+    CQCamera3DOverview*           overview_ { nullptr };
+    CQCamera3DOverview::DrawData& drawData_;
+    CQCamera3DApp*                app_      { nullptr };
+
+    CGeomMaterial* objectMaterial_ { nullptr };
+
+    CQCamera3DOverview::FaceDatas* faceDatas_ { nullptr };
+    CQCamera3DOverview::FaceData*  faceData_  { nullptr };
+
+    const CQCamera3DApp::NodeMatrices *nodeMatrices_ { nullptr };
+  };
+
+  auto *scene = app_->getScene();
+
+  SceneVisitor visitor(this, scene, drawData_);
+
+  visitor.visit();
 }
 
 void
@@ -397,8 +485,8 @@ drawCamera(CQCamera3DCamera *camera)
 
 //auto o = CVector3D(0, 0, 0);
 
-  painter_->setPen(QColor(0, 0, 255, 255));
-  painter_->setBrush(Qt::NoBrush);
+  drawData_.painter->setPen(QColor(0, 0, 255, 255));
+  drawData_.painter->setBrush(Qt::NoBrush);
 
   auto front = camera->front();
   auto up    = camera->up();
@@ -417,7 +505,7 @@ drawCamera(CQCamera3DCamera *camera)
 
   auto r = CVector3D(origin, pos).length();
 
-  painter_->setPen(Qt::red);
+  drawData_.painter->setPen(Qt::red);
 
   drawCircle(origin, r);
 }
@@ -455,7 +543,7 @@ drawCursor()
 
   auto r = bbox.getMaxSize()/100.0;
 
-  painter_->setPen(QColor(255, 0, 0));
+  drawData_.painter->setPen(QColor(255, 0, 0));
 
   drawCircle(CVector3D(p), r);
 }
@@ -467,8 +555,8 @@ drawLights()
   if (! isLightsVisible())
     return;
 
-  painter_->setPen(QColor(0, 0, 0, 255));
-  painter_->setBrush(Qt::NoBrush);
+  drawData_.painter->setPen(QColor(0, 0, 0, 255));
+  drawData_.painter->setBrush(Qt::NoBrush);
 
   auto *canvas = app_->canvas();
 
@@ -504,7 +592,7 @@ CQCamera3DOverview::
 drawModelPolygon(const std::vector<CPoint3D> &points) const
 {
   auto drawPolygon2D = [&](const ViewData &view, const std::vector<CPoint2D> &points) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     std::vector<QPointF> ppoints;
 
@@ -515,19 +603,19 @@ drawModelPolygon(const std::vector<CPoint3D> &points) const
       ppoints.push_back(QPointF(px, py));
     }
 
-    painter_->drawPolygon(&ppoints[0], ppoints.size());
+    drawData_.painter->drawPolygon(&ppoints[0], ppoints.size());
   };
 
   std::vector<CPoint2D> xpoints, ypoints, zpoints, ppoints;
 
   for (const auto &p : points) {
-    auto p1 = modelMatrix_*p;
+    auto p1 = drawData_.modelMatrix*p;
 
     xpoints.push_back(CPoint2D(p1.getX(), p1.getY())); // XY
     ypoints.push_back(CPoint2D(p1.getZ(), p1.getY())); // ZY
     zpoints.push_back(CPoint2D(p1.getX(), p1.getZ())); // XZ
 
-    auto p2 = projectionMatrix_*viewMatrix_*p1;
+    auto p2 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
 
     ppoints.push_back(CPoint2D(p2.getX(), p2.getY()));
   }
@@ -543,25 +631,25 @@ CQCamera3DOverview::
 drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const
 {
   auto drawLine2D = [&](const ViewData &view, const CPoint2D &p1, const CPoint2D &p2) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     double px1, py1;
     view.range.windowToPixel(p1.x, p1.y, &px1, &py1);
     double px2, py2;
     view.range.windowToPixel(p2.x, p2.y, &px2, &py2);
 
-    painter_->drawLine(px1, py1, px2, py2);
+    drawData_.painter->drawLine(px1, py1, px2, py2);
   };
 
-  auto pm1 = modelMatrix_*p1;
-  auto pm2 = modelMatrix_*p2;
+  auto pm1 = drawData_.modelMatrix*p1;
+  auto pm2 = drawData_.modelMatrix*p2;
 
   drawLine2D(xview_, CPoint2D(pm1.getX(), pm1.getY()), CPoint2D(pm2.getX(), pm2.getY())); // XY
   drawLine2D(yview_, CPoint2D(pm1.getZ(), pm1.getY()), CPoint2D(pm2.getZ(), pm2.getY())); // ZY
   drawLine2D(zview_, CPoint2D(pm1.getX(), pm1.getZ()), CPoint2D(pm2.getX(), pm2.getZ())); // XZ
 
-  pm1 = projectionMatrix_*viewMatrix_*p1;
-  pm2 = projectionMatrix_*viewMatrix_*p2;
+  pm1 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
+  pm2 = drawData_.projectionMatrix*drawData_.viewMatrix*p2;
 
   drawLine2D(pview_, CPoint2D(pm1.getX(), pm1.getY()), CPoint2D(pm2.getX(), pm2.getY()));
 }
@@ -571,25 +659,25 @@ CQCamera3DOverview::
 drawModelPoint(const CPoint3D &p, const QString &label) const
 {
   auto drawPoint2D = [&](const ViewData &view, const CPoint2D &p, const QString &label) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     double px, py;
     view.range.windowToPixel(p.x, p.y, &px, &py);
 
-    painter_->drawLine(px - 4, py, px + 4, py);
-    painter_->drawLine(px, py - 4, px, py + 4);
+    drawData_.painter->drawLine(px - 4, py, px + 4, py);
+    drawData_.painter->drawLine(px, py - 4, px, py + 4);
 
     if (label != "")
-      painter_->drawText(px, py, label);
+      drawData_.painter->drawText(px, py, label);
   };
 
-  auto p1 = modelMatrix_*p;
+  auto p1 = drawData_.modelMatrix*p;
 
   drawPoint2D(xview_, CPoint2D(p1.getX(), p1.getY()), label); // XY
   drawPoint2D(yview_, CPoint2D(p1.getZ(), p1.getY()), label); // ZY
   drawPoint2D(zview_, CPoint2D(p1.getX(), p1.getZ()), label); // XZ
 
-  auto p2 = projectionMatrix_*viewMatrix_*p1;
+  auto p2 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
 
   drawPoint2D(pview_, CPoint2D(p2.getX(), p2.getY()), label);
 }
@@ -606,7 +694,7 @@ drawCone(const CVector3D &p, const CVector3D &d, double a) const
     auto p1 = view.viewPoint(p.point());
     auto dp = view.viewPoint(d.point());
 
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     auto s = std::sqrt(sx*sx + sy*sy)/3.0;
 
@@ -620,8 +708,8 @@ drawCone(const CVector3D &p, const CVector3D &d, double a) const
     double px3, py3;
     view.range.windowToPixel(p1.x + s*d2.x, p1.y + s*d2.y, &px3, &py3);
 
-    painter_->drawLine(px1, py1, px2, py2);
-    painter_->drawLine(px1, py1, px3, py3);
+    drawData_.painter->drawLine(px1, py1, px2, py2);
+    drawData_.painter->drawLine(px1, py1, px3, py3);
   };
 
   drawCone2D(xview_, p, d, xs_, ys_); // XY
@@ -635,7 +723,7 @@ drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
 {
   auto drawVector2D = [&](const ViewData &view, const CPoint2D &p,
                           const CPoint2D &d, double sx, double sy, const QString &label) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     auto s = std::sqrt(sx*sx + sy*sy)/3.0;
 
@@ -644,9 +732,9 @@ drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
     double px2, py2;
     view.range.windowToPixel(p.x + s*d.x, p.y + s*d.y, &px2, &py2);
 
-    painter_->drawLine(px1, py1, px2, py2);
+    drawData_.painter->drawLine(px1, py1, px2, py2);
 
-    painter_->drawText(px2, py2, label);
+    drawData_.painter->drawText(px2, py2, label);
   };
 
   auto x1 = p.getX(), y1 = p.getY(), z1 = p.getZ();
@@ -662,14 +750,14 @@ CQCamera3DOverview::
 drawCircle(const CVector3D &origin, double r)
 {
   auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     double px1, py1;
     view.range.windowToPixel(o.x - r, o.y - r, &px1, &py1);
     double px2, py2;
     view.range.windowToPixel(o.x + r, o.y + r, &px2, &py2);
 
-    painter_->drawEllipse(QRectF(px1, py1, px2 - px1, py2 - py1));
+    drawData_.painter->drawEllipse(QRectF(px1, py1, px2 - px1, py2 - py1));
   };
 
   drawCircle2D(xview_, CPoint2D(origin.x(), origin.y()), r); // XY
@@ -682,15 +770,15 @@ CQCamera3DOverview::
 drawPoint(const CVector3D &p, const QString &label) const
 {
   auto drawPoint2D = [&](const ViewData &view, const CPoint2D &p, const QString &label) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     double px, py;
     view.range.windowToPixel(p.x, p.y, &px, &py);
 
-    painter_->drawLine(px - 4, py, px + 4, py);
-    painter_->drawLine(px, py - 4, px, py + 4);
+    drawData_.painter->drawLine(px - 4, py, px + 4, py);
+    drawData_.painter->drawLine(px, py - 4, px, py + 4);
 
-    painter_->drawText(px, py, label);
+    drawData_.painter->drawText(px, py, label);
   };
 
   drawPoint2D(xview_, CPoint2D(p.getX(), p.getY()), label); // XY
@@ -705,12 +793,12 @@ drawPixmap(const CPoint3D &p, const QPixmap &pixmap) const
   auto s = pixmap.width();
 
   auto drawPixmap2D = [&](const ViewData &view, const CPoint2D &p, const QPixmap &pixmap) {
-    painter_->setClipRect(view.rect);
+    drawData_.painter->setClipRect(view.rect);
 
     double px, py;
     view.range.windowToPixel(p.x, p.y, &px, &py);
 
-    painter_->drawPixmap(px - s/2, py - s/2, pixmap);
+    drawData_.painter->drawPixmap(px - s/2, py - s/2, pixmap);
   };
 
   drawPixmap2D(xview_, CPoint2D(p.getX(), p.getY()), pixmap); // XY
@@ -934,7 +1022,7 @@ selectObjectIn(const QPoint &p, const QRect &r, bool clear)
   else if (selectType == SelectType::FACE) {
     std::vector<CGeomFace3D *> selectFaces;
 
-    for (const auto &po : objectFaces_) {
+    for (const auto &po : drawData_.objectFaces) {
       auto *object = po.first;
 
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
@@ -967,7 +1055,7 @@ selectObjectIn(const QPoint &p, const QRect &r, bool clear)
   else if (selectType == SelectType::POINT) {
     CQCamera3DCanvas::ObjectSelectInds selectInds;
 
-    for (const auto &po : objectFaces_) {
+    for (const auto &po : drawData_.objectFaces) {
       auto *object = po.first;
 
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
@@ -1014,7 +1102,7 @@ selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear)
   // get inside faces
   std::map<double, FaceData *> atFaces;
 
-  for (const auto &po : objectFaces_) {
+  for (const auto &po : drawData_.objectFaces) {
     auto *object = po.first;
 
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
@@ -1105,7 +1193,7 @@ selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear)
 
     CGeomFace3D *face = nullptr;
 
-    for (const auto &po : objectFaces_) {
+    for (const auto &po : drawData_.objectFaces) {
       auto *object = po.first;
 
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);

@@ -32,6 +32,11 @@ class CQCamera3DSidebar : public QFrame {
   void rotateSlot(bool state);
   void scaleSlot(bool state);
 
+  void extrudeSlot();
+  void loopCutSlot();
+
+  void updateButtonState();
+
  private:
   void connectSlots(bool b);
   void updateEditType();
@@ -48,6 +53,9 @@ class CQCamera3DSidebar : public QFrame {
   CQIconButton* moveButton_   { nullptr };
   CQIconButton* rotateButton_ { nullptr };
   CQIconButton* scaleButton_  { nullptr };
+
+  CQIconButton* extrudeButton_ { nullptr };
+  CQIconButton* loopCutButton_ { nullptr };
 
   std::vector<CQIconButton *> checkButtons_;
 };

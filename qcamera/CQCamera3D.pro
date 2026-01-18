@@ -33,9 +33,12 @@ CQCamera3DFont.cpp \
 CQCamera3DLight.cpp \
 CQCamera3DMain.cpp \
 CQCamera3DMaterials.cpp \
+CQCamera3DMouseMode.cpp \
 CQCamera3DNormals.cpp \
 CQCamera3DObject.cpp \
 CQCamera3DObjectData.cpp \
+CQCamera3DOptions.cpp \
+CQCamera3DOpWidget.cpp \
 CQCamera3DOverlay2D.cpp \
 CQCamera3DOverlay.cpp \
 CQCamera3DOverview.cpp \
@@ -51,6 +54,7 @@ CQCamera3DWidget.cpp \
 \
 CQCamera3DGeomObject.cpp \
 CQCamera3DGeomFace.cpp \
+CQCamera3DGeomLine.cpp \
 \
 CQCamera3DAnimChooser.cpp \
 CQCamera3DMaterialChooser.cpp \
@@ -89,9 +93,12 @@ CQCamera3DFont.h \
 CQCamera3DLight.h \
 CQCamera3DMain.h \
 CQCamera3DMaterials.h \
+CQCamera3DMouseMode.h \
 CQCamera3DNormals.h \
 CQCamera3DObject.h \
 CQCamera3DObjectData.h \
+CQCamera3DOptions.h \
+CQCamera3DOpWidget.h \
 CQCamera3DOverlay2D.h \
 CQCamera3DOverlay.h \
 CQCamera3DOverview.h \
@@ -108,6 +115,7 @@ CQCamera3DWidget.h \
 \
 CQCamera3DGeomObject.h \
 CQCamera3DGeomFace.h \
+CQCamera3DGeomLine.h \
 \
 CQCamera3DAnimChooser.h \
 CQCamera3DMaterialChooser.h \

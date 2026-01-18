@@ -17,6 +17,7 @@ class CQCamera3DApp;
 class CQCamera3DCamera;
 
 class CGeomFace3D;
+class CGeomLine3D;
 class CQRubberBand;
 class CVector3D;
 
@@ -106,6 +107,8 @@ class CQCamera3DOverview : public QFrame {
 
   //---
 
+  CQCamera3DApp *app() const { return app_; }
+
   bool isEqualScale() const { return equalScale_; }
   void setEqualScale(bool b) { equalScale_ = b; updateRange(); }
 
@@ -190,6 +193,7 @@ class CQCamera3DOverview : public QFrame {
  private:
   struct FaceData {
     CGeomFace3D*          face { nullptr };
+    CGeomLine3D*          line { nullptr };
     std::vector<CPoint3D> points;
   };
 
@@ -231,18 +235,22 @@ class CQCamera3DOverview : public QFrame {
   using FaceDatas       = std::vector<FaceData>;
   using ObjectFaceDatas = std::map<CGeomObject3D *, FaceDatas>;
 
-  ObjectFaceDatas objectFaces_;
-
   // draw data
-  QPainter *painter_ { nullptr };
+  struct DrawData {
+    QPainter*       painter { nullptr };
+    CMatrix3DH      projectionMatrix;
+    CMatrix3DH      viewMatrix;
+    CMatrix3DH      modelMatrix;
+    CMatrix3DH      meshMatrix;
+    ObjectFaceDatas objectFaces;
+    bool            filled  { true };
+    bool            useAnim { false };
+  };
+
+  DrawData drawData_;
 
   bool   bboxSet_ { false };
   double xs_ { 0.0 }, ys_ { 0.0 }, zs_ { 0.0 };
-
-  CMatrix3DH projectionMatrix_;
-  CMatrix3DH viewMatrix_;
-  CMatrix3DH modelMatrix_;
-  CMatrix3DH meshMatrix_;
 
   QPixmap lightPixmap_;
 

@@ -31,6 +31,9 @@ class CQCamera3DFont;
 class CQCamera3DAxes;
 class CQCamera3DGeomObject;
 class CQCamera3DGeomFace;
+class CQCamera3DOpWidget;
+class CQCamera3DMouseModeMgr;
+class CQCamera3DOptions;
 
 class CQGLBuffer;
 class CGeomObject3D;
@@ -68,6 +71,34 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   using Edges     = std::vector<int>;
   using FaceEdges = std::map<CQCamera3DGeomFace *, Edges>;
 
+  enum class AddObjectType {
+    NONE,
+    CIRCLE,
+    CUBE,
+    CYLINDER,
+    PLANE,
+    PYRAMID,
+    SPHERE,
+    TORUS
+  };
+
+  enum class ViewType {
+    PERSPECTIVE,
+    TOP,
+    BOTTOM,
+    LEFT,
+    RIGHT,
+    FRONT,
+    BACK
+  };
+
+  enum class MoveDirection {
+    NONE,
+    X,
+    Y,
+    Z
+  };
+
  public:
   CQCamera3DCanvas(CQCamera3DApp *app);
 
@@ -80,6 +111,12 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   const CPoint3D &cursor() const { return cursor_; }
   void setCursor(const CPoint3D &v);
+
+  //---
+
+  void moveObject  (CGeomObject3D *object, const CVector3D &d);
+  void scaleObject (CGeomObject3D *object, const CVector3D &d);
+  void rotateObject(CGeomObject3D *object, double da, const CVector3D &axis);
 
   //---
 
@@ -215,7 +252,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void setMouseType(const MouseType &v) { mouseType_ = v; }
 
   const EditType &editType() const { return editType_; }
-  void setEditType(const EditType &v) { editType_ = v; }
+  void setEditType(const EditType &v);
 
   double mouseScale() const { return mouseScale_; }
   void setMouseScale(double r) { mouseScale_ = r; }
@@ -319,12 +356,47 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  const ViewType &viewType() const { return viewType_; }
+  void setViewType(const ViewType &v);
+
+  CQCamera3DCamera *getViewCamera() const;
+
+  //---
+
+  const MoveDirection &moveDirection() const { return moveDirection_; }
+  void setMoveDirection(const MoveDirection &v);
+
+  //---
+
   void addCircle();
   void addCube();
   void addCylinder();
+  void addPlane();
   void addPyramid();
   void addSphere();
   void addTorus();
+
+  void addObject(const std::string &typeName, const AddObjectType &type);
+
+  //---
+
+  void extrudeMode();
+
+  void extrude();
+  void extrudeMove(double d);
+
+  double extrudeMoveDelta() const { return extrudeMoveDelta_; }
+  void setExtrudeMoveDelta(double r) { extrudeMoveDelta_ = r; }
+
+  void loopCut();
+
+  //---
+
+  void setOptions(CQCamera3DOptions *options);
+  void showOptions();
+  void hideOptions();
+
+  void endMouseMode();
 
   //---
 
@@ -368,6 +440,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void wheelEvent(QWheelEvent *) override;
 
   void selectObjectAtMouse();
+  void moveCursorToMouse();
   void showEyelineAtMouse();
 
   void setEyeLineLabel();
@@ -408,6 +481,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void objectsChanged();
 
   void eyeLineChanged();
+
+  void editTypeChanged();
 
  private:
   struct PaintData {
@@ -453,7 +528,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CQCamera3DCamera *perspectiveCamera_ { nullptr };
   CQCamera3DCamera *topCamera_         { nullptr };
+  CQCamera3DCamera *bottomCamera_      { nullptr };
   CQCamera3DCamera *frontCamera_       { nullptr };
+  CQCamera3DCamera *backCamera_        { nullptr };
+  CQCamera3DCamera *leftCamera_        { nullptr };
   CQCamera3DCamera *rightCamera_       { nullptr };
 
   //---
@@ -532,6 +610,12 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CPoint3D cursor_ { 0, 0, 0 };
 
+  ViewType viewType_ { ViewType::PERSPECTIVE };
+
+  MoveDirection moveDirection_ { MoveDirection::NONE };
+
+  double extrudeMoveDelta_ { 0.0 };
+
   //---
 
   // draw types
@@ -573,6 +657,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CQCamera3DGeomObject* currentObject_ { nullptr };
   CGeomFace3D*          currentFace_   { nullptr };
   CGeomVertex3D*        currentVertex_ { nullptr };
+
+  CQCamera3DOpWidget* opWidget_ { nullptr };
+
+  CQCamera3DMouseModeMgr* mouseModeMgr_ { nullptr };
 };
 
 #endif

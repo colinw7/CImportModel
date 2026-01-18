@@ -24,6 +24,7 @@
 #include <CQCamera3DAnimChooser.h>
 #include <CQCamera3DBonesList.h>
 #include <CQCamera3DGeomFace.h>
+#include <CQCamera3DUI.h>
 #include <CQCamera3DUtil.h>
 
 #include <CQGLBuffer.h>
@@ -241,324 +242,151 @@ CQCamera3DControl(CQCamera3DApp *app) :
   auto *layout = new QVBoxLayout(this);
   layout->setMargin(2); layout->setSpacing(2);
 
-  //---
-
-  QBoxLayout*               currentLayout = layout;
-  std::vector<QBoxLayout *> layoutStack;
-
-  auto startLayout = [&](QBoxLayout *layout) {
-    layoutStack.push_back(currentLayout);
-
-    currentLayout = layout;
-  };
-
-  auto endLayout = [&]() {
-    currentLayout = layoutStack.back();
-
-    layoutStack.pop_back();
-  };
+  CQCamera3DUI ui(this, layout);
 
   //---
 
-  auto addLabelEdit = [&](const QString &label, auto *w) {
-    auto *frame = new QFrame;
-
-    auto *layout1 = new QHBoxLayout(frame);
-    layout1->setMargin(2); layout1->setSpacing(2);
-
-    layout1->addWidget(new QLabel(label));
-    layout1->addWidget(w);
-
-    currentLayout->addWidget(frame);
-
-    return w;
-  };
-
-  auto addCheck = [&](const QString &label) {
-    auto *check = new QCheckBox(label);
-
-    currentLayout->addWidget(check);
-
-    return check;
-  };
-
-  auto addStretch = [&]() {
-    currentLayout->addStretch(1);
-  };
-
-  //---
-
-  QGroupBox*               currentGroup = nullptr;
-  std::vector<QGroupBox *> groupStack;
-
-  auto startGroup = [&](const QString &name, bool horizontal=false) {
-    groupStack.push_back(currentGroup);
-
-    currentGroup = new QGroupBox(name);
-
-    currentGroup->setObjectName(name);
-
-    QBoxLayout *layout = nullptr;
-
-    if (horizontal)
-      layout = new QHBoxLayout(currentGroup);
-    else
-      layout = new QVBoxLayout(currentGroup);
-
-    layout->setMargin(2); layout->setSpacing(2);
-
-    currentLayout->addWidget(currentGroup);
-
-    startLayout(layout);
-  };
-
-  auto endGroup = [&]() {
-    endLayout();
-
-    currentGroup = groupStack.back();
-
-    groupStack.pop_back();
-  };
-
-  //---
-
-  QFrame*               currentFrame = nullptr;
-  std::vector<QFrame *> frameStack;
-
-  auto startFrame = [&](bool horizontal=false) {
-    frameStack.push_back(currentFrame);
-
-    currentFrame = new QFrame;
-
-    currentFrame->setObjectName("frame");
-
-    QBoxLayout *layout = nullptr;
-
-    if (horizontal)
-      layout = new QHBoxLayout(currentFrame);
-    else
-      layout = new QVBoxLayout(currentFrame);
-
-    layout->setMargin(2); layout->setSpacing(2);
-
-    currentLayout->addWidget(currentFrame);
-
-    startLayout(layout);
-  };
-
-  auto endFrame = [&]() {
-    endLayout();
-
-    currentFrame = frameStack.back();
-
-    frameStack.pop_back();
-  };
-
-  //---
-
-  auto addButton = [&](const QString &name, const char *slotName) {
-    auto *button = new QPushButton(name);
-
-    connect(button, SIGNAL(clicked()), this, slotName);
-
-    currentLayout->addWidget(button);
-
-    return button;
-  };
-
-  //---
-
-  QTabWidget*               currentTab = nullptr;
-  std::vector<QTabWidget *> tabStack;
-
-  auto startTab = [&](const QString &name) {
-    tabStack.push_back(currentTab);
-
-    currentTab = CQUtil::makeWidget<QTabWidget>(name + "_tab");
-
-    currentTab->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
-    currentLayout->addWidget(currentTab);
-
-    return currentTab;
-  };
-
-  auto endTab = [&]() {
-    currentTab = tabStack.back();
-
-    tabStack.pop_back();
-  };
-
-  //---
-
-  QFrame*               currentPage = nullptr;
-  std::vector<QFrame *> pageStack;
-
-  auto startTabPage = [&](const QString &name) {
-    pageStack.push_back(currentPage);
-
-    currentPage = CQUtil::makeWidget<QFrame>(name + "_page");
-
-    auto *layout = new QVBoxLayout(currentPage);
-
-    layout->setMargin(2); layout->setSpacing(2);
-
-    currentTab->addTab(currentPage, name);
-
-    startLayout(layout);
-  };
-
-  auto endTabPage = [&]() {
-    endLayout();
-
-    currentPage = pageStack.back();
-
-    pageStack.pop_back();
-  };
-
-  //---
-
-  mainTab_ = startTab("main");
+  mainTab_ = ui.startTab("main");
 
   //---
 
   // 3D
 
-  startTabPage("3D");
+  ui.startTabPage("3D");
 
-  startTab("3D");
+  ui.startTab("3D");
 
   //---
 
   // 3D/General
-  startTabPage("General");
+  ui.startTabPage("General");
 
   //---
 
-  startGroup("Show", /*horizontal*/true);
+  ui.startGroup("Show", /*horizontal*/true);
 
-  generalData_.showWireframeCheck = addCheck("Wireframe");
-  generalData_.showSolidCheck     = addCheck("Solid");
-  generalData_.showTexturedCheck  = addCheck("Textured");
-  generalData_.showPointsCheck    = addCheck("Points");
+  generalData_.showWireframeCheck = ui.addCheck("Wireframe");
+  generalData_.showSolidCheck     = ui.addCheck("Solid");
+  generalData_.showTexturedCheck  = ui.addCheck("Textured");
+  generalData_.showPointsCheck    = ui.addCheck("Points");
 
-  addStretch();
+  ui.addStretch();
 
-  endGroup();
+  ui.endGroup();
 
-  generalData_.quadViewCheck = addLabelEdit("Quad View", new QCheckBox);
+  generalData_.quadViewCheck = ui.addLabelEdit("Quad View", new QCheckBox);
 
-  generalData_.pointSizeEdit = addLabelEdit("Point Size", new CQRealSpin);
-  generalData_.lineWidthEdit = addLabelEdit("Line Width", new CQRealSpin);
+  generalData_.pointSizeEdit = ui.addLabelEdit("Point Size", new CQRealSpin);
+  generalData_.lineWidthEdit = ui.addLabelEdit("Line Width", new CQRealSpin);
 
-  generalData_.cursorEdit = addLabelEdit("Cursor", new CQPoint3DEdit);
+  generalData_.cursorEdit = ui.addLabelEdit("Cursor", new CQPoint3DEdit);
 
-  startGroup("Normals");
+  ui.startGroup("Normals");
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  generalData_.normalsPointsCheck = addCheck("Points");
-  generalData_.normalsFacesCheck  = addCheck("Faces" );
+  generalData_.normalsPointsCheck = ui.addCheck("Points");
+  generalData_.normalsFacesCheck  = ui.addCheck("Faces" );
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  generalData_.normalsSizeEdit  = addLabelEdit("Size" , new CQRealSpin);
-  generalData_.normalsColorEdit = addLabelEdit("Color", new CQColorEdit);
+  generalData_.normalsSizeEdit  = ui.addLabelEdit("Size" , new CQRealSpin);
+  generalData_.normalsColorEdit = ui.addLabelEdit("Color", new CQColorEdit);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Basis");
+  ui.startGroup("Basis");
 
-  generalData_.showBasisCheck = addCheck("Show");
+  generalData_.showBasisCheck = ui.addCheck("Show");
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("BBox");
+  ui.startGroup("BBox");
 
-  generalData_.showBBoxCheck   = addCheck("Show");
-  generalData_.bboxOrientCheck = addCheck("Oriented");
+  generalData_.showBBoxCheck   = ui.addCheck("Show");
+  generalData_.bboxOrientCheck = ui.addCheck("Oriented");
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Options");
+  ui.startGroup("Options");
 
-  generalData_.depthTestCheck = addCheck("Depth Test");
-  generalData_.cullFaceCheck  = addCheck("Cull Face");
-  generalData_.frontFaceCheck = addCheck("Front Face");
+  generalData_.depthTestCheck = ui.addCheck("Depth Test");
+  generalData_.cullFaceCheck  = ui.addCheck("Cull Face");
+  generalData_.frontFaceCheck = ui.addCheck("Front Face");
 
-  endGroup();
+  ui.endGroup();
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Camera
-  startTabPage("Camera");
+  ui.startTabPage("Camera");
 
   //---
 
-  startGroup("Show", /*horizontal*/true);
+  ui.startGroup("Show", /*horizontal*/true);
 
-  cameraData_.showCheck    = addCheck("Camera");
-  cameraData_.eyeLineCheck = addCheck("Eye Line");
-  cameraData_.planesCheck  = addCheck("Planes");
+  cameraData_.showCheck    = ui.addCheck("Camera");
+  cameraData_.eyeLineCheck = ui.addCheck("Eye Line");
+  cameraData_.planesCheck  = ui.addCheck("Planes");
 
-  addStretch();
+  ui.addStretch();
 
-  endGroup();
+  ui.endGroup();
 
   cameraData_.cameraList = new CQCamera3DCameraList(canvas);
 
-  currentLayout->addWidget(cameraData_.cameraList);
+  ui.addWidget(cameraData_.cameraList);
 
-  startGroup("Angles");
+  ui.startGroup("Angles");
 
-  cameraData_.pitchEdit = addLabelEdit("Pitch", new CQRealSpin);
-  cameraData_.yawEdit   = addLabelEdit("Yaw"  , new CQRealSpin);
-  cameraData_.rollEdit  = addLabelEdit("Roll" , new CQRealSpin);
+  cameraData_.pitchEdit = ui.addLabelEdit("Pitch", new CQRealSpin);
+  cameraData_.yawEdit   = ui.addLabelEdit("Yaw"  , new CQRealSpin);
+  cameraData_.rollEdit  = ui.addLabelEdit("Roll" , new CQRealSpin);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Z");
+  ui.startGroup("Z");
 
-  cameraData_.nearEdit = addLabelEdit("Near", new CQRealSpin);
-  cameraData_.farEdit  = addLabelEdit("Far" , new CQRealSpin);
-  cameraData_.fovEdit  = addLabelEdit("FOV" , new CQRealSpin);
+  cameraData_.nearEdit = ui.addLabelEdit("Near", new CQRealSpin);
+  cameraData_.farEdit  = ui.addLabelEdit("Far" , new CQRealSpin);
+  cameraData_.fovEdit  = ui.addLabelEdit("FOV" , new CQRealSpin);
 
-  endGroup();
-
-  //---
-
-  startGroup("Origin");
-
-  cameraData_.xOriginEdit = addLabelEdit("X", new CQRealSpin);
-  cameraData_.yOriginEdit = addLabelEdit("Y", new CQRealSpin);
-  cameraData_.zOriginEdit = addLabelEdit("Z", new CQRealSpin);
-
-  endGroup();
+  ui.endGroup();
 
   //---
 
-  startGroup("Position");
+  ui.startGroup("Origin");
 
-  cameraData_.xEdit = addLabelEdit("X", new CQRealSpin);
-  cameraData_.yEdit = addLabelEdit("Y", new CQRealSpin);
-  cameraData_.zEdit = addLabelEdit("Z", new CQRealSpin);
+  cameraData_.xOriginEdit = ui.addLabelEdit("X", new CQRealSpin);
+  cameraData_.yOriginEdit = ui.addLabelEdit("Y", new CQRealSpin);
+  cameraData_.zOriginEdit = ui.addLabelEdit("Z", new CQRealSpin);
 
-  endGroup();
+  ui.endGroup();
 
   //---
 
-  startGroup("Eye Line");
+  ui.startGroup("Position");
 
-  cameraData_.eyeZ1Edit = addLabelEdit("Z1", new CQRealSpin);
-  cameraData_.eyeZ2Edit = addLabelEdit("Z2", new CQRealSpin);
+  cameraData_.xEdit = ui.addLabelEdit("X", new CQRealSpin);
+  cameraData_.yEdit = ui.addLabelEdit("Y", new CQRealSpin);
+  cameraData_.zEdit = ui.addLabelEdit("Z", new CQRealSpin);
 
-  endGroup();
+  ui.endGroup();
+
+  //---
+
+  ui.startGroup("Eye Line");
+
+  cameraData_.eyeZ1Edit = ui.addLabelEdit("Z1", new CQRealSpin);
+  cameraData_.eyeZ2Edit = ui.addLabelEdit("Z2", new CQRealSpin);
+
+  ui.endGroup();
 
   //---
 
@@ -582,247 +410,247 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
     playout->addStretch(1);
 
-    currentLayout->addWidget(pframe);
+    ui.addWidget(pframe);
 
     return data;
   };
 
-  startGroup("Rotate Around", /*horizontal*/true);
+  ui.startGroup("Rotate Around", /*horizontal*/true);
 
   cameraData_.aroundXButtons = plusMinusFrame("X");
   cameraData_.aroundYButtons = plusMinusFrame("Y");
   cameraData_.aroundZButtons = plusMinusFrame("Z");
 
-  addStretch();
+  ui.addStretch();
 
-  endGroup();
+  ui.endGroup();
 
-  addStretch();
+  ui.addStretch();
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Reset", SLOT(resetCameraSlot()));
-  addButton("Top"  , SLOT(topCameraSlot()));
-  addButton("Side" , SLOT(sideCameraSlot()));
-  addButton("Front", SLOT(frontCameraSlot()));
+  ui.addButton("Reset", SLOT(resetCameraSlot()));
+  ui.addButton("Top"  , SLOT(topCameraSlot()));
+  ui.addButton("Side" , SLOT(sideCameraSlot()));
+  ui.addButton("Front", SLOT(frontCameraSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Lights
-  startTabPage("Lights");
+  ui.startTabPage("Lights");
 
   lightsData_.lightList = new CQCamera3DLightList(canvas);
 
-  currentLayout->addWidget(lightsData_.lightList);
+  ui.addWidget(lightsData_.lightList);
 
-  startGroup("Globals");
+  ui.startGroup("Globals");
 
-  lightsData_.ambientColorEdit    = addLabelEdit("Ambient Color", new CQColorEdit);
-  lightsData_.ambientStrengthEdit = addLabelEdit("Ambient Strength", new CQRealSpin);
+  lightsData_.ambientColorEdit    = ui.addLabelEdit("Ambient Color", new CQColorEdit);
+  lightsData_.ambientStrengthEdit = ui.addLabelEdit("Ambient Strength", new CQRealSpin);
 
-  lightsData_.diffuseStrengthEdit  = addLabelEdit("Diffuse Strength" , new CQRealSpin);
-  lightsData_.emissiveStrengthEdit = addLabelEdit("Emission Strength", new CQRealSpin);
-  lightsData_.specularStrengthEdit = addLabelEdit("Specular Strength", new CQRealSpin);
+  lightsData_.diffuseStrengthEdit  = ui.addLabelEdit("Diffuse Strength" , new CQRealSpin);
+  lightsData_.emissiveStrengthEdit = ui.addLabelEdit("Emission Strength", new CQRealSpin);
+  lightsData_.specularStrengthEdit = ui.addLabelEdit("Specular Strength", new CQRealSpin);
 
-  lightsData_.fixedDiffuseCheck = addLabelEdit("Fixed Diffuse", new QCheckBox);
+  lightsData_.fixedDiffuseCheck = ui.addLabelEdit("Fixed Diffuse", new QCheckBox);
 
-  endGroup();
+  ui.endGroup();
 
-  lightsData_.typeCombo = addLabelEdit("Type", new QComboBox);
+  lightsData_.typeCombo = ui.addLabelEdit("Type", new QComboBox);
   lightsData_.typeCombo->addItems(lightTypeInd.names());
 
-  lightsData_.enabledCheck = addLabelEdit("Enabled", new QCheckBox);
+  lightsData_.enabledCheck = ui.addLabelEdit("Enabled", new QCheckBox);
 
-  lightsData_.positionEdit = addLabelEdit("Position", new CQPoint3DEdit);
+  lightsData_.positionEdit = ui.addLabelEdit("Position", new CQPoint3DEdit);
 
-  lightsData_.colorEdit = addLabelEdit("Color", new CQColorEdit);
+  lightsData_.colorEdit = ui.addLabelEdit("Color", new CQColorEdit);
 
   // direction light
-  lightsData_.directionEdit = addLabelEdit("Direction", new CQPoint3DEdit);
+  lightsData_.directionEdit = ui.addLabelEdit("Direction", new CQPoint3DEdit);
 
   // point light
-  lightsData_.pointRadiusEdit = addLabelEdit("Point Radius", new CQRealSpin);
+  lightsData_.pointRadiusEdit = ui.addLabelEdit("Point Radius", new CQRealSpin);
 
-  lightsData_.attenuation0Edit = addLabelEdit("Constant Attenuation", new CQRealSpin);
-  lightsData_.attenuation1Edit = addLabelEdit("Linear Attenuation", new CQRealSpin);
-  lightsData_.attenuation2Edit = addLabelEdit("Quadratic Attenuation", new CQRealSpin);
+  lightsData_.attenuation0Edit = ui.addLabelEdit("Constant Attenuation", new CQRealSpin);
+  lightsData_.attenuation1Edit = ui.addLabelEdit("Linear Attenuation", new CQRealSpin);
+  lightsData_.attenuation2Edit = ui.addLabelEdit("Quadratic Attenuation", new CQRealSpin);
 
   // spot light
-  lightsData_.spotDirectionEdit = addLabelEdit("Spot Direction", new CQPoint3DEdit);
-  lightsData_.spotExponentEdit  = addLabelEdit("Spot Exponent", new CQRealSpin);
-  lightsData_.spotCutOffAngle   = addLabelEdit("Spot Cut Off", new CQRealSpin);
+  lightsData_.spotDirectionEdit = ui.addLabelEdit("Spot Direction", new CQPoint3DEdit);
+  lightsData_.spotExponentEdit  = ui.addLabelEdit("Spot Exponent", new CQRealSpin);
+  lightsData_.spotCutOffAngle   = ui.addLabelEdit("Spot Cut Off", new CQRealSpin);
 
-  addStretch();
+  ui.addStretch();
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Add Light"  , SLOT(addLightSlot()));
-  addButton("Reset Light", SLOT(resetLightSlot()));
+  ui.addButton("Add Light"  , SLOT(addLightSlot()));
+  ui.addButton("Reset Light", SLOT(resetLightSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Axis
-  startTabPage("Axis");
+  ui.startTabPage("Axis");
 
-  axisData_.showCheck = addCheck("Show Axes");
+  axisData_.showCheck = ui.addCheck("Show Axes");
 
-  axisData_.xPosEdit = addLabelEdit("X Pos", new CQRealSpin);
-  axisData_.yPosEdit = addLabelEdit("Y Pos", new CQRealSpin);
-  axisData_.zPosEdit = addLabelEdit("Z Pos", new CQRealSpin);
+  axisData_.xPosEdit = ui.addLabelEdit("X Pos", new CQRealSpin);
+  axisData_.yPosEdit = ui.addLabelEdit("Y Pos", new CQRealSpin);
+  axisData_.zPosEdit = ui.addLabelEdit("Z Pos", new CQRealSpin);
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Mouse
-  startTabPage("Mouse");
+  ui.startTabPage("Mouse");
 
-  mouseTypeCombo_ = addLabelEdit("Mouse Type", new QComboBox);
+  mouseTypeCombo_ = ui.addLabelEdit("Mouse Type", new QComboBox);
   mouseTypeCombo_->addItems(mouseTypeInd.names());
 
-  editTypeCombo_ = addLabelEdit("Edit Type", new QComboBox);
+  editTypeCombo_ = ui.addLabelEdit("Edit Type", new QComboBox);
   editTypeCombo_->addItems(editTypeInd.names());
 
-  mouseScaleEdit_ = addLabelEdit("Scale", new CQRealSpin);
+  mouseScaleEdit_ = ui.addLabelEdit("Scale", new CQRealSpin);
 
-  mouseBasisCheck_ = addLabelEdit("Basis", new QCheckBox);
+  mouseBasisCheck_ = ui.addLabelEdit("Basis", new QCheckBox);
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Selection
-  startTabPage("Selection");
+  ui.startTabPage("Selection");
 
-  selectionData_.typeCombo = addLabelEdit("Select", new QComboBox);
+  selectionData_.typeCombo = ui.addLabelEdit("Select", new QComboBox);
   selectionData_.typeCombo->addItems(selectTypeInd.names());
 
-  selectionData_.indLabel = addLabelEdit("Name", new CQTextLabel);
-  selectionData_.visCheck = addLabelEdit("Visible", new QCheckBox);
+  selectionData_.indLabel = ui.addLabelEdit("Name", new CQTextLabel);
+  selectionData_.visCheck = ui.addLabelEdit("Visible", new QCheckBox);
 
-  selectionData_.colorEdit = addLabelEdit("Color", new CQColorEdit);
+  selectionData_.colorEdit = ui.addLabelEdit("Color", new CQColorEdit);
 
   //---
 
-  startTab("objData");
+  ui.startTab("objData");
 
-  startTabPage("Geometry");
+  ui.startTabPage("Geometry");
 
-  selectionData_.centerEdit = addLabelEdit("Center", new CQPoint3DEdit);
-  selectionData_.sizeEdit   = addLabelEdit("Size"  , new CQPoint3DEdit);
+  selectionData_.centerEdit = ui.addLabelEdit("Center", new CQPoint3DEdit);
+  selectionData_.sizeEdit   = ui.addLabelEdit("Size"  , new CQPoint3DEdit);
 
   selectionData_.meshMatrixEdit = new CQMatrix3D;
-  currentLayout->addWidget(selectionData_.meshMatrixEdit);
+  ui.addWidget(selectionData_.meshMatrixEdit);
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //--
 
-  startTabPage("Transform");
+  ui.startTabPage("Transform");
 
-  selectionData_.translationEdit = addLabelEdit("Translation", new CQPoint3DEdit);
-  selectionData_.rotationEdit    = addLabelEdit("Rotation"   , new CQPoint3DEdit);
-  selectionData_.scaleEdit       = addLabelEdit("Scale"      , new CQPoint3DEdit);
+  selectionData_.translationEdit = ui.addLabelEdit("Translation", new CQPoint3DEdit);
+  selectionData_.rotationEdit    = ui.addLabelEdit("Rotation"   , new CQPoint3DEdit);
+  selectionData_.scaleEdit       = ui.addLabelEdit("Scale"      , new CQPoint3DEdit);
 
   selectionData_.matrixEdit = new CQMatrix3D;
-  currentLayout->addWidget(selectionData_.matrixEdit);
+  ui.addWidget(selectionData_.matrixEdit);
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //--
 
-  startTabPage("Textures");
+  ui.startTabPage("Textures");
 
   selectionData_.diffuseTextureEdit =
-    addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
   selectionData_.normalTextureEdit =
-    addLabelEdit("Normal"  , new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Normal"  , new CQCamera3DTextureChooser(app_));
   selectionData_.specularTextureEdit =
-    addLabelEdit("Specular", new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Specular", new CQCamera3DTextureChooser(app_));
   selectionData_.emissiveTextureEdit =
-    addLabelEdit("Emissive", new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Emissive", new CQCamera3DTextureChooser(app_));
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Add Texture"     , SLOT(addTextureSlot()));
-  addButton("Load Texture Map", SLOT(loadTextureMapSlot()));
-  addButton("Save Texture Map", SLOT(saveTextureMapSlot()));
+  ui.addButton("Add Texture"     , SLOT(addTextureSlot()));
+  ui.addButton("Load Texture Map", SLOT(loadTextureMapSlot()));
+  ui.addButton("Save Texture Map", SLOT(saveTextureMapSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //--
 
-  startTabPage("Material");
+  ui.startTabPage("Material");
 
   selectionData_.materialNameChooser =
-    addLabelEdit("Name", new CQCamera3DMaterialChooser(app_));
+    ui.addLabelEdit("Name", new CQCamera3DMaterialChooser(app_));
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Load Material Map", SLOT(loadMaterialMapSlot()));
-  addButton("Save Material Map", SLOT(saveMaterialMapSlot()));
+  ui.addButton("Load Material Map", SLOT(loadMaterialMapSlot()));
+  ui.addButton("Save Material Map", SLOT(saveMaterialMapSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
-  endTab();
+  ui.endTab();
 
   //---
 
-  startGroup("Modify");
+  ui.startGroup("Modify");
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Swap XY", SLOT(swapSlot()));
-  addButton("Swap YZ", SLOT(swapSlot()));
-  addButton("Swap ZX", SLOT(swapSlot()));
+  ui.addButton("Swap XY", SLOT(swapSlot()));
+  ui.addButton("Swap YZ", SLOT(swapSlot()));
+  ui.addButton("Swap ZX", SLOT(swapSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Invert X", SLOT(invertSlot()));
-  addButton("Invert Y", SLOT(invertSlot()));
-  addButton("Invert Z", SLOT(invertSlot()));
+  ui.addButton("Invert X", SLOT(invertSlot()));
+  ui.addButton("Invert Y", SLOT(invertSlot()));
+  ui.addButton("Invert Z", SLOT(invertSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  endGroup();
+  ui.endGroup();
 
   //---
 
@@ -830,262 +658,262 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   selectionData_.objectInfoText->setReadOnly(true);
 
-  currentLayout->addWidget(selectionData_.objectInfoText);
+  ui.addWidget(selectionData_.objectInfoText);
 
-  //addStretch();
+  //ui.addStretch();
 
   //---
 
-  startGroup("Select", /*horizontal*/true);
+  ui.startGroup("Select", /*horizontal*/true);
 
-  addButton("Parent"     , SLOT(selectParentSlot()));
-  addButton("By Material", SLOT(selectRelatedSlot()));
-  addButton("Faces"      , SLOT(selectFacesSlot()));
-  addButton("Points"     , SLOT(selectPointsSlot()));
-  addButton("Clear"      , SLOT(deselectSlot()));
-  addButton("Dump"       , SLOT(selectDumpSlot()));
+  ui.addButton("Parent"     , SLOT(selectParentSlot()));
+  ui.addButton("By Material", SLOT(selectRelatedSlot()));
+  ui.addButton("Faces"      , SLOT(selectFacesSlot()));
+  ui.addButton("Points"     , SLOT(selectPointsSlot()));
+  ui.addButton("Clear"      , SLOT(deselectSlot()));
+  ui.addButton("Dump"       , SLOT(selectDumpSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endGroup();
+  ui.endGroup();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // 3D/Objects
-  startTabPage("Objects");
+  ui.startTabPage("Objects");
 
   objectsData_.objectsList = new CQCamera3DObjectsList(canvas);
 
-  currentLayout->addWidget(objectsData_.objectsList);
+  ui.addWidget(objectsData_.objectsList);
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  objectsData_.autoSelectCheck = addLabelEdit("Auto Select", new QCheckBox);
+  objectsData_.autoSelectCheck = ui.addLabelEdit("Auto Select", new QCheckBox);
 
-  addButton("Select", SLOT(objectSelectSlot()));
-  addButton("Zoom"  , SLOT(objectZoomSlot()));
+  ui.addButton("Select", SLOT(objectSelectSlot()));
+  ui.addButton("Zoom"  , SLOT(objectZoomSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  startGroup("Add");
+  ui.startGroup("Add");
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Cube"    , SLOT(addCubeSlot()));
-  addButton("Cylinder", SLOT(addCylinderSlot()));
-  addButton("Pyramid" , SLOT(addPyramidSlot()));
-  addButton("Sphere"  , SLOT(addSphereSlot()));
-  addButton("Torus"   , SLOT(addTorusSlot()));
+  ui.addButton("Cube"    , SLOT(addCubeSlot()));
+  ui.addButton("Cylinder", SLOT(addCylinderSlot()));
+  ui.addButton("Pyramid" , SLOT(addPyramidSlot()));
+  ui.addButton("Sphere"  , SLOT(addSphereSlot()));
+  ui.addButton("Torus"   , SLOT(addTorusSlot()));
 
-  addButton("Load", SLOT(loadModelSlot()));
-  addButton("Save", SLOT(saveModelSlot()));
+  ui.addButton("Load", SLOT(loadModelSlot()));
+  ui.addButton("Save", SLOT(saveModelSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  endGroup();
+  ui.endGroup();
 
-  endTabPage();
+  ui.endTabPage();
 
-  endTabPage();
+  ui.endTabPage();
 
-  endTab();
+  ui.endTab();
 
   //------
 
   // Overview
 
-  startTabPage("Overview");
+  ui.startTabPage("Overview");
 
-  overviewData_.equalScale = addLabelEdit("Equal Scale", new QCheckBox);
+  overviewData_.equalScale = ui.addLabelEdit("Equal Scale", new QCheckBox);
 
-  overviewData_.mouseTypeCombo = addLabelEdit("Mouse", new QComboBox);
+  overviewData_.mouseTypeCombo = ui.addLabelEdit("Mouse", new QComboBox);
   overviewData_.mouseTypeCombo->addItems(mouseTypeInd.names());
 
-  overviewData_.selectTypeCombo = addLabelEdit("Select", new QComboBox);
+  overviewData_.selectTypeCombo = ui.addLabelEdit("Select", new QComboBox);
   overviewData_.selectTypeCombo->addItems(selectTypeInd.names());
 
-  startGroup("Model");
+  ui.startGroup("Model");
 
-  overviewData_.modelTypeCombo = addLabelEdit("Type", new QComboBox);
+  overviewData_.modelTypeCombo = ui.addLabelEdit("Type", new QComboBox);
   overviewData_.modelTypeCombo->addItems(overviewModelTypeInd.names());
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Camera");
+  ui.startGroup("Camera");
 
-  overviewData_.cameraCheck = addLabelEdit("Visible", new QCheckBox);
+  overviewData_.cameraCheck = ui.addLabelEdit("Visible", new QCheckBox);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Lights");
+  ui.startGroup("Lights");
 
-  overviewData_.lightsCheck = addLabelEdit("Visible", new QCheckBox);
+  overviewData_.lightsCheck = ui.addLabelEdit("Visible", new QCheckBox);
 
-  endGroup();
+  ui.endGroup();
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // UV
 
-  startTabPage("UV");
+  ui.startTabPage("UV");
 
-  uvData_.typeCombo = addLabelEdit("Texture", new QComboBox);
+  uvData_.typeCombo = ui.addLabelEdit("Texture", new QComboBox);
   uvData_.typeCombo->addItems(uvTextureTypeInd.names());
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // Textures
 
-  startTabPage("Textures");
+  ui.startTabPage("Textures");
 
   texturesData_.textureList = new CQCamera3DTextureList(canvas);
 
-  currentLayout->addWidget(texturesData_.textureList);
+  ui.addWidget(texturesData_.textureList);
 
-  startGroup("Current");
+  ui.startGroup("Current");
 
-  texturesData_.flipCheck = addLabelEdit("Flip", new QCheckBox);
+  texturesData_.flipCheck = ui.addLabelEdit("Flip", new QCheckBox);
 
-  endGroup();
+  ui.endGroup();
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Add Texture", SLOT(addTextureSlot()));
+  ui.addButton("Add Texture", SLOT(addTextureSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  addStretch();
+  ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // Materials
 
-  startTabPage("Materials");
+  ui.startTabPage("Materials");
 
   materialsData_.materialList = new CQCamera3DMaterialList(app_);
 
-  currentLayout->addWidget(materialsData_.materialList);
+  ui.addWidget(materialsData_.materialList);
 
-  startGroup("General");
+  ui.startGroup("General");
 
-  materialsData_.twoSidedCheck = addLabelEdit("Two Sided", new QCheckBox);
+  materialsData_.twoSidedCheck = ui.addLabelEdit("Two Sided", new QCheckBox);
 
-  materialsData_.shadingCombo = addLabelEdit("Shading", new QComboBox);
+  materialsData_.shadingCombo = ui.addLabelEdit("Shading", new QComboBox);
   materialsData_.shadingCombo->addItems(materialShadingInd.names());
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Colors");
+  ui.startGroup("Colors");
 
-  materialsData_.ambientEdit  = addLabelEdit("Ambient" , new CQColorEdit);
-  materialsData_.diffuseEdit  = addLabelEdit("Diffuse" , new CQColorEdit);
-  materialsData_.specularEdit = addLabelEdit("Specular", new CQColorEdit);
-  materialsData_.emissionEdit = addLabelEdit("Emission", new CQColorEdit);
+  materialsData_.ambientEdit  = ui.addLabelEdit("Ambient" , new CQColorEdit);
+  materialsData_.diffuseEdit  = ui.addLabelEdit("Diffuse" , new CQColorEdit);
+  materialsData_.specularEdit = ui.addLabelEdit("Specular", new CQColorEdit);
+  materialsData_.emissionEdit = ui.addLabelEdit("Emission", new CQColorEdit);
 
-  materialsData_.shininessEdit = addLabelEdit("Shininess", new CQRealSpin);
+  materialsData_.shininessEdit = ui.addLabelEdit("Shininess", new CQRealSpin);
 
-  materialsData_.transparencyEdit = addLabelEdit("Transparency", new CQRealSpin);
+  materialsData_.transparencyEdit = ui.addLabelEdit("Transparency", new CQRealSpin);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Textures");
+  ui.startGroup("Textures");
 
   materialsData_.ambientTextureEdit =
-    addLabelEdit("Ambient" , new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Ambient" , new CQCamera3DTextureChooser(app_));
   materialsData_.diffuseTextureEdit =
-    addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Diffuse" , new CQCamera3DTextureChooser(app_));
   materialsData_.normalTextureEdit =
-    addLabelEdit("Normal"  , new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Normal"  , new CQCamera3DTextureChooser(app_));
   materialsData_.specularTextureEdit =
-    addLabelEdit("Specular", new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Specular", new CQCamera3DTextureChooser(app_));
   materialsData_.emissiveTextureEdit =
-    addLabelEdit("Emissive", new CQCamera3DTextureChooser(app_));
+    ui.addLabelEdit("Emissive", new CQCamera3DTextureChooser(app_));
 
-  endGroup();
+  ui.endGroup();
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
-  addButton("Add Material", SLOT(addMaterialSlot()));
+  ui.addButton("Add Material", SLOT(addMaterialSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // Bones
 
-  startTabPage("Bones");
+  ui.startTabPage("Bones");
 
-  startGroup("Show");
+  ui.startGroup("Show");
 
-  bonesData_.modelCheck       = addLabelEdit("Model", new QCheckBox);
-  bonesData_.boneNodesCheck   = addLabelEdit("Bone Nodes", new QCheckBox);
-  bonesData_.pointJointsCheck = addLabelEdit("Point Joints", new QCheckBox);
-  bonesData_.onlyJointsCheck  = addLabelEdit("Only Joints", new QCheckBox);
+  bonesData_.modelCheck       = ui.addLabelEdit("Model", new QCheckBox);
+  bonesData_.boneNodesCheck   = ui.addLabelEdit("Bone Nodes", new QCheckBox);
+  bonesData_.pointJointsCheck = ui.addLabelEdit("Point Joints", new QCheckBox);
+  bonesData_.onlyJointsCheck  = ui.addLabelEdit("Only Joints", new QCheckBox);
 
-  endGroup();
+  ui.endGroup();
 
   bonesData_.bonesList = new CQCamera3DBonesList(app_);
-  currentLayout->addWidget(bonesData_.bonesList);
+  ui.addWidget(bonesData_.bonesList);
 
-  bonesData_.nodeLabel = addLabelEdit("Node", new CQTextLabel);
+  bonesData_.nodeLabel = ui.addLabelEdit("Node", new CQTextLabel);
 
-  bonesData_.childrenLabel = addLabelEdit("Children", new CQTextLabel);
+  bonesData_.childrenLabel = ui.addLabelEdit("Children", new CQTextLabel);
 
-  bonesData_.jointCheck = addLabelEdit("Is Joint", new QCheckBox);
+  bonesData_.jointCheck = ui.addLabelEdit("Is Joint", new QCheckBox);
 
-  bonesData_.objectLabel = addLabelEdit("Object", new CQTextLabel);
+  bonesData_.objectLabel = ui.addLabelEdit("Object", new CQTextLabel);
 
-  startGroup("Default");
+  ui.startGroup("Default");
 
-  bonesData_.translationEdit = addLabelEdit("Translation", new CQPoint3DEdit);
-  bonesData_.rotationEdit    = addLabelEdit("Rotation"   , new CQPoint4DEdit);
-  bonesData_.scaleEdit       = addLabelEdit("Scale"      , new CQPoint3DEdit);
+  bonesData_.translationEdit = ui.addLabelEdit("Translation", new CQPoint3DEdit);
+  bonesData_.rotationEdit    = ui.addLabelEdit("Rotation"   , new CQPoint4DEdit);
+  bonesData_.scaleEdit       = ui.addLabelEdit("Scale"      , new CQPoint3DEdit);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Animation");
+  ui.startGroup("Animation");
 
-  bonesData_.animTranslationEdit = addLabelEdit("Translation", new CQPoint3DEdit);
-  bonesData_.animRotationEdit    = addLabelEdit("Rotation"   , new CQPoint4DEdit);
-  bonesData_.animScaleEdit       = addLabelEdit("Scale"      , new CQPoint3DEdit);
+  bonesData_.animTranslationEdit = ui.addLabelEdit("Translation", new CQPoint3DEdit);
+  bonesData_.animRotationEdit    = ui.addLabelEdit("Rotation"   , new CQPoint4DEdit);
+  bonesData_.animScaleEdit       = ui.addLabelEdit("Scale"      , new CQPoint3DEdit);
 
-  endGroup();
+  ui.endGroup();
 
-  //addStretch();
+  //ui.addStretch();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
   // Animation
 
-  startTabPage("Animation");
+  ui.startTabPage("Animation");
 
-  animData_.animCombo    = addLabelEdit("Name", new CQCamera3DAnimChooser(app_));
-  animData_.timeEdit     = addLabelEdit("Time", new CQRealSpin);
-  animData_.timeStepEdit = addLabelEdit("Step", new CQRealSpin);
+  animData_.animCombo    = ui.addLabelEdit("Name", new CQCamera3DAnimChooser(app_));
+  animData_.timeEdit     = ui.addLabelEdit("Time", new CQRealSpin);
+  animData_.timeStepEdit = ui.addLabelEdit("Step", new CQRealSpin);
 
   auto addToolButton = [&](const QString &name, const QString &iconName,
                            const QString &tip, const char *slotName) {
@@ -1099,22 +927,22 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
     connect(button, SIGNAL(clicked()), this, slotName);
 
-    currentLayout->addWidget(button);
+    ui.addWidget(button);
 
     return button;
   };
 
-  startFrame(/*horizontal*/true);
+  ui.startFrame(/*horizontal*/true);
 
   animData_.playButton  = addToolButton("play" , "PLAY"    , "Play" , SLOT(playSlot()));
   animData_.pauseButton = addToolButton("pause", "PAUSE"   , "Pause", SLOT(pauseSlot()));
   animData_.stepButton  = addToolButton("step" , "PLAY_ONE", "Step" , SLOT(stepSlot()));
 
-  addStretch();
+  ui.addStretch();
 
-  endFrame();
+  ui.endFrame();
 
-  animData_.nodeLabel = addLabelEdit("Node", new CQTextLabel);
+  animData_.nodeLabel = ui.addLabelEdit("Node", new CQTextLabel);
 
   auto createTableWidget = []() {
     auto *table = new QTableWidget;
@@ -1124,51 +952,47 @@ CQCamera3DControl(CQCamera3DApp *app) :
     return table;
   };
 
-  startGroup("Translation");
+  ui.startGroup("Translation");
 
-  animData_.translationInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.translationInterpCombo = ui.addLabelEdit("Interpolation", new QComboBox);
   animData_.translationInterpCombo->addItems(animInterpolationInd.names());
 
   animData_.animTranslationTable = createTableWidget();
-  currentLayout->addWidget(animData_.animTranslationTable);
+  ui.addWidget(animData_.animTranslationTable);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Rotation");
+  ui.startGroup("Rotation");
 
-  animData_.rotationInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.rotationInterpCombo = ui.addLabelEdit("Interpolation", new QComboBox);
   animData_.rotationInterpCombo->addItems(animInterpolationInd.names());
 
   animData_.animRotationTable = createTableWidget();
-  currentLayout->addWidget(animData_.animRotationTable);
+  ui.addWidget(animData_.animRotationTable);
 
-  endGroup();
+  ui.endGroup();
 
-  startGroup("Scale");
+  ui.startGroup("Scale");
 
-  animData_.scaleInterpCombo = addLabelEdit("Interpolation", new QComboBox);
+  animData_.scaleInterpCombo = ui.addLabelEdit("Interpolation", new QComboBox);
   animData_.scaleInterpCombo->addItems(animInterpolationInd.names());
 
   animData_.animScaleTable = createTableWidget();
-  currentLayout->addWidget(animData_.animScaleTable);
+  ui.addWidget(animData_.animScaleTable);
 
-  endGroup();
+  ui.endGroup();
 
-  endTabPage();
+  ui.endTabPage();
 
   //------
 
-  endTab();
+  ui.endTab();
 
   connectSlots(true);
 
   updateWidgets();
 
-  if (! layoutStack.empty()) std::cerr << "Bad layout stack\n";
-  if (! groupStack.empty()) std::cerr << "Bad group stack\n";
-  if (! frameStack.empty()) std::cerr << "Bad frame stack\n";
-  if (! tabStack.empty()) std::cerr << "Bad tab stack\n";
-  if (! pageStack.empty()) std::cerr << "Bad page stack\n";
+  ui.validate();
 }
 
 void
@@ -1608,10 +1432,7 @@ updateWidgets()
   }
 
   // Textures
-  auto *currentTexture = dynamic_cast<CQCamera3DTexture *>(
-    app_->getTextureByName(app_->currentTexture().toStdString()));
-
-  texturesData_.flipCheck->setChecked(currentTexture ? currentTexture->isFlipped() : false);
+  updateTextures(/*disconnect*/false);
 
   // Materials
   materialsData_.materialList->updateMaterials();
@@ -1650,8 +1471,28 @@ updateWidgets()
 
 void
 CQCamera3DControl::
+updateTextures(bool disconnect)
+{
+  if (disconnect)
+    connectSlots(false);
+
+  auto *currentTexture = dynamic_cast<CQCamera3DTexture *>(
+    app_->getTextureById(app_->currentTextureId()));
+
+  texturesData_.flipCheck->setChecked(currentTexture ? currentTexture->isFlipped() : false);
+
+  if (disconnect)
+    connectSlots(true);
+}
+
+void
+CQCamera3DControl::
 connectSlots(bool b)
 {
+  assert(b != connected_);
+
+  connected_ = b;
+
   CQUtil::connectDisconnect(b, app_, SIGNAL(timerStep()),
                             this, SLOT(timerSlot()));
 
@@ -1868,6 +1709,9 @@ connectSlots(bool b)
   connectComboBox(uvData_.typeCombo, SLOT(uvTextureTypeSlot(int)));
 
   // Textures
+  CQUtil::connectDisconnect(b, app_, SIGNAL(currentTextureChanged()),
+                            this, SLOT(updateTextures()));
+
   connectCheckBox(texturesData_.flipCheck, SLOT(textureFlipSlot(int)));
 
   // Bones
@@ -2699,15 +2543,18 @@ resetCameraSlot()
   auto maxSize1 = s2*maxSize + camera->near();
 
   auto origin = CVector3D(center.x, center.y, center.z);
-  auto pos    = CVector3D(center.x, center.y, center.z + maxSize1);
+  auto pos    = CVector3D(center.x, center.y + maxSize1/2.0, center.z + maxSize1);
 
   camera->setPosition(pos);
 
-  camera->setPitch(0.0);
-  camera->setYaw(-M_PI/2.0);
+  camera->setPitch(-M_PI/6.0);
+  camera->setYaw(0.0);
   camera->setRoll(0.0);
 
   camera->setOrigin(origin);
+
+  camera->moveAroundX(0.1);
+  camera->moveAroundY(0.1);
 }
 
 void
@@ -3872,7 +3719,7 @@ CQCamera3DControl::
 textureFlipSlot(int i)
 {
   auto *currentTexture = dynamic_cast<CQCamera3DTexture *>(
-    app_->getTextureByName(app_->currentTexture().toStdString()));
+    app_->getTextureById(app_->currentTextureId()));
   if (! currentTexture) return;
 
   currentTexture->setFlipped(i);

@@ -49,6 +49,9 @@ CQCamera3DSidebar(CQCamera3DApp *app) :
   rotateButton_ = addCheckButton("rotate", "ROTATE", "Rotate");
   scaleButton_  = addCheckButton("scale" , "SCALE" , "Scale" );
 
+  extrudeButton_ = addToolButton("extrude" , "EXTRUDE" , "Extrude" );
+  loopCutButton_ = addToolButton("loopcut" , "LOOP_CUT", "Loop Cut");
+
   selectButton_->setChecked(true);
 
   layout->addStretch(1);
@@ -70,6 +73,9 @@ CQCamera3DSidebar::
 connectSlots(bool b)
 {
   CQUtil::connectDisconnect(b,
+    app_->canvas(), SIGNAL(editTypeChanged()), this, SLOT(updateButtonState()));
+
+  CQUtil::connectDisconnect(b,
     selectButton_, SIGNAL(toggled(bool)), this, SLOT(selectSlot(bool)));
   CQUtil::connectDisconnect(b,
     cursorButton_, SIGNAL(toggled(bool)), this, SLOT(cursorSlot(bool)));
@@ -79,108 +85,84 @@ connectSlots(bool b)
     rotateButton_, SIGNAL(toggled(bool)), this, SLOT(rotateSlot(bool)));
   CQUtil::connectDisconnect(b,
     scaleButton_, SIGNAL(toggled(bool)), this, SLOT(scaleSlot(bool)));
+
+  CQUtil::connectDisconnect(b,
+    extrudeButton_, SIGNAL(clicked()), this, SLOT(extrudeSlot()));
+  CQUtil::connectDisconnect(b,
+    loopCutButton_, SIGNAL(clicked()), this, SLOT(loopCutSlot()));
 }
 
 void
 CQCamera3DSidebar::
-selectSlot(bool state)
+selectSlot(bool)
 {
-  connectSlots(false);
-
-  if (state) {
-    for (auto *button : checkButtons_)
-      button->setChecked(false);
-
-    selectButton_->setChecked(true);
-  }
-  else
-    selectButton_->setChecked(true);
-
   editType_ = CQCamera3DEditType::SELECT;
 
   updateEditType();
 
-  connectSlots(true);
+  updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
 cursorSlot(bool state)
 {
-  connectSlots(false);
-
-  for (auto *button : checkButtons_)
-    button->setChecked(false);
-
-  if (state)
-    cursorButton_->setChecked(true);
-  else
-    selectButton_->setChecked(true);
-
   editType_ = (state ? CQCamera3DEditType::CURSOR : CQCamera3DEditType::SELECT);
 
   updateEditType();
 
-  connectSlots(true);
+  updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
 moveSlot(bool state)
 {
-  connectSlots(false);
-
-  for (auto *button : checkButtons_)
-    button->setChecked(false);
-
-  if (state)
-    moveButton_->setChecked(true);
-  else
-    selectButton_->setChecked(true);
-
   editType_ = (state ? CQCamera3DEditType::MOVE : CQCamera3DEditType::SELECT);
 
   updateEditType();
 
-  connectSlots(true);
+  updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
 rotateSlot(bool state)
 {
-  connectSlots(false);
-
-  for (auto *button : checkButtons_)
-    button->setChecked(false);
-
-  if (state)
-    rotateButton_->setChecked(true);
-  else
-    selectButton_->setChecked(true);
-
   editType_ = (state ? CQCamera3DEditType::ROTATE : CQCamera3DEditType::SELECT);
 
   updateEditType();
 
-  connectSlots(true);
+  updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
 scaleSlot(bool state)
 {
+  editType_ = (state ? CQCamera3DEditType::SCALE : CQCamera3DEditType::SELECT);
+
+  updateEditType();
+
+  updateButtonState();
+}
+
+void
+CQCamera3DSidebar::
+updateButtonState()
+{
   connectSlots(false);
 
-  for (auto *button : checkButtons_)
-    button->setChecked(false);
+  if      (view_ == View::CANVAS)
+    editType_ = app_->canvas()->editType();
+  else if (view_ == View::OVERVIEW)
+    editType_ = app_->overview()->editType();
 
-  if (state)
-    scaleButton_->setChecked(true);
-  else
-    selectButton_->setChecked(true);
-
-  editType_ = (state ? CQCamera3DEditType::SCALE : CQCamera3DEditType::SELECT);
+  selectButton_->setChecked(editType_ == CQCamera3DEditType::SELECT);
+  cursorButton_->setChecked(editType_ == CQCamera3DEditType::CURSOR);
+  moveButton_  ->setChecked(editType_ == CQCamera3DEditType::MOVE);
+  rotateButton_->setChecked(editType_ == CQCamera3DEditType::ROTATE);
+  scaleButton_ ->setChecked(editType_ == CQCamera3DEditType::SCALE);
 
   connectSlots(true);
 }
@@ -189,8 +171,28 @@ void
 CQCamera3DSidebar::
 updateEditType()
 {
+  connectSlots(false);
+
   if      (view_ == View::CANVAS)
     app_->canvas()->setEditType(editType_);
   else if (view_ == View::OVERVIEW)
     app_->overview()->setEditType(editType_);
+
+  connectSlots(true);
+}
+
+void
+CQCamera3DSidebar::
+extrudeSlot()
+{
+  app_->canvas()->extrude();
+
+  app_->canvas()->extrudeMode();
+}
+
+void
+CQCamera3DSidebar::
+loopCutSlot()
+{
+  app_->canvas()->loopCut();
 }

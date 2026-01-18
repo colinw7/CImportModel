@@ -120,8 +120,8 @@ class CQCamera3DApp : public QFrame {
 
   //---
 
-  const QString &currentTexture() const { return currentTexture_; }
-  void setCurrentTexture(const QString &s);
+  int currentTextureId() const { return currentTextureId_; }
+  void setCurrentTextureId(int id);
 
   //---
 
@@ -167,6 +167,7 @@ class CQCamera3DApp : public QFrame {
   //---
 
   CGeomTexture *getTextureByName(const std::string &name) const;
+  CGeomTexture *getTextureById(int id) const;
 
   //---
 
@@ -233,7 +234,7 @@ class CQCamera3DApp : public QFrame {
   double  time_         { 0.0 };
 
   // textures
-  QString currentTexture_;
+  int currentTextureId_ { -1 };
 
   // material
   QString currentMaterial_;

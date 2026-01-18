@@ -6,10 +6,13 @@
 #include <vector>
 
 class CGeomFace3D;
+class CGeomLine3D;
+
 class CQGLTexture;
 
 struct CQCamera3DFaceData {
   CGeomFace3D*     face            { nullptr };
+  CGeomLine3D*     line            { nullptr };
   bool             selected        { false };
   bool             visible         { true };
   bool             wireframe       { false };
