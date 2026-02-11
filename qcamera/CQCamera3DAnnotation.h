@@ -4,6 +4,8 @@
 #include <CQCamera3DObject.h>
 
 class CQCamera3DAnnotation : public CQCamera3DObject {
+  Q_OBJECT
+
  public:
   CQCamera3DAnnotation(CQCamera3DCanvas *canvas);
 
@@ -14,16 +16,20 @@ class CQCamera3DAnnotation : public CQCamera3DObject {
 
   //---
 
-  void updateGeometry();
-
   void drawGeometry();
+
+  void drawMoveDirection();
+  void drawCamera();
 
   //---
 
   CQCamera3DShaderProgram *shaderProgram() override;
 
+ public Q_SLOTS:
+  void updateGeometry();
+
  private:
-  bool wireframe_ { true };
+  bool wireframe_ { false };
 };
 
 #endif

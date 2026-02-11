@@ -1,5 +1,4 @@
 #include <CQCamera3DCanvas.h>
-#include <CQCamera3DObjectData.h>
 #include <CQCamera3DApp.h>
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DFaceData.h>
@@ -20,13 +19,21 @@
 #include <CQCamera3DTexture.h>
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DGeomFace.h>
-#include <CQCamera3DUtil.h>
+#include <CQCamera3DCanvasMouseModeIFace.h>
 #include <CQCamera3DMouseMode.h>
 #include <CQCamera3DOpWidget.h>
+#include <CQCamera3DUtil.h>
 
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
 #include <CQGLUtil.h>
+#ifdef CQ_PERF_GRAPH
+#include <CQPerfMonitor.h>
+#else
+struct CQPerfTrace {
+  CQPerfTrace(const char *) { }
+};
+#endif
 
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
@@ -52,7 +59,7 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
     camera->setId(cameras_.size() + 1);
 
-    camera->setName(name);
+    camera->setName(name.toStdString());
 
     camera->setPerspective(perspective);
 
@@ -64,6 +71,8 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   };
 
   perspectiveCamera_ = addCamera("perspective");
+
+  debugCamera_ = addCamera("debug");
 
   setCurrentCamera(cameras_[0]);
 
@@ -97,9 +106,11 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
   //---
 
-  mouseModeMgr_ = new CQCamera3DMouseModeMgr(this);
+  mouseModeIFace_ = new CQCamera3DCanvasMouseModeIFace(this);
 
-  opWidget_ = new CQCamera3DOpWidget(this);
+  mouseModeMgr_ = new CQCamera3DMouseModeMgr(mouseModeIFace_);
+
+  opWidget_ = new CQCamera3DOpWidget(this, mouseModeMgr_);
 
   hideOptions();
 
@@ -115,8 +126,12 @@ void
 CQCamera3DCanvas::
 updateQuadCameras()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::updateQuadCameras");
+
+  auto s = std::sqrt(2.0);
+
   auto center  = CVector3D(bbox_.getCenter());
-  auto maxSize = bbox_.getMaxSize();
+  auto maxSize = s*bbox_.getMaxSize();
 
   topCamera_->setPitch(-M_PI/2.0);
   topCamera_->setYaw(M_PI/2.0);
@@ -169,6 +184,8 @@ void
 CQCamera3DCanvas::
 addLight()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::addLight");
+
   auto id = uint(lights_.size() + 1);
 
   auto name = QString("light.%1").arg(id);
@@ -192,13 +209,15 @@ void
 CQCamera3DCanvas::
 resetLight(CQCamera3DLight *light)
 {
+  CQPerfTrace trace("CQCamera3DCanvas::resetLight");
+
   light->setDirection(CVector3D(0, 1, 0));
 
   if (bbox_.isSet()) {
     auto center  = bbox_.getCenter();
     auto maxSize = bbox_.getMaxSize();
 
-    light->setPosition(CPoint3D(center.x, center.y + maxSize, center.z));
+    light->setPosition(CPoint3D(center.x + maxSize/2, center.y + maxSize/2.0, center.z + maxSize));
 
     light->setPointRadius(2*maxSize);
 
@@ -219,6 +238,8 @@ void
 CQCamera3DCanvas::
 initializeGL()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::initializeGL");
+
   initializeOpenGLFunctions();
 
   //---
@@ -554,6 +575,8 @@ void
 CQCamera3DCanvas::
 resizeGL(int width, int height)
 {
+  CQPerfTrace trace("CQCamera3DCanvas::resizeGL");
+
   setPixelWidth (width);
   setPixelHeight(height);
 
@@ -572,6 +595,8 @@ void
 CQCamera3DCanvas::
 paintGL()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::paintGL");
+
   // clear canvas
   glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
 
@@ -613,8 +638,10 @@ paintGL()
 
 void
 CQCamera3DCanvas::
-drawContents(CQCamera3DCamera *camera)
+drawContents(CGLCameraIFace *camera)
 {
+  CQPerfTrace trace("CQCamera3DCanvas::drawContents");
+
   cameraData_.camera = camera;
 
   // camera projection
@@ -684,13 +711,14 @@ drawContents(CQCamera3DCamera *camera)
 
 //overlay2D_->drawGeometry();
 
-  if (! isQuadView())
+  if (! isQuadView() && viewType_ == ViewType::PERSPECTIVE) {
     overlay_->drawGeometry();
+  }
 }
 
 void
 CQCamera3DCanvas::
-setCurrentCamera(CQCamera3DCamera *camera)
+setCurrentCamera(CGLCameraIFace *camera)
 {
   setCurrentCameraInd(camera->id());
 }
@@ -723,14 +751,6 @@ isShowAxes() const
   return (axes_ && axes_->isVisible());
 }
 
-void
-CQCamera3DCanvas::
-setShowAxes(bool b)
-{
-  if (axes_)
-    axes_->setVisible(b);
-}
-
 CQCamera3DShaderProgram *
 CQCamera3DCanvas::
 shaderProgram()
@@ -757,6 +777,8 @@ void
 CQCamera3DCanvas::
 addObjectsData()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::addObjectsData");
+
   bbox_ = CBBox3D();
 
   //---
@@ -772,7 +794,7 @@ addObjectsData()
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
-    auto *objectData = initObjectData(io, object);
+    //(void) initObjectData(io, object);
 
     //---
 
@@ -781,7 +803,7 @@ addObjectsData()
 
     //---
 
-    auto *buffer = objectData->initBuffer();
+    auto *buffer = object1->initBuffer(this);
 
     //---
 
@@ -798,7 +820,13 @@ addObjectsData()
 
     int pos = 0;
 
-    auto addFaceData = [&](const CGeomFace3D *face, bool reverse=false) {
+    auto addFaceData = [&](CGeomFace3D *face, bool reverse=false) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      face1->clearPoints();
+
+      //---
+
       CQCamera3DFaceData faceData;
 
       faceData.face = const_cast<CGeomFace3D *>(face);
@@ -889,6 +917,8 @@ addObjectsData()
         auto model1 = meshMatrix *model;
         auto model2 = modelMatrix*model1;
 
+        face1->addPoint(model2);
+
         //---
 
         // update color, normal for custom vertex value
@@ -964,14 +994,14 @@ addObjectsData()
 
       pos += faceData.len;
 
-      objectData->addFaceData(faceData);
+      object1->addFaceData(faceData);
     };
 
     //---
 
     const auto &faces = object->getFaces();
 
-    for (const auto *face : faces) {
+    for (auto *face : faces) {
       addFaceData(face);
 
       auto *faceMaterial = const_cast<CGeomFace3D *>(face)->getMaterialP();
@@ -1052,12 +1082,12 @@ addObjectsData()
 
       pos += faceData.len;
 
-      objectData->addFaceData(faceData);
+      object1->addFaceData(faceData);
     }
 
     //---
 
-    objectData->setBBox(bbox1);
+    object1->setBBox(bbox1);
 
     bbox_ += bbox1;
 
@@ -1074,10 +1104,14 @@ addObjectsData()
   }
 }
 
+//---
+
 void
 CQCamera3DCanvas::
 initCamera()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::initCamera");
+
   auto center  = bbox_.getCenter();
   auto maxSize = bbox_.getMaxSize();
 
@@ -1101,8 +1135,45 @@ initCamera()
 
 void
 CQCamera3DCanvas::
+resetCamera(CGLCameraIFace *camera)
+{
+  auto bbox = this->bbox();
+
+  auto center  = bbox.getCenter();
+  auto maxSize = bbox.getMaxSize();
+
+  auto s2 = std::sqrt(2.0);
+
+  auto maxSize1 = s2*maxSize + camera->near();
+
+  auto origin = CVector3D(center.x, center.y, center.z);
+  auto pos    = CVector3D(center.x, center.y + maxSize1/2.0, center.z + maxSize1);
+
+  if (camera == debugCamera_) {
+    origin = CVector3D(center.x, center.y, center.z);
+    pos    = CVector3D(center.x, center.y, center.z + maxSize1/4.0);
+  }
+
+  camera->setPosition(pos);
+
+  camera->setPitch(-M_PI/6.0);
+  camera->setYaw(0.0);
+  camera->setRoll(0.0);
+
+  camera->setOrigin(origin);
+
+  camera->moveAroundX(0.1);
+  camera->moveAroundY(0.1);
+}
+
+//---
+
+void
+CQCamera3DCanvas::
 updateStatus()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::updateStatus");
+
   auto center = bbox_.getCenter();
   auto size   = bbox_.getSize();
 
@@ -1137,6 +1208,8 @@ void
 CQCamera3DCanvas::
 drawObjectsData()
 {
+  CQPerfTrace trace("CQCamera3DCanvas::drawObjectsData");
+
   auto *program = this->shaderProgram();
 
   program->bind();
@@ -1180,9 +1253,30 @@ drawObjectsData()
 
   //---
 
-  auto *scene = app_->getScene();
+  auto selectColor    = (editMode() == EditMode::OBJECT ? this->selectColor() : this->focusColor());
+  auto wireframeColor = this->wireframeColor();
 
-  for (auto *object : scene->getObjects()) {
+  auto wireframeTransparency = 0.5f;
+
+  program->setUniformValue("selectColor", CQGLUtil::toVector(ColorToVector(selectColor)));
+  program->setUniformValue("wireframeColor", CQGLUtil::toVector(ColorToVector(wireframeColor)));
+
+  program->setUniformValue("wireframeTransparency", wireframeTransparency);
+
+  //---
+
+  Objects objects;
+
+  if (isLocalMode()) {
+    objects = getSelectedObjects();
+  }
+  else {
+    auto *scene = app_->getScene();
+
+    objects = scene->getObjects();
+  }
+
+  for (auto *object : objects) {
     if (! object->getVisible())
       continue;
 
@@ -1221,9 +1315,13 @@ drawObjectsData()
 
     bool objectSelected = object->getHierSelected();
 
-    auto *objectData = getObjectData(object);
+    object1->buffer()->bind();
 
-    objectData->buffer()->bind();
+    //---
+
+    auto *objectMaterial = object->getMaterialP();
+
+    //---
 
     auto drawFace = [&](const CQCamera3DFaceData &faceData, double transparency) {
       bool faceSelected = faceData.face->getSelected();
@@ -1324,7 +1422,7 @@ drawObjectsData()
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
 
-    for (const auto &faceData : objectData->faceDatas()) {
+    for (const auto &faceData : object1->faceDatas()) {
       if      (faceData.face) {
         auto *face = faceData.face;
 
@@ -1332,6 +1430,9 @@ drawObjectsData()
           continue;
 
         auto *faceMaterial = face->getMaterialP();
+
+        if (! faceMaterial && objectMaterial)
+          faceMaterial = objectMaterial;
 
         if (faceMaterial && faceMaterial->transparency() > 0.0) {
           anyTransparent = true;
@@ -1379,13 +1480,16 @@ drawObjectsData()
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       glDepthMask(GL_FALSE);
 
-      for (const auto &faceData : objectData->faceDatas()) {
+      for (const auto &faceData : object1->faceDatas()) {
         auto *face = faceData.face;
 
         if (! face->getVisible())
           continue;
 
         auto *faceMaterial = face->getMaterialP();
+
+        if (! faceMaterial && objectMaterial)
+          faceMaterial = objectMaterial;
 
         if (! faceMaterial || faceMaterial->transparency() <= 0.0)
           continue;
@@ -1425,7 +1529,7 @@ drawObjectsData()
 
     //---
 
-    objectData->buffer()->unbind();
+    object1->buffer()->unbind();
   }
 
   //---
@@ -1437,11 +1541,17 @@ void
 CQCamera3DCanvas::
 addShaderLights(CQCamera3DShaderProgram *program)
 {
+  CQPerfTrace trace("CQCamera3DCanvas::addShaderLights");
+
   program->setUniformValue("ambientColor", CQGLUtil::toVector(ambientColor()));
   program->setUniformValue("ambientStrength", float(ambientStrength()));
 
-  program->setUniformValue("diffuseStrength" , float(diffuseStrength()));
+  program->setUniformValue("diffuseStrength", float(diffuseStrength()));
+
+  program->setUniformValue("specularColor"   , CQGLUtil::toVector(specularColor()));
   program->setUniformValue("specularStrength", float(specularStrength()));
+
+  program->setUniformValue("emissionColor"   , CQGLUtil::toVector(emissiveColor()));
   program->setUniformValue("emissiveStrength", float(emissiveStrength()));
 
   program->setUniformValue("fixedDiffuse", isFixedDiffuse());
@@ -1510,6 +1620,8 @@ void
 CQCamera3DCanvas::
 updateNodeMatrices(CGeomObject3D *object)
 {
+  CQPerfTrace trace("CQCamera3DCanvas::updateNodeMatrices");
+
   // anim data always on root object
   auto *rootObject = object->getRootObject();
 
@@ -1577,18 +1689,6 @@ defaultRootObject() const
 
 CGeomObject3D *
 CQCamera3DCanvas::
-getObject(int ind) const
-{
-  for (auto &objectData : objectDatas_) {
-    if (objectData->ind() == ind)
-      return const_cast<CGeomObject3D *>(objectData->object());
-  }
-
-  return nullptr;
-}
-
-CGeomObject3D *
-CQCamera3DCanvas::
 getGeomObject(CGeomObject3D *object) const
 {
   if (! object->getFaces().empty())
@@ -1602,44 +1702,6 @@ getGeomObject(CGeomObject3D *object) const
   return nullptr;
 }
 
-CQCamera3DObjectData *
-CQCamera3DCanvas::
-getObjectData(CGeomObject3D *object) const
-{
-  for (auto &objectData : objectDatas_) {
-    if (objectData->object() == object)
-      return objectData;
-  }
-
-  return nullptr;
-}
-
-CQCamera3DObjectData *
-CQCamera3DCanvas::
-initObjectData(int io, CGeomObject3D *object)
-{
-  bool changed = false;
-
-  while (int(objectDatas_.size()) <= io) {
-    auto *data = new CQCamera3DObjectData(this);
-
-    data->setInd(objectDatas_.size() + 1);
-
-    objectDatas_.push_back(data);
-
-    changed = true;
-  }
-
-  auto *objectData = objectDatas_[io];
-
-  objectData->setObject(object);
-
-  if (changed)
-    Q_EMIT objectsChanged();
-
-  return objectData;
-}
-
 //---
 
 void
@@ -1650,8 +1712,13 @@ setEditType(const EditType &v)
 
   auto *object = currentObject();
 
-  if      (editType_ == EditType::MOVE) {
-    auto *mode = new CQCamera3DMoveMouseMode(object);
+  if      (editType_ == EditType::CURSOR) {
+    auto *mode = new CQCamera3DCursorMouseMode(object);
+
+    mouseModeMgr_->startMode(mode);
+  }
+  else if (editType_ == EditType::MOVE) {
+    auto *mode = new CQCamera3DMoveMouseMode;
 
     mouseModeMgr_->startMode(mode);
   }
@@ -1673,6 +1740,36 @@ setEditType(const EditType &v)
 
 void
 CQCamera3DCanvas::
+setLocalMode(bool b)
+{
+  localMode_ = b;
+
+  updateObjectsData();
+}
+
+//---
+
+CQCamera3DCanvas::SelectType
+CQCamera3DCanvas::
+calcSelectType() const
+{
+  if (editMode() == EditMode::OBJECT)
+    return SelectType::OBJECT;
+  else
+    return selectType_;
+}
+
+void
+CQCamera3DCanvas::
+setSelectType(const SelectType &v)
+{
+  selectType_ = v;
+
+  Q_EMIT selectTypeChanged();
+}
+
+void
+CQCamera3DCanvas::
 selectAllObjects()
 {
   auto *scene = app_->getScene();
@@ -1686,29 +1783,51 @@ selectAllObjects()
     object1->setSelected(true);
   }
 
-  setCurrentObject(dynamic_cast<CQCamera3DGeomObject *>(object), /*update*/ false);
-  setCurrentFace  (nullptr, /*update*/ false);
-  setCurrentVertex(nullptr, /*update*/ false);
+  updateCurrentObject();
 
   this->update();
 }
 
 bool
 CQCamera3DCanvas::
-selectObject(CGeomObject3D *object, bool update)
+selectObjects(const Objects &objects, bool clear, bool update)
 {
-  auto changed = deselectAll(update);
+  bool changed = false;
+
+  if (clear)
+    changed = deselectAll(update);
+
+  for (auto *object : objects) {
+    if (selectObject(object, /*clear*/false, /*update*/false))
+      changed = true;
+  }
+
+  if (changed && update) {
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+
+  return changed;
+}
+
+bool
+CQCamera3DCanvas::
+selectObject(CGeomObject3D *object, bool clear, bool update)
+{
+  bool changed = false;
+
+  if (clear)
+    changed = deselectAll(update);
 
   if (! object->getSelected()) {
     object->setSelected(true);
     changed = true;
   }
 
-  setCurrentObject(dynamic_cast<CQCamera3DGeomObject *>(object), /*update*/ false);
-  setCurrentFace  (nullptr, /*update*/ false);
-  setCurrentVertex(nullptr, /*update*/ false);
-
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
@@ -1731,11 +1850,9 @@ selectFace(CGeomFace3D *face, bool clear, bool update)
     changed = true;
   }
 
-  setCurrentObject(nullptr, /*update*/ false);
-  setCurrentFace  (face   , /*update*/ false);
-  setCurrentVertex(nullptr, /*update*/ false);
-
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
@@ -1760,10 +1877,9 @@ selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update)
     }
   }
 
-  setCurrentObject(nullptr, /*update*/ false);
-  setCurrentFace  (! faces.empty() ? faces[0] : nullptr, /*update*/ false);
-
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
@@ -1774,35 +1890,39 @@ selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update)
 
 void
 CQCamera3DCanvas::
-selectFaceEdge(CGeomFace3D *face, int ind)
+selectFaceEdge(CGeomFace3D *face, int ind, bool clear, bool update)
 {
-  deselectAll(/*update*/ false);
+  if (clear)
+    deselectAll(/*update*/ false);
 
   auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
 
   face1->selectEdge(ind);
 
-  this->update();
+  if (update) {
+    this->update();
 
-  Q_EMIT stateChanged();
+    Q_EMIT stateChanged();
+  }
 }
 
 bool
 CQCamera3DCanvas::
-selectVertex(CGeomVertex3D *vertex, bool update)
+selectVertex(CGeomVertex3D *vertex, bool clear, bool update)
 {
-  auto changed = deselectAll(update);
+  auto changed = false;
+
+  if (clear)
+    changed = deselectAll(update);
 
   if (! vertex->isSelected()) {
     vertex->setSelected(true);
     changed = true;
   }
 
-  setCurrentObject(nullptr, /*update*/ false);
-  setCurrentFace  (nullptr, /*update*/ false);
-  setCurrentVertex(vertex , /*update*/ false);
-
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
@@ -1849,11 +1969,9 @@ selectVertices(const ObjectSelectInds &selectInds, bool update)
     }
   }
 
-  setCurrentObject(nullptr, /*update*/ false);
-  setCurrentFace  (nullptr, /*update*/ false);
-  setCurrentVertex(pvertex, /*update*/ false);
-
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
@@ -1909,12 +2027,66 @@ deselectAll(bool update)
   currentVertex_ = nullptr;
 
   if (changed && update) {
+    updateCurrentObject();
+
     this->update();
 
     Q_EMIT stateChanged();
   }
 
   return changed;
+}
+
+CQCamera3DCanvas::SelectData
+CQCamera3DCanvas::
+getSelection() const
+{
+  SelectData selectData;
+
+  selectData.type = calcSelectType();
+
+  if      (selectData.type == SelectType::OBJECT)
+    selectData.objects = getSelectedObjects();
+  else if (selectData.type == SelectType::FACE)
+    selectData.faces = getSelectedFaces();
+  else if (selectData.type == SelectType::EDGE)
+    selectData.faceEdges = getSelectedFaceEdges();
+  else if (selectData.type == SelectType::POINT)
+    selectData.vertices = getSelectedVertices();
+
+  return selectData;
+}
+
+void
+CQCamera3DCanvas::
+updateCurrentObject()
+{
+  auto selectData = getSelection();
+
+  setCurrentObject(nullptr, /*update*/ false);
+  setCurrentFace  (nullptr, /*update*/ false);
+  setCurrentVertex(nullptr, /*update*/ false);
+
+  if      (selectData.type == SelectType::OBJECT) {
+    if (! selectData.objects.empty())
+      setCurrentObject(selectData.objects[0], /*update*/ false);
+  }
+  else if (selectData.type == SelectType::FACE) {
+    if (! selectData.faces.empty())
+      setCurrentFace(selectData.faces[0], /*update*/ false);
+  }
+  else if (selectData.type == SelectType::POINT) {
+    if (! selectData.vertices.empty()) {
+      auto pv = selectData.vertices.begin();
+
+      auto *object = (*pv).first;
+      int   ind    = *(*pv).second.begin();
+
+      auto &vertex = object->getVertex(ind);
+
+      setCurrentVertex(&vertex, /*update*/ false);
+    }
+  }
 }
 
 std::vector<CGeomObject3D *>
@@ -1994,9 +2166,7 @@ mousePressEvent(QMouseEvent *e)
 
   mouseData_.pressed = true;
   mouseData_.button  = e->button();
-
-  mouseData_.press.x = e->x();
-  mouseData_.press.y = e->y();
+  mouseData_.press   = CPoint2D(e->x(), e->y());
 
   mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
   mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
@@ -2008,7 +2178,7 @@ mousePressEvent(QMouseEvent *e)
       selectObjectAtMouse();
     }
     else if (editType() == EditType::CURSOR) {
-      moveCursorToMouse();
+      moveCursorToMouse(CPoint3D(mouseData_.press));
     }
   }
   else if (mouseData_.button == Qt::RightButton) {
@@ -2049,7 +2219,7 @@ mouseMoveEvent(QMouseEvent *e)
   else if (mouseData_.button == Qt::MiddleButton) {
     // TODO: move current light
     if (viewType_ == ViewType::PERSPECTIVE) {
-      auto *camera = getCurrentCamera();
+      auto *camera = getInteractiveCamera();
 
       if      (mouseData_.isShift) {
         camera->movePosition(0, dx1);
@@ -2069,7 +2239,7 @@ mouseMoveEvent(QMouseEvent *e)
   }
   else if (mouseData_.button == Qt::RightButton) {
     if (viewType_ == ViewType::PERSPECTIVE) {
-      auto *camera = getCurrentCamera();
+      auto *camera = getInteractiveCamera();
 
       // calc eye line
       calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
@@ -2115,15 +2285,13 @@ wheelEvent(QWheelEvent *e)
 
   //---
 
-  if (viewType_ == ViewType::PERSPECTIVE) {
-    auto d = bbox_.getMaxSize()/100.0;
+  auto d = bbox_.getMaxSize()/100.0;
 
-    auto dw = e->angleDelta().y()/250.0;
+  auto dw = e->angleDelta().y()/250.0;
 
-    auto *camera = getCurrentCamera();
+  auto *camera = getInteractiveCamera();
 
-    camera->zoom(dw*d);
-  }
+  camera->moveFront(dw*d);
 
   update();
 }
@@ -2137,6 +2305,8 @@ selectObjectAtMouse()
   auto *camera = getCurrentCamera();
 
   auto useAnim = (app_->animName() != "");
+
+  auto selectType = calcSelectType();
 
   //---
 
@@ -2178,9 +2348,21 @@ selectObjectAtMouse()
   CLine3D line(eyeLine_.px1, eyeLine_.px2);
 
   // intersect eye line with object faces
-  auto *scene = app_->getScene();
+  Objects objects;
 
-  for (auto *object : scene->getObjects()) {
+  if      (editMode() == EditMode::EDIT) {
+    objects = selectedObjects_;
+  }
+  else if (isLocalMode()) {
+    objects = getSelectedObjects();
+  }
+  else {
+    auto *scene = app_->getScene();
+
+    objects = scene->getObjects();
+  }
+
+  for (auto *object : objects) {
     if (! object->getVisible())
       continue;
 
@@ -2234,7 +2416,7 @@ selectObjectAtMouse()
 
       auto np = points.size();
 
-      if      (selectType() == SelectType::OBJECT || selectType() == SelectType::FACE) {
+      if      (selectType == SelectType::OBJECT || selectType == SelectType::FACE) {
         if (np < 3) continue;
 
         // add face if inside
@@ -2264,7 +2446,7 @@ selectObjectAtMouse()
             i3 = 0;
         }
       }
-      else if (selectType() == SelectType::EDGE) {
+      else if (selectType == SelectType::EDGE) {
         if (np < 3) continue;
 
         // intersect line with face and find nearest edge to intersect point
@@ -2313,7 +2495,7 @@ selectObjectAtMouse()
           }
         }
       }
-      else if (selectType() == SelectType::POINT) {
+      else if (selectType == SelectType::POINT) {
         // add point if closed
         for (uint i = 0; i < np; ++i) {
           auto d = points[i].distanceTo(eyeLine_.px1);
@@ -2343,16 +2525,26 @@ selectObjectAtMouse()
 
   bool changed = false;
 
-  if      (selectType() == SelectType::OBJECT) {
+  if      (selectType == SelectType::OBJECT) {
     if (! tfaces.empty()) {
       const auto &insideFace = insideFaces[tfaces.begin()->second];
 
       auto *object = insideFace.face->getObject();
 
-      changed = selectObject(object, /*update*/false);
+      // toggle selection
+      if (mouseData_.isControl) {
+        if (! object->getSelected())
+          object->setSelected(true);
+        else
+          object->setSelected(false);
+
+        changed = true;
+      }
+      else
+        changed = selectObject(object, clear, /*update*/false);
     }
   }
-  else if (selectType() == SelectType::FACE) {
+  else if (selectType == SelectType::FACE) {
     if (! tfaces.empty()) {
       const auto &insideFace = insideFaces[tfaces.begin()->second];
 
@@ -2361,19 +2553,19 @@ selectObjectAtMouse()
       setIntersectPoints(insideFace.ipoint, insideFace.ipoint);
     }
   }
-  else if (selectType() == SelectType::EDGE) {
+  else if (selectType == SelectType::EDGE) {
     if (insideFace.face) {
-      selectFaceEdge(insideFace.face, insideFace.edge);
+      selectFaceEdge(insideFace.face, insideFace.edge, /*clear*/true, /*update*/true);
       changed = true;
     }
   }
-  else if (selectType() == SelectType::POINT) {
+  else if (selectType == SelectType::POINT) {
     if (insideFace.face) {
       auto *object = insideFace.face->getObject();
 
       for (auto *vertex : object->getVertices()) {
         if (vertex->getInd() == uint(insideFace.vertex)) {
-          changed = selectVertex(vertex, /*update*/false);
+          changed = selectVertex(vertex, /*clear*/true, /*update*/false);
         }
       }
     }
@@ -2381,6 +2573,8 @@ selectObjectAtMouse()
 
   if (changed) {
     addObjectsData();
+
+    updateCurrentObject();
 
     updateAnnotation();
 
@@ -2392,10 +2586,10 @@ selectObjectAtMouse()
 
 void
 CQCamera3DCanvas::
-moveCursorToMouse()
+moveCursorToMouse(const CPoint3D &p)
 {
   // get eye line in view coords
-  calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+  calcEyeLine(p, eyeLine_);
   setEyeLineLabel();
 
   CLine3D line(eyeLine_.pp1, eyeLine_.pp2);
@@ -2477,12 +2671,28 @@ setEyeLineLabel()
 
 //---
 
+bool
+CQCamera3DCanvas::
+event(QEvent *e)
+{
+  if (e->type() == QEvent::KeyPress) {
+    auto *ke = static_cast<QKeyEvent *>(e);
+
+    if (ke->key() == Qt::Key_Tab) {
+      keyPressEvent(ke);
+      return true;
+    }
+  }
+
+  return CQCamera3DWidget::event(e);
+}
+
 void
 CQCamera3DCanvas::
 keyPressEvent(QKeyEvent *e)
 {
   if (e->key() == Qt::Key_Escape) {
-    endMouseMode();
+    mouseModeMgr_->endAllModes();
     return;
   }
 
@@ -2495,14 +2705,47 @@ keyPressEvent(QKeyEvent *e)
 
   //---
 
+  if (e->key() == Qt::Key_Tab) {
+    setEditMode(editMode() == EditMode::OBJECT ? EditMode::EDIT : EditMode::OBJECT);
+    return;
+  }
+
+  //---
+
   mouseData_.isShift   = (e->modifiers() & Qt::ShiftModifier);
   mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
 
-  if      (mouseType_ == MouseType::CAMERA)
+  if      (editType_ == EditType::CAMERA) {
     cameraKeyPress(e);
-  else if (mouseType_ == MouseType::LIGHT)
+    return;
+  }
+  else if (editType_ == EditType::LIGHT) {
     lightKeyPress(e);
-  else if (mouseType_ == MouseType::OBJECT)
+    return;
+  }
+  else if (editType_ == EditType::SELECT) {
+    if (! mouseData_.isShift && ! mouseData_.isControl) {
+      if      (e->key() == Qt::Key_G) { // Grab
+        setEditType(EditType::MOVE);
+        return;
+      }
+      else if (e->key() == Qt::Key_S) { // Scale
+        setEditType(EditType::SCALE);
+        return;
+      }
+      else if (e->key() == Qt::Key_R) { // Rotate
+        setEditType(EditType::ROTATE);
+        return;
+      }
+      else if (e->key() == Qt::Key_E) { // Extrude
+        extrudeMode();
+        return;
+      }
+    }
+  }
+
+#if 0
+  if      (mouseType_ == MouseType::OBJECT)
     objectKeyPress(e);
   else if (mouseType_ == MouseType::FACE)
     faceKeyPress(e);
@@ -2510,6 +2753,7 @@ keyPressEvent(QKeyEvent *e)
     edgeKeyPress(e);
   else if (mouseType_ == MouseType::POINT)
     pointKeyPress(e);
+#endif
 }
 
 void
@@ -2518,7 +2762,7 @@ cameraKeyPress(QKeyEvent *e)
 {
   // TODO: use camera vectors
 
-  auto *camera = getCurrentCamera();
+  auto *camera = getInteractiveCamera();
 
   auto k = e->key();
 
@@ -2565,6 +2809,12 @@ cameraKeyPress(QKeyEvent *e)
       else
         camera->moveAroundY(-10*d);
     }
+    else if (k == Qt::Key_Left) {
+      camera->moveRight(-d);
+    }
+    else if (k == Qt::Key_Right) {
+      camera->moveRight(d);
+    }
     else if (k == Qt::Key_Up) {
       camera->moveUp(d);
     }
@@ -2578,16 +2828,18 @@ cameraKeyPress(QKeyEvent *e)
       camera->moveFront(-d);
     }
     else if (k == Qt::Key_Question) {
-      std::cerr << "Key                   Shift       Control        \n";
-      std::cerr << "---  ---------------  ----------  ---------------\n";
-      std::cerr << "A    Move Left        Roll -                     \n";
-      std::cerr << "D    Move Right       Roll +                     \n";
-      std::cerr << "W    Move Front       Pitch +     Move Around X +\n";
-      std::cerr << "S    Move Back        Pitch -     Move Around X -\n";
-      std::cerr << "Q    Move Around Y +  Yaw +       Move Around Z +\n";
-      std::cerr << "E    Move Around Y -  Yaw -       Move Around Z -\n";
-      std::cerr << "Up   Move Up                                     \n";
-      std::cerr << "Down Move Down                                   \n";
+      std::cerr << "Key                    Shift       Control        \n";
+      std::cerr << "---   ---------------  ----------  ---------------\n";
+      std::cerr << "A     Move Left        Roll -                     \n";
+      std::cerr << "D     Move Right       Roll +                     \n";
+      std::cerr << "W     Move Front       Pitch +     Move Around X +\n";
+      std::cerr << "S     Move Back        Pitch -     Move Around X -\n";
+      std::cerr << "Q     Move Around Y +  Yaw +       Move Around Z +\n";
+      std::cerr << "E     Move Around Y -  Yaw -       Move Around Z -\n";
+      std::cerr << "Left  Move Left                                   \n";
+      std::cerr << "Right Move Right                                  \n";
+      std::cerr << "Up    Move Up                                     \n";
+      std::cerr << "Down  Move Down                                   \n";
     }
   }
   else if (viewType_ == ViewType::TOP || viewType_ == ViewType::BOTTOM) { // XZ
@@ -2728,7 +2980,7 @@ faceKeyPress(QKeyEvent *e)
       for (auto *face : faces) {
         auto n = faceNormal(face);
 
-        face->moveBy(dir*d*n);
+        moveFace(face, dir*d*n);
       }
 
       updateObjectsData();
@@ -2766,7 +3018,9 @@ edgeKeyPress(QKeyEvent *e)
   else
     face->calcNormal(n);
 
-  const auto &edge = face->edge(edgeNum);
+  auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+  const auto &edge = face1->edge(edgeNum);
 
   auto *object = face->getObject();
 
@@ -2847,6 +3101,15 @@ rotateObject(CGeomObject3D *object, double da, const CVector3D &axis)
 
 void
 CQCamera3DCanvas::
+moveFace(CGeomFace3D *face, const CVector3D &d)
+{
+  face->moveBy(d);
+}
+
+//---
+
+void
+CQCamera3DCanvas::
 setCursor(const CPoint3D &v)
 {
   cursor_ = v;
@@ -2876,7 +3139,7 @@ extrude()
 
   auto d = bbox_.getMaxSize()/20.0;
 
-  setExtrudeMoveDelta(d);
+  mouseModeIFace_->setExtrudeMoveDelta(d);
 
   std::vector<CGeomFace3D *> newFaces;
 
@@ -3059,21 +3322,47 @@ cameraChanged()
   shape_->updateGeometry();
 
   Q_EMIT stateChanged();
+  Q_EMIT cameraStateChanged();
 
   update();
 }
 
-CQCamera3DCamera *
+void
 CQCamera3DCanvas::
-getCurrentCamera() const
+setDebugCamera(bool b)
 {
-  if (viewType_ == ViewType::PERSPECTIVE)
-    return getCameraById(cameraInd_);
-  else
-    return getViewCamera();
+  enableDebugCamera_ = b;
+
+  Q_EMIT cameraStateChanged();
+
+  update();
 }
 
-CQCamera3DCamera *
+CGLCameraIFace *
+CQCamera3DCanvas::
+getInteractiveCamera() const
+{
+  if (isDebugCamera())
+    return debugCamera_;
+  else
+    return getCurrentCamera();
+}
+
+CGLCameraIFace *
+CQCamera3DCanvas::
+getCurrentCamera(bool view) const
+{
+  if (! view)
+    return getCameraById(cameraInd_);
+  else {
+    if (viewType_ == ViewType::PERSPECTIVE)
+      return getCameraById(cameraInd_);
+    else
+      return getViewCamera();
+  }
+}
+
+CGLCameraIFace *
 CQCamera3DCanvas::
 getCameraById(uint id) const
 {
@@ -3153,7 +3442,7 @@ updateOverlay2D()
 
 //---
 
-CQCamera3DGeomObject *
+CGeomObject3D *
 CQCamera3DCanvas::
 currentObject(bool includeRoot) const
 {
@@ -3172,12 +3461,12 @@ currentGeomObject(bool includeRoot) const
   if (object)
     object = dynamic_cast<CQCamera3DGeomObject *>(getGeomObject(object));
 
-  return object;
+  return dynamic_cast<CQCamera3DGeomObject *>(object);
 }
 
 void
 CQCamera3DCanvas::
-setCurrentObject(CQCamera3DGeomObject *object, bool update)
+setCurrentObject(CGeomObject3D *object, bool update)
 {
   currentObject_ = object;
 
@@ -3220,7 +3509,7 @@ getSelectedFaceEdges() const
       const auto &edges = face1->selectedEdges();
 
       for (const auto &edge : edges)
-        faceEdges[face1].push_back(edge);
+        faceEdges[face].push_back(edge);
     }
   }
 
@@ -3231,34 +3520,78 @@ getSelectedFaceEdges() const
 
 void
 CQCamera3DCanvas::
+setEditMode(const EditMode &m)
+{
+  auto m1 = m;
+
+  if      (m1 == EditMode::OBJECT) {
+    selectObjects(selectedObjects_, /*clear*/true);
+
+    selectedObjects_.clear();
+  }
+  else if (m1 == EditMode::EDIT) {
+    selectedObjects_ = getSelectedObjects();
+
+    if (selectedObjects_.empty())
+      m1 = EditMode::OBJECT;
+  }
+
+  editMode_ = m1;
+
+  updateStateLabel();
+
+  Q_EMIT editModeChanged();
+}
+
+void
+CQCamera3DCanvas::
+updateStateLabel()
+{
+  QString s;
+
+  s += (editMode() == EditMode::OBJECT ? "Object" : "Edit");
+
+  if (editMode() == EditMode::EDIT) {
+    s += " : ";
+
+    if (selectedObjects_.size() == 1)
+      s += QString::fromStdString(selectedObjects_[0]->getName());
+    else
+      s += QString("#%1").arg(selectedObjects_.size());
+  }
+
+  app_->status()->setStateLabel(s);
+}
+
+//---
+
+void
+CQCamera3DCanvas::
 setViewType(const ViewType &v)
 {
   viewType_ = v;
 
-  updateQuadCameras();
+  if (updateQuad_) {
+    updateQuad_ = false;
+
+    updateQuadCameras();
+  }
 
   update();
 }
 
-CQCamera3DCamera *
+CGLCameraIFace *
 CQCamera3DCanvas::
 getViewCamera() const
 {
   switch (viewType()) {
-    case ViewType::PERSPECTIVE:
-      return perspectiveCamera_;
-    case ViewType::TOP:
-      return topCamera_;
-    case ViewType::BOTTOM:
-      return bottomCamera_;
-    case ViewType::LEFT:
-      return leftCamera_;
-    case ViewType::RIGHT:
-      return rightCamera_;
-    case ViewType::FRONT:
-      return frontCamera_;
-    case ViewType::BACK:
-      return backCamera_;
+    case ViewType::PERSPECTIVE: return perspectiveCamera_;
+    case ViewType::TOP        : return topCamera_;
+    case ViewType::BOTTOM     : return bottomCamera_;
+    case ViewType::LEFT       : return leftCamera_;
+    case ViewType::RIGHT      : return rightCamera_;
+    case ViewType::FRONT      : return frontCamera_;
+    case ViewType::BACK       : return backCamera_;
   }
 
   return perspectiveCamera_;
@@ -3279,56 +3612,63 @@ setMoveDirection(const MoveDirection &v)
 
 //---
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addCircle()
 {
-  addObject("circle", AddObjectType::CIRCLE);
+  return addObject("circle", AddObjectType::CIRCLE);
 }
 
-void
+CGeomObject3D *
+CQCamera3DCanvas::
+addCone()
+{
+  return addObject("cone", AddObjectType::CONE);
+}
+
+CGeomObject3D *
 CQCamera3DCanvas::
 addCube()
 {
-  addObject("cube", AddObjectType::CUBE);
+  return addObject("cube", AddObjectType::CUBE);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addCylinder()
 {
-  addObject("cylinder", AddObjectType::CYLINDER);
+  return addObject("cylinder", AddObjectType::CYLINDER);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addPlane()
 {
-  addObject("plane", AddObjectType::PLANE);
+  return addObject("plane", AddObjectType::PLANE);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addPyramid()
 {
-  addObject("pyramid", AddObjectType::PYRAMID);
+  return addObject("pyramid", AddObjectType::PYRAMID);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addSphere()
 {
-  addObject("sphere", AddObjectType::SPHERE);
+  return addObject("sphere", AddObjectType::SPHERE);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addTorus()
 {
-  addObject("torus", AddObjectType::TORUS);
+  return addObject("torus", AddObjectType::TORUS);
 }
 
-void
+CGeomObject3D *
 CQCamera3DCanvas::
 addObject(const std::string &typeName, const AddObjectType &type)
 {
@@ -3348,6 +3688,10 @@ addObject(const std::string &typeName, const AddObjectType &type)
   mode->updateObject();
 
   Q_EMIT objectAdded();
+
+  selectObject(object, /*clear*/true, /*update*/true);
+
+  return object;
 }
 
 void
@@ -3371,14 +3715,6 @@ hideOptions()
   opWidget_->hide();
 }
 
-void
-CQCamera3DCanvas::
-endMouseMode()
-{
-  while (mouseModeMgr_->depth() > 0)
-    (void) mouseModeMgr_->endMode();
-}
-
 //---
 
 bool
@@ -3389,11 +3725,11 @@ createFontTexture(uint *texture, int w, int h, uchar *data)
 
   // allocate texture id
   glGenTextures(1, texture);
-  //if (! checkError("glGenTextures")) return false;
+  if (! checkError("glGenTextures")) return false;
 
   // set texture type
   glBindTexture(GL_TEXTURE_2D, *texture);
-  //if (! checkError("glGenTexture")) return false;
+  if (! checkError("glBindTexture")) return false;
 
 #if 0
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

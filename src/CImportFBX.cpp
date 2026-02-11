@@ -2584,6 +2584,28 @@ processDataTree(PropDataTree *tree)
                                  propertyTemplate == "KFbxSkeleton") {
                           // ???
                         }
+                        else if (propertyTemplate == "FbxLight") {
+                          if      (propName == "AreaLightShape") {
+                          }
+                          else if (propName == "CastLight") {
+                          }
+                          else if (propName == "CastShadows") {
+                          }
+                          else if (propName == "Color") {
+                          }
+                          else if (propName == "DecayStart") {
+                          }
+                          else if (propName == "DecayType") {
+                          }
+                          else if (propName == "Intensity") {
+                          }
+                          else if (propName == "LightType") {
+                          }
+                          else if (propName == "ShadowColor") {
+                          }
+                          else
+                            unhandledDataName(treeName4, propertyTemplate + "/" + propName);
+                        }
                         else if (propertyTemplate == "FbxNull" ||
                                  propertyTemplate == "KFbxNull") {
                           // ???
@@ -3827,6 +3849,8 @@ processDataTree(PropDataTree *tree)
                 }
                 else if (pd3.first == "Matrix") {
                   poseNodeData.matrix = getPropertyDoubleArray(pd3.second);
+                }
+                else if (pd3.first == "Local") {
                 }
                 else
                   unhandledDataName(treeName2, pd3.first);
@@ -5215,7 +5239,7 @@ bool
 CImportFBX::
 loadTexture(TextureData *textureData, std::string &fileName)
 {
-  std::vector<std::string> fileNames;
+  std::set<std::string> fileNames;
 
   auto addFileName = [&](const std::string &fname) {
     if (fname == "")
@@ -5223,10 +5247,19 @@ loadTexture(TextureData *textureData, std::string &fileName)
 
     auto fname1 = remapFile(fname);
 
-    if (fname1 != fname)
-      fileNames.push_back(fname1);
+    fileNames.insert(fname1);
+    fileNames.insert(fname);
 
-    fileNames.push_back(fname);
+    if (textureDir() != "") {
+      auto fname2 = fname;
+
+      auto p = fname2.rfind('/');
+
+      if (p != std::string::npos)
+        fname2 = fname2.substr(p + 1);
+
+      fileNames.insert(textureDir() + "/" + fname2);
+    }
   };
 
   addFileName(textureData->fileName);
@@ -5243,7 +5276,7 @@ loadTexture(TextureData *textureData, std::string &fileName)
   }
 
   if (fileName == "") {
-    fileName = fileNames.front();
+    fileName = *fileNames.begin();
     return false;
   }
 

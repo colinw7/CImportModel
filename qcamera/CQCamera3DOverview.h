@@ -4,17 +4,20 @@
 #include <CQCamera3DApp.h>
 
 #include <CWindowRange2D.h>
-//#include <CDisplayRange2D.h>
-#include <CWindowRange2D.h>
 #include <CMatrix3DH.h>
 #include <CPoint3D.h>
+#include <CRGBA.h>
 
 #include <QFrame>
 
 #include <map>
 
 class CQCamera3DApp;
-class CQCamera3DCamera;
+class CGLCameraIFace;
+class CQCamera3DOpWidget;
+class CQCamera3DOverviewMouseModeIFace;
+class CQCamera3DMouseModeMgr;
+class CQCamera3DOptions;
 
 class CGeomFace3D;
 class CGeomLine3D;
@@ -39,9 +42,9 @@ class CQCamera3DOverview : public QFrame {
     THREED
   };
 
-  using EditType   = CQCamera3DEditType;
-  using SelectType = CQCamera3DSelectType;
-  using MouseType  = CQCamera3DMouseType;
+  using EditType      = CQCamera3DEditType;
+  using SelectType    = CQCamera3DSelectType;
+  using AddObjectType = CQCamera3DAddObjectType;
 
   struct ViewData {
     CDisplayRange2D range;
@@ -113,13 +116,10 @@ class CQCamera3DOverview : public QFrame {
   void setEqualScale(bool b) { equalScale_ = b; updateRange(); }
 
   const EditType &editType() const { return editType_; }
-  void setEditType(const EditType &v) { editType_ = v; }
+  void setEditType(const EditType &v);
 
   const SelectType &selectType() const { return selectType_; }
-  void setSelectType(const SelectType &v) { selectType_ = v; }
-
-  const MouseType &mouseType() const { return mouseType_; }
-  void setMouseType(const MouseType &v) { mouseType_ = v; }
+  void setSelectType(const SelectType &v);
 
   const ModelType &modelType() const { return modelType_; }
   void setModelType(const ModelType &v) { modelType_ = v; update(); }
@@ -132,6 +132,25 @@ class CQCamera3DOverview : public QFrame {
 
   //---
 
+  void setOptions(CQCamera3DOptions *options);
+  void showOptions();
+  void hideOptions();
+
+  //---
+
+  CGeomObject3D *addCircle();
+  CGeomObject3D *addCone();
+  CGeomObject3D *addCube();
+  CGeomObject3D *addCylinder();
+  CGeomObject3D *addPlane();
+  CGeomObject3D *addPyramid();
+  CGeomObject3D *addSphere();
+  CGeomObject3D *addTorus();
+
+  CGeomObject3D *addObject(const std::string &typeName, const AddObjectType &type);
+
+  //---
+
   void resizeEvent(QResizeEvent *) override;
 
   void paintEvent(QPaintEvent *) override;
@@ -140,13 +159,19 @@ class CQCamera3DOverview : public QFrame {
   void mouseReleaseEvent(QMouseEvent *e) override;
   void mouseMoveEvent   (QMouseEvent *e) override;
 
+  void wheelEvent(QWheelEvent *) override;
+
   void keyPressEvent(QKeyEvent *e) override;
 
  private:
   void updateRange();
 
-  void setCameraPosition(int x, int y, bool angle);
-  void setLightPosition(int x, int y, bool setDirection);
+  void setCameraPosition(int x, int y);
+  void setCameraOrigin(int x, int y);
+
+  void setLightPosition(int x, int y);
+  void setLightDirection(int x, int y);
+
   void setCursorPosition(int x, int y);
 
   void selectObjectAt(const QPoint &p, bool clear) ;
@@ -159,9 +184,10 @@ class CQCamera3DOverview : public QFrame {
   void selectObjectXZ(const CPoint3D &p);
 
   void drawModel();
+  void updateModel();
 
   void drawCameras();
-  void drawCamera(CQCamera3DCamera *camera);
+  void drawCamera(CGLCameraIFace *camera);
 
   void drawEyeLine();
 
@@ -171,13 +197,14 @@ class CQCamera3DOverview : public QFrame {
 
   void drawModelPolygon(const std::vector<CPoint3D> &points) const;
   void drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const;
-  void drawModelPoint(const CPoint3D &p, const QString &label) const;
+  void drawModelPoint(const CPoint3D &p) const;
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
 
   void drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const;
 
-  void drawCircle(const CVector3D &o, double r);
+  void drawCircle(const CPoint3D &o, double r);
+  void drawSphere(const CPoint3D &o, const CPoint3D &r);
 
   void drawPoint(const CVector3D &p, const QString &label) const;
 
@@ -187,14 +214,39 @@ class CQCamera3DOverview : public QFrame {
 
   CPoint2D pixelToView(ViewType viewType, const QPointF &p) const;
 
+  ViewType pixelToViewType(const QPointF &p) const;
+
   QPointF viewQPoint(ViewType viewType, const CPoint3D &p) const;
   CPoint2D viewPoint(ViewType viewType, const CPoint3D &p) const;
 
+ public Q_SLOTS:
+  void invalidate();
+
+ Q_SIGNALS:
+  void selectTypeChanged();
+  void editTypeChanged();
+
+  void objectAdded();
+
  private:
   struct FaceData {
-    CGeomFace3D*          face { nullptr };
-    CGeomLine3D*          line { nullptr };
+    CGeomFace3D*          face        { nullptr };
     std::vector<CPoint3D> points;
+    bool                  filled      { true };
+    bool                  stroked     { false };
+    CRGBA                 fillColor   { CRGBA::white() };
+    CRGBA                 strokeColor { CRGBA::black() };
+  };
+
+  struct LineData {
+    CGeomLine3D*          line  { nullptr };
+    std::vector<CPoint3D> points;
+    CRGBA                 color { CRGBA::white() };
+  };
+
+  struct VertexData {
+    CPoint3D p;
+    CRGBA    color { CRGBA::white() };
   };
 
   //---
@@ -212,14 +264,14 @@ class CQCamera3DOverview : public QFrame {
   int ind_ { -1 };
 
   bool equalScale_ { true };
+  bool valid_      { false };
 
   EditType   editType_   { EditType::SELECT };
   SelectType selectType_ { SelectType::OBJECT };
-  MouseType  mouseType_  { MouseType::OBJECT };
 
   ModelType modelType_     { ModelType::WIREFRAME };
-  bool      cameraVisible_ { true };
-  bool      lightsVisible_ { true };
+  bool      cameraVisible_ { false };
+  bool      lightsVisible_ { false };
 
   struct MouseData {
     bool   pressed   { false };
@@ -232,19 +284,40 @@ class CQCamera3DOverview : public QFrame {
 
   MouseData mouseData_;
 
-  using FaceDatas       = std::vector<FaceData>;
-  using ObjectFaceDatas = std::map<CGeomObject3D *, FaceDatas>;
+  using FaceDatas   = std::vector<FaceData *>;
+  using LineDatas   = std::vector<LineData *>;
+  using VertexDatas = std::vector<VertexData *>;
+
+  struct GeomData {
+    FaceDatas   faceDatas;
+    LineDatas   lineDatas;
+    VertexDatas vertexDatas;
+  };
+
+  using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
+
+  using Polygon2D                = std::vector<QPointF>;
+  using Polygon2DArray           = std::vector<Polygon2D>;
+  using SortedPolygon2DArray     = std::map<double, Polygon2DArray>;
+  using SortedPoint2DArray       = std::map<double, Polygon2D>;
+  using ViewSortedPolygon2DArray = std::map<int, SortedPolygon2DArray>;
+  using ViewSortedLine2DArray    = std::map<int, SortedPolygon2DArray>;
+  using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;
 
   // draw data
   struct DrawData {
-    QPainter*       painter { nullptr };
-    CMatrix3DH      projectionMatrix;
-    CMatrix3DH      viewMatrix;
-    CMatrix3DH      modelMatrix;
-    CMatrix3DH      meshMatrix;
-    ObjectFaceDatas objectFaces;
-    bool            filled  { true };
-    bool            useAnim { false };
+    QPainter*      painter { nullptr };
+    CMatrix3DH     projectionMatrix;
+    CMatrix3DH     viewMatrix;
+    CMatrix3DH     modelMatrix;
+    CMatrix3DH     meshMatrix;
+    ObjectGeomData objectGeomData;
+    bool           filled  { true };
+    bool           useAnim { false };
+
+    mutable ViewSortedPolygon2DArray viewSortedPolygon2DArray;
+    mutable ViewSortedLine2DArray    viewSortedLine2DArray;
+    mutable ViewSortedPoint2DArray   viewSortedPoint2DArray;
   };
 
   DrawData drawData_;
@@ -255,6 +328,11 @@ class CQCamera3DOverview : public QFrame {
   QPixmap lightPixmap_;
 
   CQRubberBand* rubberBand_ { nullptr };
+
+  CQCamera3DOpWidget* opWidget_ { nullptr };
+
+  CQCamera3DOverviewMouseModeIFace* mouseModeIFace_ { nullptr };
+  CQCamera3DMouseModeMgr*           mouseModeMgr_   { nullptr };
 };
 
 #endif

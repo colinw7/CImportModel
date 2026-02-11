@@ -1,10 +1,11 @@
 #ifndef CQCamera3DControl_H
 #define CQCamera3DControl_H
 
+#include <CQCamera3DApp.h>
+
 #include <QFrame>
 
-class CQCamera3DApp;
-class CQCamera3DCamera;
+class CGLCameraIFace;
 class CQCamera3DObjectsList;
 class CQCamera3DLightList;
 class CQCamera3DCameraList;
@@ -39,11 +40,12 @@ class CQCamera3DControl : public QFrame {
 
   void connectSlots(bool b);
 
-  void setCurrentControl(int i);
-
  private Q_SLOTS:
+  void viewTypeSlot();
+
   void updateWidgets();
-  void updateTextures(bool disconnect=true);
+  void updateTextureWidgets(bool disconnect=true);
+  void updateCameraWidgets (bool disconnect=true);
 
   void mainTabSlot(int);
 
@@ -53,7 +55,10 @@ class CQCamera3DControl : public QFrame {
   void showTexturedSlot(int);
   void showPointsSlot(int i);
 
+  void wireframeColorSlot(const QColor &c);
+
   void quadViewSlot(int);
+  void debugCameraSlot(int);
   void pointSizeSlot(double);
   void lineWidthSlot(double);
   void cursorSlot();
@@ -105,6 +110,8 @@ class CQCamera3DControl : public QFrame {
   void aroundZSlot1();
   void aroundZSlot2();
 
+  void aroundDeltaSlot(double d);
+
   void resetCameraSlot();
   void topCameraSlot();
   void sideCameraSlot();
@@ -136,20 +143,26 @@ class CQCamera3DControl : public QFrame {
   void resetLightSlot();
 
   // Axis
-  void showAxesSlot(int);
+  void showXAxesSlot(int);
+  void showYAxesSlot(int);
+  void showZAxesSlot(int);
 
   void axesXPosSlot(double);
   void axesYPosSlot(double);
   void axesZPosSlot(double);
 
+  void axesGridSlot(int);
+
   // Mouse
+#if 0
   void mouseTypeSlot(int);
   void editTypeSlot(int);
+#endif
   void mouseScaleSlot(double);
   void mouseBasisSlot(int);
 
   // Selection
-  void selectTypeSlot(int);
+//void selectTypeSlot(int);
 
   void objectVisSlot(int);
 
@@ -191,6 +204,7 @@ class CQCamera3DControl : public QFrame {
   void objectSelectSlot();
   void objectZoomSlot();
 
+  void addConeSlot();
   void addCubeSlot();
   void addCylinderSlot();
   void addPyramidSlot();
@@ -223,8 +237,8 @@ class CQCamera3DControl : public QFrame {
 
   // Overview
   void overviewEqualScaleSlot(int i);
-  void overviewSelectTypeSlot(int i);
-  void overviewMouseTypeSlot(int i);
+//void overviewSelectTypeSlot(int i);
+//void overviewMouseTypeSlot(int i);
   void overviewModelTypeSlot(int i);
   void overviewCameraSlot(int i);
   void overviewLightsSlot(int i);
@@ -233,7 +247,8 @@ class CQCamera3DControl : public QFrame {
   void uvTextureTypeSlot(int i);
 
   // Textures
-  void textureFlipSlot(int i);
+//void textureFlipSlot(int i);
+  void textureWrapSlot(int i);
 
   // Bones
   void bonesModelSlot(int);
@@ -267,7 +282,7 @@ class CQCamera3DControl : public QFrame {
   void updateObjects();
 
  private:
-  CQCamera3DCamera *getCamera() const;
+  CGLCameraIFace *getCamera() const;
 
  private:
   struct PlusMinusData {
@@ -279,6 +294,8 @@ class CQCamera3DControl : public QFrame {
 
   QTabWidget *mainTab_ { nullptr };
 
+  CQCamera3DViewType viewType_ { CQCamera3DViewType::NONE };
+
   // General
   struct GeneralData {
     QCheckBox* showWireframeCheck { nullptr };
@@ -286,7 +303,10 @@ class CQCamera3DControl : public QFrame {
     QCheckBox* showTexturedCheck  { nullptr };
     QCheckBox* showPointsCheck    { nullptr };
 
-    QCheckBox* quadViewCheck { nullptr };
+    CQColorEdit* wireframeColorEdit { nullptr };
+
+    QCheckBox* quadViewCheck    { nullptr };
+    QCheckBox* debugCameraCheck { nullptr };
 
     CQRealSpin*    pointSizeEdit { nullptr };
     CQRealSpin*    lineWidthEdit { nullptr };
@@ -339,6 +359,9 @@ class CQCamera3DControl : public QFrame {
     PlusMinusData aroundXButtons;
     PlusMinusData aroundYButtons;
     PlusMinusData aroundZButtons;
+    CQRealSpin*   aroundDeltaEdit { nullptr };
+
+    double aroundDelta { -1 };
   };
 
   CameraData cameraData_;
@@ -354,7 +377,9 @@ class CQCamera3DControl : public QFrame {
     CQRealSpin*    specularStrengthEdit { nullptr };
     QCheckBox*     fixedDiffuseCheck    { nullptr };
     QComboBox*     typeCombo            { nullptr };
+#if 0
     QCheckBox*     enabledCheck         { nullptr };
+#endif
     CQPoint3DEdit* directionEdit        { nullptr };
     CQPoint3DEdit* positionEdit         { nullptr };
     CQColorEdit*   colorEdit            { nullptr };
@@ -371,18 +396,22 @@ class CQCamera3DControl : public QFrame {
 
   // Axis
   struct AxisData {
-    QCheckBox* showCheck { nullptr };
+    using CheckEdit = std::pair<QCheckBox *, CQRealSpin *>;
 
-    CQRealSpin* xPosEdit { nullptr };
-    CQRealSpin* yPosEdit { nullptr };
-    CQRealSpin* zPosEdit { nullptr };
+    CheckEdit xPosEdit;
+    CheckEdit yPosEdit;
+    CheckEdit zPosEdit;
+
+    QCheckBox* gridCheck { nullptr };
   };
 
   AxisData axisData_;
 
   // Mouse
+#if 0
   QComboBox*  mouseTypeCombo_  { nullptr };
   QComboBox*  editTypeCombo_   { nullptr };
+#endif
   CQRealSpin* mouseScaleEdit_  { nullptr };
   QCheckBox*  mouseBasisCheck_ { nullptr };
 
@@ -428,7 +457,8 @@ class CQCamera3DControl : public QFrame {
   // Textures
   struct TexturesData {
     CQCamera3DTextureList* textureList { nullptr };
-    QCheckBox*             flipCheck   { nullptr };
+//  QCheckBox*             flipCheck   { nullptr };
+    QCheckBox*             wrapCheck   { nullptr };
   };
 
   TexturesData texturesData_;
@@ -460,8 +490,8 @@ class CQCamera3DControl : public QFrame {
   // Overview
   struct OverviewData {
     QCheckBox* equalScale      { nullptr };
-    QComboBox* mouseTypeCombo  { nullptr };
-    QComboBox* selectTypeCombo { nullptr };
+//  QComboBox* mouseTypeCombo  { nullptr };
+//  QComboBox* selectTypeCombo { nullptr };
     QComboBox* modelTypeCombo  { nullptr };
     QCheckBox* cameraCheck     { nullptr };
     QCheckBox* lightsCheck     { nullptr };

@@ -7,6 +7,8 @@
 #include <CMatrix3D.h>
 #include <CBBox3D.h>
 
+#include <set>
+
 class CQCamera3DCanvas;
 class CQCamera3DToolbar;
 class CQCamera3DSidebar;
@@ -22,9 +24,21 @@ class CQTabSplit;
 
 class CGeomScene3D;
 class CGeomObject3D;
+class CGeomFace3D;
 class CGeomVertex3D;
 class CGeomTexture;
 class CGeomMaterial;
+
+enum class CQCamera3DViewType {
+  NONE,
+  MODEL,
+  OVERVIEW,
+  UV,
+  TEXTURES,
+  MATERIALS,
+  BONES,
+  ANIMATION
+};
 
 enum class CQCamera3DSelectType {
   OBJECT,
@@ -36,11 +50,14 @@ enum class CQCamera3DSelectType {
 enum class CQCamera3DEditType {
   SELECT,
   CURSOR,
+  CAMERA,
+  LIGHT,
   MOVE,
   ROTATE,
   SCALE
 };
 
+#if 0
 enum class CQCamera3DMouseType {
   CAMERA,
   LIGHT,
@@ -49,6 +66,48 @@ enum class CQCamera3DMouseType {
   EDGE,
   POINT
 };
+#endif
+
+enum class CQCamera3DAddObjectType {
+  NONE,
+  CIRCLE,
+  CONE,
+  CUBE,
+  CYLINDER,
+  PLANE,
+  PYRAMID,
+  SPHERE,
+  TORUS
+};
+
+enum class CQCamera3DMoveDirection {
+  NONE,
+  X,
+  Y,
+  Z
+};
+
+//---
+
+struct CQCamera3DSelectData {
+  using SelectType = CQCamera3DSelectType;
+
+  using Objects   = std::vector<CGeomObject3D *>;
+  using Faces     = std::vector<CGeomFace3D *>;
+  using Edges     = std::vector<int>;
+  using FaceEdges = std::map<CGeomFace3D *, Edges>;
+
+  using SelectInds       = std::set<int>;
+  using ObjectSelectInds = std::map<CGeomObject3D *, SelectInds>;
+
+  SelectType       type { SelectType::OBJECT };
+  Objects          objects;
+  Faces            faces;
+  FaceEdges        faceEdges;
+  ObjectSelectInds vertices;
+};
+
+//---
 
 class CQCamera3DApp : public QFrame {
   Q_OBJECT
@@ -105,7 +164,12 @@ class CQCamera3DApp : public QFrame {
 
   //---
 
-  void setCurrentView(int i);
+  const CQCamera3DViewType &viewType() const { return viewType_; }
+
+  void setCurrentView(const CQCamera3DViewType &viewType);
+
+  int viewTypeToInd(const CQCamera3DViewType &viewType) const;
+  CQCamera3DViewType indToViewType(int ind) const;
 
   //---
 
@@ -177,6 +241,12 @@ class CQCamera3DApp : public QFrame {
 
   CBBox3D transformBBox(const CBBox3D &bbox, const CMatrix3D &matrix) const;
 
+  //---
+
+  void showMetaEdit();
+  void showPerfDialog();
+  void showAppOptions();
+
  private:
   void connectSlots(bool b);
 
@@ -186,6 +256,8 @@ class CQCamera3DApp : public QFrame {
   void timerSlot();
 
  Q_SIGNALS:
+  void viewTypeChanged();
+
   void timerStep();
 
   void modelAdded();
@@ -207,6 +279,8 @@ class CQCamera3DApp : public QFrame {
 
   // object data
   CGeomScene3D* scene_ { nullptr };
+
+  CQCamera3DViewType viewType_ { CQCamera3DViewType::NONE };
 
   //---
 

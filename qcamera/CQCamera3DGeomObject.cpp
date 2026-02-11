@@ -1,4 +1,8 @@
 #include <CQCamera3DGeomObject.h>
+#include <CQCamera3DWidget.h>
+#include <CQCamera3DShaderProgram.h>
+
+#include <CQGLBuffer.h>
 
 CQCamera3DGeomObject::
 CQCamera3DGeomObject(CGeomScene3D *pscene, const std::string &name) :
@@ -90,4 +94,29 @@ CQCamera3DGeomObject::
 setScaleValues(const CPoint3D &p)
 {
   setScale(CMatrix3D::scale(p.x, p.y, p.z));
+}
+
+//---
+
+CQGLBuffer *
+CQCamera3DGeomObject::
+initBuffer(CQCamera3DWidget *widget)
+{
+  assert(widget->shaderProgram());
+
+  if (! buffer_)
+    buffer_ = widget->shaderProgram()->createBuffer();
+
+  buffer_->clearBuffers();
+
+  faceDatas_.clear();
+
+  return buffer_;
+}
+
+void
+CQCamera3DGeomObject::
+addFaceData(const CQCamera3DFaceData &faceData)
+{
+  faceDatas_.push_back(faceData);
 }

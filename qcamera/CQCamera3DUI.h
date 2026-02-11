@@ -1,12 +1,14 @@
 #ifndef CQCamera3DUI_H
 #define CQCamera3DUI_H
 
+#include <CQIconButton.h>
 #include <CQUtil.h>
 
 #include <QGroupBox>
 #include <QCheckBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QMenuBar>
 #include <QHBoxLayout>
 
 #include <iostream>
@@ -34,18 +36,41 @@ class CQCamera3DUI {
   //---
 
   template<typename WIDGET>
-  WIDGET *addLabelEdit(const QString &label, WIDGET *w) {
+  WIDGET *addLabelEdit(const QString &labelStr, WIDGET *w) {
+    auto labelName = nameString(labelStr);
+
     auto *frame = new QFrame;
+    frame->setObjectName(QString("frame_%1").arg(labelName));
 
     auto *layout1 = new QHBoxLayout(frame);
     layout1->setMargin(2); layout1->setSpacing(2);
 
-    layout1->addWidget(new QLabel(label));
+    auto *label = new QLabel(labelStr);
+    label->setObjectName("label");
+
+    layout1->addWidget(label);
     layout1->addWidget(w);
 
     currentLayout_->addWidget(frame);
 
     return w;
+  }
+
+  template<typename WIDGET1, typename WIDGET2>
+  std::pair<WIDGET1 *, WIDGET2 *>
+  addEdit(WIDGET1 *w1, WIDGET2 *w2) {
+    auto *frame = new QFrame;
+    frame->setObjectName("frame");
+
+    auto *layout1 = new QHBoxLayout(frame);
+    layout1->setMargin(2); layout1->setSpacing(2);
+
+    layout1->addWidget(w1);
+    layout1->addWidget(w2);
+
+    currentLayout_->addWidget(frame);
+
+    return std::pair<WIDGET1 *, WIDGET2 *>(w1, w2);
   }
 
   //---
@@ -105,7 +130,7 @@ class CQCamera3DUI {
 
   //---
 
-  void startFrame(bool horizontal=false) {
+  QFrame *startFrame(bool horizontal=false) {
     frameStack_.push_back(currentFrame_);
 
     currentFrame_ = new QFrame;
@@ -124,6 +149,8 @@ class CQCamera3DUI {
     currentLayout_->addWidget(currentFrame_);
 
     startLayout(layout);
+
+    return currentFrame_;
   }
 
   void endFrame() {
@@ -180,7 +207,92 @@ class CQCamera3DUI {
 
   //---
 
+  CQIconButton *addIconButton(const QString &name, const QString &iconName, const QString &tip) {
+    auto *button = new CQIconButton;
+
+    button->setObjectName(name);
+    button->setIcon(iconName);
+    button->setIconSize(QSize(32, 32));
+    button->setAutoRaise(true);
+    button->setToolTip(tip);
+
+    currentLayout_->addWidget(button);
+
+    return button;
+  }
+
+  CQIconButton *addIconCheckButton(const QString &name, const QString &iconName,
+                                   const QString &tip) {
+    auto *button = addIconButton(name, iconName, tip);
+
+    button->setCheckable(true);
+
+    return button;
+  }
+
+  //---
+
   void addWidget(QWidget *w) { currentLayout_->addWidget(w); }
+
+  //---
+
+  QMenuBar *startMenuBar() {
+    menuBar_ = new QMenuBar;
+
+    menuBar_->setObjectName("menuBar");
+
+    currentLayout_->addWidget(menuBar_);
+
+    return menuBar_;
+  }
+
+  void endMenuBar() {
+    menuBar_ = nullptr;
+  }
+
+  QMenu *startMenu(const QString &name) {
+    menuStack_.push_back(currentMenu_);
+
+    if (! currentMenu_) {
+      if (menuBar_)
+        currentMenu_ = menuBar_->addMenu(name);
+    }
+    else
+      currentMenu_ = currentMenu_->addMenu(name);
+
+    return currentMenu_;
+  }
+
+  void endMenu() {
+    currentMenu_ = menuStack_.back();
+
+    menuStack_.pop_back();
+  }
+
+  QAction *addAction(const QString &name, const char *slotName=nullptr) {
+    auto *action = currentMenu_->addAction(name);
+
+    if (slotName)
+      QObject::connect(action, SIGNAL(triggered()), parent_, slotName);
+
+    return action;
+  }
+
+  QAction *addCheckAction(const QString &name, bool checked=false, const char *slotName=nullptr) {
+    auto *action = currentMenu_->addAction(name);
+
+    action->setCheckable(true);
+    action->setChecked(checked);
+
+    if (slotName)
+      QObject::connect(action, SIGNAL(triggered(bool)), parent_, slotName);
+
+    return action;
+  }
+
+  void addMenuSeparator() {
+    currentMenu_->addSeparator();
+  }
 
   //---
 
@@ -190,6 +302,15 @@ class CQCamera3DUI {
     if (! frameStack_ .empty()) std::cerr << "Bad frame stack\n";
     if (! tabStack_   .empty()) std::cerr << "Bad tab stack\n";
     if (! pageStack_  .empty()) std::cerr << "Bad page stack\n";
+    if (! menuStack_  .empty()) std::cerr << "Bad menu stack\n";
+    if (menuBar_              ) std::cerr << "Bad menu bar\n";
+  }
+
+ private:
+  QString nameString(const QString &str) const {
+    auto str1 = str;
+    str1.replace(" ", "_");
+    return str1;
   }
 
  private:
@@ -198,18 +319,22 @@ class CQCamera3DUI {
   QBoxLayout*               currentLayout_ { nullptr };
   std::vector<QBoxLayout *> layoutStack_;
 
-  QGroupBox*               currentGroup_ = nullptr;
+  QGroupBox*               currentGroup_ { nullptr };
   std::vector<QGroupBox *> groupStack_;
 
-  QFrame*               currentFrame_ = nullptr;
+  QFrame*               currentFrame_ { nullptr };
   std::vector<QFrame *> frameStack_;
 
 
-  QTabWidget*               currentTab_ = nullptr;
+  QTabWidget*               currentTab_ { nullptr };
   std::vector<QTabWidget *> tabStack_;
 
-  QFrame*               currentPage_ = nullptr;
+  QFrame*               currentPage_ { nullptr };
   std::vector<QFrame *> pageStack_;
+
+  QMenuBar*            menuBar_     { nullptr };
+  QMenu*               currentMenu_ { nullptr };
+  std::vector<QMenu *> menuStack_;
 };
 
 #endif

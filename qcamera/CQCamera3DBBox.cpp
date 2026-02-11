@@ -1,7 +1,6 @@
 #include <CQCamera3DBBox.h>
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DCanvas.h>
-#include <CQCamera3DObjectData.h>
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DCamera.h>
 #include <CQCamera3DApp.h>
@@ -58,9 +57,9 @@ void
 CQCamera3DBBox::
 addBufferOrientBBox(CGeomObject3D *object)
 {
-  auto *objectData = canvas_->getObjectData(object);
+  auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto *srcBuffer = objectData->buffer();
+  auto *srcBuffer = object1->buffer();
   if (! srcBuffer) return;
 
   //---

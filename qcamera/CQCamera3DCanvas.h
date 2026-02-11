@@ -3,6 +3,7 @@
 
 #include <CQCamera3DWidget.h>
 #include <CQCamera3DApp.h>
+#include <CQCamera3DMouseModeIFace.h>
 
 #include <CGLMatrix3D.h>
 #include <CMatrix3DH.h>
@@ -14,10 +15,6 @@
 
 #include <set>
 
-class CQCamera3DShaderProgram;
-class CQCamera3DObjectData;
-class CQCamera3DFaceData;
-class CQCamera3DCamera;
 class CQCamera3DLight;
 class CQCamera3DShape;
 class CQCamera3DAnnotation;
@@ -32,6 +29,7 @@ class CQCamera3DAxes;
 class CQCamera3DGeomObject;
 class CQCamera3DGeomFace;
 class CQCamera3DOpWidget;
+class CQCamera3DCanvasMouseModeIFace;
 class CQCamera3DMouseModeMgr;
 class CQCamera3DOptions;
 
@@ -39,13 +37,14 @@ class CQGLBuffer;
 class CGeomObject3D;
 class CGeomFace3D;
 class CGeomVertex3D;
+class CGLCameraIFace;
 
 class CQCamera3DCanvas : public CQCamera3DWidget {
   Q_OBJECT
 
  public:
   using SelectType = CQCamera3DSelectType;
-  using MouseType  = CQCamera3DMouseType;
+//using MouseType  = CQCamera3DMouseType;
   using EditType   = CQCamera3DEditType;
 
   struct EyeLine {
@@ -62,24 +61,19 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   using SelectInds       = std::set<int>;
   using ObjectSelectInds = std::map<CGeomObject3D *, SelectInds>;
 
-  using Cameras     = std::vector<CQCamera3DCamera *>;
-  using Lights      = std::vector<CQCamera3DLight *>;
-  using ObjectDatas = std::vector<CQCamera3DObjectData *>;
-  using Objects     = std::vector<CGeomObject3D *>;
-  using Faces       = std::vector<CGeomFace3D *>;
+  using Cameras = std::vector<CGLCameraIFace *>;
+  using Lights  = std::vector<CQCamera3DLight *>;
+  using Objects = std::vector<CGeomObject3D *>;
+  using Faces   = std::vector<CGeomFace3D *>;
 
   using Edges     = std::vector<int>;
-  using FaceEdges = std::map<CQCamera3DGeomFace *, Edges>;
+  using FaceEdges = std::map<CGeomFace3D *, Edges>;
 
-  enum class AddObjectType {
-    NONE,
-    CIRCLE,
-    CUBE,
-    CYLINDER,
-    PLANE,
-    PYRAMID,
-    SPHERE,
-    TORUS
+  using SelectData = CQCamera3DSelectData;
+
+  enum class EditMode {
+    OBJECT,
+    EDIT
   };
 
   enum class ViewType {
@@ -92,12 +86,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
     BACK
   };
 
-  enum class MoveDirection {
-    NONE,
-    X,
-    Y,
-    Z
-  };
+  using AddObjectType = CQCamera3DAddObjectType;
+  using MoveDirection = CQCamera3DMoveDirection;
 
  public:
   CQCamera3DCanvas(CQCamera3DApp *app);
@@ -109,8 +99,18 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   const CBBox3D &bbox() const { return bbox_; }
 
+  //---
+
+  CQCamera3DShaderProgram *shaderProgram() override;
+
+  //---
+
+  // cursor
+
   const CPoint3D &cursor() const { return cursor_; }
   void setCursor(const CPoint3D &v);
+
+  void moveCursorToMouse(const CPoint3D &p);
 
   //---
 
@@ -118,9 +118,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void scaleObject (CGeomObject3D *object, const CVector3D &d);
   void rotateObject(CGeomObject3D *object, double da, const CVector3D &axis);
 
-  //---
-
-  CQCamera3DShaderProgram *shaderProgram();
+  void moveFace(CGeomFace3D *face, const CVector3D &d);
 
   //---
 
@@ -143,18 +141,25 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   // cameras
   const Cameras &cameras() const { return cameras_; }
 
-  CQCamera3DCamera* getCurrentCamera() const;
-  void setCurrentCamera(CQCamera3DCamera *camera);
+  CGLCameraIFace* getCurrentCamera(bool view=true) const;
+  void setCurrentCamera(CGLCameraIFace *camera);
 
   void setCurrentCameraInd(uint ind);
   uint getCurrentCameraInd() const { return cameraInd_; }
 
-  CQCamera3DCamera* getCameraById(uint id) const;
+  CGLCameraIFace* getCameraById(uint id) const;
 
   bool isShowCamera() const { return showCamera_; }
   void setShowCamera(bool b) { showCamera_ = b; }
 
   void updateQuadCameras();
+
+  bool isDebugCamera() const { return enableDebugCamera_; }
+  void setDebugCamera(bool b);
+
+  CGLCameraIFace *debugCamera() const { return debugCamera_; }
+
+  CGLCameraIFace* getInteractiveCamera() const;
 
   //---
 
@@ -162,7 +167,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CQCamera3DAxes *axes() const { return axes_; }
 
   bool isShowAxes() const;
-  void setShowAxes(bool b);
 
   //---
 
@@ -228,6 +232,17 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  const CRGBA &selectColor() const { return selectColor_; }
+  void setSelectColor(const CRGBA &c) { selectColor_ = c; update(); }
+
+  const CRGBA &focusColor() const { return focusColor_; }
+  void setFocusColor(const CRGBA &c) { focusColor_ = c; update(); }
+
+  const CRGBA &wireframeColor() const { return wireframeColor_; }
+  void setWireframeColor(const CRGBA &c) { wireframeColor_ = c; update(); }
+
+  //---
+
   const CRGBA &ambientColor() const { return ambientColor_; }
   void setAmbientColor(const CRGBA &c) { ambientColor_ = c; update(); }
 
@@ -237,8 +252,14 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   double diffuseStrength() const { return diffuseStrength_; }
   void setDiffuseStrength(double r) { diffuseStrength_ = r; update(); }
 
+  const CRGBA &specularColor() const { return specularColor_; }
+  void setSpecularColor(const CRGBA &c) { specularColor_ = c; update(); }
+
   double specularStrength() const { return specularStrength_; }
   void setSpecularStrength(double r) { specularStrength_ = r; update(); }
+
+  const CRGBA &emissiveColor() const { return emissiveColor_; }
+  void setEmissiveColor(const CRGBA &c) { emissiveColor_ = c; update(); }
 
   double emissiveStrength() const { return emissiveStrength_; }
   void setEmissiveStrength(double r) { emissiveStrength_ = r; update(); }
@@ -248,8 +269,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+#if 0
   const MouseType &mouseType() const { return mouseType_; }
   void setMouseType(const MouseType &v) { mouseType_ = v; }
+#endif
 
   const EditType &editType() const { return editType_; }
   void setEditType(const EditType &v);
@@ -260,23 +283,33 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool isMouseBasis() const { return mouseBasis_; }
   void setMouseBasis(bool b) { mouseBasis_ = b; }
 
+  bool isLocalMode() const { return localMode_; }
+  void setLocalMode(bool b);
+
   //---
 
   const SelectType &selectType() const { return selectType_; }
-  void setSelectType(const SelectType &v) { selectType_ = v; }
+  void setSelectType(const SelectType &v);
+
+  SelectType calcSelectType() const;
 
   void selectAllObjects();
-  bool selectObject(CGeomObject3D *object, bool update=true);
+  bool selectObjects(const Objects &objects, bool clear, bool update=true);
+  bool selectObject(CGeomObject3D *object, bool clear, bool update=true);
 
-  bool selectFaces(const Faces &faces, bool clear, bool update);
-  bool selectFace(CGeomFace3D *face, bool clear, bool update);
+  bool selectFaces(const Faces &faces, bool clear, bool update=true);
+  bool selectFace(CGeomFace3D *face, bool clear, bool update=true);
 
-  void selectFaceEdge(CGeomFace3D *face, int ind);
+  void selectFaceEdge(CGeomFace3D *face, int ind, bool clear, bool update=true);
 
-  bool selectVertex(CGeomVertex3D *vertex, bool update=true);
+  bool selectVertex(CGeomVertex3D *vertex, bool clear, bool update=true);
   bool selectVertices(const ObjectSelectInds &vertices, bool update=true);
 
   bool deselectAll(bool update=true);
+
+  SelectData getSelection() const;
+
+  void updateCurrentObject();
 
   Objects          getSelectedObjects () const;
   Faces            getSelectedFaces   () const;
@@ -298,6 +331,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  void resetCamera(CGLCameraIFace *camera);
+
+  //---
+
   void updateShapes();
 
   void updateAnnotation();
@@ -309,10 +346,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
-  CQCamera3DGeomObject *currentObject(bool includeRoot=false) const;
-  CQCamera3DGeomObject *currentGeomObject(bool includeRoot=false) const;
+  CGeomObject3D *currentObject(bool includeRoot=false) const;
+  void setCurrentObject(CGeomObject3D *object, bool update);
 
-  void setCurrentObject(CQCamera3DGeomObject *object, bool update);
+  CQCamera3DGeomObject *currentGeomObject(bool includeRoot=false) const;
 
   CGeomFace3D *currentFace() const { return currentFace_; }
   void setCurrentFace(CGeomFace3D *face, bool update);
@@ -327,12 +364,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CQCamera3DGeomObject *defaultRootObject() const;
 
   //---
-
-  const ObjectDatas &getObjectDatas() const { return objectDatas_; }
-
-  CGeomObject3D *getObject(int i) const;
-
-  CQCamera3DObjectData *getObjectData(CGeomObject3D *object) const;
 
   CGeomObject3D *getGeomObject(CGeomObject3D *object) const;
 
@@ -356,10 +387,15 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  const EditMode &editMode() const { return editMode_; }
+  void setEditMode(const EditMode &v);
+
+  //---
+
   const ViewType &viewType() const { return viewType_; }
   void setViewType(const ViewType &v);
 
-  CQCamera3DCamera *getViewCamera() const;
+  CGLCameraIFace *getViewCamera() const;
 
   //---
 
@@ -368,15 +404,16 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
-  void addCircle();
-  void addCube();
-  void addCylinder();
-  void addPlane();
-  void addPyramid();
-  void addSphere();
-  void addTorus();
+  CGeomObject3D* addCircle();
+  CGeomObject3D* addCone();
+  CGeomObject3D* addCube();
+  CGeomObject3D* addCylinder();
+  CGeomObject3D* addPlane();
+  CGeomObject3D* addPyramid();
+  CGeomObject3D* addSphere();
+  CGeomObject3D* addTorus();
 
-  void addObject(const std::string &typeName, const AddObjectType &type);
+  CGeomObject3D* addObject(const std::string &typeName, const AddObjectType &type);
 
   //---
 
@@ -385,9 +422,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void extrude();
   void extrudeMove(double d);
 
-  double extrudeMoveDelta() const { return extrudeMoveDelta_; }
-  void setExtrudeMoveDelta(double r) { extrudeMoveDelta_ = r; }
-
   void loopCut();
 
   //---
@@ -395,8 +429,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void setOptions(CQCamera3DOptions *options);
   void showOptions();
   void hideOptions();
-
-  void endMouseMode();
 
   //---
 
@@ -418,7 +450,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //--
 
-  void drawContents(CQCamera3DCamera *camera);
+  void drawContents(CGLCameraIFace *camera);
 
  private:
   void drawObjectsData();
@@ -427,9 +459,9 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void updateNodeMatrices(CGeomObject3D *object);
 
-  void initCamera();
+  //---
 
-  CQCamera3DObjectData *initObjectData(int i, CGeomObject3D *o);
+  void initCamera();
 
   //---
 
@@ -439,15 +471,18 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void wheelEvent(QWheelEvent *) override;
 
+  bool event(QEvent *e) override;
+
+  void keyPressEvent(QKeyEvent *event) override;
+
+  //---
+
   void selectObjectAtMouse();
-  void moveCursorToMouse();
   void showEyelineAtMouse();
 
   void setEyeLineLabel();
 
   //---
-
-  void keyPressEvent(QKeyEvent *event) override;
 
   void cameraKeyPress(QKeyEvent *event);
   void lightKeyPress (QKeyEvent *event);
@@ -457,6 +492,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void pointKeyPress (QKeyEvent *event);
 
   void calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose=false) const;
+
+  //---
+
+  void updateStateLabel();
 
  public Q_SLOTS:
   void updateObjectsData();
@@ -470,6 +509,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
  Q_SIGNALS:
   void stateChanged();
+  void cameraStateChanged();
 
   void materialAdded();
 
@@ -482,6 +522,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void eyeLineChanged();
 
+  void editModeChanged();
+  void selectTypeChanged();
   void editTypeChanged();
 
  private:
@@ -518,30 +560,43 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool    showCamera_ { false };
 
   struct CameraData {
-    CQCamera3DCamera* camera      { nullptr };
-    CMatrix3DH        worldMatrix { CMatrix3DH::identity() };
-    CMatrix3DH        viewMatrix  { CMatrix3DH::identity() };
-    CVector3D         viewPos     { 0, 0, 0 };
+    CGLCameraIFace* camera      { nullptr };
+    CMatrix3DH      worldMatrix { CMatrix3DH::identity() };
+    CMatrix3DH      viewMatrix  { CMatrix3DH::identity() };
+    CVector3D       viewPos     { 0, 0, 0 };
   };
 
   CameraData cameraData_;
 
-  CQCamera3DCamera *perspectiveCamera_ { nullptr };
-  CQCamera3DCamera *topCamera_         { nullptr };
-  CQCamera3DCamera *bottomCamera_      { nullptr };
-  CQCamera3DCamera *frontCamera_       { nullptr };
-  CQCamera3DCamera *backCamera_        { nullptr };
-  CQCamera3DCamera *leftCamera_        { nullptr };
-  CQCamera3DCamera *rightCamera_       { nullptr };
+  CGLCameraIFace *perspectiveCamera_ { nullptr };
+  CGLCameraIFace *topCamera_         { nullptr };
+  CGLCameraIFace *bottomCamera_      { nullptr };
+  CGLCameraIFace *frontCamera_       { nullptr };
+  CGLCameraIFace *backCamera_        { nullptr };
+  CGLCameraIFace *leftCamera_        { nullptr };
+  CGLCameraIFace *rightCamera_       { nullptr };
+
+  CGLCameraIFace *debugCamera_       { nullptr };
+  bool            enableDebugCamera_ { false };
+
+  bool updateQuad_ { true };
 
   //---
 
+  CRGBA selectColor_    { CRGBA::white() };
+  CRGBA focusColor_     { CRGBA::yellow() };
+  CRGBA wireframeColor_ { CRGBA::white() };
+
   // lighting
-  CRGBA  ambientColor_    { 1, 1, 1 };
+  CRGBA  ambientColor_    { 1.0, 1.0, 1.0 };
   double ambientStrength_ { 0.1 };
 
   double diffuseStrength_  { 1.0 };
+
+  CRGBA  specularColor_    { 1.0, 1.0, 1.0 };
   double specularStrength_ { 0.2 };
+
+  CRGBA  emissiveColor_    { 1.0, 1.0, 1.0 };
   double emissiveStrength_ { 0.1 };
 
   double shininess_ { 32.0 };
@@ -587,12 +642,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
    //---
 
-  // objects
-
-  ObjectDatas objectDatas_;
-
-  //---
-
   // textures
   std::string initTextureMap_;
 
@@ -610,11 +659,15 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CPoint3D cursor_ { 0, 0, 0 };
 
+  EditMode editMode_ { EditMode::OBJECT };
+
   ViewType viewType_ { ViewType::PERSPECTIVE };
+
+  bool localMode_ { false };
 
   MoveDirection moveDirection_ { MoveDirection::NONE };
 
-  double extrudeMoveDelta_ { 0.0 };
+  Objects selectedObjects_;
 
   //---
 
@@ -647,20 +700,21 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   // interaction
 
-  MouseType mouseType_  { MouseType::OBJECT };
+//MouseType mouseType_  { MouseType::OBJECT };
   EditType  editType_   { EditType::SELECT };
   double    mouseScale_ { 0.05 };
   bool      mouseBasis_ { false };
 
-  SelectType selectType_ { SelectType::OBJECT };
+  SelectType selectType_ { SelectType::FACE };
 
-  CQCamera3DGeomObject* currentObject_ { nullptr };
-  CGeomFace3D*          currentFace_   { nullptr };
-  CGeomVertex3D*        currentVertex_ { nullptr };
+  CGeomObject3D* currentObject_ { nullptr };
+  CGeomFace3D*   currentFace_   { nullptr };
+  CGeomVertex3D* currentVertex_ { nullptr };
 
   CQCamera3DOpWidget* opWidget_ { nullptr };
 
-  CQCamera3DMouseModeMgr* mouseModeMgr_ { nullptr };
+  CQCamera3DCanvasMouseModeIFace* mouseModeIFace_ { nullptr };
+  CQCamera3DMouseModeMgr*         mouseModeMgr_   { nullptr };
 };
 
 #endif

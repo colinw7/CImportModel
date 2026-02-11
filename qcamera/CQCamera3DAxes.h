@@ -12,8 +12,19 @@ class CQCamera3DAxes : public CQCamera3DObject {
  public:
   CQCamera3DAxes(CQCamera3DCanvas *canvas);
 
-  bool isVisible() const { return visible_; }
-  void setVisible(bool b) { visible_ = b; }
+  bool isVisible() const { return isShowX() || isShowY() || isShowZ() || isShowGrid(); }
+
+  bool isShowX() const { return showX_; }
+  void setShowX(bool b) { showX_ = b; }
+
+  bool isShowY() const { return showY_; }
+  void setShowY(bool b) { showY_ = b; }
+
+  bool isShowZ() const { return showZ_; }
+  void setShowZ(bool b) { showZ_ = b; }
+
+  bool isShowGrid() const { return showGrid_; }
+  void setShowGrid(bool b) { showGrid_ = b; }
 
   double xpos() const { return xpos_; }
   void setXPos(double r) { xpos_ = r; }
@@ -31,7 +42,10 @@ class CQCamera3DAxes : public CQCamera3DObject {
   CQCamera3DShaderProgram *shaderProgram() override;
 
  private:
-  bool visible_ { false };
+  bool showX_    { false };
+  bool showY_    { false };
+  bool showZ_    { false };
+  bool showGrid_ { false };
 
   double xpos_ { 0.0 };
   double ypos_ { 0.0 };

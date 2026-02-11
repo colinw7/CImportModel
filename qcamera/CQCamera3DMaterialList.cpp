@@ -92,14 +92,9 @@ connectSlots(bool b)
 {
   CQUtil::connectDisconnect(b, app_, SIGNAL(modelAdded()), this, SLOT(invalidate()));
 
-  if (b) {
-    connect(list_, &QListWidget::currentItemChanged,
-            this, &CQCamera3DMaterialList::itemSelectedSlot);
-  }
-  else {
-    disconnect(list_, &QListWidget::currentItemChanged,
-               this, &CQCamera3DMaterialList::itemSelectedSlot);
-  }
+  CQUtil::connectDisconnect(b,
+    list_, SIGNAL(currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
+    this, SLOT(itemSelectedSlot(QListWidgetItem *, QListWidgetItem *)));
 }
 
 void

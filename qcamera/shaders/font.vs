@@ -4,20 +4,33 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
 layout (location = 2) in vec2 aTexCoords;
 
-//attribute vec4 position;
-//attribute vec2 texCoord0;
-//attribute vec3 color;
+out vec3 FragPos;
+out vec3 Color;
+out vec2 TexCoords;
 
-uniform mat4 projection;
-uniform mat4 view;
 uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
-out vec2 uv0;
-out vec3 col;
+uniform vec3 center;
+uniform vec3 cameraUp;
+uniform vec3 cameraRight;
+
+uniform bool  billboard;
+uniform float size;
 
 void main() {
-  gl_Position = projection*view*model*vec4(aPos, 1);
+  vec3 position  = aPos;
+  vec3 position1 = position;
 
-  uv0 = aTexCoords;
-  col = aColor;
+  if (billboard) {
+    position1 = center + (size*cameraRight*position.x) + (size*cameraUp*position.y);
+  }
+
+  FragPos = vec3(model*vec4(position1, 1.0));
+
+  TexCoords = aTexCoords;
+  Color     = aColor;
+
+  gl_Position = projection*view*vec4(FragPos, 1.0);
 }

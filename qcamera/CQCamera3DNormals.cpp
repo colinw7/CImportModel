@@ -1,7 +1,6 @@
 #include <CQCamera3DNormals.h>
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DCanvas.h>
-#include <CQCamera3DObjectData.h>
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DCamera.h>
 #include <CQCamera3DApp.h>
@@ -38,9 +37,9 @@ updateGeometry()
     if (! object->getVisible())
       continue;
 
-    auto *objectData = canvas_->getObjectData(object);
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-    addBufferNormals(objectData);
+    addBufferNormals(object1);
   }
 
   //---
@@ -50,12 +49,10 @@ updateGeometry()
 
 void
 CQCamera3DNormals::
-addBufferNormals(CQCamera3DObjectData *objectData)
+addBufferNormals(CQCamera3DGeomObject *object)
 {
-  auto *srcBuffer = objectData->buffer();
+  auto *srcBuffer = object->buffer();
   if (! srcBuffer) return;
-
-  auto *object = objectData->object();
 
   //---
 
@@ -140,9 +137,9 @@ addBufferNormals(CQCamera3DObjectData *objectData)
     if (! child->getVisible())
       continue;
 
-    auto *childData = canvas_->getObjectData(child);
+    auto *child1 = dynamic_cast<CQCamera3DGeomObject *>(child);
 
-    addBufferNormals(childData);
+    addBufferNormals(child1);
   }
 }
 

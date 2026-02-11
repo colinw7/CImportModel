@@ -27,7 +27,9 @@ CQCamera3DBasis.cpp \
 CQCamera3DBBox.cpp \
 CQCamera3DBillboard.cpp \
 CQCamera3DBones.cpp \
+CQCamera3DCamera.cpp \
 CQCamera3DCanvas.cpp \
+CQCamera3DCanvasMouseModeIFace.cpp \
 CQCamera3DControl.cpp \
 CQCamera3DFont.cpp \
 CQCamera3DLight.cpp \
@@ -42,6 +44,7 @@ CQCamera3DOpWidget.cpp \
 CQCamera3DOverlay2D.cpp \
 CQCamera3DOverlay.cpp \
 CQCamera3DOverview.cpp \
+CQCamera3DOverviewMouseModeIFace.cpp \
 CQCamera3DShaderProgram.cpp \
 CQCamera3DShape.cpp \
 CQCamera3DShapes.cpp \
@@ -75,6 +78,7 @@ CQMatrix3D.cpp \
 CQTextLabel.cpp \
 CQTreeWidget.cpp \
 CQRubberBand.cpp \
+CQDocumentLabel.cpp \
 
 HEADERS += \
 CDisplayRange2D.h \
@@ -87,6 +91,7 @@ CQCamera3DBillboard.h \
 CQCamera3DBones.h \
 CQCamera3DCamera.h \
 CQCamera3DCanvas.h \
+CQCamera3DCanvasMouseModeIFace.h \
 CQCamera3DControl.h \
 CQCamera3DFaceData.h \
 CQCamera3DFont.h \
@@ -102,6 +107,7 @@ CQCamera3DOpWidget.h \
 CQCamera3DOverlay2D.h \
 CQCamera3DOverlay.h \
 CQCamera3DOverview.h \
+CQCamera3DOverviewMouseModeIFace.h \
 CQCamera3DShaderProgram.h \
 CQCamera3DShape.h \
 CQCamera3DShapes.h \
@@ -137,6 +143,7 @@ CQMatrix3D.h \
 CQTextLabel.h \
 CQTreeWidget.h \
 CQRubberBand.h \
+CQDocumentLabel.h \
 \
 CWindowRange2D.h \
 stb/stb_truetype.h \

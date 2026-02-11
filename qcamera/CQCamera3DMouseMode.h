@@ -1,22 +1,31 @@
 #ifndef CQCamera3DMouseMode_H
 #define CQCamera3DMouseMode_H
 
-#include <CQCamera3DCanvas.h>
+#include <CQCamera3DApp.h>
 
 #include <CGeomCircle3D.h>
+#include <CGeomCylinder3D.h>
 #include <CGeomSphere3D.h>
 
 #include <vector>
 
 class CQCamera3DWidget;
 class CQCamera3DMouseModeMgr;
+class CQCamera3DMouseModeIFace;
+class CQCamera3DOptions;
 
 class CGeomObject3D;
 class QMouseEvent;
 class QWheelEvent;
 class QKeyEvent;
 
+//---
+
 class CQCamera3DMouseMode {
+ public:
+  using MoveDirection = CQCamera3DMoveDirection;
+  using EditType      = CQCamera3DEditType;
+
  public:
   CQCamera3DMouseMode() { }
 
@@ -24,6 +33,8 @@ class CQCamera3DMouseMode {
 
   const CQCamera3DMouseModeMgr *mgr() const { return mgr_; }
   void setMgr(CQCamera3DMouseModeMgr *p) { mgr_ = p; }
+
+  void setOptions(CQCamera3DOptions *options) { options_ = options; }
 
   virtual void begin() { }
   virtual void end  () { }
@@ -36,17 +47,18 @@ class CQCamera3DMouseMode {
 
   virtual void keyPress(QKeyEvent *) { }
 
- private:
-  CQCamera3DMouseModeMgr* mgr_ { nullptr };
+ protected:
+  CQCamera3DMouseModeMgr* mgr_     { nullptr };
+  CQCamera3DOptions*      options_ { nullptr };
 };
 
 //---
 
 class CQCamera3DMouseModeMgr {
  public:
-  CQCamera3DMouseModeMgr(CQCamera3DWidget *widget);
+  CQCamera3DMouseModeMgr(CQCamera3DMouseModeIFace *iface);
 
-  CQCamera3DWidget *widget() const { return widget_; }
+  CQCamera3DMouseModeIFace *iface() const { return iface_; }
 
   int depth() const { return mouseModeStack_.size(); }
 
@@ -56,18 +68,20 @@ class CQCamera3DMouseModeMgr {
 
   CQCamera3DMouseMode *endMode();
 
+  void endAllModes();
+
  private:
   using MouseModeStack = std::vector<CQCamera3DMouseMode *>;
 
-  CQCamera3DWidget* widget_ { nullptr };
-  MouseModeStack    mouseModeStack_;
+  CQCamera3DMouseModeIFace* iface_ { nullptr };
+  MouseModeStack            mouseModeStack_;
 };
 
 //---
 
 class CQCamera3DAddMouseMode : public CQCamera3DMouseMode {
  public:
-  using AddType = CQCamera3DCanvas::AddObjectType;
+  using AddType = CQCamera3DAddObjectType;
 
  public:
   CQCamera3DAddMouseMode(const AddType &type, CGeomObject3D *object);
@@ -99,6 +113,9 @@ class CQCamera3DAddMouseMode : public CQCamera3DMouseMode {
   const CGeomSphere3D::ConfigData &sphereConfig() const { return sphereConfig_; }
   void setSphereConfig(const CGeomSphere3D::ConfigData &config) { sphereConfig_ = config; };
 
+  const CGeomCylinder3D::ConfigData &cylinderConfig() const { return cylinderConfig_; }
+  void setCylinderConfig(const CGeomCylinder3D::ConfigData &config) { cylinderConfig_ = config; };
+
  private:
   AddType        type_   { AddType::NONE };
   CGeomObject3D* object_ { nullptr };
@@ -111,17 +128,37 @@ class CQCamera3DAddMouseMode : public CQCamera3DMouseMode {
   double power2_      { 1.0 };
   double torusRadius_ { 0.1 };
 
-  CGeomCircle3D::ConfigData circleConfig_;
-  CGeomSphere3D::ConfigData sphereConfig_;
+  CGeomCircle3D::ConfigData   circleConfig_;
+  CGeomSphere3D::ConfigData   sphereConfig_;
+  CGeomCylinder3D::ConfigData cylinderConfig_;
+};
+
+//---
+
+class CQCamera3DCursorMouseMode : public CQCamera3DMouseMode {
+ public:
+  CQCamera3DCursorMouseMode(CGeomObject3D *object);
+
+  CGeomObject3D *object() const { return object_; }
+
+  void begin() override;
+  void end  () override;
+
+  void mousePress(QMouseEvent *) override;
+
+  void keyPress(QKeyEvent *) override;
+
+ private:
+  CGeomObject3D* object_ { nullptr };
 };
 
 //---
 
 class CQCamera3DMoveMouseMode : public CQCamera3DMouseMode {
  public:
-  CQCamera3DMoveMouseMode(CGeomObject3D *object);
+  CQCamera3DMoveMouseMode();
 
-  CGeomObject3D *object() const { return object_; }
+  const CQCamera3DSelectData &selectData() const { return selectData_; }
 
   void begin() override;
   void end  () override;
@@ -129,7 +166,7 @@ class CQCamera3DMoveMouseMode : public CQCamera3DMouseMode {
   void keyPress(QKeyEvent *) override;
 
  private:
-  CGeomObject3D* object_ { nullptr };
+  CQCamera3DSelectData selectData_;
 };
 
 //---

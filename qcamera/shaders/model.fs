@@ -38,6 +38,7 @@ uniform float ambientStrength;
 uniform float diffuseStrength;
 uniform vec3  emissionColor;
 uniform float emissiveStrength;
+uniform vec3  specularColor;
 uniform float specularStrength;
 uniform float shininess;
 uniform bool  fixedDiffuse;
@@ -61,18 +62,11 @@ uniform bool isWireframe;
 
 uniform float transparency;
 
+uniform vec3  selectColor;
+uniform vec3  wireframeColor;
+uniform float wireframeTransparency;
+
 //---
-
-float calcDiffuse(vec3 lightDir, vec3 nrm) {
-  float diffAmt = max(dot(nrm, lightDir), 0.0);
-  return diffAmt;
-}
-
-float calcSpecular(vec3 lightDir, vec3 viewDir, vec3 nrm, float shininess) {
-  vec3 reflectDir = reflect(-lightDir, nrm);
-  float specAmt = max(dot(viewDir, reflectDir), 0.0);
-  return pow(specAmt, shininess);
-}
 
 vec3 calcNormal() {
   if (normalTexture.enabled) {
@@ -82,6 +76,11 @@ vec3 calcNormal() {
   }
   else
     return normalize(Normal);
+}
+
+float calcDiffuseFactor(vec3 lightDir, vec3 nrm) {
+  float diffAmt = max(dot(nrm, lightDir), 0.0);
+  return diffAmt;
 }
 
 vec3 calcDiffuseColor() {
@@ -94,17 +93,23 @@ vec3 calcDiffuseColor() {
     return textureColor.rgb;
   }
   else
-    return Color;
+    return diffuseStrength*Color;
+}
+
+float calcSpecularFactor(vec3 lightDir, vec3 viewDir, vec3 nrm, float shininess) {
+  vec3 reflectDir = reflect(-lightDir, nrm);
+  float specAmt = max(dot(viewDir, reflectDir), 0.0);
+  return pow(specAmt, shininess);
 }
 
 vec3 calcSpecularColor() {
   if (specularTexture.enabled)
     return texture(specularTexture.texture, TexCoords).rgb;
   else
-    return vec3(1, 1, 1);
+    return specularColor*specularStrength;
 }
 
-vec3 calcEmission() {
+vec3 calcEmissionColor() {
   if (emissiveTexture.enabled)
     return texture(emissiveTexture.texture, TexCoords).rgb;
   else
@@ -125,12 +130,8 @@ void main() {
   // diffuse color
   vec3 diffuseColor = calcDiffuseColor();
 
-  vec3 diffuse = diffuseStrength*diffuseColor;
-
   // specular color
   vec3 specColor = calcSpecularColor();
-
-  vec3 specular = specularStrength*specColor;
 
   vec3 viewDir = normalize(viewPos - FragPos);
 
@@ -143,24 +144,26 @@ void main() {
 
     lighted = true;
 
-    vec3 toLight  = lights[i].position - FragPos;
-    vec3 lightDir = normalize(toLight);
-
-    float diff = 1.0;
+    float diffFactor = 1.0;
 
     if      (lights[i].type == 0) { // directional
+      vec3 lightDir = normalize(lights[i].direction);
+
       // diffuse light color
       if (! fixedDiffuse)
-        diff = calcDiffuse(lights[i].direction, norm);
+        diffFactor = calcDiffuseFactor(lightDir, norm);
 
-      result += diff*lights[i].color*diffuse;
+      result += diffFactor*lights[i].color*diffuseColor;
 
       // specular light color
-      float spec = calcSpecular(lights[i].direction, viewDir, norm, shininess);
+      float specFactor = calcSpecularFactor(lightDir, viewDir, norm, shininess);
 
-      result += spec*lights[i].color*specular;
+      result += specFactor*lights[i].color*specColor;
     }
     else if (lights[i].type == 1) { // point
+      vec3 toLight    = lights[i].position - FragPos;
+      vec3 toLightDir = normalize(toLight);
+
       // diffuse light color
       float falloff = 1.0;
 
@@ -174,49 +177,54 @@ void main() {
       }
 
       if (! fixedDiffuse)
-        diff = calcDiffuse(lightDir, norm)*falloff;
+        diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
 
-      result += diff*lights[i].color*diffuse;
+      result += diffFactor*lights[i].color*diffuseColor;
 
       // specular light color
-      float spec = calcSpecular(lightDir, viewDir, norm, shininess);
+      float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
 
-      result += spec*lights[i].color*specular;
+      result += specFactor*lights[i].color*specColor;
     }
     else if (lights[i].type == 2) { // spot
+      vec3 lightDir = normalize(lights[i].direction);
+
+      vec3 toLight    = lights[i].position - FragPos;
+      vec3 toLightDir = normalize(toLight);
+
       // diffuse light color
-      float angle = dot(lights[i].direction, lightDir);
+      float angle = dot(lightDir, toLightDir);
 
       if (angle > lights[i].cutoff) {
         float falloff = pow(angle, lights[i].exponent);
 
         if (! fixedDiffuse)
-          diff = calcDiffuse(lightDir, norm)*falloff;
+          diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
 
-        result += diff*lights[i].color*diffuse;
+        result += diffFactor*lights[i].color*diffuseColor;
       }
 
       // specular light color
-      float spec = calcSpecular(lightDir, viewDir, norm, shininess);
+      float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
 
-      result += spec*lights[i].color*specular;
+      result += specFactor*lights[i].color*specColor;
     }
   }
 
   // baked diffuse lighting if none
   if (! lighted) {
-    float diff = 1.0;
+    float diffFactor = 1.0;
 
     if (! fixedDiffuse)
-      diff = max(dot(norm, viewDir), 0.0);
+      diffFactor = max(dot(norm, viewDir), 0.0);
 
-    result += diff*diffuse;
+    result += diffFactor*diffuseColor;
   }
 
   // add emission
-  vec3 emissive = calcEmission();
+  vec3 emissionColor = calcEmissionColor();
 
-  result += emissive;
+  result += emissionColor;
 
   // adjust color by state
 
@@ -224,13 +232,15 @@ void main() {
     if (! isSelected) {
       FragColor = vec4(result, transparency);
     } else {
-      FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      vec3 selectColor1 = mix(result, selectColor, 0.4);
+
+      FragColor = vec4(selectColor1, 1.0);
     }
   } else {
     if (! isSelected) {
-      FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      FragColor = vec4(wireframeColor, wireframeTransparency);
     } else {
-      FragColor = vec4(0.1, 0.1, 0.1, 1.0);
+      FragColor = vec4(selectColor, 1.0);
     }
   }
 }

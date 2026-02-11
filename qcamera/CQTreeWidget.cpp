@@ -28,6 +28,13 @@ CQTreeWidget::
 {
 }
 
+QTreeWidgetItem *
+CQTreeWidget::
+itemFromIndex(const QModelIndex &index) const
+{
+  return QTreeWidget::itemFromIndex(index);
+}
+
 void
 CQTreeWidget::
 customContextMenuSlot(const QPoint &pos)

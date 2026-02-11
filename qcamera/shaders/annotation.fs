@@ -7,6 +7,7 @@ in vec3 Color;
 uniform vec3 viewPos;
 
 uniform bool isWireframe;
+uniform bool isLine;
 
 void main() {
   vec3 norm = normalize(Normal);
@@ -19,9 +20,11 @@ void main() {
 
   vec3 diffuse = diff*Color + ambient;
 
-  if (! isWireframe) {
-    gl_FragColor = vec4(diffuse, 1.0);
-  } else {
+  if        (isWireframe) {
     gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  } else if (isLine) {
+    gl_FragColor = vec4(Color, 1.0);
+  } else {
+    gl_FragColor = vec4(diffuse, 1.0);
   }
 }

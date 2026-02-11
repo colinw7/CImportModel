@@ -80,13 +80,14 @@ drawGeometry()
   //---
 
   auto *camera = canvas_->getCurrentCamera();
+  auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
 
   // camera projection
   auto projectionMatrix = camera->worldMatrix();
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
 
   // camera/view transformation
-  auto viewMatrix = camera->viewRotationMatrix();
+  auto viewMatrix = camera1->viewRotationMatrix();
   program->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix));
 
   // model matrix

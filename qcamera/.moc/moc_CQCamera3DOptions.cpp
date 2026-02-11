@@ -92,8 +92,8 @@ int CQCamera3DOptions::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     return _id;
 }
 struct qt_meta_stringdata_CQCamera3DAddOptions_t {
-    QByteArrayData data[19];
-    char stringdata0[199];
+    QByteArrayData data[20];
+    char stringdata0[216];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -116,19 +116,21 @@ QT_MOC_LITERAL(10, 81, 9), // "zSizeSlot"
 QT_MOC_LITERAL(11, 91, 15), // "innerRadiusSlot"
 QT_MOC_LITERAL(12, 107, 15), // "outerRadiusSlot"
 QT_MOC_LITERAL(13, 123, 14), // "circleTypeSlot"
-QT_MOC_LITERAL(14, 138, 13), // "verticesXSlot"
-QT_MOC_LITERAL(15, 152, 1), // "i"
-QT_MOC_LITERAL(16, 154, 13), // "verticesYSlot"
-QT_MOC_LITERAL(17, 168, 14), // "startAngleSlot"
-QT_MOC_LITERAL(18, 183, 15) // "extentAngleSlot"
+QT_MOC_LITERAL(14, 138, 16), // "cylinderTypeSlot"
+QT_MOC_LITERAL(15, 155, 13), // "verticesXSlot"
+QT_MOC_LITERAL(16, 169, 1), // "i"
+QT_MOC_LITERAL(17, 171, 13), // "verticesYSlot"
+QT_MOC_LITERAL(18, 185, 14), // "startAngleSlot"
+QT_MOC_LITERAL(19, 200, 15) // "extentAngleSlot"
 
     },
     "CQCamera3DAddOptions\0xSlot\0\0ySlot\0"
     "zSlot\0rxSlot\0rySlot\0rzSlot\0xSizeSlot\0"
     "ySizeSlot\0zSizeSlot\0innerRadiusSlot\0"
     "outerRadiusSlot\0circleTypeSlot\0"
-    "verticesXSlot\0i\0verticesYSlot\0"
-    "startAngleSlot\0extentAngleSlot"
+    "cylinderTypeSlot\0verticesXSlot\0i\0"
+    "verticesYSlot\0startAngleSlot\0"
+    "extentAngleSlot"
 };
 #undef QT_MOC_LITERAL
 
@@ -138,7 +140,7 @@ static const uint qt_meta_data_CQCamera3DAddOptions[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      17,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -146,22 +148,23 @@ static const uint qt_meta_data_CQCamera3DAddOptions[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    1,   94,    2, 0x08 /* Private */,
-       3,    1,   97,    2, 0x08 /* Private */,
-       4,    1,  100,    2, 0x08 /* Private */,
-       5,    1,  103,    2, 0x08 /* Private */,
-       6,    1,  106,    2, 0x08 /* Private */,
-       7,    1,  109,    2, 0x08 /* Private */,
-       8,    1,  112,    2, 0x08 /* Private */,
-       9,    1,  115,    2, 0x08 /* Private */,
-      10,    1,  118,    2, 0x08 /* Private */,
-      11,    1,  121,    2, 0x08 /* Private */,
-      12,    1,  124,    2, 0x08 /* Private */,
-      13,    1,  127,    2, 0x08 /* Private */,
-      14,    1,  130,    2, 0x08 /* Private */,
-      16,    1,  133,    2, 0x08 /* Private */,
-      17,    1,  136,    2, 0x08 /* Private */,
-      18,    1,  139,    2, 0x08 /* Private */,
+       1,    1,   99,    2, 0x08 /* Private */,
+       3,    1,  102,    2, 0x08 /* Private */,
+       4,    1,  105,    2, 0x08 /* Private */,
+       5,    1,  108,    2, 0x08 /* Private */,
+       6,    1,  111,    2, 0x08 /* Private */,
+       7,    1,  114,    2, 0x08 /* Private */,
+       8,    1,  117,    2, 0x08 /* Private */,
+       9,    1,  120,    2, 0x08 /* Private */,
+      10,    1,  123,    2, 0x08 /* Private */,
+      11,    1,  126,    2, 0x08 /* Private */,
+      12,    1,  129,    2, 0x08 /* Private */,
+      13,    1,  132,    2, 0x08 /* Private */,
+      14,    1,  135,    2, 0x08 /* Private */,
+      15,    1,  138,    2, 0x08 /* Private */,
+      17,    1,  141,    2, 0x08 /* Private */,
+      18,    1,  144,    2, 0x08 /* Private */,
+      19,    1,  147,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void, QMetaType::Double,    2,
@@ -176,8 +179,9 @@ static const uint qt_meta_data_CQCamera3DAddOptions[] = {
     QMetaType::Void, QMetaType::Double,    2,
     QMetaType::Void, QMetaType::Double,    2,
     QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Int,   15,
-    QMetaType::Void, QMetaType::Int,   15,
+    QMetaType::Void, QMetaType::Int,    2,
+    QMetaType::Void, QMetaType::Int,   16,
+    QMetaType::Void, QMetaType::Int,   16,
     QMetaType::Void, QMetaType::Double,    2,
     QMetaType::Void, QMetaType::Double,    2,
 
@@ -202,10 +206,11 @@ void CQCamera3DAddOptions::qt_static_metacall(QObject *_o, QMetaObject::Call _c,
         case 9: _t->innerRadiusSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
         case 10: _t->outerRadiusSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
         case 11: _t->circleTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 12: _t->verticesXSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 13: _t->verticesYSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 14: _t->startAngleSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 15: _t->extentAngleSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 12: _t->cylinderTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 13: _t->verticesXSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 14: _t->verticesYSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 15: _t->startAngleSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 16: _t->extentAngleSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -240,13 +245,107 @@ int CQCamera3DAddOptions::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 17;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 17)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 16;
+        _id -= 17;
+    }
+    return _id;
+}
+struct qt_meta_stringdata_CQCamera3DCursorOptions_t {
+    QByteArrayData data[3];
+    char stringdata0[36];
+};
+#define QT_MOC_LITERAL(idx, ofs, len) \
+    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
+    qptrdiff(offsetof(qt_meta_stringdata_CQCamera3DCursorOptions_t, stringdata0) + ofs \
+        - idx * sizeof(QByteArrayData)) \
+    )
+static const qt_meta_stringdata_CQCamera3DCursorOptions_t qt_meta_stringdata_CQCamera3DCursorOptions = {
+    {
+QT_MOC_LITERAL(0, 0, 23), // "CQCamera3DCursorOptions"
+QT_MOC_LITERAL(1, 24, 10), // "centerSlot"
+QT_MOC_LITERAL(2, 35, 0) // ""
+
+    },
+    "CQCamera3DCursorOptions\0centerSlot\0"
+};
+#undef QT_MOC_LITERAL
+
+static const uint qt_meta_data_CQCamera3DCursorOptions[] = {
+
+ // content:
+       8,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       1,   14, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+ // slots: name, argc, parameters, tag, flags
+       1,    0,   19,    2, 0x08 /* Private */,
+
+ // slots: parameters
+    QMetaType::Void,
+
+       0        // eod
+};
+
+void CQCamera3DCursorOptions::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        auto *_t = static_cast<CQCamera3DCursorOptions *>(_o);
+        (void)_t;
+        switch (_id) {
+        case 0: _t->centerSlot(); break;
+        default: ;
+        }
+    }
+    (void)_a;
+}
+
+QT_INIT_METAOBJECT const QMetaObject CQCamera3DCursorOptions::staticMetaObject = { {
+    QMetaObject::SuperData::link<CQCamera3DOptions::staticMetaObject>(),
+    qt_meta_stringdata_CQCamera3DCursorOptions.data,
+    qt_meta_data_CQCamera3DCursorOptions,
+    qt_static_metacall,
+    nullptr,
+    nullptr
+} };
+
+
+const QMetaObject *CQCamera3DCursorOptions::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *CQCamera3DCursorOptions::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_meta_stringdata_CQCamera3DCursorOptions.stringdata0))
+        return static_cast<void*>(this);
+    return CQCamera3DOptions::qt_metacast(_clname);
+}
+
+int CQCamera3DCursorOptions::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = CQCamera3DOptions::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 1)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 1;
+    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 1)
+            *reinterpret_cast<int*>(_a[0]) = -1;
+        _id -= 1;
     }
     return _id;
 }

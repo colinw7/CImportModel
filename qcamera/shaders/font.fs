@@ -1,12 +1,15 @@
 #version 330 core
 
-in vec3 col;
-in vec2 uv0;
+in vec3 Color;
+in vec2 TexCoords;
 
 uniform sampler2D mainTex;
 
 void main() {
-  vec4 tc = texture(mainTex, uv0);
+  vec4 textureColor = texture(mainTex, TexCoords);
 
-  gl_FragColor = vec4(col, tc.r);
+  if (textureColor.r < 0.001)
+    discard;
+
+  gl_FragColor = vec4(Color, textureColor.r);
 }

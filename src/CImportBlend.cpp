@@ -40,8 +40,10 @@ read(CFile &file)
 
   header[13] = '\0';
 
-  if (strncmp(reinterpret_cast<char *>(&header[0]), "BLENDER", 6) != 0)
+  if (strncmp(reinterpret_cast<char *>(&header[0]), "BLENDER", 6) != 0) {
+    std::cerr << "Invalid header\n";
     return false;
+  }
 
   if      (header[7] == '_')
     pointerSize_ = 4;

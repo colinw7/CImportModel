@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DTextureList_t {
-    QByteArrayData data[8];
-    char stringdata0[118];
+    QByteArrayData data[11];
+    char stringdata0[152];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -39,12 +39,16 @@ QT_MOC_LITERAL(3, 42, 14), // "updateTextures"
 QT_MOC_LITERAL(4, 57, 10), // "invalidate"
 QT_MOC_LITERAL(5, 68, 15), // "needsUpdateSlot"
 QT_MOC_LITERAL(6, 84, 16), // "itemSelectedSlot"
-QT_MOC_LITERAL(7, 101, 16) // "QListWidgetItem*"
+QT_MOC_LITERAL(7, 101, 17), // "QTableWidgetItem*"
+QT_MOC_LITERAL(8, 119, 14), // "tableClickSlot"
+QT_MOC_LITERAL(9, 134, 11), // "QModelIndex"
+QT_MOC_LITERAL(10, 146, 5) // "index"
 
     },
     "CQCamera3DTextureList\0currentItemChanged\0"
     "\0updateTextures\0invalidate\0needsUpdateSlot\0"
-    "itemSelectedSlot\0QListWidgetItem*"
+    "itemSelectedSlot\0QTableWidgetItem*\0"
+    "tableClickSlot\0QModelIndex\0index"
 };
 #undef QT_MOC_LITERAL
 
@@ -54,7 +58,7 @@ static const uint qt_meta_data_CQCamera3DTextureList[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       5,   14, // methods
+       6,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -62,13 +66,14 @@ static const uint qt_meta_data_CQCamera3DTextureList[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   39,    2, 0x06 /* Public */,
+       1,    0,   44,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       3,    0,   40,    2, 0x0a /* Public */,
-       4,    0,   41,    2, 0x0a /* Public */,
-       5,    0,   42,    2, 0x08 /* Private */,
-       6,    2,   43,    2, 0x08 /* Private */,
+       3,    0,   45,    2, 0x0a /* Public */,
+       4,    0,   46,    2, 0x0a /* Public */,
+       5,    0,   47,    2, 0x08 /* Private */,
+       6,    2,   48,    2, 0x08 /* Private */,
+       8,    1,   53,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void,
@@ -78,6 +83,7 @@ static const uint qt_meta_data_CQCamera3DTextureList[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void, 0x80000000 | 7, 0x80000000 | 7,    2,    2,
+    QMetaType::Void, 0x80000000 | 9,   10,
 
        0        // eod
 };
@@ -92,7 +98,8 @@ void CQCamera3DTextureList::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         case 1: _t->updateTextures(); break;
         case 2: _t->invalidate(); break;
         case 3: _t->needsUpdateSlot(); break;
-        case 4: _t->itemSelectedSlot((*reinterpret_cast< QListWidgetItem*(*)>(_a[1])),(*reinterpret_cast< QListWidgetItem*(*)>(_a[2]))); break;
+        case 4: _t->itemSelectedSlot((*reinterpret_cast< QTableWidgetItem*(*)>(_a[1])),(*reinterpret_cast< QTableWidgetItem*(*)>(_a[2]))); break;
+        case 5: _t->tableClickSlot((*reinterpret_cast< const QModelIndex(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -136,13 +143,13 @@ int CQCamera3DTextureList::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 5)
+        if (_id < 6)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 5;
+        _id -= 6;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 5)
+        if (_id < 6)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 5;
+        _id -= 6;
     }
     return _id;
 }
@@ -151,6 +158,171 @@ int CQCamera3DTextureList::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 void CQCamera3DTextureList::currentItemChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
+}
+struct qt_meta_stringdata_CQCamera3DTextureListDelegate_t {
+    QByteArrayData data[1];
+    char stringdata0[30];
+};
+#define QT_MOC_LITERAL(idx, ofs, len) \
+    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
+    qptrdiff(offsetof(qt_meta_stringdata_CQCamera3DTextureListDelegate_t, stringdata0) + ofs \
+        - idx * sizeof(QByteArrayData)) \
+    )
+static const qt_meta_stringdata_CQCamera3DTextureListDelegate_t qt_meta_stringdata_CQCamera3DTextureListDelegate = {
+    {
+QT_MOC_LITERAL(0, 0, 29) // "CQCamera3DTextureListDelegate"
+
+    },
+    "CQCamera3DTextureListDelegate"
+};
+#undef QT_MOC_LITERAL
+
+static const uint qt_meta_data_CQCamera3DTextureListDelegate[] = {
+
+ // content:
+       8,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       0,    0, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+       0        // eod
+};
+
+void CQCamera3DTextureListDelegate::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    (void)_o;
+    (void)_id;
+    (void)_c;
+    (void)_a;
+}
+
+QT_INIT_METAOBJECT const QMetaObject CQCamera3DTextureListDelegate::staticMetaObject = { {
+    QMetaObject::SuperData::link<QItemDelegate::staticMetaObject>(),
+    qt_meta_stringdata_CQCamera3DTextureListDelegate.data,
+    qt_meta_data_CQCamera3DTextureListDelegate,
+    qt_static_metacall,
+    nullptr,
+    nullptr
+} };
+
+
+const QMetaObject *CQCamera3DTextureListDelegate::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *CQCamera3DTextureListDelegate::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_meta_stringdata_CQCamera3DTextureListDelegate.stringdata0))
+        return static_cast<void*>(this);
+    return QItemDelegate::qt_metacast(_clname);
+}
+
+int CQCamera3DTextureListDelegate::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QItemDelegate::qt_metacall(_c, _id, _a);
+    return _id;
+}
+struct qt_meta_stringdata_CQCamera3DTextureListHeader_t {
+    QByteArrayData data[3];
+    char stringdata0[47];
+};
+#define QT_MOC_LITERAL(idx, ofs, len) \
+    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
+    qptrdiff(offsetof(qt_meta_stringdata_CQCamera3DTextureListHeader_t, stringdata0) + ofs \
+        - idx * sizeof(QByteArrayData)) \
+    )
+static const qt_meta_stringdata_CQCamera3DTextureListHeader_t qt_meta_stringdata_CQCamera3DTextureListHeader = {
+    {
+QT_MOC_LITERAL(0, 0, 27), // "CQCamera3DTextureListHeader"
+QT_MOC_LITERAL(1, 28, 17), // "updateColumnSizes"
+QT_MOC_LITERAL(2, 46, 0) // ""
+
+    },
+    "CQCamera3DTextureListHeader\0"
+    "updateColumnSizes\0"
+};
+#undef QT_MOC_LITERAL
+
+static const uint qt_meta_data_CQCamera3DTextureListHeader[] = {
+
+ // content:
+       8,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       1,   14, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+ // slots: name, argc, parameters, tag, flags
+       1,    0,   19,    2, 0x0a /* Public */,
+
+ // slots: parameters
+    QMetaType::Void,
+
+       0        // eod
+};
+
+void CQCamera3DTextureListHeader::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        auto *_t = static_cast<CQCamera3DTextureListHeader *>(_o);
+        (void)_t;
+        switch (_id) {
+        case 0: _t->updateColumnSizes(); break;
+        default: ;
+        }
+    }
+    (void)_a;
+}
+
+QT_INIT_METAOBJECT const QMetaObject CQCamera3DTextureListHeader::staticMetaObject = { {
+    QMetaObject::SuperData::link<QHeaderView::staticMetaObject>(),
+    qt_meta_stringdata_CQCamera3DTextureListHeader.data,
+    qt_meta_data_CQCamera3DTextureListHeader,
+    qt_static_metacall,
+    nullptr,
+    nullptr
+} };
+
+
+const QMetaObject *CQCamera3DTextureListHeader::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *CQCamera3DTextureListHeader::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_meta_stringdata_CQCamera3DTextureListHeader.stringdata0))
+        return static_cast<void*>(this);
+    return QHeaderView::qt_metacast(_clname);
+}
+
+int CQCamera3DTextureListHeader::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QHeaderView::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 1)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 1;
+    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 1)
+            *reinterpret_cast<int*>(_a[0]) = -1;
+        _id -= 1;
+    }
+    return _id;
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

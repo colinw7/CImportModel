@@ -47,10 +47,33 @@ class CQCamera3DGeomFace : public CGeomFace3D {
     selectedEdges_.clear();
   }
 
+  //---
+
+  void clearPoints() { points_.clear(); }
+
+  void addPoint(const CPoint3D &p) { points_.push_back(p); }
+
+  CPoint3D pointCenter() const {
+    CPoint3D c(0, 0, 0);
+
+    if (points_.empty())
+      return c;
+
+    for (const auto &p : points_)
+      c += p;
+
+    c /= points_.size();
+
+    return c;
+  }
+
  private:
+  using Points = std::vector<CPoint3D>;
+
   Edges    edges_;
   EdgeInds selectedEdges_;
   bool     edgesValid_ { false };
+  Points   points_;
 };
 
 #endif

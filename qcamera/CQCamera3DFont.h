@@ -57,6 +57,9 @@ class CQCamera3DFont {
   int size() const { return size_; }
   void setSize(int s);
 
+  bool isBillboard() const { return billboard_; }
+  void setBillboard(bool b) { billboard_ = b; }
+
   GlyphInfo makeGlyphInfo(uint32_t character, float offsetX, float offsetY) const;
 
   CQCamera3DCanvas *canvas() const { return canvas_; }
@@ -78,6 +81,7 @@ class CQCamera3DFont {
   int                      size_          { 40 };
   CQCamera3DShaderProgram* shaderProgram_ { nullptr };
   CQCamera3DFontData*      fontData_      { nullptr };
+  bool                     billboard_     { true };
 };
 
 //---
@@ -119,12 +123,12 @@ class CQCamera3DText {
  private:
 //using RotatingLabel = CQCamera3DFont::RotatingLabel;
 
-  QString      text_;
+  QString         text_;
   CQCamera3DFont* font_  { nullptr };
-  Color        color_ { 1, 1, 1 };
-  CGLVector3D  position_;
-  CGLVector3D  angle_ { 0, 0, 0 };
-  double       size_  { 0.1 };
+  Color           color_ { 1, 1, 1 };
+  CGLVector3D     position_;
+  CGLVector3D     angle_ { 0, 0, 0 };
+  double          size_  { 0.1 };
 
   CQGLBuffer *buffer_ { nullptr };
 

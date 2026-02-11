@@ -9,6 +9,7 @@
 
 class CQCamera3DApp;
 class CQCamera3DTexture;
+class CQCamera3DShaderProgram;
 
 class CQGLTexture;
 class CGeomTexture;
@@ -71,6 +72,10 @@ class CQCamera3DWidget : public QGLWidget, public QOpenGLExtraFunctions {
 
   //---
 
+  virtual CQCamera3DShaderProgram *shaderProgram() = 0;
+
+  //---
+
   CQGLTexture *getGLTexture(CGeomTexture *texture, bool add);
 
   void initGLTexture(CQCamera3DTexture *texture);
@@ -116,7 +121,6 @@ class CQCamera3DWidget : public QGLWidget, public QOpenGLExtraFunctions {
   QColor bgColor_ { 140, 140, 140 };
 
   // interaction
-
   MouseData mouseData_;
 };
 

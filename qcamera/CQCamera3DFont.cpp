@@ -359,8 +359,10 @@ render(CQCamera3DCanvas *canvas)
   //(void) checkError("glDepthFunc");
 
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  //glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   //if (! checkError("glBlendFunc GL_SRC_ALPHA, GL_ONE")) return;
+  //glDepthMask(GL_FALSE);
 
   //---
 
@@ -378,6 +380,8 @@ render(CQCamera3DCanvas *canvas)
 
   //---
 
+  program->setUniformValue("billboard", font_->isBillboard());
+
   auto *camera = canvas->getCurrentCamera();
 
   // camera projection
@@ -392,6 +396,12 @@ render(CQCamera3DCanvas *canvas)
   program->setUniformValue("model", CQGLUtil::toQMatrix(mm1*mm2));
 
   program->setUniformValue("viewPos", CQGLUtil::toVector(camera->position()));
+
+  program->setUniformValue("center", CQGLUtil::toVector(position()));
+  program->setUniformValue("size", float(size()));
+
+  program->setUniformValue("cameraUp", CQGLUtil::toVector(camera->up()));
+  program->setUniformValue("cameraRight", CQGLUtil::toVector(camera->right()));
 
   //---
 
@@ -413,6 +423,7 @@ render(CQCamera3DCanvas *canvas)
   program->release();
 
   glDisable(GL_BLEND);
+  //glDepthMask(GL_TRUE);
 }
 
 CMatrix3DH
@@ -421,13 +432,15 @@ getModelMatrix() const
 {
   auto modelMatrix = CMatrix3DH::identity();
 
-  modelMatrix.translated(position().x(), position().y(), position().z());
+  if (! font_->isBillboard()) {
+    modelMatrix.translated(position().x(), position().y(), position().z());
 
-  modelMatrix.rotated(angle().x(), CVector3D(1.0, 0.0, 0.0));
-  modelMatrix.rotated(angle().y(), CVector3D(0.0, 1.0, 0.0));
-  modelMatrix.rotated(angle().z(), CVector3D(0.0, 0.0, 1.0));
+    modelMatrix.rotated(angle().x(), CVector3D(1.0, 0.0, 0.0));
+    modelMatrix.rotated(angle().y(), CVector3D(0.0, 1.0, 0.0));
+    modelMatrix.rotated(angle().z(), CVector3D(0.0, 0.0, 1.0));
 
-  modelMatrix.scaled(size(), size(), 1.0);
+    modelMatrix.scaled(size(), size(), 1.0);
+  }
 
   return modelMatrix;
 }

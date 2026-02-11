@@ -25,7 +25,6 @@ CQCamera3DBones(CQCamera3DApp *app) :
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->getCurrentCamera();
 
   setFocusPolicy(Qt::StrongFocus);
 
@@ -56,8 +55,8 @@ CQCamera3DBones(CQCamera3DApp *app) :
   connect(app_, SIGNAL(animNameChanged()), this, SLOT(update()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
 
-  connect(camera, SIGNAL(stateChanged()), this, SLOT(update()));
   connect(canvas, SIGNAL(stateChanged()), this, SLOT(update()));
+  connect(canvas, SIGNAL(cameraStateChanged()), this, SLOT(update()));
 }
 
 void

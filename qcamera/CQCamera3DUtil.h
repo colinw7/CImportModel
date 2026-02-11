@@ -11,7 +11,9 @@
 namespace {
 
 inline CGLVector3D QColorToVector(const QColor &c) {
-  return CGLVector3D(c.red()/255.0, c.green()/255.0, c.blue()/255.0);
+  auto itor = [](int i) { return i/255.0; };
+
+  return CGLVector3D(itor(c.red()), itor(c.green()), itor(c.blue()));
 }
 
 inline CGLVector3D ColorToVector(const CRGBA &c) {
@@ -19,11 +21,15 @@ inline CGLVector3D ColorToVector(const CRGBA &c) {
 }
 
 inline CRGBA QColorToRGBA(const QColor &c) {
-  return CRGBA(c.red()/255.0, c.green()/255.0, c.blue()/255.0);
+  auto itor = [](int i) { return i/255.0; };
+
+  return CRGBA(itor(c.red()), itor(c.green()), itor(c.blue()), itor(c.alpha()));
 }
 
 inline QColor RGBAToQColor(const CRGBA &c) {
-  return QColor(int(255*c.getRed()), int(255*c.getGreen()), int(255*c.getBlue()));
+  auto rtoi = [](double r) { return int(255*r); };
+
+  return QColor(rtoi(c.getRed()), rtoi(c.getGreen()), rtoi(c.getBlue()), rtoi(c.getAlpha()));
 }
 
 inline CGLVector3D vectorToGLVector(const CVector3D &v) {

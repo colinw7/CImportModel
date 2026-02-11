@@ -3,7 +3,7 @@
 
 #include <CQWinWidget.h>
 
-class CQCamera3DCanvas;
+class CQCamera3DMouseModeMgr;
 class CQCamera3DOpContents;
 class CQCamera3DOptions;
 
@@ -13,7 +13,7 @@ class CQCamera3DOpWidget : public CQWinWidget {
   Q_OBJECT
 
  public:
-  CQCamera3DOpWidget(CQCamera3DCanvas *canvas);
+  CQCamera3DOpWidget(QWidget *widget, CQCamera3DMouseModeMgr *mgr);
 
   void setOptions(CQCamera3DOptions *options);
 
@@ -21,8 +21,8 @@ class CQCamera3DOpWidget : public CQWinWidget {
   void closeSlot();
 
  private:
-  CQCamera3DCanvas*     canvas_   { nullptr };
-  CQCamera3DOpContents* contents_ { nullptr };
+  CQCamera3DMouseModeMgr* mgr_      { nullptr };
+  CQCamera3DOpContents*   contents_ { nullptr };
 };
 
 class CQCamera3DOpContents : public QFrame {

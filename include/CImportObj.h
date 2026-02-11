@@ -11,6 +11,9 @@ class CImportObj : public CImportBase {
 
  ~CImportObj();
 
+  bool isSplitByMaterial() const { return splitByMaterial_; }
+  void setSplitByMaterial(bool b) { splitByMaterial_ = b; }
+
   bool read(CFile &file) override;
 
   CGeomScene3D &getScene() override { return *scene_; }
@@ -31,6 +34,8 @@ class CImportObj : public CImportBase {
   }
 
  private:
+  struct Material;
+
   bool readVertex(const std::string &line);
   bool readTextureVertex(const std::string &line);
   bool readVertexNormal(const std::string &line);
@@ -39,6 +44,8 @@ class CImportObj : public CImportBase {
   bool readFace(const std::string &line);
 
   bool readMaterialFile(const std::string &filename);
+
+  Material *addMaterial(const std::string &name);
 
  private:
   using OptColor = std::optional<CRGBA>;
@@ -52,20 +59,32 @@ class CImportObj : public CImportBase {
 
   struct Material {
     std::string name;
-    OptColor    ambientColor;            // Ka
-    OptColor    diffuseColor;            // Kd
-    OptColor    specularColor;           // Ks
-    OptColor    emissionColor;           // Ke
-    OptInt      illuminationModel;       // illum
-    OptReal     specularExponent;        // Ns
-    OptReal     refractionIndex;         // Ni
-    OptReal     transparency;            // Tr
-    OptColor    transmissionFilterColor; // Tf
-    MapImage    ambientMap;              // map_Ka
-    MapImage    diffuseMap;              // map_Kd
-    MapImage    specularMap;             // map_Ks
-    MapImage    emissiveMap;             // map_Ke
-    MapImage    bumpMap;                 // map_Bump
+
+    OptColor ambientColor; // Ka
+    MapImage ambientMap;   // map_Ka
+
+    OptColor diffuseColor; // Kd
+    MapImage diffuseMap;   // map_Kd
+
+    MapImage bumpMap; // map_Bump
+
+    OptColor specularColor;    // Ks
+    MapImage specularMap;      // map_Ks
+    OptReal  specularExponent; // Ns
+
+    OptColor emissionColor; // Ke
+    MapImage emissiveMap;   // map_Ke
+
+    OptReal  metallic;    // Pm
+    MapImage metallicMap; // map_Pm
+
+    OptReal  roughness;    // Pr
+    MapImage roughnessMap; // map_Pr
+
+    OptInt   illuminationModel;       // illum
+    OptReal  refractionIndex;         // Ni
+    OptReal  transparency;            // Tr
+    OptColor transmissionFilterColor; // Tf
   };
 
   using Materials     = std::map<std::string, Material *>;
@@ -85,6 +104,8 @@ class CImportObj : public CImportBase {
   std::string    groupName_;
   TexturePoints  texturePoints_;
   NormalPoints   normalPoints_;
+
+  bool splitByMaterial_ { true };
 };
 
 #endif

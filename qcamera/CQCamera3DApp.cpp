@@ -16,6 +16,13 @@
 #include <CQCamera3DGeomFace.h>
 #include <CQCamera3DGeomLine.h>
 
+#include <CQMetaEdit.h>
+#include <CQAppOptions.h>
+
+#ifdef CQ_PERF_GRAPH
+#include <CQPerfGraph.h>
+#endif
+
 #include <CGeometry3D.h>
 #include <CImportScene.h>
 #include <CGeomScene3D.h>
@@ -25,10 +32,14 @@
 #include <CQTabSplit.h>
 #include <CQUtil.h>
 
+#include <QApplication>
 #include <QHBoxLayout>
 #include <QTimer>
+#include <QKeyEvent>
 
+#include <svg/camera_svg.h>
 #include <svg/light_svg.h>
+
 #include <svg/play_svg.h>
 #include <svg/pause_svg.h>
 #include <svg/play_one_svg.h>
@@ -36,6 +47,7 @@
 #include <svg/point_select_svg.h>
 #include <svg/edge_select_svg.h>
 #include <svg/face_select_svg.h>
+#include <svg/object_select_svg.h>
 
 #include <svg/wireframe_svg.h>
 #include <svg/solid_fill_svg.h>
@@ -50,11 +62,58 @@
 #include <svg/extrude_svg.h>
 #include <svg/loop_cut_svg.h>
 
+#include <svg/selected_svg.h>
+#include <svg/deselected_svg.h>
+
+#include <svg/visible_svg.h>
+#include <svg/invisible_svg.h>
+
+#include <svg/menu_svg.h>
+
 #include <set>
 #include <iostream>
 
 #define Q(x) #x
 #define QUOTE(x) Q(x)
+
+class CQCamera3DEventFilter : public QObject {
+ public:
+  CQCamera3DEventFilter(CQCamera3DApp *app) :
+   app_(app) {
+  }
+
+ protected:
+  bool eventFilter(QObject *obj, QEvent *event) override {
+    if (event->type() == QEvent::KeyPress) {
+      auto *keyEvent = static_cast<QKeyEvent *>(event);
+
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_Home) {
+        app_->showMetaEdit();
+        return true;
+      }
+
+#if 0
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_End) {
+        CQApp::showPerfDialog();
+        return true;
+      }
+
+      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageDown) {
+        CQApp::showOptions();
+        return true;
+      }
+#endif
+    }
+
+    // standard event processing
+    return QObject::eventFilter(obj, event);
+  }
+
+ private:
+  CQCamera3DApp* app_ { nullptr };
+};
+
+//---
 
 class CQCamera3DGeomFactory : public CGeometryFactory {
  public:
@@ -159,7 +218,15 @@ CQCamera3DApp()
 
   //---
 
+  auto *eventFilter = new CQCamera3DEventFilter(this);
+
+  qApp->installEventFilter(eventFilter);
+
+  //---
+
   connectSlots(true);
+
+  tabSlot(0);
 }
 
 void
@@ -179,25 +246,52 @@ void
 CQCamera3DApp::
 tabSlot(int i)
 {
-  control_->setCurrentControl(i);
+  viewType_ = indToViewType(i);
 
-  if      (i == 0)
-    sidebar_->setView(CQCamera3DSidebar::View::CANVAS);
-  else if (i == 1)
-    sidebar_->setView(CQCamera3DSidebar::View::OVERVIEW);
-  else
-    sidebar_->setView(CQCamera3DSidebar::View::NONE);
+  Q_EMIT viewTypeChanged();
 }
 
 void
 CQCamera3DApp::
-setCurrentView(int i)
+setCurrentView(const CQCamera3DViewType &viewType)
 {
   connectSlots(false);
 
-  tab_->setCurrentIndex(i);
+  viewType_ = viewType;
+
+  tab_->setCurrentIndex(viewTypeToInd(viewType_));
+
+  Q_EMIT viewTypeChanged();
 
   connectSlots(true);
+}
+
+int
+CQCamera3DApp::
+viewTypeToInd(const CQCamera3DViewType &viewType) const
+{
+  if      (viewType == CQCamera3DViewType::MODEL    ) return 0;
+  else if (viewType == CQCamera3DViewType::OVERVIEW ) return 1;
+  else if (viewType == CQCamera3DViewType::UV       ) return 2;
+  else if (viewType == CQCamera3DViewType::TEXTURES ) return 3;
+  else if (viewType == CQCamera3DViewType::MATERIALS) return 4;
+  else if (viewType == CQCamera3DViewType::BONES    ) return 5;
+  else if (viewType == CQCamera3DViewType::ANIMATION) return 6;
+  else                                                return -1;
+}
+
+CQCamera3DViewType
+CQCamera3DApp::
+indToViewType(int ind) const
+{
+  if      (ind == 0) return CQCamera3DViewType::MODEL;
+  else if (ind == 1) return CQCamera3DViewType::OVERVIEW;
+  else if (ind == 2) return CQCamera3DViewType::UV;
+  else if (ind == 3) return CQCamera3DViewType::TEXTURES;
+  else if (ind == 4) return CQCamera3DViewType::MATERIALS;
+  else if (ind == 5) return CQCamera3DViewType::BONES;
+  else if (ind == 6) return CQCamera3DViewType::ANIMATION;
+  else               return CQCamera3DViewType::NONE;
 }
 
 //---
@@ -343,7 +437,7 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
   auto *im = CImportBase::createModel(format, modelName.toStdString());
 
   if (! im) {
-    std::cerr << "Invalid format\n";
+    std::cerr << "File format not recognised for '" << fileName.toStdString() << "'\n";
     return false;
   }
 
@@ -359,7 +453,7 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
 
   if (! im->read(file)) {
     delete im;
-    std::cerr << "Failed to read model '" << fileName.toStdString() << "'\n";
+    std::cerr << "Failed to read model for '" << fileName.toStdString() << "'\n";
     return false;
   }
 
@@ -696,4 +790,38 @@ transformBBox(const CBBox3D &bbox, const CMatrix3D &matrix) const
     bbox1.add(matrix*p);
 
   return bbox1;
+}
+
+//---
+
+void
+CQCamera3DApp::
+showMetaEdit()
+{
+  static CQMetaEdit *metaEdit;
+
+  if (! metaEdit)
+    metaEdit = new CQMetaEdit;
+
+  metaEdit->show();
+
+  metaEdit->raise();
+}
+
+void
+CQCamera3DApp::
+showPerfDialog()
+{
+#ifdef CQ_PERF_GRAPH
+  auto *dialog = CQPerfDialog::instance();
+
+  dialog->show();
+#endif
+}
+
+void
+CQCamera3DApp::
+showAppOptions()
+{
+  CQAppOptions::show();
 }

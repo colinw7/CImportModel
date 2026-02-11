@@ -138,6 +138,8 @@ class CQGLBuffer {
   bool hasTexturePart() const { return (data_.types & static_cast<unsigned int>(Parts::TEXTURE)); }
   bool hasBonesPart  () const { return (data_.types & static_cast<unsigned int>(Parts::BONE   )); }
 
+  void disableTexturePart() { data_.types &= ~static_cast<unsigned int>(Parts::TEXTURE); }
+
   //---
 
   void clearAll() {

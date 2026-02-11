@@ -3,53 +3,11 @@
 #include <CQCamera3DCanvas.h>
 
 #include <CQImage.h>
-#include <CQMetaEdit.h>
 #include <CImportBase.h>
 #include <CGeomScene3D.h>
 #include <CGeometry3D.h>
 
 #include <QApplication>
-#include <QKeyEvent>
-
-class CQCamera3DEventFilter : public QObject {
- public:
-  CQCamera3DEventFilter() { }
-
- protected:
-  bool eventFilter(QObject *obj, QEvent *event) override {
-    if (event->type() == QEvent::KeyPress) {
-      auto *keyEvent = static_cast<QKeyEvent *>(event);
-
-      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_Home) {
-        showMetaEdit();
-        return true;
-      }
-
-#if 0
-      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_End) {
-        CQApp::showPerfDialog();
-        return true;
-      }
-
-      if (keyEvent->modifiers() == Qt::ControlModifier && keyEvent->key() == Qt::Key_PageDown) {
-        CQApp::showOptions();
-        return true;
-      }
-#endif
-    }
-
-    // standard event processing
-    return QObject::eventFilter(obj, event);
-  }
-
-  void showMetaEdit() {
-    auto *metaEdit = new CQMetaEdit;
-
-    metaEdit->show();
-
-    metaEdit->raise();
-  }
-};
 
 int
 main(int argc, char **argv)
@@ -191,12 +149,6 @@ main(int argc, char **argv)
 
   if (materialMap != "")
     canvas->setInitMaterialMap(materialMap);
-
-  //---
-
-  auto *eventFilter = new CQCamera3DEventFilter;
-
-  app->installEventFilter(eventFilter);
 
   //---
 

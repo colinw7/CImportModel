@@ -2,6 +2,7 @@
 #define CQCamera3DTexture_H
 
 #include <CGeomTexture.h>
+#include <CQGLTexture.h>
 
 class CQGLTexture;
 
@@ -21,11 +22,31 @@ class CQCamera3DTexture : public CGeomTexture {
       return widgetTexture.glTexture;
   }
 
-  void setGlTextures(CQCamera3DWidget *widget, CQGLTexture *t1, CQGLTexture *t2) {
-    auto &widgetTexture = widgetTextureData_[widget->ind()];
+  bool isWrapped() const { return wrapped_; }
 
-    widgetTexture.glTexture        = t1;
-    widgetTexture.glTextureFlipped = t2;
+  void setWrapped(bool b) {
+    wrapped_ = b;
+
+    for (auto pw : widgetTextureData_) {
+      auto &textureData = pw.second;
+
+      if (textureData.glTexture)
+        textureData.glTexture->setWrapType(wrapped_ ?
+         CQGLTexture::WrapType::REPEAT : CQGLTexture::WrapType::CLAMP);
+
+      if (textureData.glTextureFlipped)
+        textureData.glTextureFlipped->setWrapType(wrapped_ ?
+         CQGLTexture::WrapType::REPEAT : CQGLTexture::WrapType::CLAMP);
+    }
+  }
+
+  void setGlTextures(CQCamera3DWidget *widget, CQGLTexture *t1, CQGLTexture *t2) {
+    auto &textureData = widgetTextureData_[widget->ind()];
+
+    textureData.glTexture        = t1;
+    textureData.glTextureFlipped = t2;
+
+    setWrapped(wrapped_);
   }
 
  private:
@@ -39,6 +60,7 @@ class CQCamera3DTexture : public CGeomTexture {
   bool flipped_ { false }; // TODO: per widget
 
   WidgetTextureData widgetTextureData_;
+  bool              wrapped_ { true };
 };
 
 #endif

@@ -302,7 +302,7 @@ addObject(const std::string &name)
     return;
   }
 
-  auto *object1 = primitive->dup();
+  auto *object1 = CGeometry3DInst->dupObject(primitive);
 
   object1->setScene(scene_);
 
@@ -477,23 +477,24 @@ CImportScene::
 readObject(const std::string &name)
 {
   enum Cmds {
-    OBJECT_PRIMITIVE_CMD       = 1,
-    OBJECT_FLIP_ORIENTATION    = 2,
-    OBJECT_FACE_COLOR_CMD      = 3,
-    OBJECT_FACE_COLOUR_CMD     = 4,
-    OBJECT_SUB_FACE_COLOR_CMD  = 5,
-    OBJECT_SUB_FACE_COLOUR_CMD = 6,
-    OBJECT_LINE_COLOR_CMD      = 7,
-    OBJECT_LINE_COLOUR_CMD     = 8,
-    OBJECT_SUB_LINE_COLOR_CMD  = 9,
-    OBJECT_SUB_LINE_COLOUR_CMD = 10,
-    OBJECT_TEXTURE_CMD         = 11,
-    OBJECT_COVER_TEXTURE_CMD   = 12,
-    OBJECT_MASK_CMD            = 13,
-    OBJECT_COVER_MASK_CMD      = 14,
-    OBJECT_MATERIAL_CMD        = 15,
-    OBJECT_TRANSFORMS_CMD      = 16,
-    OBJECT_END_CMD             = 17
+    OBJECT_PRIMITIVE_CMD         = 1,
+    OBJECT_FLIP_ORIENTATION      = 2,
+    OBJECT_FACE_COLOR_CMD        = 3,
+    OBJECT_FACE_COLOUR_CMD       = 4,
+    OBJECT_SUB_FACE_COLOR_CMD    = 5,
+    OBJECT_SUB_FACE_COLOUR_CMD   = 6,
+    OBJECT_LINE_COLOR_CMD        = 7,
+    OBJECT_LINE_COLOUR_CMD       = 8,
+    OBJECT_SUB_LINE_COLOR_CMD    = 9,
+    OBJECT_SUB_LINE_COLOUR_CMD   = 10,
+    OBJECT_TEXTURE_CMD           = 11,
+    OBJECT_COVER_TEXTURE_CMD     = 12,
+    OBJECT_MASK_CMD              = 13,
+    OBJECT_COVER_MASK_CMD        = 14,
+    OBJECT_MATERIAL_CMD          = 15,
+    OBJECT_SUB_FACE_MATERIAL_CMD = 16,
+    OBJECT_TRANSFORMS_CMD        = 17,
+    OBJECT_END_CMD               = 18
   };
 
   static const char *
@@ -513,6 +514,7 @@ readObject(const std::string &name)
     "Mask",
     "CoverMask",
     "Material",
+    "SubFace_Material",
     "Transforms",
     "End",
     nullptr,
@@ -602,7 +604,7 @@ readObject(const std::string &name)
 
         delete object;
 
-        object = primitive->dup();
+        object = CGeometry3DInst->dupObject(primitive);
 
         object->setScene(scene_);
 
@@ -695,6 +697,18 @@ readObject(const std::string &name)
 
         if (material)
           object->setMaterialP(material);
+        else
+          errorMsg("Invalid material name '" + materialName + "'");
+
+        break;
+      }
+      case OBJECT_SUB_FACE_MATERIAL_CMD: {
+        const auto &materialName = words.getWord(1);
+
+        auto *material = getMaterial(materialName);
+
+        if (material)
+          object->setSubFaceMaterialP(material);
         else
           errorMsg("Invalid material name '" + materialName + "'");
 
@@ -1184,7 +1198,8 @@ readMaterial(const std::string &name)
     MATERIAL_NORMAL_TEXTURE_CMD   = 6,
     MATERIAL_SPECULAR_TEXTURE_CMD = 7,
     MATERIAL_EMISSION_TEXTURE_CMD = 8,
-    MATERIAL_END_CMD              = 9
+    MATERIAL_TRANSPARENCY_CMD     = 9,
+    MATERIAL_END_CMD              = 10
   };
 
   static const char *
@@ -1197,6 +1212,7 @@ readMaterial(const std::string &name)
     "NormalTexture",
     "SpecularTexture",
     "EmissionTexture",
+    "Transparency",
     "End",
     nullptr,
   };
@@ -1296,6 +1312,13 @@ readMaterial(const std::string &name)
 
         if (texture)
           material->setEmissiveTexture(texture);
+
+        break;
+      }
+      case MATERIAL_TRANSPARENCY_CMD: {
+        auto r = words.getReal(1);
+
+        material->setTransparency(r);
 
         break;
       }

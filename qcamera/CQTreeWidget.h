@@ -15,6 +15,8 @@ class CQTreeWidget : public QTreeWidget {
 
   virtual void addMenuActions(QMenu *menu);
 
+  QTreeWidgetItem *itemFromIndex(const QModelIndex &index) const;
+
  private Q_SLOTS:
   void customContextMenuSlot(const QPoint &pos);
 

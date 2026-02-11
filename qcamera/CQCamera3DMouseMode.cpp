@@ -1,6 +1,6 @@
 #include <CQCamera3DMouseMode.h>
 #include <CQCamera3DOptions.h>
-#include <CQCamera3DObjectData.h>
+#include <CQCamera3DGeomObject.h>
 
 #include <CGeomCircle3D.h>
 #include <CGeomCube3D.h>
@@ -15,8 +15,8 @@
 #include <cassert>
 
 CQCamera3DMouseModeMgr::
-CQCamera3DMouseModeMgr(CQCamera3DWidget *widget) :
- widget_(widget)
+CQCamera3DMouseModeMgr(CQCamera3DMouseModeIFace *iface) :
+ iface_(iface)
 {
 }
 
@@ -60,6 +60,14 @@ endMode()
   return mode;
 }
 
+void
+CQCamera3DMouseModeMgr::
+endAllModes()
+{
+  while (depth() > 0)
+    (void) endMode();
+}
+
 //---
 
 CQCamera3DAddMouseMode::
@@ -72,9 +80,9 @@ void
 CQCamera3DAddMouseMode::
 begin()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  position_ = canvas->cursor();
+  position_ = iface->cursor();
   rotation_ = CVector3D(0, 0, 0);
   size_     = CVector3D(1, 1, 1);
 
@@ -82,27 +90,29 @@ begin()
   power2_      = 1.0;
   torusRadius_ = 0.1;
 
-  canvas->setOptions(new CQCamera3DAddOptions(this));
+  iface->setOptions(new CQCamera3DAddOptions(this));
 
-  canvas->showOptions();
+  iface->showOptions();
 }
 
 void
 CQCamera3DAddMouseMode::
 end()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->hideOptions();
+  iface->hideOptions();
 
-  canvas->setOptions(nullptr);
+  iface->setOptions(nullptr);
 }
 
 void
 CQCamera3DAddMouseMode::
 updateObject()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
+
+  iface->beginUpdateObjects();
 
   object_->clearGeometry();
 
@@ -113,7 +123,7 @@ updateObject()
   else if (type_ == AddType::CUBE)
     CGeomCube3D::addGeometry(object_, origin, 1.0);
   else if (type_ == AddType::CYLINDER)
-    CGeomCylinder3D::addGeometry(object_, origin, 1.0, 1.0);
+    CGeomCylinder3D::addGeometry(object_, origin, 1.0, 1.0, cylinderConfig_);
   else if (type_ == AddType::PLANE)
     CGeomPlane3D::addGeometry(object_, origin, 1.0, 1.0);
   else if (type_ == AddType::PYRAMID)
@@ -133,15 +143,96 @@ updateObject()
 
   object_->transform(m);
 
-  canvas->addObjectsData();
-  canvas->update();
+  iface->endUpdateObjects();
+}
+
+//---
+
+CQCamera3DCursorMouseMode::
+CQCamera3DCursorMouseMode(CGeomObject3D *object) :
+ object_(object)
+{
+}
+
+void
+CQCamera3DCursorMouseMode::
+begin()
+{
+  auto *iface = mgr()->iface();
+
+  iface->setOptions(new CQCamera3DCursorOptions(this));
+
+  iface->showOptions();
+}
+
+void
+CQCamera3DCursorMouseMode::
+end()
+{
+  auto *iface = mgr()->iface();
+
+  iface->hideOptions();
+
+  iface->resetOptions();
+}
+
+void
+CQCamera3DCursorMouseMode::
+mousePress(QMouseEvent *e)
+{
+  auto *iface = mgr()->iface();
+
+  auto p = CPoint2D(e->x(), e->y());
+
+  iface->moveCursorToMouse(CPoint3D(p));
+}
+
+void
+CQCamera3DCursorMouseMode::
+keyPress(QKeyEvent *e)
+{
+  auto *iface = mgr()->iface();
+
+  auto dir = iface->moveDirection();
+
+  auto bbox = iface->bbox();
+
+  auto d = bbox.getMaxSize()/100.0;
+
+  auto moveCursor = [&](const CVector3D &d) {
+    auto pos = iface->cursor();
+
+    iface->setCursor(pos + d);
+  };
+
+  if      (e->key() == Qt::Key_Left) {
+    if (dir == MoveDirection::X)
+      moveCursor(CVector3D(-d, 0, 0));
+  }
+  else if (e->key() == Qt::Key_Right) {
+    if (dir == MoveDirection::X)
+      moveCursor(CVector3D(d, 0, 0));
+  }
+  else if (e->key() == Qt::Key_Up) {
+    if      (dir == MoveDirection::Y)
+      moveCursor(CVector3D(0, d, 0));
+    else if (dir == MoveDirection::Z)
+      moveCursor(CVector3D(0, 0, d));
+  }
+  else if (e->key() == Qt::Key_Down) {
+    if      (dir == MoveDirection::Y)
+      moveCursor(CVector3D(0, -d, 0));
+    else if (dir == MoveDirection::Z)
+      moveCursor(CVector3D(0, 0, -d));
+  }
+
+  options_->updateWidgets();
 }
 
 //---
 
 CQCamera3DMoveMouseMode::
-CQCamera3DMoveMouseMode(CGeomObject3D *object) :
- object_(object)
+CQCamera3DMoveMouseMode()
 {
 }
 
@@ -149,66 +240,140 @@ void
 CQCamera3DMoveMouseMode::
 begin()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->setOptions(new CQCamera3DMoveOptions(this));
+  selectData_ = iface->getSelection();
 
-  canvas->showOptions();
+  iface->setOptions(new CQCamera3DMoveOptions(this));
+
+  iface->showOptions();
 }
 
 void
 CQCamera3DMoveMouseMode::
 end()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->hideOptions();
+  iface->hideOptions();
 
-  canvas->setOptions(nullptr);
-
-  canvas->setMoveDirection(CQCamera3DCanvas::MoveDirection::NONE);
-
-  canvas->setEditType(CQCamera3DCanvas::EditType::SELECT);
+  iface->resetOptions();
 }
 
 void
 CQCamera3DMoveMouseMode::
 keyPress(QKeyEvent *e)
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  auto dir = canvas->moveDirection();
+  if      (e->key() == Qt::Key_X) {
+    iface->setMoveDirection(MoveDirection::X);
+    options_->updateWidgets();
+    return;
+  }
+  else if (e->key() == Qt::Key_Y) {
+    iface->setMoveDirection(MoveDirection::Y);
+    options_->updateWidgets();
+    return;
+  }
+  else if (e->key() == Qt::Key_Z) {
+    iface->setMoveDirection(MoveDirection::Z);
+    options_->updateWidgets();
+    return;
+  }
 
-  auto *objectData = canvas->getObjectData(object_);
+  auto dir = iface->moveDirection();
 
-  auto bbox = objectData->bbox();
+  auto bbox = iface->bbox();
 
   auto d = bbox.getMaxSize()/100.0;
 
-  auto k = e->key();
+  if      (selectData_.type == CQCamera3DSelectType::OBJECT) {
+    for (auto *object : selectData_.objects) {
+      if (! iface->is2D()) {
+        if      (e->key() == Qt::Key_Left) {
+          if (dir == MoveDirection::X)
+            iface->moveObject(object, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          if (dir == MoveDirection::X)
+            iface->moveObject(object, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          if      (dir == MoveDirection::Y)
+            iface->moveObject(object, CVector3D(0, d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveObject(object, CVector3D(0, 0, d));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          if      (dir == MoveDirection::Y)
+            iface->moveObject(object, CVector3D(0, -d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveObject(object, CVector3D(0, 0, -d));
+        }
+      }
+      else {
+        if      (e->key() == Qt::Key_Left) {
+          iface->moveObject(object, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          iface->moveObject(object, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          iface->moveObject(object, CVector3D(0, d, 0));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          iface->moveObject(object, CVector3D(0, -d, 0));
+        }
+      }
+    }
+  }
+  else if (selectData_.type == CQCamera3DSelectType::FACE) {
+    iface->beginUpdateObjects();
 
-  if      (k == Qt::Key_Left) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->moveObject(object_, CVector3D(-d, 0, 0));
-  }
-  else if (k == Qt::Key_Right) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->moveObject(object_, CVector3D(d, 0, 0));
-  }
-  else if (k == Qt::Key_Up) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->moveObject(object_, CVector3D(0, d, 0));
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->moveObject(object_, CVector3D(0, 0, d));
-  }
-  else if (k == Qt::Key_Down) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->moveObject(object_, CVector3D(0, -d, 0));
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->moveObject(object_, CVector3D(0, 0, -d));
+    for (auto *face : selectData_.faces) {
+      if (! iface->is2D()) {
+        if      (e->key() == Qt::Key_Left) {
+          if (dir == MoveDirection::X)
+            iface->moveFace(face, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          if (dir == MoveDirection::X)
+            iface->moveFace(face, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          if      (dir == MoveDirection::Y)
+            iface->moveFace(face, CVector3D(0, d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveFace(face, CVector3D(0, 0, d));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          if      (dir == MoveDirection::Y)
+            iface->moveFace(face, CVector3D(0, -d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveFace(face, CVector3D(0, 0, -d));
+        }
+      }
+      else {
+        if      (e->key() == Qt::Key_Left) {
+          iface->moveFace(face, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          iface->moveFace(face, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          iface->moveFace(face, CVector3D(0, d, 0));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          iface->moveFace(face, CVector3D(0, -d, 0));
+        }
+      }
+    }
+
+    iface->endUpdateObjects();
   }
 
-  canvas->update();
+  options_->updateWidgets();
 }
 
 //---
@@ -223,63 +388,57 @@ void
 CQCamera3DScaleMouseMode::
 begin()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->setOptions(new CQCamera3DScaleOptions(this));
+  iface->setOptions(new CQCamera3DScaleOptions(this));
 
-  canvas->showOptions();
+  iface->showOptions();
 }
 
 void
 CQCamera3DScaleMouseMode::
 end()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->hideOptions();
+  iface->hideOptions();
 
-  canvas->setOptions(nullptr);
-
-  canvas->setMoveDirection(CQCamera3DCanvas::MoveDirection::NONE);
-
-  canvas->setEditType(CQCamera3DCanvas::EditType::SELECT);
+  iface->resetOptions();
 }
 
 void
 CQCamera3DScaleMouseMode::
 keyPress(QKeyEvent *e)
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  auto dir = canvas->moveDirection();
-
-  auto k = e->key();
+  auto dir = iface->moveDirection();
 
   auto scale  = 1.1;
   auto iscale = 1.0/scale;
 
-  if      (k == Qt::Key_Left) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->scaleObject(object_, CVector3D(iscale, 1, 1));
+  if      (e->key() == Qt::Key_Left) {
+    if (dir == MoveDirection::X)
+      iface->scaleObject(object_, CVector3D(iscale, 1, 1));
   }
-  else if (k == Qt::Key_Right) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->scaleObject(object_, CVector3D(scale, 1, 1));
+  else if (e->key() == Qt::Key_Right) {
+    if (dir == MoveDirection::X)
+      iface->scaleObject(object_, CVector3D(scale, 1, 1));
   }
-  else if (k == Qt::Key_Up) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->scaleObject(object_, CVector3D(1, scale, 1));
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->scaleObject(object_, CVector3D(1, 1, scale));
+  else if (e->key() == Qt::Key_Up) {
+    if      (dir == MoveDirection::Y)
+      iface->scaleObject(object_, CVector3D(1, scale, 1));
+    else if (dir == MoveDirection::Z)
+      iface->scaleObject(object_, CVector3D(1, 1, scale));
   }
-  else if (k == Qt::Key_Down) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->scaleObject(object_, CVector3D(1, iscale, 1));
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->scaleObject(object_, CVector3D(1, 1, iscale));
+  else if (e->key() == Qt::Key_Down) {
+    if      (dir == MoveDirection::Y)
+      iface->scaleObject(object_, CVector3D(1, iscale, 1));
+    else if (dir == MoveDirection::Z)
+      iface->scaleObject(object_, CVector3D(1, 1, iscale));
   }
 
-  canvas->update();
+  options_->updateWidgets();
 }
 
 //---
@@ -294,90 +453,84 @@ void
 CQCamera3DRotateMouseMode::
 begin()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->setOptions(new CQCamera3DRotateOptions(this));
+  iface->setOptions(new CQCamera3DRotateOptions(this));
 
-  canvas->showOptions();
+  iface->showOptions();
 }
 
 void
 CQCamera3DRotateMouseMode::
 end()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->hideOptions();
+  iface->hideOptions();
 
-  canvas->setOptions(nullptr);
-
-  canvas->setMoveDirection(CQCamera3DCanvas::MoveDirection::NONE);
-
-  canvas->setEditType(CQCamera3DCanvas::EditType::SELECT);
+  iface->resetOptions();
 }
 
 void
 CQCamera3DRotateMouseMode::
 keyPress(QKeyEvent *e)
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
 #if 0
-  auto *objectData = canvas->getObjectData(object_);
+  auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object_);
 
-  auto bbox   = objectData->bbox();
+  auto bbox   = iface->bbox();
   auto center = bbox.getCenter();
 #endif
 
-  auto dir = canvas->moveDirection();
-
-  auto k = e->key();
+  auto dir = iface->moveDirection();
 
   auto da = M_PI/180.0;
 
   CVector3D axis;
 
 #if 0
-  if      (dir == CQCamera3DCanvas::MoveDirection::X)
+  if      (dir == MoveDirection::X)
     axis = CVector3D(CPoint3D(bbox.getXMin(), center.y, center.z),
                      CPoint3D(bbox.getXMax(), center.y, center.z));
-  else if (dir == CQCamera3DCanvas::MoveDirection::Y)
+  else if (dir == MoveDirection::Y)
     axis = CVector3D(CPoint3D(center.x, bbox.getYMin(), center.x),
                      CPoint3D(center.x, bbox.getYMax(), center.x));
-  else if (dir == CQCamera3DCanvas::MoveDirection::Z)
+  else if (dir == MoveDirection::Z)
     axis = CVector3D(CPoint3D(center.x, center.y, bbox.getZMin()),
                      CPoint3D(center.x, center.y, bbox.getZMax()));
 #else
-  if      (dir == CQCamera3DCanvas::MoveDirection::X)
+  if      (dir == MoveDirection::X)
     axis = CVector3D(1, 0, 0);
-  else if (dir == CQCamera3DCanvas::MoveDirection::Y)
+  else if (dir == MoveDirection::Y)
     axis = CVector3D(0, 1, 0);
-  else if (dir == CQCamera3DCanvas::MoveDirection::Z)
+  else if (dir == MoveDirection::Z)
     axis = CVector3D(0, 0, 1);
 #endif
 
-  if      (k == Qt::Key_Left) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->rotateObject(object_, -da, axis);
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->rotateObject(object_, -da, axis);
+  if      (e->key() == Qt::Key_Left) {
+    if      (dir == MoveDirection::Y)
+      iface->rotateObject(object_, -da, axis);
+    else if (dir == MoveDirection::Z)
+      iface->rotateObject(object_, -da, axis);
   }
-  else if (k == Qt::Key_Right) {
-    if      (dir == CQCamera3DCanvas::MoveDirection::Y)
-      canvas->rotateObject(object_, da, axis);
-    else if (dir == CQCamera3DCanvas::MoveDirection::Z)
-      canvas->rotateObject(object_, da, axis);
+  else if (e->key() == Qt::Key_Right) {
+    if      (dir == MoveDirection::Y)
+      iface->rotateObject(object_, da, axis);
+    else if (dir == MoveDirection::Z)
+      iface->rotateObject(object_, da, axis);
   }
-  else if (k == Qt::Key_Up) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->rotateObject(object_, da, axis);
+  else if (e->key() == Qt::Key_Up) {
+    if (dir == MoveDirection::X)
+      iface->rotateObject(object_, da, axis);
   }
-  else if (k == Qt::Key_Down) {
-    if (dir == CQCamera3DCanvas::MoveDirection::X)
-      canvas->rotateObject(object_, -da, axis);
+  else if (e->key() == Qt::Key_Down) {
+    if (dir == MoveDirection::X)
+      iface->rotateObject(object_, -da, axis);
   }
 
-  canvas->update();
+  options_->updateWidgets();
 }
 
 //---
@@ -391,39 +544,34 @@ void
 CQCamera3DExtrudeMouseMode::
 begin()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->setOptions(new CQCamera3DExtrudeOptions(this));
+  iface->setOptions(new CQCamera3DExtrudeOptions(this));
 
-  canvas->showOptions();
+  iface->showOptions();
 }
 
 void
 CQCamera3DExtrudeMouseMode::
 end()
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  canvas->hideOptions();
+  iface->hideOptions();
 
-  canvas->setOptions(nullptr);
-
-  canvas->setMoveDirection(CQCamera3DCanvas::MoveDirection::NONE);
-
-  canvas->setEditType(CQCamera3DCanvas::EditType::SELECT);
+  iface->resetOptions();
 }
 
 void
 CQCamera3DExtrudeMouseMode::
 keyPress(QKeyEvent *e)
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mgr()->widget());
+  auto *iface = mgr()->iface();
 
-  auto bbox = canvas->bbox();
+  auto bbox = iface->bbox();
 
-  if (e->key() == Qt::Key_Up) {
-    canvas->extrudeMove(bbox.getMaxSize()/100.0);
+  if (e->key() == Qt::Key_Up)
+    iface->extrudeMove(bbox.getMaxSize()/100.0);
 
-    canvas->update();
-  }
+  options_->updateWidgets();
 }

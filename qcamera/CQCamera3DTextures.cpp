@@ -7,7 +7,6 @@
 
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
-#include <CImportBase.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomTexture.h>

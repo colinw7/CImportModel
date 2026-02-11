@@ -4,7 +4,6 @@
 #include <CQCamera3DObject.h>
 #include <QColor>
 
-class CQCamera3DObjectData;
 class CQCamera3DCanvas;
 
 class CBasis3D;
@@ -43,8 +42,6 @@ class CQCamera3DBasis : public CQCamera3DObject {
 
   bool show_  { false };
   bool valid_ { false };
-
-  CQCamera3DObjectData* objectData_ { nullptr };
 
   double lineWidth_ { -1.0 };
   double lineSize_  { -1.0 };

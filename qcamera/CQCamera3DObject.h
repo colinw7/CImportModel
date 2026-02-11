@@ -4,6 +4,8 @@
 #include <CQCamera3DFaceData.h>
 
 #include <QString>
+#include <QObject>
+
 #include <map>
 
 class CQCamera3DCanvas;
@@ -12,7 +14,9 @@ class CQCamera3DText;
 
 class CQGLBuffer;
 
-class CQCamera3DObject {
+class CQCamera3DObject : public QObject {
+  Q_OBJECT
+
  public:
   using FaceDatas = std::vector<CQCamera3DFaceData>;
   using Texts     = std::vector<CQCamera3DText *>;

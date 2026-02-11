@@ -89,6 +89,9 @@ class CImportBase {
   bool isFlipTexture() const { return flipTexture_; }
   void setFlipTexture(bool b) { flipTexture_ = b; }
 
+  const std::string &textureDir() const { return textureDir_; }
+  void setTextureDir(const std::string &s) { textureDir_ = s; }
+
   //---
 
   virtual bool read(CFile &file) = 0;
@@ -150,7 +153,8 @@ class CImportBase {
   bool swapYZ_ { false };
   bool swapZX_ { false };
 
-  bool flipTexture_ { false };
+  bool        flipTexture_ { false };
+  std::string textureDir_;
 
   using FileNameMap = std::map<std::string, std::string>;
 

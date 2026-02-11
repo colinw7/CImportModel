@@ -301,6 +301,9 @@ keyPressEvent(QKeyEvent *e)
 {
   int key = e->key();
 
-  if (key == Qt::Key_P)
-    camera_->print();
+  if (key == Qt::Key_P) {
+    auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera_);
+
+    camera1->print();
+  }
 }

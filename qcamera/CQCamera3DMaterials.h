@@ -5,7 +5,7 @@
 #include <CQCamera3DFaceData.h>
 
 class CQCamera3DShaderProgram;
-class CQCamera3DCamera;
+class CGLCameraIFace;
 class CQGLBuffer;
 
 class CQCamera3DMaterials : public CQCamera3DWidget {
@@ -24,6 +24,10 @@ class CQCamera3DMaterials : public CQCamera3DWidget {
 
   double aspect() const { return aspect_; }
   void setAspect(double r) { aspect_ = r; }
+
+  //---
+
+  CQCamera3DShaderProgram *shaderProgram() override { return shaderProgram_; }
 
   //---
 
@@ -53,7 +57,7 @@ class CQCamera3DMaterials : public CQCamera3DWidget {
   CQGLBuffer *initBuffer();
 
  private:
-  CQCamera3DCamera* camera_ { nullptr };
+  CGLCameraIFace* camera_ { nullptr };
 
   CQCamera3DShaderProgram *shaderProgram_ { nullptr };
 

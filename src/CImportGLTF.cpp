@@ -1444,11 +1444,13 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
         auto &nodeData1 = rootObject_->editNode(ind1);
 
         if (nodeData1.index() != node1->order) {
-          assert(nodeData1.index() == -1);
+          if (nodeData1.index() == -1) {
+            nodeData1.setIndex(node1->order);
 
-          nodeData1.setIndex(node1->order);
-
-          maxIndex = std::max(maxIndex, node1->order);
+            maxIndex = std::max(maxIndex, node1->order);
+          }
+          else
+            (void) errorMsg("node index/order mismatch");
         }
 
         nodeData1.setObject(node1->object);

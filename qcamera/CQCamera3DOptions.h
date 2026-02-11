@@ -5,6 +5,7 @@
 
 class CQCamera3DUI;
 class CQCamera3DAddMouseMode;
+class CQCamera3DCursorMouseMode;
 class CQCamera3DMoveMouseMode;
 class CQCamera3DScaleMouseMode;
 class CQCamera3DRotateMouseMode;
@@ -24,6 +25,8 @@ class CQCamera3DOptions : public QObject {
 
   virtual void addOptions(CQCamera3DUI *) = 0;
 
+  virtual void updateWidgets() = 0;
+
   virtual QString title() const = 0;
 };
 
@@ -31,11 +34,16 @@ class CQCamera3DAddOptions : public CQCamera3DOptions {
   Q_OBJECT
 
  public:
+  using AddType = CQCamera3DAddObjectType;
+
+ public:
   CQCamera3DAddOptions(CQCamera3DAddMouseMode *mode);
 
   void addOptions(CQCamera3DUI *ui) override;
 
   QString title() const override;
+
+  void updateWidgets() override;
 
   void connectSlots(bool b);
 
@@ -56,6 +64,7 @@ class CQCamera3DAddOptions : public CQCamera3DOptions {
   void outerRadiusSlot(double);
 
   void circleTypeSlot(int);
+  void cylinderTypeSlot(int);
 
   void verticesXSlot(int i);
   void verticesYSlot(int i);
@@ -83,7 +92,8 @@ class CQCamera3DAddOptions : public CQCamera3DOptions {
   CQRealSpin* innerRadiusEdit_ { nullptr };
   CQRealSpin* outerRadiusEdit_ { nullptr };
 
-  QComboBox* circleTypeCombo_ { nullptr };
+  QComboBox* circleTypeCombo_   { nullptr };
+  QComboBox* cylinderTypeCombo_ { nullptr };
 
   CQIntegerSpin* verticesXEdit_ { nullptr };
   CQIntegerSpin* verticesYEdit_ { nullptr };
@@ -92,6 +102,28 @@ class CQCamera3DAddOptions : public CQCamera3DOptions {
   CQRealSpin* extentAngleEdit_ { nullptr };
 };
 
+//---
+
+class CQCamera3DCursorOptions : public CQCamera3DOptions {
+  Q_OBJECT
+
+ public:
+  CQCamera3DCursorOptions(CQCamera3DCursorMouseMode *mode);
+
+  void addOptions(CQCamera3DUI *ui) override;
+
+  QString title() const override;
+
+  void updateWidgets() override;
+
+  void connectSlots(bool b);
+
+ private Q_SLOTS:
+  void centerSlot();
+
+ private:
+  CQCamera3DCursorMouseMode* mode_ { nullptr };
+};
 //---
 
 class CQCamera3DMoveOptions : public CQCamera3DOptions {
@@ -103,6 +135,8 @@ class CQCamera3DMoveOptions : public CQCamera3DOptions {
   void addOptions(CQCamera3DUI *ui) override;
 
   QString title() const override;
+
+  void updateWidgets() override;
 
   void connectSlots(bool b);
 
@@ -134,6 +168,8 @@ class CQCamera3DScaleOptions : public CQCamera3DOptions {
 
   QString title() const override;
 
+  void updateWidgets() override;
+
   void connectSlots(bool b);
 
  private Q_SLOTS:
@@ -164,6 +200,8 @@ class CQCamera3DRotateOptions : public CQCamera3DOptions {
 
   QString title() const override;
 
+  void updateWidgets() override;
+
   void connectSlots(bool b);
 
  private Q_SLOTS:
@@ -193,6 +231,8 @@ class CQCamera3DExtrudeOptions : public CQCamera3DOptions {
   void addOptions(CQCamera3DUI *ui) override;
 
   QString title() const override;
+
+  void updateWidgets() override;
 
   void connectSlots(bool b);
 

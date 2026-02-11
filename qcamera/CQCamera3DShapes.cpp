@@ -280,7 +280,10 @@ addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r
 
   auto h = p1.distanceTo(p2);
 
-  CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h, 20);
+  CGeomCylinder3D::ConfigData configData;
+  configData.num_patches = 20;
+
+  CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h, configData);
   CGeomCylinder3D::addNormals(object, 2*r, h);
 
   //---
@@ -328,13 +331,15 @@ addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r
   delete object;
 }
 
+// sphere centered at p1 width p2 on surface
 void
 addSphere(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const ShapeData &data,
           double angleStart, double angleDelta, CQCamera3DFaceDataList &faceDataList)
 {
   auto *object = CGeometry3DInst->createObject3D(nullptr, "");
 
-  auto r = p1.distanceTo(p2)/2.0;
+  //auto r = p1.distanceTo(p2)/2.0;
+  auto r = p1.distanceTo(p2);
 
   // sphere of radius r, centerered at (0, 0, 0)
   CGeomSphere3D::ConfigData configData;
@@ -358,7 +363,7 @@ addSphere(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const Shap
   //---
 
   auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c, const CPoint2D &tp) {
-    auto p1 = modelMatrix *p;
+    auto p1 = modelMatrix*p;
     auto n1 = (normalMatrix*n).normalize();
 
     buffer->addPoint(p1.x, p1.y, p1.z);

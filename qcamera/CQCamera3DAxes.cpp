@@ -80,25 +80,40 @@ updateGeometry()
   CInterval yinterval(y1, y2);
   CInterval zinterval(z1, z2);
 
-  for (uint i = 0; i <= xinterval.calcNumMajor(); ++i) {
-    double x = xinterval.interval(i);
+  if (isShowX())
+    (void) addLine(CPoint3D(x1, yp, zp), CPoint3D(x2, yp, zp), CPoint3D(0, 1, 0));
 
-    addLine(CPoint3D(x, yp, z1), CPoint3D(x, yp, z2), CPoint3D(0, 1, 0));
-    addLine(CPoint3D(x, y1, zp), CPoint3D(x, y2, zp), CPoint3D(0, 0, 1));
+  if (isShowGrid()) {
+    for (uint i = 0; i <= xinterval.calcNumMajor(); ++i) {
+      double x = xinterval.interval(i);
+
+      addLine(CPoint3D(x, yp, z1), CPoint3D(x, yp, z2), CPoint3D(0, 1, 0));
+      addLine(CPoint3D(x, y1, zp), CPoint3D(x, y2, zp), CPoint3D(0, 0, 1));
+    }
   }
 
-  for (uint i = 0; i <= yinterval.calcNumMajor(); ++i) {
-    double y = yinterval.interval(i);
+  if (isShowY())
+    (void) addLine(CPoint3D(xp, y1, zp), CPoint3D(xp, y2, zp), CPoint3D(0, 1, 0));
 
-    addLine(CPoint3D(x1, y, zp), CPoint3D(x2, y, zp), CPoint3D(0, 0, 1));
-    addLine(CPoint3D(xp, y, z1), CPoint3D(xp, y, z2), CPoint3D(1, 0, 0));
+  if (isShowGrid()) {
+    for (uint i = 0; i <= yinterval.calcNumMajor(); ++i) {
+      double y = yinterval.interval(i);
+
+      addLine(CPoint3D(x1, y, zp), CPoint3D(x2, y, zp), CPoint3D(0, 0, 1));
+      addLine(CPoint3D(xp, y, z1), CPoint3D(xp, y, z2), CPoint3D(1, 0, 0));
+    }
   }
 
-  for (uint i = 0; i <= zinterval.calcNumMajor(); ++i) {
-    double z = zinterval.interval(i);
+  if (isShowZ())
+    (void) addLine(CPoint3D(xp, xp, z1), CPoint3D(xp, yp, z1), CPoint3D(0, 1, 0));
 
-    addLine(CPoint3D(xp, y1, z), CPoint3D(xp, y2, z), CPoint3D(1, 0, 0));
-    addLine(CPoint3D(x1, yp, z), CPoint3D(x2, yp, z), CPoint3D(0, 1, 0));
+  if (isShowGrid()) {
+    for (uint i = 0; i <= zinterval.calcNumMajor(); ++i) {
+      double z = zinterval.interval(i);
+
+      addLine(CPoint3D(xp, y1, z), CPoint3D(xp, y2, z), CPoint3D(1, 0, 0));
+      addLine(CPoint3D(x1, yp, z), CPoint3D(x2, yp, z), CPoint3D(0, 1, 0));
+    }
   }
 
   //---
@@ -128,32 +143,41 @@ updateGeometry()
   auto ts1 = sceneScale/10.0;
   auto ts2 = sceneScale/20.0;
 
-  (void) createText("X", CPoint3D(x2, yp - ts1, zp      ), ts1);
-  (void) createText("Y", CPoint3D(xp, y2      , zp + ts1), ts1);
-  (void) createText("Z", CPoint3D(xp, yp - ts1, z2      ), ts1);
+  if (isShowX()) {
+    (void) createText("X", CPoint3D(x2, yp - ts1, zp), ts1);
 
-  for (uint i = 0; i <= xinterval.calcNumMajor(); ++i) {
-    auto x      = xinterval.interval(i);
-    auto xlabel = QString("%1").arg(x);
-    auto dx     = xlabel.length()*ts2/2.0;
+    for (uint i = 0; i <= xinterval.calcNumMajor(); ++i) {
+      auto x      = xinterval.interval(i);
+      auto xlabel = QString("%1").arg(x);
+      auto dx     = xlabel.length()*ts2/2.0;
 
-    (void) createText(xlabel, CPoint3D(x - dx, yp, zp), ts2);
+      (void) createText(xlabel, CPoint3D(x - dx, yp, zp), ts2);
+    }
   }
 
-  for (uint i = 0; i <= yinterval.calcNumMajor(); ++i) {
-    auto y      = yinterval.interval(i);
-    auto ylabel = QString("%1").arg(y);
-    auto dy     = ylabel.length()*ts2/2.0;
 
-    (void) createText(ylabel, CPoint3D(xp, y - dy, zp), ts2);
+  if (isShowY()) {
+    (void) createText("Y", CPoint3D(xp, y2, zp + ts1), ts1);
+
+    for (uint i = 0; i <= yinterval.calcNumMajor(); ++i) {
+      auto y      = yinterval.interval(i);
+      auto ylabel = QString("%1").arg(y);
+      auto dy     = ylabel.length()*ts2/2.0;
+
+      (void) createText(ylabel, CPoint3D(xp, y - dy, zp), ts2);
+    }
   }
 
-  for (uint i = 0; i <= zinterval.calcNumMajor(); ++i) {
-    auto z      = zinterval.interval(i);
-    auto zlabel = QString("%1").arg(z);
-    auto dz     = zlabel.length()*ts2/2.0;
+  if (isShowZ()) {
+    (void) createText("Z", CPoint3D(xp, yp - ts1, z2), ts1);
 
-    (void) createText(zlabel, CPoint3D(xp, yp, z - dz), ts2);
+    for (uint i = 0; i <= zinterval.calcNumMajor(); ++i) {
+      auto z      = zinterval.interval(i);
+      auto zlabel = QString("%1").arg(z);
+      auto dz     = zlabel.length()*ts2/2.0;
+
+      (void) createText(zlabel, CPoint3D(xp, yp, z - dz), ts2);
+    }
   }
 
   updateTexts();
@@ -163,10 +187,6 @@ void
 CQCamera3DAxes::
 drawGeometry()
 {
-  //glDisable(GL_CULL_FACE);
-
-  //---
-
   auto *program = shaderProgram();
 
   program->bind();
@@ -208,5 +228,9 @@ drawGeometry()
 
   //---
 
+  glDisable(GL_CULL_FACE);
+
   drawTexts();
+
+  glEnable(GL_CULL_FACE);
 }

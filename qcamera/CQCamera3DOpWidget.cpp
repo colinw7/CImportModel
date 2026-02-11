@@ -1,12 +1,13 @@
 #include <CQCamera3DOpWidget.h>
+#include <CQCamera3DMouseMode.h>
 #include <CQCamera3DUI.h>
 #include <CQCamera3DOptions.h>
 
 #include <CQRealSpin.h>
 
 CQCamera3DOpWidget::
-CQCamera3DOpWidget(CQCamera3DCanvas *canvas) :
- CQWinWidget(canvas), canvas_(canvas)
+CQCamera3DOpWidget(QWidget *widget, CQCamera3DMouseModeMgr *mgr) :
+ CQWinWidget(widget), mgr_(mgr)
 {
   setObjectName("opWidget");
 
@@ -33,7 +34,7 @@ void
 CQCamera3DOpWidget::
 closeSlot()
 {
-  canvas_->endMouseMode();
+  mgr_->endAllModes();
 }
 
 //---

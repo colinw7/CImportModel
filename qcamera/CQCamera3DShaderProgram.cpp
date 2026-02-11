@@ -1,5 +1,4 @@
 #include <CQCamera3DShaderProgram.h>
-#include <CQCamera3DCanvas.h>
 #include <CQCamera3DApp.h>
 #include <CQGLBuffer.h>
 

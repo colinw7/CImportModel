@@ -140,6 +140,8 @@ class CDisplayRange2D {
   }
 
   void zoomOut(double factor=2.0) {
+    zoomFactor_ *= factor;
+
     double window_hwidth  = 0.5*window_size_.x*factor;
     double window_hheight = 0.5*window_size_.y*factor;
 
@@ -153,6 +155,8 @@ class CDisplayRange2D {
     recalc();
   }
 
+  double zoomFactor() const { return zoomFactor_; }
+
   void scroll(double offset_x, double offset_y) {
     scrollX(offset_x);
     scrollY(offset_y);
@@ -161,7 +165,7 @@ class CDisplayRange2D {
   void scrollX(double offset_x) { window1_.incX(offset_x); recalc(); }
   void scrollY(double offset_y) { window1_.incY(offset_y); recalc(); }
 
-  void reset() { window1_ = window_; recalc(); }
+  void reset() { window1_ = window_; zoomFactor_ = 1.0; recalc(); }
 
   void recalc() {
     flipPX_ = (pixel_ .xmin > pixel_ .xmax);
@@ -495,6 +499,8 @@ class CDisplayRange2D {
   bool flipPY_ { false };
   bool flipWX_ { false };
   bool flipWY_ { false };
+
+  double zoomFactor_ { 1.0 };
 };
 
 #endif

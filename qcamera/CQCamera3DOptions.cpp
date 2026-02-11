@@ -1,7 +1,8 @@
 #include <CQCamera3DOptions.h>
 #include <CQCamera3DUI.h>
 #include <CQCamera3DMouseMode.h>
-#include <CQCamera3DObjectData.h>
+#include <CQCamera3DGeomObject.h>
+#include <CQCamera3DGeomFace.h>
 #include <CQCamera3DUtil.h>
 
 #include <CGeomCircle3D.h>
@@ -32,6 +33,25 @@ class CircleTypeInd : public ValueMap<CGeomCircle3D::Type, int> {
 
 CircleTypeInd circleTypeInd;
 
+class CylinderTypeInd : public ValueMap<CGeomCylinder3D::CapType, int> {
+ public:
+  CylinderTypeInd() {
+    add("None", CGeomCylinder3D::CapType::NONE, 0);
+    add("NGon", CGeomCylinder3D::CapType::NGON, 1);
+    add("Fan" , CGeomCylinder3D::CapType::FAN , 2);
+  };
+
+  CGeomCylinder3D::CapType indToType(int ind) {
+    return lookup(ind);
+  }
+
+  int typeToInd(const CGeomCylinder3D::CapType &type) {
+    return lookup(type);
+  }
+};
+
+CylinderTypeInd cylinderTypeInd;
+
 class MoveDirectionInd : public ValueMap<CQCamera3DCanvas::MoveDirection, int> {
  public:
   MoveDirectionInd() {
@@ -58,6 +78,7 @@ CQCamera3DAddOptions::
 CQCamera3DAddOptions(CQCamera3DAddMouseMode *mode) :
  mode_(mode)
 {
+  mode_->setOptions(this);
 }
 
 void
@@ -65,9 +86,6 @@ CQCamera3DAddOptions::
 addOptions(CQCamera3DUI *ui)
 {
   auto type = mode_->type();
-  auto pos  = mode_->position();
-  auto size = mode_->size();
-  auto tr   = mode_->torusRadius();
 
   ui->startGroup("Location");
 
@@ -87,47 +105,41 @@ addOptions(CQCamera3DUI *ui)
 
   ui->endGroup();
 
-  xEdit_->setValue(pos.x);
-  yEdit_->setValue(pos.y);
-  zEdit_->setValue(pos.z);
-
   ui->startGroup("Size");
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     xSizeEdit_ = ui->addLabelEdit("X", new CQRealSpin);
     ySizeEdit_ = ui->addLabelEdit("Y", new CQRealSpin);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::CUBE) {
+  else if (type == AddType::CUBE) {
     xSizeEdit_ = ui->addLabelEdit("X", new CQRealSpin);
     ySizeEdit_ = ui->addLabelEdit("Y", new CQRealSpin);
     zSizeEdit_ = ui->addLabelEdit("Z", new CQRealSpin);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::PLANE) {
+  else if (type == AddType::CYLINDER) {
+    xSizeEdit_ = ui->addLabelEdit("X", new CQRealSpin);
+    ySizeEdit_ = ui->addLabelEdit("Y", new CQRealSpin);
+    zSizeEdit_ = ui->addLabelEdit("Z", new CQRealSpin);
+  }
+  else if (type == AddType::PLANE) {
     xSizeEdit_ = ui->addLabelEdit("Width" , new CQRealSpin);
     ySizeEdit_ = ui->addLabelEdit("Height", new CQRealSpin);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::SPHERE) {
     xSizeEdit_ = ui->addLabelEdit("X", new CQRealSpin);
     ySizeEdit_ = ui->addLabelEdit("Y", new CQRealSpin);
     zSizeEdit_ = ui->addLabelEdit("Z", new CQRealSpin);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::TORUS) {
+  else if (type == AddType::TORUS) {
     innerRadiusEdit_ = ui->addLabelEdit("Inner Radius", new CQRealSpin);
     outerRadiusEdit_ = ui->addLabelEdit("Outer Radius", new CQRealSpin);
 
     ui->endGroup();
-
-    innerRadiusEdit_->setValue(size.getX());
-    outerRadiusEdit_->setValue(tr);
   }
 
   ui->endGroup();
 
-  if (xSizeEdit_) xSizeEdit_->setValue(size.getX());
-  if (ySizeEdit_) ySizeEdit_->setValue(size.getY());
-  if (zSizeEdit_) zSizeEdit_->setValue(size.getZ());
-
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     ui->startGroup("Config");
 
     circleTypeCombo_ = ui->addLabelEdit("Type"        , new QComboBox);
@@ -138,15 +150,19 @@ addOptions(CQCamera3DUI *ui)
     circleTypeCombo_->addItems(circleTypeInd.names());
 
     ui->endGroup();
-
-    const auto &data = mode_->circleConfig();
-
-    circleTypeCombo_->setCurrentIndex(circleTypeInd.typeToInd(data.type));
-    verticesXEdit_  ->setValue(data.num_xy);
-    startAngleEdit_ ->setValue(data.angleStart);
-    extentAngleEdit_->setValue(data.angleDelta);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::CYLINDER) {
+    ui->startGroup("Config");
+
+    cylinderTypeCombo_ = ui->addLabelEdit("Cap Type"    , new QComboBox);
+    verticesXEdit_     = ui->addLabelEdit("Num Vertical", new CQIntegerSpin);
+    verticesYEdit_     = ui->addLabelEdit("Num Radial"  , new CQIntegerSpin);
+
+    cylinderTypeCombo_->addItems(cylinderTypeInd.names());
+
+    ui->endGroup();
+  }
+  else if (type == AddType::SPHERE) {
     ui->startGroup("Config");
 
     verticesXEdit_   = ui->addLabelEdit("Segments", new CQIntegerSpin);
@@ -155,7 +171,57 @@ addOptions(CQCamera3DUI *ui)
     extentAngleEdit_ = ui->addLabelEdit("Angle Extent", new CQRealSpin);
 
     ui->endGroup();
+  }
 
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQCamera3DAddOptions::
+updateWidgets()
+{
+  connectSlots(false);
+
+  //---
+
+  auto type = mode_->type();
+
+  auto pos  = mode_->position();
+  auto size = mode_->size();
+
+  xEdit_->setValue(pos.x);
+  yEdit_->setValue(pos.y);
+  zEdit_->setValue(pos.z);
+
+  if (type == AddType::TORUS) {
+    auto tr = mode_->torusRadius();
+
+    innerRadiusEdit_->setValue(size.getX());
+    outerRadiusEdit_->setValue(tr);
+  }
+
+  if (xSizeEdit_) xSizeEdit_->setValue(size.getX());
+  if (ySizeEdit_) ySizeEdit_->setValue(size.getY());
+  if (zSizeEdit_) zSizeEdit_->setValue(size.getZ());
+
+  if      (type == AddType::CIRCLE) {
+    const auto &data = mode_->circleConfig();
+
+    circleTypeCombo_->setCurrentIndex(circleTypeInd.typeToInd(data.type));
+    verticesXEdit_  ->setValue(data.num_xy);
+    startAngleEdit_ ->setValue(data.angleStart);
+    extentAngleEdit_->setValue(data.angleDelta);
+  }
+  else if (type == AddType::CYLINDER) {
+    const auto &data = mode_->cylinderConfig();
+
+    cylinderTypeCombo_->setCurrentIndex(cylinderTypeInd.typeToInd(data.cap_type));
+    verticesXEdit_    ->setValue(data.num_xy);
+    verticesYEdit_    ->setValue(data.num_patches);
+  }
+  else if (type == AddType::SPHERE) {
     const auto &data = mode_->sphereConfig();
 
     verticesXEdit_  ->setValue(data.num_xy);
@@ -163,6 +229,8 @@ addOptions(CQCamera3DUI *ui)
     startAngleEdit_ ->setValue(data.angleStart);
     extentAngleEdit_->setValue(data.angleDelta);
   }
+
+  //---
 
   connectSlots(true);
 }
@@ -197,14 +265,14 @@ connectSlots(bool b)
     CQUtil::connectDisconnect(b, zSizeEdit_, SIGNAL(realValueChanged(double)),
                               this, SLOT(zSizeSlot(double)));
 
-  if (type == CQCamera3DAddMouseMode::AddType::TORUS) {
+  if (type == AddType::TORUS) {
     CQUtil::connectDisconnect(b, innerRadiusEdit_, SIGNAL(realValueChanged(double)),
                               this, SLOT(innerRadiusSlot(double)));
     CQUtil::connectDisconnect(b, outerRadiusEdit_, SIGNAL(realValueChanged(double)),
                               this, SLOT(outerRadiusSlot(double)));
   }
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     CQUtil::connectDisconnect(b, circleTypeCombo_, SIGNAL(currentIndexChanged(int)),
                               this, SLOT(circleTypeSlot(int)));
     CQUtil::connectDisconnect(b, verticesXEdit_, SIGNAL(valueChanged(int)),
@@ -214,7 +282,15 @@ connectSlots(bool b)
     CQUtil::connectDisconnect(b, extentAngleEdit_, SIGNAL(realValueChanged(double)),
                               this, SLOT(extentAngleSlot(double)));
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::CYLINDER) {
+    CQUtil::connectDisconnect(b, cylinderTypeCombo_, SIGNAL(currentIndexChanged(int)),
+                              this, SLOT(cylinderTypeSlot(int)));
+    CQUtil::connectDisconnect(b, verticesXEdit_, SIGNAL(valueChanged(int)),
+                              this, SLOT(verticesXSlot(int)));
+    CQUtil::connectDisconnect(b, verticesYEdit_, SIGNAL(valueChanged(int)),
+                              this, SLOT(verticesYSlot(int)));
+  }
+  else if (type == AddType::SPHERE) {
     CQUtil::connectDisconnect(b, verticesXEdit_, SIGNAL(valueChanged(int)),
                               this, SLOT(verticesXSlot(int)));
     CQUtil::connectDisconnect(b, verticesYEdit_, SIGNAL(valueChanged(int)),
@@ -232,19 +308,21 @@ title() const
 {
   auto type = mode_->type();
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE)
+  if      (type == AddType::CIRCLE)
     return "Add Circle";
-  else if (type == CQCamera3DAddMouseMode::AddType::CUBE)
+  else if (type == AddType::CONE)
+    return "Add Cone";
+  else if (type == AddType::CUBE)
     return "Add Cube";
-  else if (type == CQCamera3DAddMouseMode::AddType::CYLINDER)
+  else if (type == AddType::CYLINDER)
     return "Add Cylinder";
-  else if (type == CQCamera3DAddMouseMode::AddType::PLANE)
+  else if (type == AddType::PLANE)
     return "Add Plane";
-  else if (type == CQCamera3DAddMouseMode::AddType::PYRAMID)
+  else if (type == AddType::PYRAMID)
     return "Add Pyramid";
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE)
-    return "Add Spehere";
-  else if (type == CQCamera3DAddMouseMode::AddType::TORUS)
+  else if (type == AddType::SPHERE)
+    return "Add Sphere";
+  else if (type == AddType::TORUS)
     return "Add Torus";
   else
     return "";
@@ -398,18 +476,38 @@ circleTypeSlot(int i)
 
 void
 CQCamera3DAddOptions::
+cylinderTypeSlot(int i)
+{
+  auto data = mode_->cylinderConfig();
+
+  data.cap_type = cylinderTypeInd.indToType(i);
+
+  mode_->setCylinderConfig(data);
+
+  mode_->updateObject();
+}
+
+void
+CQCamera3DAddOptions::
 verticesXSlot(int i)
 {
   auto type = mode_->type();
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     auto data = mode_->circleConfig();
 
     data.num_xy = std::max(i, 4);
 
     mode_->setCircleConfig(data);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::CYLINDER) {
+    auto data = mode_->cylinderConfig();
+
+    data.num_xy = std::max(i, 4);
+
+    mode_->setCylinderConfig(data);
+  }
+  else if (type == AddType::SPHERE) {
     auto data = mode_->sphereConfig();
 
     data.num_xy = std::max(i, 4);
@@ -424,11 +522,22 @@ void
 CQCamera3DAddOptions::
 verticesYSlot(int i)
 {
-  auto data = mode_->sphereConfig();
+  auto type = mode_->type();
 
-  data.num_patches = std::max(i, 4);
+  if      (type == AddType::CYLINDER) {
+    auto data = mode_->cylinderConfig();
 
-  mode_->setSphereConfig(data);
+    data.num_patches = std::max(i, 2);
+
+    mode_->setCylinderConfig(data);
+  }
+  else if (type == AddType::SPHERE) {
+    auto data = mode_->sphereConfig();
+
+    data.num_patches = std::max(i, 4);
+
+    mode_->setSphereConfig(data);
+  }
 
   mode_->updateObject();
 }
@@ -439,14 +548,14 @@ startAngleSlot(double r)
 {
   auto type = mode_->type();
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     auto data = mode_->circleConfig();
 
     data.angleStart = r;
 
     mode_->setCircleConfig(data);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::SPHERE) {
     auto data = mode_->sphereConfig();
 
     data.angleStart = r;
@@ -463,14 +572,14 @@ extentAngleSlot(double r)
 {
   auto type = mode_->type();
 
-  if      (type == CQCamera3DAddMouseMode::AddType::CIRCLE) {
+  if      (type == AddType::CIRCLE) {
     auto data = mode_->circleConfig();
 
     data.angleDelta = r;
 
     mode_->setCircleConfig(data);
   }
-  else if (type == CQCamera3DAddMouseMode::AddType::SPHERE) {
+  else if (type == AddType::SPHERE) {
     auto data = mode_->sphereConfig();
 
     data.angleDelta = r;
@@ -483,20 +592,116 @@ extentAngleSlot(double r)
 
 //---
 
+CQCamera3DCursorOptions::
+CQCamera3DCursorOptions(CQCamera3DCursorMouseMode *mode) :
+ mode_(mode)
+{
+  mode_->setOptions(this);
+}
+
+void
+CQCamera3DCursorOptions::
+addOptions(CQCamera3DUI *ui)
+{
+  ui->startGroup("Operation");
+
+  auto *centerButton = new QPushButton("Center");
+
+  ui->addWidget(centerButton);
+
+  ui->endGroup();
+
+  connect(centerButton, SIGNAL(clicked()), this, SLOT(centerSlot()));
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQCamera3DCursorOptions::
+updateWidgets()
+{
+}
+
+QString
+CQCamera3DCursorOptions::
+title() const
+{
+  return "Cursor";
+}
+
+void
+CQCamera3DCursorOptions::
+connectSlots(bool)
+{
+}
+
+void
+CQCamera3DCursorOptions::
+centerSlot()
+{
+  auto *iface = mode_->mgr()->iface();
+
+  auto selectData = iface->getSelection();
+
+  CPoint3D c;
+
+  if (selectData.type == CQCamera3DSelectData::SelectType::OBJECT) {
+    if (selectData.objects.empty())
+      return;
+
+    CBBox3D bbox;
+
+    for (auto *object : selectData.objects) {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+
+      bbox += object1->bbox();
+    }
+
+    c = bbox.getCenter();
+  }
+  else if (selectData.type == CQCamera3DSelectData::SelectType::FACE) {
+    if (selectData.faces.empty())
+      return;
+
+    CPoint3D c;
+
+    for (auto *face : selectData.faces) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      c += face1->pointCenter();
+    }
+
+    c /= selectData.faces.size();
+  }
+  else
+    return;
+
+  iface->setCursor(c);
+}
+
+//---
+
 CQCamera3DMoveOptions::
 CQCamera3DMoveOptions(CQCamera3DMoveMouseMode *mode) :
  mode_(mode)
 {
+  mode_->setOptions(this);
 }
 
 void
 CQCamera3DMoveOptions::
 addOptions(CQCamera3DUI *ui)
 {
+  auto *iface = mode_->mgr()->iface();
+
   ui->startGroup("Location");
 
-  dirCombo_ = ui->addLabelEdit("Direction", new QComboBox);
-  dirCombo_->addItems(moveDirectionInd.names());
+  if (! iface->is2D()) {
+    dirCombo_ = ui->addLabelEdit("Direction", new QComboBox);
+    dirCombo_->addItems(moveDirectionInd.names());
+  }
 
   xEdit_ = ui->addLabelEdit("X", new CQRealSpin);
   yEdit_ = ui->addLabelEdit("Y", new CQRealSpin);
@@ -504,21 +709,50 @@ addOptions(CQCamera3DUI *ui)
 
   ui->endGroup();
 
-  CPoint3D pos;
+  //---
 
-  auto *object = mode_->object();
+  updateWidgets();
 
-  if (object) {
-    auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  //---
 
-    auto *objectData = canvas->getObjectData(object);
+  connectSlots(true);
+}
 
-    if (objectData) {
-      auto bbox = objectData->bbox();
+void
+CQCamera3DMoveOptions::
+updateWidgets()
+{
+  connectSlots(false);
 
-      pos = bbox.getCenter();
+  //---
+
+  auto *iface = mode_->mgr()->iface();
+
+  dirCombo_->setCurrentIndex(moveDirectionInd.typeToInd(iface->moveDirection()));
+
+  const auto &selectData = mode_->selectData();
+
+  CBBox3D bbox;
+
+  if      (selectData.type == CQCamera3DCanvas::SelectType::OBJECT) {
+    for (auto *object : selectData.objects) {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+
+      bbox += object1->bbox();
     }
   }
+  else if (selectData.type == CQCamera3DCanvas::SelectType::FACE) {
+    for (auto *face : selectData.faces) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      bbox += face1->pointCenter();
+    }
+  }
+
+  CPoint3D pos;
+
+  if (bbox.isSet())
+    pos = bbox.getCenter();
 
   xEdit_->setValue(pos.x);
   yEdit_->setValue(pos.y);
@@ -540,8 +774,10 @@ void
 CQCamera3DMoveOptions::
 connectSlots(bool b)
 {
-  CQUtil::connectDisconnect(b, dirCombo_, SIGNAL(currentIndexChanged(int)),
-                            this, SLOT(dirSlot(int)));
+  if (dirCombo_)
+    CQUtil::connectDisconnect(b, dirCombo_, SIGNAL(currentIndexChanged(int)),
+                              this, SLOT(dirSlot(int)));
+
   CQUtil::connectDisconnect(b, xEdit_, SIGNAL(realValueChanged(double)),
                             this, SLOT(xSlot(double)));
   CQUtil::connectDisconnect(b, yEdit_, SIGNAL(realValueChanged(double)),
@@ -556,66 +792,117 @@ dirSlot(int ind)
 {
   auto dir = moveDirectionInd.indToType(ind);
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  canvas->setMoveDirection(dir);
+  iface->setMoveDirection(dir);
 }
 
 void
 CQCamera3DMoveOptions::
 xSlot(double r)
 {
-  auto *object = mode_->object();
-  if (! object) return;
+  auto *iface = mode_->mgr()->iface();
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  const auto &selectData = mode_->selectData();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  if      (selectData.type == CQCamera3DCanvas::SelectType::OBJECT) {
+    for (auto *object : selectData.objects) {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
-  auto dx   = r - bbox.getCenter().x;
+      auto bbox = object1->bbox();
 
-  canvas->moveObject(object, CVector3D(dx, 0, 0));
-  canvas->update();
+      auto dx = r - bbox.getCenter().x;
+
+      iface->moveObject(object, CVector3D(dx, 0, 0));
+    }
+  }
+  else if (selectData.type == CQCamera3DCanvas::SelectType::FACE) {
+    iface->beginUpdateObjects();
+
+    for (auto *face : selectData.faces) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      auto p = face1->pointCenter();
+
+      auto dx = r - p.x;
+
+      iface->moveFace(face, CVector3D(dx, 0, 0));
+    }
+
+    iface->endUpdateObjects();
+  }
 }
 
 void
 CQCamera3DMoveOptions::
 ySlot(double r)
 {
-  auto *object = mode_->object();
-  if (! object) return;
+  auto *iface = mode_->mgr()->iface();
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  const auto &selectData = mode_->selectData();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  if      (selectData.type == CQCamera3DCanvas::SelectType::OBJECT) {
+    for (auto *object : selectData.objects) {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
-  auto dy   = r - bbox.getCenter().y;
+      auto bbox = object1->bbox();
 
-  canvas->moveObject(object, CVector3D(0, dy, 0));
-  canvas->update();
+      auto dy = r - bbox.getCenter().y;
+
+      iface->moveObject(object, CVector3D(0, dy, 0));
+    }
+  }
+  else if (selectData.type == CQCamera3DCanvas::SelectType::FACE) {
+    iface->beginUpdateObjects();
+
+    for (auto *face : selectData.faces) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      auto p = face1->pointCenter();
+
+      auto dy = r - p.y;
+
+      iface->moveFace(face, CVector3D(0, dy, 0));
+    }
+
+    iface->endUpdateObjects();
+  }
 }
 
 void
 CQCamera3DMoveOptions::
 zSlot(double r)
 {
-  auto *object = mode_->object();
-  if (! object) return;
+  auto *iface = mode_->mgr()->iface();
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  const auto &selectData = mode_->selectData();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  if      (selectData.type == CQCamera3DCanvas::SelectType::OBJECT) {
+    for (auto *object : selectData.objects) {
+      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
-  auto dz   = r - bbox.getCenter().z;
+      auto bbox = object1->bbox();
 
-  canvas->moveObject(object, CVector3D(0, 0, dz));
-  canvas->update();
+      auto dz = r - bbox.getCenter().z;
+
+      iface->moveObject(object, CVector3D(0, 0, dz));
+    }
+  }
+  else if (selectData.type == CQCamera3DCanvas::SelectType::FACE) {
+    iface->beginUpdateObjects();
+
+    for (auto *face : selectData.faces) {
+      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+
+      auto p = face1->pointCenter();
+
+      auto dz = r - p.z;
+
+      iface->moveFace(face, CVector3D(0, 0, dz));
+    }
+
+    iface->endUpdateObjects();
+  }
 }
 
 //---
@@ -624,6 +911,7 @@ CQCamera3DScaleOptions::
 CQCamera3DScaleOptions(CQCamera3DScaleMouseMode *mode) :
  mode_(mode)
 {
+  mode_->setOptions(this);
 }
 
 void
@@ -641,20 +929,33 @@ addOptions(CQCamera3DUI *ui)
 
   ui->endGroup();
 
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQCamera3DScaleOptions::
+updateWidgets()
+{
+  connectSlots(false);
+
+  //---
+
+  auto *iface = mode_->mgr()->iface();
+
+  dirCombo_->setCurrentIndex(moveDirectionInd.typeToInd(iface->moveDirection()));
+
   CVector3D size;
 
   auto *object = mode_->object();
 
   if (object) {
-    auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-    auto *objectData = canvas->getObjectData(object);
+    auto bbox = object1->bbox();
 
-    if (objectData) {
-      auto bbox = objectData->bbox();
-
-      size = bbox.getSize();
-    }
+    size = bbox.getSize();
   }
 
   xEdit_->setValue(size.getX());
@@ -693,9 +994,9 @@ dirSlot(int ind)
 {
   auto dir = moveDirectionInd.indToType(ind);
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  canvas->setMoveDirection(dir);
+  iface->setMoveDirection(dir);
 }
 
 void
@@ -705,17 +1006,15 @@ xSlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
+  auto bbox = object1->bbox();
 
   auto scale = (r > 0.0 ? r/bbox.getXSize() : 1.0);
 
-  canvas->scaleObject(object, CVector3D(scale, 1, 1));
-  canvas->update();
+  iface->scaleObject(object, CVector3D(scale, 1, 1));
 }
 
 void
@@ -725,17 +1024,15 @@ ySlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
+  auto bbox = object1->bbox();
 
   auto scale = (r > 0.0 ? r/bbox.getXSize() : 1.0);
 
-  canvas->scaleObject(object, CVector3D(1, scale, 1));
-  canvas->update();
+  iface->scaleObject(object, CVector3D(1, scale, 1));
 }
 
 void
@@ -745,17 +1042,15 @@ zSlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
-  auto bbox = objectData->bbox();
+  auto bbox = object1->bbox();
 
   auto scale = (r > 0.0 ? r/bbox.getXSize() : 1.0);
 
-  canvas->scaleObject(object, CVector3D(1, 1, scale));
-  canvas->update();
+  iface->scaleObject(object, CVector3D(1, 1, scale));
 }
 
 //---
@@ -764,6 +1059,7 @@ CQCamera3DRotateOptions::
 CQCamera3DRotateOptions(CQCamera3DRotateMouseMode *mode) :
  mode_(mode)
 {
+  mode_->setOptions(this);
 }
 
 void
@@ -780,6 +1076,19 @@ addOptions(CQCamera3DUI *ui)
   zEdit_ = ui->addLabelEdit("Z", new CQRealSpin);
 
   ui->endGroup();
+
+  //---
+
+  connectSlots(true);
+}
+
+void
+CQCamera3DRotateOptions::
+updateWidgets()
+{
+  connectSlots(false);
+
+  //---
 
   xEdit_->setValue(0.0);
   yEdit_->setValue(0.0);
@@ -817,9 +1126,9 @@ dirSlot(int ind)
 {
   auto dir = moveDirectionInd.indToType(ind);
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  canvas->setMoveDirection(dir);
+  iface->setMoveDirection(dir);
 }
 
 void
@@ -829,15 +1138,11 @@ xSlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
-
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *iface = mode_->mgr()->iface();
 
   connectSlots(false);
 
-  canvas->rotateObject(object, r, CVector3D(1, 0, 0));
-  canvas->update();
+  iface->rotateObject(object, r, CVector3D(1, 0, 0));
 
   xEdit_->setValue(0.0);
 
@@ -851,15 +1156,11 @@ ySlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
-
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *iface = mode_->mgr()->iface();
 
   connectSlots(false);
 
-  canvas->rotateObject(object, r, CVector3D(0, 1, 0));
-  canvas->update();
+  iface->rotateObject(object, r, CVector3D(0, 1, 0));
 
   yEdit_->setValue(0.0);
 
@@ -873,15 +1174,11 @@ zSlot(double r)
   auto *object = mode_->object();
   if (! object) return;
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
-
-  auto *objectData = canvas->getObjectData(object);
-  if (! objectData) return;
+  auto *iface = mode_->mgr()->iface();
 
   connectSlots(false);
 
-  canvas->rotateObject(object, r, CVector3D(0, 0, 1));
-  canvas->update();
+  iface->rotateObject(object, r, CVector3D(0, 0, 1));
 
   zEdit_->setValue(0.0);
 
@@ -894,6 +1191,7 @@ CQCamera3DExtrudeOptions::
 CQCamera3DExtrudeOptions(CQCamera3DExtrudeMouseMode *mode) :
  mode_(mode)
 {
+  mode_->setOptions(this);
 }
 
 void
@@ -911,9 +1209,20 @@ addOptions(CQCamera3DUI *ui)
 
   //---
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  connectSlots(true);
+}
 
-  auto r1 = canvas->extrudeMoveDelta();
+void
+CQCamera3DExtrudeOptions::
+updateWidgets()
+{
+  connectSlots(false);
+
+  //---
+
+  auto *iface = mode_->mgr()->iface();
+
+  auto r1 = iface->extrudeMoveDelta();
 
   distanceEdit_->setValue(r1);
 
@@ -945,26 +1254,24 @@ dirSlot(int ind)
 {
   auto dir = moveDirectionInd.indToType(ind);
 
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
-  canvas->setMoveDirection(dir);
+  iface->setMoveDirection(dir);
 }
 
 void
 CQCamera3DExtrudeOptions::
 distanceSlot(double r)
 {
-  auto *canvas = dynamic_cast<CQCamera3DCanvas *>(mode_->mgr()->widget());
+  auto *iface = mode_->mgr()->iface();
 
   connectSlots(false);
 
-  auto r1 = canvas->extrudeMoveDelta();
+  auto r1 = iface->extrudeMoveDelta();
 
-  canvas->extrudeMove(r - r1);
+  iface->extrudeMove(r - r1);
 
-  canvas->setExtrudeMoveDelta(r);
-
-  canvas->update();
+  iface->setExtrudeMoveDelta(r);
 
   connectSlots(true);
 }

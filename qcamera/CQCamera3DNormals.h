@@ -5,7 +5,7 @@
 #include <QColor>
 
 class CQCamera3DCanvas;
-class CQCamera3DObjectData;
+class CQCamera3DGeomObject;
 
 class CQCamera3DNormals : public CQCamera3DObject {
  public:
@@ -34,7 +34,7 @@ class CQCamera3DNormals : public CQCamera3DObject {
   CQCamera3DShaderProgram *shaderProgram() override;
 
  private:
-  void addBufferNormals(CQCamera3DObjectData *object);
+  void addBufferNormals(CQCamera3DGeomObject *object);
 
  protected:
   CQCamera3DCanvas* canvas_ { nullptr };
