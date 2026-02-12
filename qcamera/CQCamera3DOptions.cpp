@@ -20,7 +20,7 @@ class CircleTypeInd : public ValueMap<CGeomCircle3D::Type, int> {
     add("Line", CGeomCircle3D::Type::LINE, 0);
     add("NGon", CGeomCircle3D::Type::NGON, 1);
     add("Fan" , CGeomCircle3D::Type::FAN , 2);
-  };
+  }
 
   CGeomCircle3D::Type indToType(int ind) {
     return lookup(ind);
