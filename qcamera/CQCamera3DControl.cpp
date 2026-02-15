@@ -803,6 +803,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
   uvData_.typeCombo = ui.addLabelEdit("Texture", new QComboBox);
   uvData_.typeCombo->addItems(uvTextureTypeInd.names());
 
+  uvData_.wrapCheck = ui.addLabelEdit("Wrap", new QCheckBox);
+
   ui.addStretch();
 
   ui.endTabPage();
@@ -1477,6 +1479,11 @@ updateWidgets()
   overviewData_.cameraCheck->setChecked(overview->isCameraVisible());
   overviewData_.lightsCheck->setChecked(overview->isLightsVisible());
 
+  // UV
+  auto *uvMap = app_->uvMap();
+
+  uvData_.wrapCheck->setChecked(uvMap->isWrapValues());
+
   // Bones
   auto *bones = app_->bones();
 
@@ -1793,6 +1800,7 @@ connectSlots(bool b)
 
   // UV
   connectComboBox(uvData_.typeCombo, SLOT(uvTextureTypeSlot(int)));
+  connectCheckBox(uvData_.wrapCheck, SLOT(uvTextureWrapSlot(int)));
 
   // Textures
   CQUtil::connectDisconnect(b, app_, SIGNAL(currentTextureChanged()),
@@ -3911,6 +3919,15 @@ uvTextureTypeSlot(int i)
   auto *uvMap = app_->uvMap();
 
   uvMap->setTextureType(uvTextureTypeInd.indToType(i));
+}
+
+void
+CQCamera3DControl::
+uvTextureWrapSlot(int i)
+{
+  auto *uvMap = app_->uvMap();
+
+  uvMap->setWrapValues(i);
 }
 
 #if 0

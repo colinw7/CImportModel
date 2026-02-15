@@ -34,6 +34,7 @@ class CImportBase {
     else if (suffix == "asc"  ) return CGEOM_3D_TYPE_ASC;
     else if (suffix == "blend") return CGEOM_3D_TYPE_BLEND;
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;
+    else if (suffix == "dae"  ) return CGEOM_3D_TYPE_DAE;
     else if (suffix == "dxf"  ) return CGEOM_3D_TYPE_DXF;
     else if (suffix == "fbx"  ) return CGEOM_3D_TYPE_FBX;
     else if (suffix == "glb"  ) return CGEOM_3D_TYPE_GLTF;

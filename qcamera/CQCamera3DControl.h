@@ -245,6 +245,7 @@ class CQCamera3DControl : public QFrame {
 
   // UV Map
   void uvTextureTypeSlot(int i);
+  void uvTextureWrapSlot(int i);
 
   // Textures
 //void textureFlipSlot(int i);
@@ -502,6 +503,7 @@ class CQCamera3DControl : public QFrame {
   // UV
   struct UVData {
     QComboBox *typeCombo { nullptr };
+    QCheckBox *wrapCheck { nullptr };
   };
 
   UVData uvData_;

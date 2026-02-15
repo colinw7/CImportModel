@@ -935,7 +935,12 @@ addObjectsData()
         //---
 
         if (faceData.normalTexture) {
-          const auto &tpoint = face->getTexturePoint(vertex, iv);
+          CPoint2D tpoint;
+
+          if (vertex.hasTextureMap())
+            tpoint = vertex.getTextureMap();
+          else
+            tpoint = face->getTexturePoint(vertex, iv);
 
           int tw = faceData.normalTexture->getWidth ();
           int th = faceData.normalTexture->getHeight();

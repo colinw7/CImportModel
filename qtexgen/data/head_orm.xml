@@ -1,0 +1,10 @@
+<texture_gen>
+<image_texture id="diffuse" filename="hulk/head_d.png"/>
+<image_texture id="normal" filename="hulk/head_n.png"/>
+<image_texture id="specular" filename="hulk/head_s.png"/>
+<image_texture id="ORM" filename="hulk/head_orm.png"/>
+<pipe from="diffuse:Value" to="material:Diffuse"/>
+<pipe from="normal:Value" to="material:Normal"/>
+<pipe from="specular:Value" to="material:Specular"/>
+<pipe from="ORM:Value" to="material:ORM"/>
+</texture_gen>

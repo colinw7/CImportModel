@@ -1,0 +1,8 @@
+<texture_gen>
+<image_texture id="image" filename="pics/Catwoman.jpg"/>
+<separate_color id="separate_color"/>
+<color id="color"/>
+<pipe from="image:Value" to="separate_color:Color"/>
+<pipe from="separate_color:R" to="color:R"/>
+<pipe from="color:Color" to="material:Diffuse"/>
+</texture_gen>

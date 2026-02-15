@@ -1,0 +1,12 @@
+<texture_gen>
+<image_texture id="diffuse" filename="rocket/equip_d.png"/>
+<image_texture id="normal" filename="rocket/equip_n.png"/>
+<image_texture id="specular" filename="rocket/equip_s.png"/>
+<image_texture id="emission" filename="rocket/equip_e.png"/>
+<image_texture id="ORM" filename="rocket/equip_orm.png"/>
+<pipe from="diffuse:Value" to="material:Diffuse"/>
+<pipe from="normal:Value" to="material:Normal"/>
+<pipe from="specular:Value" to="material:Specular"/>
+<pipe from="emission:Value" to="material:Emission"/>
+<pipe from="ORM:Value" to="material:ORM"/>
+</texture_gen>

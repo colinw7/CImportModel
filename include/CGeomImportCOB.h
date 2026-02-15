@@ -35,7 +35,7 @@ class CGeomImportCOB : public CImportCOB {
 
   void addTexturePoint(double x, double y) override;
 
-  void addITriangle(int i1, int i2, int i3, int t1, int t2, int t3, int imat) override;
+  void addIPolygon(uint *inds, uint *tinds, uint num_inds, int imat) override;
 
   void setFacesMaterial(int imat, CShadeType3D shade_type,
                         const CRGBA &ambient, const CRGBA &diffuse,

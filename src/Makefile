@@ -22,6 +22,7 @@ CImport3DS.cpp \
 CImportASC.cpp \
 CImportBlend.cpp \
 CImportCOB.cpp \
+CImportDAE.cpp \
 CImportDXF.cpp \
 CImportFBX.cpp \
 CImportGLTF.cpp \
@@ -46,6 +47,7 @@ $(CDEBUG) \
 -I../../CImportModel/include \
 -I../../CGeometry3D/include \
 -I../../CVoxel/include \
+-I../../CXML/include \
 -I../../CImageLib/include \
 -I../../CFont/include \
 -I../../CJson/include \

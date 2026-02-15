@@ -249,7 +249,7 @@ read(CFile &file)
       }
       else {
         std::cerr << "Unhandled line: " << line.line << "\n";
-        return false;
+        //return false;
       }
     }
   }
@@ -329,13 +329,13 @@ readAscii()
         v.y = std::stod(word);
       else if (p.name == "z")
         v.z = std::stod(word);
-      else if (p.name == "r")
+      else if (p.name == "r" || p.name == "red")
         v.r = std::stod(word);
-      else if (p.name == "g")
+      else if (p.name == "g" || p.name == "green")
         v.g = std::stod(word);
-      else if (p.name == "b")
+      else if (p.name == "b" || p.name == "blue")
         v.b = std::stod(word);
-      else if (p.name == "a")
+      else if (p.name == "a" || p.name == "alpha")
         v.a = std::stod(word);
       else if (p.name == "nx")
         v.nx = std::stod(word);

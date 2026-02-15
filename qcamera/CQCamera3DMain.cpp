@@ -35,10 +35,11 @@ main(int argc, char **argv)
     if (argv[i][0] == '-') {
       auto arg = QString(&argv[i][1]);
 
-      if      (arg == "3ds" || arg == "3drw" || arg == "asc" || arg == "blend" ||
-               arg == "cob" || arg == "dxf"  || arg == "fbx" || arg == "gltf"  ||
-               arg == "obj" || arg == "plg"  || arg == "ply" || arg == "scene" ||
-               arg == "stl"  || arg == "v3d" || arg == "vox" || arg == "x3d") {
+      if      (arg == "3ds"   || arg == "3drw" || arg == "asc" || arg == "blend" ||
+               arg == "cob"   || arg == "dae"  || arg == "dxf" || arg == "fbx"   ||
+               arg == "gltf"  || arg == "obj"  || arg == "plg" || arg == "ply"   ||
+               arg == "scene" || arg == "stl"  || arg == "v3d" || arg == "vox"   ||
+               arg == "x3d") {
         ++i;
 
         if (i < argc) {
@@ -84,7 +85,7 @@ main(int argc, char **argv)
       }
       else if (arg == "h" || arg == "help") {
         std::cerr << "CQCamera3D "
-         "[-3ds|-3drw|-asc|-blend|-cob|-dxf|-fbx|-gltf|-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
+         "[-3ds|-3drw|-asc|-blend|-cob|-dae|-dxf|-fbx|-gltf|-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
          "[-swap_xy|swap_yz|swap_zx] "
          "[-invert_x|-invert_y|-invert_z] "
          "[-texture_map <file>] [<file>]"
@@ -115,7 +116,7 @@ main(int argc, char **argv)
     };
 
     auto strs = QStringList() <<
-      "3ds" << "3drw" << "asc" << "blend" << "cob" << "dxf" << "fbx" << "glb" << "gltf" <<
+      "3ds" << "3drw" << "asc" << "blend" << "cob" << "dae" << "dxf" << "fbx" << "glb" << "gltf" <<
       "obj" << "plg" << "ply"<< "scene"<< "stl"<< "v3d" << "vox" << "x3d";
 
     for (const auto &str : strs)

@@ -35,7 +35,7 @@ class CImportCOB : public CImportBase {
 
   virtual void addTexturePoint(double x, double y) = 0;
 
-  virtual void addITriangle(int i1, int i2, int i3, int t1, int t2, int t3, int imat) = 0;
+  virtual void addIPolygon(uint *inds, uint *tinds, uint num_inds, int imat) = 0;
 
   virtual void setFacesMaterial(int imat, CShadeType3D shade_type, const CRGBA &ambient,
                                 const CRGBA &diffuse, const CRGBA &specular, const CRGBA &emission,
@@ -44,6 +44,9 @@ class CImportCOB : public CImportBase {
   CGeomScene3D &getScene() override;
 
  private:
+  bool readAscii();
+  bool readBinary();
+
   bool readName();
   bool readCoordinates();
   bool readTransform();
@@ -54,6 +57,8 @@ class CImportCOB : public CImportBase {
   bool readMaterial(int i);
 
   bool readNextLine();
+
+  bool errorMsg(const std::string &msg) const;
 
  private:
   CFile*                   file_ { nullptr };

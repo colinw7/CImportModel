@@ -172,15 +172,21 @@ paintEvent(QPaintEvent *)
     auto iw1 = width ()/s;
     auto ih1 = height()/s;
 
-    auto *qimage = dynamic_cast<CQImage *>(texture->image()->image().get());
+    auto *texture1 = dynamic_cast<CQCamera3DTexture *>(texture);
 
-    auto qimage1 = qimage->getQImage().scaled(iw1, ih1,
-      /*Qt::KeepAspectRatio*/Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    auto *glTexture = texture1->glTexture(canvas);
 
-    auto px = mapU(0.0);
-    auto py = mapV(0.0);
+    auto qimage = glTexture->getImage();
 
-    painter.drawImage(px, py, qimage1);
+    if (! qimage.isNull()) {
+      auto qimage1 = qimage.scaled(iw1, ih1,
+        /*Qt::KeepAspectRatio*/Qt::IgnoreAspectRatio, Qt::FastTransformation);
+
+      auto px = mapU(0.0);
+      auto py = mapV(0.0);
+
+      painter.drawImage(px, py, qimage1);
+    }
   }
 
   //---

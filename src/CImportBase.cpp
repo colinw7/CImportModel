@@ -7,6 +7,7 @@
 #include <CImport3DRW.h>
 #include <CImport3DS.h>
 #include <CImportBlend.h>
+#include <CImportDAE.h>
 #include <CImportDXF.h>
 #include <CImportFBX.h>
 #include <CImportGLTF.h>
@@ -33,6 +34,7 @@ createModel(CGeom3DType type, const std::string &name)
     case CGEOM_3D_TYPE_ASC:   base = new CGeomImportASC  (nullptr, name); break;
     case CGEOM_3D_TYPE_BLEND: base = new CImportBlend    (nullptr, name); break;
     case CGEOM_3D_TYPE_COB:   base = new CGeomImportCOB  (nullptr, name); break;
+    case CGEOM_3D_TYPE_DAE:   base = new CImportDAE      (nullptr, name); break;
     case CGEOM_3D_TYPE_DXF:   base = new CImportDXF      (nullptr, name); break;
     case CGEOM_3D_TYPE_FBX:   base = new CImportFBX      (nullptr, name); break;
     case CGEOM_3D_TYPE_GLTF:  base = new CImportGLTF     (nullptr, name); break;

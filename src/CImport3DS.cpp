@@ -2,56 +2,63 @@
 #include <CGeometry3D.h>
 #include <CMathGeom3D.h>
 
-#define M3D_VERSION_ID      0x0002
-#define COLOR_24_ID         0x0011
-#define LIN_COLOR_24_ID     0x0012
-#define INT_PERCENTAGE_ID   0x0030
-#define FLOAT_PERCENTAGE_ID 0x0031
-#define MASTER_SCALE_ID     0x0100
-#define MDATA_ID            0x3d3d
-#define MESH_VERSION_ID     0x3d3e
-#define NAMED_OBJECT_ID     0x4000
-#define N_TRI_OBJECT_ID     0x4100
-#define POINT_ARRAY_ID      0x4110
-#define FACE_ARRAY_ID       0x4120
-#define MSH_MAT_GROUP_ID    0x4130
-#define MAP_COORDS_ID       0x4140
-#define SMOOTH_GROUP_ID     0x4150
-#define MESH_MATRIX_ID      0x4160
-#define LIGHT_ID            0x4600
-#define SPOTLIGHT_ID        0x4610
-#define CAMERA_ID           0x4700
-#define M3DMAGIC_ID         0x4d4d
-#define MAT_NAME_ID         0xa000
-#define MAT_AMBIENT_ID      0xa010
-#define MAT_DIFFUSE_ID      0xa020
-#define MAT_SPECULAR_ID     0xa030
-#define MAT_SHININESS_ID    0xa040
-#define MAT_SHININESSP_ID   0xa041 // percent
-#define MAT_TRANSPARENCY_ID 0xa050
-#define MAT_SELF_ILLUM_ID   0xa080
-#define MAT_TWO_SIDED_ID    0xa081
-#define MAT_SELF_ILLUMP_ID  0xa081 // percent
-#define MAT_SHADING_ID      0xa100
-#define MAT_SHADING_TYPE_ID 0xa1e0
-#define TEXTURE_1_ID        0xa200
-#define MAT_GLOSSY_ID       0xa204
-#define MAP_OPACITY_ID      0xa210
-#define REFLECT_MAP_ID      0xa220
-#define BUMP_MAP_ID         0xa230
-#define MAP_FILENAME_ID     0xa300
-#define MAP_PARAM_ID        0xa351
-#define MAT_ENTRY_ID        0xafff
-#define KEY_FRAME_ID        0xb000
-#define MESH_INFO_ID        0xb002
-#define SPOTLIGHT_INFO_ID   0xb007
-#define FRAMES_BLOCK_ID     0xb008
-#define OBJECT_NAME_ID      0xb010
-#define OBJECT_PIVOT_ID     0xb013
-#define POS_TRACK_ID        0xb020
-#define ROT_TRACK_ID        0xb021
-#define SCALE_TRACK_ID      0xb022
-#define HIER_POS_IF         0xb030
+#define M3D_VERSION_ID       0x0002
+#define FLT_COLOR_24_ID      0x0010
+#define INT_COLOR_24_ID      0x0011
+#define LIN_INT_COLOR_24_ID  0x0012 // gamma color
+#define LIN_FLT_COLOR_24_ID  0x0013 // gamma color
+#define INT_PERCENTAGE_ID    0x0030
+#define FLOAT_PERCENTAGE_ID  0x0031
+#define DOUBLE_PERCENTAGE_ID 0x0032
+#define MASTER_SCALE_ID      0x0100
+#define MDATA_ID             0x3d3d
+#define MESH_VERSION_ID      0x3d3e
+#define NAMED_OBJECT_ID      0x4000
+#define N_TRI_OBJECT_ID      0x4100
+#define POINT_ARRAY_ID       0x4110
+#define FACE_ARRAY_ID        0x4120
+#define MSH_MAT_GROUP_ID     0x4130
+#define MAP_COORDS_ID        0x4140
+#define SMOOTH_GROUP_ID      0x4150
+#define MESH_MATRIX_ID       0x4160
+#define MESH_COLOR_ID        0x4165
+#define TEXT_INFO_ID         0x4170
+#define LIGHT_ID             0x4600
+#define SPOTLIGHT_ID         0x4610
+#define CAMERA_ID            0x4700
+#define M3DMAGIC_ID          0x4d4d
+#define HIERARCHY_ID         0x4f00
+#define MAT_NAME_ID          0xa000
+#define MAT_AMBIENT_ID       0xa010
+#define MAT_DIFFUSE_ID       0xa020
+#define MAT_SPECULAR_ID      0xa030
+#define MAT_SHININESS_ID     0xa040
+#define MAT_SHININESSP_ID    0xa041 // percent
+#define MAT_TRANSPARENCY_ID  0xa050
+#define MAT_SELF_ILLUM_ID    0xa080
+#define MAT_TWO_SIDED_ID     0xa081
+#define MAT_SELF_ILPCT_ID    0xa084
+#define MAT_SELF_ILLUMP_ID   0xa081 // percent
+#define MAT_SHADING_ID       0xa100
+#define MAT_SHADING_TYPE_ID  0xa1e0
+#define TEXTURE_1_ID         0xa200
+#define MAT_GLOSSY_ID        0xa204
+#define MAP_OPACITY_ID       0xa210
+#define REFLECT_MAP_ID       0xa220
+#define BUMP_MAP_ID          0xa230
+#define MAP_FILENAME_ID      0xa300
+#define MAP_PARAM_ID         0xa351
+#define MAT_ENTRY_ID         0xafff
+#define KEY_FRAME_ID         0xb000
+#define MESH_INFO_ID         0xb002
+#define SPOTLIGHT_INFO_ID    0xb007
+#define FRAMES_BLOCK_ID      0xb008
+#define OBJECT_NAME_ID       0xb010
+#define OBJECT_PIVOT_ID      0xb013
+#define POS_TRACK_ID         0xb020
+#define ROT_TRACK_ID         0xb021
+#define SCALE_TRACK_ID       0xb022
+#define HIER_POS_IF          0xb030
 
 struct ChunkName {
   ushort      id;
@@ -61,8 +68,10 @@ struct ChunkName {
 static ChunkName
 chunk_names[] = {
   { M3D_VERSION_ID     , "M3D_VERSION"     , },
-  { COLOR_24_ID        , "COLOR_24"        , },
-  { LIN_COLOR_24_ID    , "LIN_COLOR_24"    , },
+  { INT_COLOR_24_ID    , "INT_COLOR_24"    , },
+  { FLT_COLOR_24_ID    , "FLT_COLOR_24"    , },
+  { LIN_INT_COLOR_24_ID, "LIN_INT_COLOR_24", },
+  { LIN_FLT_COLOR_24_ID, "LIN_FLT_COLOR_24", },
   { INT_PERCENTAGE_ID  , "INT_PERCENTAGE"  , },
   { FLOAT_PERCENTAGE_ID, "FLOAT_PERCENTAGE", },
   { MASTER_SCALE_ID    , "MASTER_SCALE"    , },
@@ -76,6 +85,11 @@ chunk_names[] = {
   { MAP_COORDS_ID      , "MAP_COORDS"      , },
   { SMOOTH_GROUP_ID    , "SMOOTH_GROUP"    , },
   { MESH_MATRIX_ID     , "MESH_MATRIX"     , },
+  { MESH_COLOR_ID      , "MESH_COLOR"      , },
+  { TEXT_INFO_ID       , "TEXT_INFO"       , },
+  { LIGHT_ID           , "LIGHT"           , },
+  { SPOTLIGHT_ID       , "SPOTLIGHT"       , },
+  { CAMERA_ID          , "CAMERA"          , },
   { M3DMAGIC_ID        , "M3DMAGIC"        , },
   { MAT_NAME_ID        , "MAT_NAME"        , },
   { MAT_AMBIENT_ID     , "MAT_AMBIENT"     , },
@@ -328,15 +342,17 @@ readMatAmbient(CImport3DSChunk *chunk)
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
-      case COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case INT_COLOR_24_ID:
+      case LIN_INT_COLOR_24_ID: {
+        readIntColor(chunk, rgba);
 
         material_->setAmbient(rgba);
 
         break;
       }
-      case LIN_COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case FLT_COLOR_24_ID:
+      case LIN_FLT_COLOR_24_ID: {
+        readFltColor(chunk, rgba);
 
         material_->setAmbient(rgba);
 
@@ -361,15 +377,17 @@ readMatDiffuse(CImport3DSChunk *chunk)
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
-      case COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case INT_COLOR_24_ID:
+      case LIN_INT_COLOR_24_ID: {
+        readIntColor(chunk, rgba);
 
         material_->setDiffuse(rgba);
 
         break;
       }
-      case LIN_COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case FLT_COLOR_24_ID:
+      case LIN_FLT_COLOR_24_ID: {
+        readFltColor(chunk, rgba);
 
         material_->setDiffuse(rgba);
 
@@ -394,15 +412,17 @@ readMatSpecular(CImport3DSChunk *chunk)
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
-      case COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case INT_COLOR_24_ID:
+      case LIN_INT_COLOR_24_ID: {
+        readIntColor(chunk, rgba);
 
         material_->setSpecular(rgba);
 
         break;
       }
-      case LIN_COLOR_24_ID: {
-        readColor(chunk, rgba);
+      case FLT_COLOR_24_ID:
+      case LIN_FLT_COLOR_24_ID: {
+        readFltColor(chunk, rgba);
 
         material_->setSpecular(rgba);
 
@@ -522,7 +542,7 @@ readMatTexture(CImport3DSChunk *chunk, TextureData &texture)
 
       break;
     default:
-      std::cerr << "Unhandled texture data type : " << type << "\n";
+      errorMsg("Unhandled texture data type : " + std::to_string(type));
       break;
   }
 
@@ -537,7 +557,7 @@ readMatTexture(CImport3DSChunk *chunk, TextureData &texture)
 
 bool
 CImport3DS::
-readColor(CImport3DSChunk *chunk, CRGBA &rgba)
+readIntColor(CImport3DSChunk *chunk, CRGBA &rgba)
 {
   uchar r, g, b;
 
@@ -546,6 +566,21 @@ readColor(CImport3DSChunk *chunk, CRGBA &rgba)
   readChar(chunk, &b);
 
   rgba = CRGBA(r/255.0, g/255.0, b/255.0, 1.0);
+
+  return true;
+}
+
+bool
+CImport3DS::
+readFltColor(CImport3DSChunk *chunk, CRGBA &rgba)
+{
+  float r, g, b;
+
+  readFloat(chunk, &r);
+  readFloat(chunk, &g);
+  readFloat(chunk, &b);
+
+  rgba = CRGBA(r, g, b, 1.0);
 
   return true;
 }
@@ -1200,4 +1235,11 @@ getChunkPad(CImport3DSChunk *chunk)
     pad += "  ";
 
   return pad;
+}
+
+void
+CImport3DS::
+errorMsg(const std::string &msg) const
+{
+  std::cerr << msg << "\n";
 }

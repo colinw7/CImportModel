@@ -38,11 +38,11 @@ addTexturePoint(double, double)
 
 void
 CGeomImportCOB::
-addITriangle(int i1, int i2, int i3, int, int, int, int imat)
+addIPolygon(uint *inds, uint * /*tinds*/, uint num_inds, int imat)
 {
-  auto face_num = object_->addITriangle(uint(i1), uint(i2), uint(i3));
+  auto face_num = object_->addIPolygon(inds, num_inds);
 
-  //face->setTextureIds(t1, t2, t3);
+  //face->setTextureIds(tinds);
 
   addMaterialFace(imat, face_num);
 }

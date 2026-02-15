@@ -56,7 +56,8 @@ class CImport3DS : public CImportBase {
   bool        readMatTwoSided     (CImport3DSChunk *chunk);
   bool        readMatShading      (CImport3DSChunk *chunk);
   bool        readMatTexture      (CImport3DSChunk *chunk, TextureData &texture);
-  bool        readColor           (CImport3DSChunk *chunk, CRGBA &color);
+  bool        readIntColor        (CImport3DSChunk *chunk, CRGBA &color);
+  bool        readFltColor        (CImport3DSChunk *chunk, CRGBA &color);
   bool        readIntPercentage   (CImport3DSChunk *chunk, ushort *percent);
   bool        readFloatPercentage (CImport3DSChunk *chunk, float *percent);
   bool        readMasterScale     (CImport3DSChunk *chunk);
@@ -81,6 +82,8 @@ class CImport3DS : public CImportBase {
   void        printChunk          (CImport3DSChunk *chunk);
   uint        getChunkDepth       (CImport3DSChunk *chunk);
   std::string getChunkPad         (CImport3DSChunk *chunk);
+
+  void errorMsg(const std::string &msg) const;
 
  private:
   using MaterialList        = std::vector<CGeomMaterial *>;

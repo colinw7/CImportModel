@@ -1,0 +1,8 @@
+<texture_gen>
+<image_texture id="diffuse" filename="textures/shield/shield_diffuse.png"/>
+<image_texture id="normal" filename="textures/shield/shield_normal.png"/>
+<image_texture id="specular" filename="textures/shield/shield_spec.png"/>
+<pipe from="diffuse:Value" to="material:Diffuse"/>
+<pipe from="normal:Value" to="material:Normal"/>
+<pipe from="specular:Value" to="material:Specular"/>
+</texture_gen>

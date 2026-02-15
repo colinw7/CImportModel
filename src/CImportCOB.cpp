@@ -20,6 +20,27 @@ read(CFile &file)
 {
   file_ = &file;
 
+  uchar header[32];
+
+  if (! file_->read(header, 32))
+    return false;
+
+  if (strncmp(reinterpret_cast<char *>(&header[0]), "Caligari ", 9) != 0)
+     return false;
+
+  if (header[16] != 'L')
+    return errorMsg("File is big-endian, which is not supported");
+
+  if (header[15] == 'A')
+    return readAscii();
+  else
+    return readBinary();
+}
+
+bool
+CImportCOB::
+readAscii()
+{
   if (! readName())
     return false;
 
@@ -42,6 +63,13 @@ read(CFile &file)
     return false;
 
   return true;
+}
+
+bool
+CImportCOB::
+readBinary()
+{
+  return errorMsg("Binary not supported");
 }
 
 bool
@@ -344,34 +372,36 @@ readFaces()
     if (! CStrUtil::toInteger(match_strs_[1], &flags)) return false;
     if (! CStrUtil::toInteger(match_strs_[2], &imat )) return false;
 
-    if (num != 3)
-      return false;
+    if (num < 3)
+      return errorMsg("Invalid number of face vertices " + std::to_string(num));
 
     if (! readNextLine())
       return false;
 
     pattern_ = "<\\(.*\\),\\(.*\\)> <\\(.*\\),\\(.*\\)> <\\(.*\\),\\(.*\\)>";
 
+    for (int ii = 3; ii < num; ++ii)
+      pattern_ += " <\\(.*\\),\\(.*\\)>";
+
     if (! CRegExpUtil::parse(line_, pattern_, match_strs_))
       return false;
 
-    int v1, v2, v3;
-    int t1, t2, t3;
+    std::vector<uint> v; v.resize(num);
+    std::vector<uint> t; t.resize(num);
 
-    if (! CStrUtil::toInteger(match_strs_[0], &v1)) return false;
-    if (! CStrUtil::toInteger(match_strs_[2], &v2)) return false;
-    if (! CStrUtil::toInteger(match_strs_[4], &v3)) return false;
-
-    if (! CStrUtil::toInteger(match_strs_[1], &t1)) return false;
-    if (! CStrUtil::toInteger(match_strs_[3], &t2)) return false;
-    if (! CStrUtil::toInteger(match_strs_[5], &t3)) return false;
-
-    if (flags_ & INVERT_WINDING_ORDER) {
-      std::swap(v1, v3);
-      std::swap(t1, t3);
+    for (int ii = 0; ii < num; ++ii) {
+      if (! CStrUtil::toInteger(match_strs_[2*ii    ], &v[ii])) return false;
+      if (! CStrUtil::toInteger(match_strs_[2*ii + 1], &t[ii])) return false;
     }
 
-    addITriangle(v1, v2, v3, t1, t2, t3, imat);
+    if (flags_ & INVERT_WINDING_ORDER) {
+      for (int ii = 0; ii < num/2; ++ii) {
+        std::swap(v[ii], v[num - 1 - ii]);
+        std::swap(t[ii], t[num - 1 - ii]);
+      }
+    }
+
+    addIPolygon(&v[0], &t[0], num, imat);
 
     ++i;
   }
@@ -609,4 +639,12 @@ getScene()
 {
   static CGeomScene3D scene;
   return scene;
+}
+
+bool
+CImportCOB::
+errorMsg(const std::string &msg) const
+{
+  std::cerr << msg << "\n";
+  return false;
 }

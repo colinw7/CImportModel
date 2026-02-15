@@ -1,0 +1,11 @@
+<texture_gen>
+<texture_coord id="texture_coord"/>
+<math id="math_cos" type="Cos"/>
+<math id="math_sin" type="Sin"/>
+<color id="color"/>
+<pipe from="texture_coord:X" to="math_cos:Input"/>
+<pipe from="texture_coord:Y" to="math_sin:Input"/>
+<pipe from="math_cos:Output" to="color:R"/>
+<pipe from="math_sin:Output" to="color:G"/>
+<pipe from="color:Color" to="material:Diffuse"/>
+</texture_gen>

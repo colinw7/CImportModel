@@ -1,0 +1,6 @@
+<texture_gen>
+<image_texture id="diffuse" filename="textures/bricks/bricks2.jpg"/>
+<image_texture id="normal" filename="textures/bricks/bricks2_normal.jpg"/>
+<pipe from="diffuse:Value" to="material:Diffuse"/>
+<pipe from="normal:Value" to="material:Normal"/>
+</texture_gen>
