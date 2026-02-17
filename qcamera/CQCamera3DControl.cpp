@@ -6,6 +6,7 @@
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DAxes.h>
+#include <CQCamera3DGrid.h>
 #include <CQCamera3DUVMap.h>
 #include <CQCamera3DNormals.h>
 #include <CQCamera3DBasis.h>
@@ -524,6 +525,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   axisData_.gridCheck = ui.addCheck("Grid");
 
+  axisData_.infGridCheck = ui.addCheck("Infinite Grid");
+
   ui.addStretch();
 
   ui.endTabPage();
@@ -830,7 +833,9 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   ui.startFrame(/*horizontal*/true);
 
-  ui.addButton("Add Texture", SLOT(addTextureSlot()));
+  ui.addButton("Add", SLOT(addTextureSlot()));
+  ui.addButton("Load Map", SLOT(loadTextureMapSlot()));
+  ui.addButton("Save Map", SLOT(saveTextureMapSlot()));
 
   ui.addStretch();
 
@@ -889,7 +894,9 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   ui.startFrame(/*horizontal*/true);
 
-  ui.addButton("Add Material", SLOT(addMaterialSlot()));
+  ui.addButton("Add", SLOT(addMaterialSlot()));
+  ui.addButton("Load Map", SLOT(loadMaterialMapSlot()));
+  ui.addButton("Save Map", SLOT(saveMaterialMapSlot()));
 
   ui.addStretch();
 
@@ -1131,6 +1138,11 @@ updateWidgets()
 
     axisData_.gridCheck->setChecked(axes->isShowGrid());
   }
+
+  auto *grid = canvas->grid();
+
+  if (grid)
+    axisData_.infGridCheck->setChecked(grid->isVisible());
 
   // Mouse
 #if 0
@@ -1726,6 +1738,8 @@ connectSlots(bool b)
   connectRealSpin(axisData_.zPosEdit.second, SLOT(axesZPosSlot(double)));
 
   connectCheckBox(axisData_.gridCheck, SLOT(axesGridSlot(int)));
+
+  connectCheckBox(axisData_.infGridCheck, SLOT(infGridSlot(int)));
 
   // Mouse
 #if 0
@@ -3147,6 +3161,19 @@ axesGridSlot(int i)
 
 void
 CQCamera3DControl::
+infGridSlot(int i)
+{
+  auto *canvas = app_->canvas();
+  auto *grid   = canvas->grid();
+
+  if (grid)
+    grid->setVisible(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
 swapSlot()
 {
   auto name = qobject_cast<QPushButton *>(sender())->text();
@@ -3196,7 +3223,7 @@ addTextureSlot()
 
   auto *canvas = app_->canvas();
 
-  canvas->addTextureFile(fileName.toStdString());
+  canvas->addTextureFile(fileName.toStdString(), /*update*/true);
 }
 
 void

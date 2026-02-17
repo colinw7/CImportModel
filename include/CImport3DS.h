@@ -41,6 +41,14 @@ class CImport3DS : public CImportBase {
  private:
   struct TextureData {
     std::string filename;
+    double      blend { 1.0 };
+  };
+
+  struct Camera {
+    float xPos, yPos, zPos;
+    float xTgt, yTgt, zTgt;
+    float roll;
+    float fov;
   };
 
   bool        readM3DVersion      (CImport3DSChunk *chunk);
@@ -62,7 +70,9 @@ class CImport3DS : public CImportBase {
   bool        readFloatPercentage (CImport3DSChunk *chunk, float *percent);
   bool        readMasterScale     (CImport3DSChunk *chunk);
   bool        readNamedObject     (CImport3DSChunk *chunk, CGeomObject3D* &object);
+  bool        readKeyFrame        (CImport3DSChunk *chunk);
   bool        readNTriObject      (CImport3DSChunk *chunk, CGeomObject3D *object);
+  bool        readCamera          (CImport3DSChunk *chunk, Camera *camera);
   bool        readPointArray      (CImport3DSChunk *chunk, CGeomObject3D *object);
   bool        readFaceArray       (CImport3DSChunk *chunk, CGeomObject3D *object);
   bool        readMshMatGroup     (CImport3DSChunk *chunk, CGeomObject3D *object);
@@ -77,7 +87,7 @@ class CImport3DS : public CImportBase {
   bool        readLong            (CImport3DSChunk *chunk, uint *l);
   std::string readString          (CImport3DSChunk *chunk);
   bool        readFloat           (CImport3DSChunk *chunk, float *f);
-  std::string getChunkName        (CImport3DSChunk *chunk);
+  std::string getChunkName        (CImport3DSChunk *chunk, bool showId=true);
   void        adjustChunkLeft     (CImport3DSChunk *chunk, int offset);
   void        printChunk          (CImport3DSChunk *chunk);
   uint        getChunkDepth       (CImport3DSChunk *chunk);

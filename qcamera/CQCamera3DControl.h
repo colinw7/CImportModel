@@ -153,6 +153,9 @@ class CQCamera3DControl : public QFrame {
 
   void axesGridSlot(int);
 
+  // Grid
+  void infGridSlot(int);
+
   // Mouse
 #if 0
   void mouseTypeSlot(int);
@@ -404,6 +407,8 @@ class CQCamera3DControl : public QFrame {
     CheckEdit zPosEdit;
 
     QCheckBox* gridCheck { nullptr };
+
+    QCheckBox* infGridCheck { nullptr };
   };
 
   AxisData axisData_;

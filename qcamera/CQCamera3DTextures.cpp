@@ -111,6 +111,7 @@ placeTextures()
     auto *texture1 = dynamic_cast<CQCamera3DTexture *>(texture);
 
     auto *glTexture = texture1->glTexture(canvas);
+    if (! glTexture) continue;
 
     TextureData textureData1;
 

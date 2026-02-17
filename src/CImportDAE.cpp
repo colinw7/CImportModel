@@ -67,11 +67,16 @@ read(CFile &file)
     const auto &opt_name = option->getName ();
 
     if      (opt_name == "xmlns") {
+      SKIP(opt_name);
     }
     else if (opt_name == "version") {
+      SKIP(opt_name);
+    }
+    else if (opt_name == "xmlns:xsi") {
+      SKIP(opt_name);
     }
     else
-      std::cerr << "Unrecognised option '" << opt_name << "'\n";
+      errorMsg("Unrecognised option '" + opt_name + "'");
   }
 
   //---
@@ -88,67 +93,49 @@ read(CFile &file)
 
     auto *tag1 = token->getTag();
 
-    const auto &name = tag1->getName();
+    const auto &name1 = tag1->getName();
 
     auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options1 = tag1->getOptions();
-
-    if      (name == "asset") {
-      assert(num_options1 == 0);
-
-      readAssert(name, tag1);
+    if      (name1 == "asset") {
+      readAssert(name1, tag1);
     }
-    else if (name == "library_images") {
-      assert(num_options1 == 0);
-
-      readLibraryImages(name, tag1);
+    else if (name1 == "library_images") {
+      readLibraryImages(name1, tag1);
     }
-    else if (name == "library_materials") {
-      assert(num_options1 == 0);
-
-      readLibraryMaterials(name, tag1);
+    else if (name1 == "library_materials") {
+      readLibraryMaterials(name1, tag1);
     }
-    else if (name == "library_effects") {
-      assert(num_options1 == 0);
-
-      readLibraryEffects(name, tag1);
+    else if (name1 == "library_effects") {
+      readLibraryEffects(name1, tag1);
     }
-    else if (name == "library_geometries") {
-      assert(num_options1 == 0);
-
-      readLibraryGeometries(name, tag1);
+    else if (name1 == "library_geometries") {
+      readLibraryGeometries(name1, tag1);
     }
-    else if (name == "library_controllers") {
-      assert(num_options1 == 0);
-
-      readLibraryControllers(name, tag1);
+    else if (name1 == "library_controllers") {
+      readLibraryControllers(name1, tag1);
     }
-    else if (name == "library_animations") {
-      assert(num_options1 == 0);
-
-      readLibraryAnimations(name, tag1);
+    else if (name1 == "library_animations") {
+      readLibraryAnimations(name1, tag1);
     }
-    else if (name == "library_visual_scenes") {
-      assert(num_options1 == 0);
-
-      readLibraryVisualScenes(name, tag1);
+    else if (name1 == "library_visual_scenes") {
+      readLibraryVisualScenes(name1, tag1);
     }
-    else if (name == "library_cameras") {
-      TODO(name);
+    else if (name1 == "library_cameras") {
+      TODO(name1);
     }
-    else if (name == "library_lights") {
-      TODO(name);
+    else if (name1 == "library_lights") {
+      TODO(name1);
     }
-    else if (name == "scene") {
+    else if (name1 == "scene") {
       assert(num_options1 == 0);
 
       Scene scene;
 
-      readScene(name, tag1, scene);
+      readScene(name1, tag1, scene);
     }
     else
-      std::cerr << "Unrecognised tag '" << name << "'\n";
+      errorMsg("Unrecognised tag '" + name1 + "'");
   }
 
   //---
@@ -177,10 +164,12 @@ read(CFile &file)
         emissionFile = getEffectTexture(effect, effect->emissionTexture.texture);
         specularFile = getEffectTexture(effect, effect->specularTexture.texture);
 
-        std::cerr << "Diffuse  file: " << diffuseFile  << "\n";
-        std::cerr << "Normal   file: " << normalFile   << "\n";
-        std::cerr << "Emission file: " << emissionFile << "\n";
-        std::cerr << "Specular file: " << specularFile << "\n";
+        if (isDebug()) {
+          std::cerr << "Diffuse  file: " << diffuseFile  << "\n";
+          std::cerr << "Normal   file: " << normalFile   << "\n";
+          std::cerr << "Emission file: " << emissionFile << "\n";
+          std::cerr << "Specular file: " << specularFile << "\n";
+        }
       }
 
       MeshSource *vertexMesh   = nullptr;
@@ -259,15 +248,15 @@ read(CFile &file)
 
       std::vector<CPoint3D> points;
 
-      auto nv = vertexMesh->values.size();
+      auto nv = vertexMesh->valueArray.values.size();
       auto np = nv/3;
 
       points.resize(np);
 
       for (uint i = 0; i < np; ++i) {
-        auto p = CPoint3D(vertexMesh->values[3*i    ],
-                          vertexMesh->values[3*i + 1],
-                          vertexMesh->values[3*i + 2]);
+        auto p = CPoint3D(vertexMesh->valueArray.values[3*i    ],
+                          vertexMesh->valueArray.values[3*i + 1],
+                          vertexMesh->valueArray.values[3*i + 2]);
 
         points[i] = p;
       }
@@ -277,15 +266,15 @@ read(CFile &file)
       std::vector<CVector3D> normals;
 
       if (normalMesh) {
-        auto nnv = normalMesh->values.size();
+        auto nnv = normalMesh->valueArray.values.size();
         auto nn  = nnv/3;
 
         normals.resize(nn);
 
         for (uint i = 0; i < nn; ++i) {
-          auto v = CVector3D(normalMesh->values[3*i    ],
-                             normalMesh->values[3*i + 1],
-                             normalMesh->values[3*i + 2]);
+          auto v = CVector3D(normalMesh->valueArray.values[3*i    ],
+                             normalMesh->valueArray.values[3*i + 1],
+                             normalMesh->valueArray.values[3*i + 2]);
 
           normals[i] = v;
         }
@@ -298,14 +287,14 @@ read(CFile &file)
       std::vector<CPoint2D> texCoords;
 
       if (texCoordMesh) {
-        auto ntv = texCoordMesh->values.size();
+        auto ntv = texCoordMesh->valueArray.values.size();
         auto nt  = ntv/2;
 
         texCoords.resize(nt);
 
         for (uint i = 0; i < nt; ++i) {
-          auto p = CPoint2D(texCoordMesh->values[2*i    ],
-                            texCoordMesh->values[2*i + 1]);
+          auto p = CPoint2D(texCoordMesh->valueArray.values[2*i    ],
+                            texCoordMesh->valueArray.values[2*i + 1]);
 
           texCoords[i] = p;
         }
@@ -396,6 +385,8 @@ read(CFile &file)
 
         auto image = CImageMgrInst->createImage(src);
 
+        image->flipH();
+
         auto *texture = CGeometry3DInst->createTexture(image);
 
         texture->setName(name);
@@ -478,12 +469,12 @@ read(CFile &file)
 
       //---
 
-      int nv = int(vertexMesh->values.size());
+      int nv = int(vertexMesh->valueArray.values.size());
 
       for (int i = 0; i < nv; i += 3) {
-        auto p = CPoint3D(vertexMesh->values[i],
-                          vertexMesh->values[i + 1],
-                          vertexMesh->values[i + 2]);
+        auto p = CPoint3D(vertexMesh->valueArray.values[i],
+                          vertexMesh->valueArray.values[i + 1],
+                          vertexMesh->valueArray.values[i + 2]);
 
         object1->addVertex(p);
       }
@@ -584,6 +575,12 @@ bool
 CImportDAE::
 readAssert(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -598,58 +595,61 @@ readAssert(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+    auto num_options1 = tag1->getNumOptions();
 
     if      (name == "contributor") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "created") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "modified") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "revision") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "title") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "unit") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      const auto &options1 = tag1->getOptions();
 
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option1 = options1[j];
 
-        if (opt_name == "meter") {
+        const auto &opt_name  = option1->getName ();
+      //const auto &opt_value = option1->getValue();
+
+        if     (opt_name == "name") {
+          SKIP(parentName + "/" + name + " : " + opt_name);
+        }
+        else if (opt_name == "meter") {
           SKIP(parentName + "/" + name + " : " + opt_name);
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       SKIP(parentName + ":" + name);
     }
     else if (name == "up_axis") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       SKIP(parentName + ":" + name);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -659,6 +659,12 @@ bool
 CImportDAE::
 readLibraryImages(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -673,32 +679,10 @@ readLibraryImages(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "image") {
       auto image = std::make_unique<Image>();
-
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          image->id = opt_value;
-        }
-        else if (opt_name == "name") {
-          image->name = opt_value;
-        }
-        else if (opt_name == "depth") {
-          if (! CStrUtil::toInteger(opt_value, &image->depth))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
 
       readLibraryImage(parentName + "/" + name, tag1, image);
 
@@ -708,7 +692,7 @@ readLibraryImages(const std::string &parentName, CXMLTag *tag)
       idImage_[image->id] = std::move(image);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -718,6 +702,12 @@ bool
 CImportDAE::
 readLibraryMaterials(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -732,28 +722,10 @@ readLibraryMaterials(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "material") {
       auto material = std::make_unique<Material>();
-
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          material->id = opt_value;
-        }
-        else if (opt_name == "name") {
-          material->name = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
 
       readLibraryMaterial(parentName + "/" + name, tag1, material);
 
@@ -763,7 +735,7 @@ readLibraryMaterials(const std::string &parentName, CXMLTag *tag)
       idMaterial_[material->id] = std::move(material);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -773,6 +745,12 @@ bool
 CImportDAE::
 readLibraryEffects(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -787,35 +765,17 @@ readLibraryEffects(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "effect") {
       auto effect = std::make_unique<LibraryEffect>();
-
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          effect->id = opt_value;
-        }
-        else if (opt_name == "name") {
-          effect->name = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
 
       readLibraryEffect(parentName + "/" + name, tag1, effect);
 
       idLibraryEffect_[effect->id] = std::move(effect);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -825,6 +785,32 @@ bool
 CImportDAE::
 readLibraryImage(const std::string &parentName, CXMLTag *tag, ImageP &image)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      image->id = opt_value;
+    }
+    else if (opt_name == "name") {
+      image->name = opt_value;
+    }
+    else if (opt_name == "depth") {
+      if (! CStrUtil::toInteger(opt_value, &image->depth))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -839,12 +825,12 @@ readLibraryImage(const std::string &parentName, CXMLTag *tag, ImageP &image)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "init_from") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -853,7 +839,7 @@ readLibraryImage(const std::string &parentName, CXMLTag *tag, ImageP &image)
       assert(tag1->getNumTagChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -863,6 +849,28 @@ bool
 CImportDAE::
 readLibraryMaterial(const std::string &parentName, CXMLTag *tag, MaterialP &material)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      material->id = opt_value;
+    }
+    else if (opt_name == "name") {
+      material->name = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -877,16 +885,16 @@ readLibraryMaterial(const std::string &parentName, CXMLTag *tag, MaterialP &mate
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "instance_effect") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option1 = options1[j];
 
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
+        const auto &opt_name  = option1->getName ();
+        const auto &opt_value = option1->getValue();
 
         if (opt_name == "url") {
           if (opt_value[0] == '#')
@@ -895,13 +903,13 @@ readLibraryMaterial(const std::string &parentName, CXMLTag *tag, MaterialP &mate
             std::cerr << "Invalid url value '" << opt_value << "'\n";
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       assert(tag1->getNumChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -911,6 +919,28 @@ bool
 CImportDAE::
 readLibraryEffect(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      effect->id = opt_value;
+    }
+    else if (opt_name == "name") {
+      effect->name = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -925,17 +955,13 @@ readLibraryEffect(const std::string &parentName, CXMLTag *tag, LibraryEffectP &e
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    //const auto &options = tag1->getOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
     if (name == "profile_COMMON") {
-      assert(num_options == 0);
-
       readLibraryEffectProfileCommon(parentName + "/" + name, tag1, effect);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -945,6 +971,10 @@ bool
 CImportDAE::
 readLibraryEffectProfileCommon(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -959,25 +989,12 @@ readLibraryEffectProfileCommon(const std::string &parentName, CXMLTag *tag, Libr
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if      (name == "newparam") {
       NewParam newParam;
-
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "sid") {
-          newParam.sid = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
 
       readLibraryEffectProfileParam(parentName + "/" + name, tag1, newParam, effect);
     }
@@ -985,7 +1002,7 @@ readLibraryEffectProfileCommon(const std::string &parentName, CXMLTag *tag, Libr
       readLibraryEffectProfileTechnique(parentName + "/" + name, tag1, effect);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -996,6 +1013,25 @@ CImportDAE::
 readLibraryEffectProfileParam(const std::string &parentName, CXMLTag *tag, NewParam &param,
                               LibraryEffectP &effect)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "sid") {
+      param.sid = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -1010,32 +1046,17 @@ readLibraryEffectProfileParam(const std::string &parentName, CXMLTag *tag, NewPa
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+    auto num_options1 = tag1->getNumOptions();
 
     if      (name == "surface") {
       Surface surface;
-
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "type") {
-          surface.type = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
 
       readLibraryEffectProfileSurface(parentName + "/" + name, tag1, surface);
 
       effect->surfaces[param.sid] = surface;
     }
     else if (name == "sampler2D") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       Sampler2D sampler2D;
 
@@ -1044,7 +1065,7 @@ readLibraryEffectProfileParam(const std::string &parentName, CXMLTag *tag, NewPa
       effect->samplers[param.sid] = sampler2D;
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1069,20 +1090,26 @@ readLibraryEffectProfileTechnique(const std::string &parentName, CXMLTag *tag,
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if      (name == "phong") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readLibraryEffectProfilePhong(parentName + "/" + name, tag1, effect);
+    }
+    else if (name == "blinn") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "lambert") {
+      TODO(parentName + "/" + name);
     }
     else if (name == "extra") {
       readLibraryEffectProfileExtra(parentName + "/" + name, tag1, effect);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1107,68 +1134,68 @@ readLibraryEffectProfilePhong(const std::string &parentName, CXMLTag *tag,
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if      (name == "ambient") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readAmbient(parentName + "/" + name, tag1);
     }
     else if (name == "diffuse") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readDiffuse(parentName + "/" + name, tag1, effect);
     }
     else if (name == "emission") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readEmission(parentName + "/" + name, tag1, effect);
     }
     else if (name == "specular") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readSpecular(parentName + "/" + name, tag1, effect);
     }
     else if (name == "shininess") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readShininess(parentName + "/" + name, tag1);
     }
     else if (name == "reflective") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readReflective(parentName + "/" + name, tag1);
     }
     else if (name == "reflectivity") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readReflectivity(parentName + "/" + name, tag1);
     }
     else if (name == "transparent") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option1 = options1[j];
 
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
+        const auto &opt_name  = option1->getName ();
+        const auto &opt_value = option1->getValue();
 
         if      (opt_name == "opaque") {
-          TODO(parentName + "/" + name + " : " + opt_name);
+          effect->transparentOpaque = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
-      readTransparent(parentName + "/" + name, tag1);
+      readTransparent(parentName + "/" + name, tag1, effect);
     }
     else if (name == "transparency") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readTransparency(parentName + "/" + name, tag1);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1193,28 +1220,28 @@ readLibraryEffectProfileExtra(const std::string &parentName, CXMLTag *tag,
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "technique") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
+        const auto &opt_value = option->getValue();
 
         if      (opt_name == "profile") {
-          TODO(parentName + "/" + name + " : " + opt_name);
+          effect->technique_profile = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readLibraryEffectProfileTechExtra(parentName + "/" + name, tag1, effect);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1239,17 +1266,20 @@ readLibraryEffectProfileTechExtra(const std::string &parentName, CXMLTag *tag,
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
-    if (name == "displacement") {
-      assert(num_options == 0);
+    if      (name == "displacement") {
+      assert(num_options1 == 0);
 
       readLibraryEffectProfileDisplacement(parentName + "/" + name, tag1, effect);
     }
+    else if (name == "bump") {
+      TODO(parentName + "/" + name);
+    }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1274,63 +1304,15 @@ readLibraryEffectProfileDisplacement(const std::string &parentName, CXMLTag *tag
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if (name == "texture") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "texture") {
-          effect->normalTexture.texture = opt_value;
-        }
-        else if (opt_name == "texcoord") {
-          effect->normalTexture.texcoord = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readNormalTexture(parentName + "/" + name, tag1);
+      readTexture(parentName + "/" + name, tag1, effect->normalTexture);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
-  }
-
-  return true;
-}
-
-bool
-CImportDAE::
-readNormalTexture(const std::string &parentName, CXMLTag *tag)
-{
-  auto children = tag->getChildren();
-
-  auto num_children = tag->getNumChildren();
-
-  for (size_t i = 0; i < num_children; ++i) {
-    const auto *token = children[i];
-
-    if (! token->isTag())
-      continue;
-
-    auto *tag1 = token->getTag();
-
-    const auto &name = tag1->getName();
-
-    //auto num_options = tag1->getNumOptions();
-
-    //const auto &options = tag1->getOptions();
-
-    if (name == "extra") {
-      TODO(parentName + "/" + name);
-    }
-    else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1354,15 +1336,16 @@ readAmbient(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "color") {
-      TODO(parentName + "/" + name);
+      Color c;
+      readColor(parentName + "/" + name, tag1, c);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1386,63 +1369,15 @@ readDiffuse(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if (name == "texture") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "texture") {
-          effect->diffuseTexture.texture = opt_value;
-        }
-        else if (opt_name == "texcoord") {
-          effect->diffuseTexture.texcoord = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readDiffuseTexture(parentName + "/" + name, tag1);
+      readTexture(parentName + "/" + name, tag1, effect->diffuseTexture);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
-  }
-
-  return true;
-}
-
-bool
-CImportDAE::
-readDiffuseTexture(const std::string &parentName, CXMLTag *tag)
-{
-  auto children = tag->getChildren();
-
-  auto num_children = tag->getNumChildren();
-
-  for (size_t i = 0; i < num_children; ++i) {
-    const auto *token = children[i];
-
-    if (! token->isTag())
-      continue;
-
-    auto *tag1 = token->getTag();
-
-    const auto &name = tag1->getName();
-
-    //auto num_options = tag1->getNumOptions();
-
-    //const auto &options = tag1->getOptions();
-
-    if (name == "extra") {
-      TODO(parentName + "/" + name);
-    }
-    else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1466,63 +1401,15 @@ readEmission(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if (name == "texture") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "texture") {
-          effect->emissionTexture.texture = opt_value;
-        }
-        else if (opt_name == "texcoord") {
-          effect->emissionTexture.texcoord = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readEmissionTexture(parentName + "/" + name, tag1);
+      readTexture(parentName + "/" + name, tag1, effect->emissionTexture);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
-  }
-
-  return true;
-}
-
-bool
-CImportDAE::
-readEmissionTexture(const std::string &parentName, CXMLTag *tag)
-{
-  auto children = tag->getChildren();
-
-  auto num_children = tag->getNumChildren();
-
-  for (size_t i = 0; i < num_children; ++i) {
-    const auto *token = children[i];
-
-    if (! token->isTag())
-      continue;
-
-    auto *tag1 = token->getTag();
-
-    const auto &name = tag1->getName();
-
-    //auto num_options = tag1->getNumOptions();
-
-    //const auto &options = tag1->getOptions();
-
-    if (name == "extra") {
-      TODO(parentName + "/" + name);
-    }
-    else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1546,63 +1433,15 @@ readSpecular(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if (name == "texture") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "texture") {
-          effect->specularTexture.texture = opt_value;
-        }
-        else if (opt_name == "texcoord") {
-          effect->specularTexture.texcoord = opt_value;
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readSpecularTexture(parentName + "/" + name, tag1);
+      readTexture(parentName + "/" + name, tag1, effect->specularTexture);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
-  }
-
-  return true;
-}
-
-bool
-CImportDAE::
-readSpecularTexture(const std::string &parentName, CXMLTag *tag)
-{
-  auto children = tag->getChildren();
-
-  auto num_children = tag->getNumChildren();
-
-  for (size_t i = 0; i < num_children; ++i) {
-    const auto *token = children[i];
-
-    if (! token->isTag())
-      continue;
-
-    auto *tag1 = token->getTag();
-
-    const auto &name = tag1->getName();
-
-    //auto num_options = tag1->getNumOptions();
-
-    //const auto &options = tag1->getOptions();
-
-    if (name == "extra") {
-      TODO(parentName + "/" + name);
-    }
-    else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1626,15 +1465,16 @@ readShininess(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "float") {
-      TODO(parentName + "/" + name);
+      Float f;
+      readFloat(parentName + "/" + name, tag1, f);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1658,15 +1498,16 @@ readReflective(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "color") {
-      TODO(parentName + "/" + name);
+      Color c;
+      readColor(parentName + "/" + name, tag1, c);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1690,15 +1531,16 @@ readReflectivity(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "float") {
-      TODO(parentName + "/" + name);
+      Float f;
+      readFloat(parentName + "/" + name, tag1, f);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1706,7 +1548,7 @@ readReflectivity(const std::string &parentName, CXMLTag *tag)
 
 bool
 CImportDAE::
-readTransparent(const std::string &parentName, CXMLTag *tag)
+readTransparent(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect)
 {
   auto children = tag->getChildren();
 
@@ -1722,15 +1564,438 @@ readTransparent(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "texture") {
-      TODO(parentName + "/" + name);
+      readTexture(parentName + "/" + name, tag1, effect->transparentTexture);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTexture(const std::string &parentName, CXMLTag *tag, Texture &texture)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "texture") {
+      texture.texture = opt_value;
+    }
+    else if (opt_name == "texcoord") {
+      texture.texcoord = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name1 = tag1->getName();
+
+    //auto num_options1 = tag1->getNumOptions();
+
+    //const auto &options1 = tag1->getOptions();
+
+    if (name1 == "extra") {
+      readTextureExtra(parentName + "/" + name1, tag1, texture);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name1 + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureExtra(const std::string &parentName, CXMLTag *tag, Texture &texture)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "type") {
+      texture.extra_type = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+    //auto num_options1 = tag1->getNumOptions();
+
+    //const auto &options1 = tag1->getOptions();
+
+    if (name == "technique") {
+      readTextureTechnique(parentName + "/" + name, tag1, texture);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureTechnique(const std::string &parentName, CXMLTag *tag, Texture &texture)
+{
+  TextureTechnique technique;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "profile") {
+      technique.profile = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name1 = tag1->getName();
+
+    if      (name1 == "wrapU") {
+      readTextureWrapU(parentName + "/" + name1, tag1, texture);
+    }
+    else if (name1 == "wrapV") {
+      readTextureWrapV(parentName + "/" + name1, tag1, texture);
+    }
+    else if (name1 == "blend_mode") {
+      readTextureBlendMode(parentName + "/" + name1, tag1, texture);
+    }
+    else if (name1 == "offsets") {
+      readTextureOffsets(parentName + "/" + name1, tag1, texture);
+    }
+    else if (name1 == "amount") {
+      readTextureAmount(parentName + "/" + name1, tag1, texture);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name1 + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureWrapU(const std::string &parentName, CXMLTag *tag, Texture & /*texture*/)
+{
+  TextureWrap wrap;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "sid") {
+      wrap.sid = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+    errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureWrapV(const std::string &parentName, CXMLTag *tag, Texture & /*texture*/)
+{
+  TextureWrap wrap;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "sid") {
+      wrap.sid = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+    errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureBlendMode(const std::string &parentName, CXMLTag *tag, Texture & /*texture*/)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+
+    errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+    errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureOffsets(const std::string &parentName, CXMLTag *tag, Texture &texture)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+
+    errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name1 = tag1->getName();
+
+    auto num_options1 = tag1->getNumOptions();
+
+    if      (name1 == "offsetu") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      if (! CStrUtil::toReal(value, &texture.offsetU))
+        errorMsg("Invalid real '" + value + "'");
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else if (name1 == "offsetv") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      if (! CStrUtil::toReal(value, &texture.offsetV))
+        errorMsg("Invalid real '" + value + "'");
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else if (name1 == "scaleu") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      if (! CStrUtil::toReal(value, &texture.scaleU))
+        errorMsg("Invalid real '" + value + "'");
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else if (name1 == "scalev") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      if (! CStrUtil::toReal(value, &texture.scaleV))
+        errorMsg("Invalid real '" + value + "'");
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else if (name1 == "angle") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      if (! CStrUtil::toReal(value, &texture.angle))
+        errorMsg("Invalid real '" + value + "'");
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name1 + "'");
+  }
+
+  return true;
+}
+
+bool
+CImportDAE::
+readTextureAmount(const std::string &parentName, CXMLTag *tag, Texture & /*texture*/)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+
+    errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name1 = tag1->getName();
+
+    errorMsg("Unrecognised tag '" + parentName + "/" + name1 + "'");
   }
 
   return true;
@@ -1752,17 +2017,18 @@ readTransparency(const std::string &parentName, CXMLTag *tag)
 
     auto *tag1 = token->getTag();
 
-    const auto &name = tag1->getName();
+    const auto &name1 = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+    //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
-    if (name == "float") {
-      TODO(parentName + "/" + name);
+    if (name1 == "float") {
+      Float f;
+      readFloat(parentName + "/" + name1, tag1, f);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name1 + "'");
   }
 
   return true;
@@ -1772,6 +2038,25 @@ bool
 CImportDAE::
 readLibraryEffectProfileSurface(const std::string &parentName, CXMLTag *tag, Surface &surface)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "type") {
+      surface.type = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -1786,12 +2071,12 @@ readLibraryEffectProfileSurface(const std::string &parentName, CXMLTag *tag, Sur
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
-    if (name == "init_from") {
-      assert(num_options == 0);
+    if      (name == "init_from") {
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -1799,8 +2084,11 @@ readLibraryEffectProfileSurface(const std::string &parentName, CXMLTag *tag, Sur
 
       assert(tag1->getNumTagChildren() == 0);
     }
+    else if (name == "format") {
+      TODO(parentName + "/" + name);
+    }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1827,33 +2115,33 @@ readLibraryEffectSampler2D(const std::string &parentName, CXMLTag *tag, NewParam
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if      (name == "source") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       sampler.source = tag1->getText();
 
       assert(tag1->getNumTagChildren() == 0);
     }
     else if (name == "minfilter") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       sampler.minfilter = tag1->getText();
 
       assert(tag1->getNumTagChildren() == 0);
     }
     else if (name == "magfilter") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       sampler.magfilter = tag1->getText();
 
       assert(tag1->getNumTagChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1863,6 +2151,12 @@ bool
 CImportDAE::
 readLibraryGeometries(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -1877,31 +2171,13 @@ readLibraryGeometries(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "geometry") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else if (opt_name == "name") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
       readGeometry(parentName + "/" + name, tag1);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1911,6 +2187,30 @@ bool
 CImportDAE::
 readGeometry(const std::string &parentName, CXMLTag *tag)
 {
+  Geometry geometry;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      geometry.id = opt_value;
+    }
+    else if (opt_name == "name") {
+      geometry.name = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -1925,17 +2225,17 @@ readGeometry(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if (name == "mesh") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readMesh(parentName + "/" + name, tag1);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -1959,15 +2259,15 @@ readMesh(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if      (name == "source") {
       auto meshSource = std::make_unique<MeshSource>();
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -1979,7 +2279,7 @@ readMesh(const std::string &parentName, CXMLTag *tag)
           meshSource->name = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readMeshSource(parentName + "/" + name, tag1, meshSource);
@@ -1992,8 +2292,8 @@ readMesh(const std::string &parentName, CXMLTag *tag)
     else if (name == "vertices") {
       auto meshVertices = std::make_unique<MeshVertices>();
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2002,7 +2302,7 @@ readMesh(const std::string &parentName, CXMLTag *tag)
           meshVertices->id = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readMeshVertices(parentName + "/" + name, tag1, meshVertices);
@@ -2015,8 +2315,8 @@ readMesh(const std::string &parentName, CXMLTag *tag)
     else if (name == "triangles") {
       auto triangles = std::make_unique<MeshTriangles>();
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2026,10 +2326,10 @@ readMesh(const std::string &parentName, CXMLTag *tag)
         }
         else if (opt_name == "count") {
           if (! CStrUtil::toInteger(opt_value, &triangles->count))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
+            errorMsg("Invalid integer '" + opt_value + "'");
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readMeshTriangles(parentName + "/" + name, tag1, triangles);
@@ -2045,8 +2345,8 @@ readMesh(const std::string &parentName, CXMLTag *tag)
     else if (name == "polylist") {
       auto polyList = std::make_unique<MeshPolyList>();
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2056,10 +2356,10 @@ readMesh(const std::string &parentName, CXMLTag *tag)
         }
         else if (opt_name == "count") {
           if (! CStrUtil::toInteger(opt_value, &polyList->count))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
+            errorMsg("Invalid integer '" + opt_value + "'");
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readMeshPolylist(parentName + "/" + name, tag1, polyList);
@@ -2070,7 +2370,7 @@ readMesh(const std::string &parentName, CXMLTag *tag)
       meshPolyLists_.push_back(std::move(polyList));
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2094,50 +2394,18 @@ readMeshSource(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSou
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if      (name == "technique_common") {
-      assert(num_options == 0);
-
-      readTechniqueCommon(parentName + "/" + name, tag1, meshSource);
+      readTechniqueCommon(parentName + "/" + name, tag1, meshSource->techniqueCommon);
     }
     else if (name == "float_array") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          meshSource->valuesId = opt_value;
-        }
-        else if (opt_name == "count") {
-          if (! CStrUtil::toInteger(opt_value, &meshSource->valuesCount))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      const auto &value = tag1->getText();
-
-      std::vector<std::string> words;
-      CStrUtil::toWords(value, words);
-
-      for (const auto &word : words) {
-        double r;
-        if (! CStrUtil::toReal(word, &r))
-          std::cerr << "Invalid float '" << word << "'\n";
-
-        meshSource->values.push_back(r);
-      }
-
-      assert(tag1->getNumTagChildren() == 0);
+      readFloatArray(parentName + "/" + name, tag1, meshSource->valueArray);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2161,43 +2429,23 @@ readMeshVertices(const std::string &parentName, CXMLTag *tag, MeshVerticesP &mes
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "input") {
       MeshVerticesInput input;
+      readInput(parentName + "/" + name, tag1, input);
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "semantic") {
-          if      (opt_value == "POSITION")
-            input.type = MeshVerticesInputType::POSITION;
-          else if (opt_value == "NORMAL")
-            input.type = MeshVerticesInputType::NORMAL;
-          else
-            std::cerr << "Invalid semantic '" << opt_value << "'\n";
-        }
-        else if (opt_name == "source") {
-          if (opt_value[0] == '#')
-            input.source = opt_value.substr(1);
-          else
-            std::cerr << "Invalid source value '" << opt_value << "'\n";
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      assert(tag1->getNumChildren() == 0);
+      if      (input.semantic == "POSITION")
+        input.type = MeshVerticesInputType::POSITION;
+      else if (input.semantic == "NORMAL")
+        input.type = MeshVerticesInputType::NORMAL;
+      else
+        std::cerr << "Invalid mesh vertices semantic '" << input.semantic << "'\n";
 
       meshVertices->inputs.push_back(input);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2221,57 +2469,30 @@ readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &pol
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+    auto num_options1 = tag1->getNumOptions();
 
     if      (name == "input") {
       MeshPolyListInput input;
+      readInput(parentName + "/" + name, tag1, input);
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      if      (input.semantic == "VERTEX")
+        input.type = MeshPolyListInputType::VERTEX;
+      else if (input.semantic == "NORMAL")
+        input.type = MeshPolyListInputType::NORMAL;
+      else if (input.semantic == "TEXCOORD")
+        input.type = MeshPolyListInputType::TEXCOORD;
+      else if (input.semantic == "COLOR")
+        input.type = MeshPolyListInputType::COLOR;
+      else
+        std::cerr << "Invalid mesh polylist semantic '" << input.semantic << "'\n";
 
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "semantic") {
-          if      (opt_value == "VERTEX")
-            input.type = MeshPolyListInputType::VERTEX;
-          else if (opt_value == "NORMAL")
-            input.type = MeshPolyListInputType::NORMAL;
-          else if (opt_value == "TEXCOORD")
-            input.type = MeshPolyListInputType::TEXCOORD;
-          else
-            std::cerr << "Invalid semantic '" << opt_value << "'\n";
-        }
-        else if (opt_name == "offset") {
-          if (! CStrUtil::toInteger(opt_value, &input.offset))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-
-          polyList->max_offset = std::max(polyList->max_offset, input.offset);
-        }
-        else if (opt_name == "set") {
-          if (! CStrUtil::toInteger(opt_value, &input.set))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-
-          polyList->max_set = std::max(polyList->max_set, input.set);
-        }
-        else if (opt_name == "source") {
-          if (opt_value[0] == '#')
-            input.source = opt_value.substr(1);
-          else
-            std::cerr << "Invalid source value '" << opt_value << "'\n";
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      assert(tag1->getNumChildren() == 0);
+      polyList->max_set    = std::max(polyList->max_set   , input.set);
+      polyList->max_offset = std::max(polyList->max_offset, input.offset);
 
       polyList->inputs.push_back(input);
     }
     else if (name == "vcount") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -2281,7 +2502,7 @@ readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &pol
       for (const auto &word : words) {
         int ii;
         if (! CStrUtil::toInteger(word, &ii))
-          std::cerr << "Invalid integer '" << word << "'\n";
+          errorMsg("Invalid integer '" + word + "'");
 
         polyList->vcount.push_back(ii);
 
@@ -2291,7 +2512,7 @@ readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &pol
       assert(tag1->getNumTagChildren() == 0);
     }
     else if (name == "p") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -2303,7 +2524,7 @@ readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &pol
       for (const auto &word : words) {
         int ii;
         if (! CStrUtil::toInteger(word, &ii))
-          std::cerr << "Invalid integer '" << word << "'\n";
+          errorMsg("Invalid integer '" + word + "'");
 
         polyList->p.push_back(ii);
       }
@@ -2311,7 +2532,7 @@ readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &pol
       assert(tag1->getNumTagChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2335,57 +2556,30 @@ readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &t
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+    auto num_options1 = tag1->getNumOptions();
 
     if      (name == "input") {
       MeshPolyListInput input;
+      readInput(parentName + "/" + name, tag1, input);
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      if      (input.semantic == "VERTEX")
+        input.type = MeshPolyListInputType::VERTEX;
+      else if (input.semantic == "NORMAL")
+        input.type = MeshPolyListInputType::NORMAL;
+      else if (input.semantic == "TEXCOORD")
+        input.type = MeshPolyListInputType::TEXCOORD;
+      else if (input.semantic == "COLOR")
+        input.type = MeshPolyListInputType::COLOR;
+      else
+        std::cerr << "Invalid mesh polylist semantic '" << input.semantic << "'\n";
 
-        const auto &opt_name  = option->getName ();
-        const auto &opt_value = option->getValue();
-
-        if      (opt_name == "semantic") {
-          if      (opt_value == "VERTEX")
-            input.type = MeshPolyListInputType::VERTEX;
-          else if (opt_value == "NORMAL")
-            input.type = MeshPolyListInputType::NORMAL;
-          else if (opt_value == "TEXCOORD")
-            input.type = MeshPolyListInputType::TEXCOORD;
-          else
-            std::cerr << "Invalid semantic '" << opt_value << "'\n";
-        }
-        else if (opt_name == "offset") {
-          if (! CStrUtil::toInteger(opt_value, &input.offset))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-
-          triangles->max_offset = std::max(triangles->max_offset, input.offset);
-        }
-        else if (opt_name == "set") {
-          if (! CStrUtil::toInteger(opt_value, &input.set))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
-
-          triangles->max_set = std::max(triangles->max_set, input.set);
-        }
-        else if (opt_name == "source") {
-          if (opt_value[0] == '#')
-            input.source = opt_value.substr(1);
-          else
-            std::cerr << "Invalid source value '" << opt_value << "'\n";
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      assert(tag1->getNumChildren() == 0);
+      triangles->max_offset = std::max(triangles->max_offset, input.offset);
+      triangles->max_set    = std::max(triangles->max_set   , input.set);
 
       triangles->inputs.push_back(input);
     }
     else if (name == "p") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -2397,7 +2591,7 @@ readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &t
       for (const auto &word : words) {
         int ii;
         if (! CStrUtil::toInteger(word, &ii))
-          std::cerr << "Invalid integer '" << word << "'\n";
+          errorMsg("Invalid integer '" + word + "'");
 
         triangles->p.push_back(ii);
       }
@@ -2405,7 +2599,7 @@ readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &t
       assert(tag1->getNumTagChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2413,8 +2607,11 @@ readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &t
 
 bool
 CImportDAE::
-readTechniqueCommon(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSource)
+readTechniqueCommon(const std::string &parentName, CXMLTag *tag, TechniqueCommon &techniqueCommon)
 {
+  auto num_options = tag->getNumOptions();
+  assert(num_options == 0);
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2429,40 +2626,40 @@ readTechniqueCommon(const std::string &parentName, CXMLTag *tag, MeshSourceP &me
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "accessor") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
 
         if      (opt_name == "count") {
-          if (! CStrUtil::toInteger(opt_value, &meshSource->accessorCount))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
+          if (! CStrUtil::toInteger(opt_value, &techniqueCommon.accessorCount))
+            errorMsg("Invalid integer '" + opt_value + "'");
         }
         else if (opt_name == "offset") {
-          if (! CStrUtil::toInteger(opt_value, &meshSource->accessorOffset))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
+          if (! CStrUtil::toInteger(opt_value, &techniqueCommon.accessorOffset))
+            errorMsg("Invalid integer '" + opt_value + "'");
         }
         else if (opt_name == "source") {
-          meshSource->source = opt_value;
+          techniqueCommon.source = opt_value;
         }
         else if (opt_name == "stride") {
-          if (! CStrUtil::toInteger(opt_value, &meshSource->accessorStride))
-            std::cerr << "Invalid integer '" << opt_value << "'\n";
+          if (! CStrUtil::toInteger(opt_value, &techniqueCommon.accessorStride))
+            errorMsg("Invalid integer '" + opt_value + "'");
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
-      readTechniqueCommonAccessor(parentName + "/" + name, tag1, meshSource);
+      readTechniqueCommonAccessor(parentName + "/" + name, tag1, techniqueCommon);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2470,7 +2667,8 @@ readTechniqueCommon(const std::string &parentName, CXMLTag *tag, MeshSourceP &me
 
 bool
 CImportDAE::
-readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSource)
+readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag,
+                            TechniqueCommon &techniqueCommon)
 {
   auto children = tag->getChildren();
 
@@ -2486,15 +2684,15 @@ readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag, MeshSou
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "param") {
-      MeshSourceParam param;
+      Param param;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2506,15 +2704,15 @@ readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag, MeshSou
           param.type = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       assert(tag1->getNumChildren() == 0);
 
-      meshSource->params.push_back(param);
+      techniqueCommon.params.push_back(param);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2524,6 +2722,12 @@ bool
 CImportDAE::
 readLibraryControllers(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2538,28 +2742,11 @@ readLibraryControllers(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
-
     if (name == "controller") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if (opt_name == "id") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
       readLibraryController(parentName + "/" + name, tag1);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2569,6 +2756,32 @@ bool
 CImportDAE::
 readLibraryController(const std::string &parentName, CXMLTag *tag)
 {
+  LibraryController controller;
+
+  //---
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      controller.id = opt_value;
+    }
+    else if (opt_name == "name") {
+      controller.name = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2583,28 +2796,14 @@ readLibraryController(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "skin") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if (opt_name == "source") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readLibraryControllerSkin(parentName + "/" + name, tag1);
+      Skin skin;
+      readLibraryControllerSkin(parentName + "/" + name, tag1, skin);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2612,8 +2811,27 @@ readLibraryController(const std::string &parentName, CXMLTag *tag)
 
 bool
 CImportDAE::
-readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag)
+readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag, Skin &skin)
 {
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "source") {
+      skin.source = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2628,12 +2846,10 @@ readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+    auto num_options1 = tag1->getNumOptions();
 
     if      (name == "bind_shape_matrix") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -2645,44 +2861,29 @@ readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag)
       for (const auto &word : words) {
         double r;
         if (! CStrUtil::toReal(word, &r))
-          std::cerr << "Invalid real '" << word << "'\n";
+          errorMsg("Invalid real '" + word + "'");
 
         reals.push_back(r);
       }
 
-      CMatrix3D matrix;
-
       if (reals.size() == 16)
-        matrix = CMatrix3D(&reals[0], 16);
+        skin.bind_shape_matrix = CMatrix3D(&reals[0], 16);
       else
         std::cerr << "Invalid matrix size\n";
 
       assert(tag1->getNumTagChildren() == 0);
     }
     else if (name == "source") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if (opt_name == "id") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readLibraryControllerSkinSource(parentName + "/" + name, tag1);
+      readLibraryControllerSkinSource(parentName + "/" + name, tag1, skin);
     }
     else if (name == "joints") {
-      TODO(parentName + "/" + name);
+      readLibraryControllerSkinJoints(parentName + "/" + name, tag1, skin);
     }
     else if (name == "vertex_weights") {
-      TODO(parentName + "/" + name);
+      readLibraryControllerSkinWeights(parentName + "/" + name, tag1, skin);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2690,8 +2891,33 @@ readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag)
 
 bool
 CImportDAE::
-readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag)
+readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag, Skin &skin)
 {
+  SkinSource source;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      source.id = opt_value;
+    }
+    else if (opt_name == "count") {
+      if (! CStrUtil::toInteger(opt_value, &source.count))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2706,22 +2932,162 @@ readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-  //auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-  //const auto &options = tag1->getOptions();
-
-    if      (name == "Name_array") {
-      TODO(parentName + "/" + name);
+    if      (name == "float_array") {
+      readFloatArray(parentName + "/" + name, tag1, source.valueArray);
     }
     else if (name == "technique_common") {
-      TODO(parentName + "/" + name);
+      readTechniqueCommon(parentName + "/" + name, tag1, source.techniqueCommon);
     }
-    else if (name == "float_array") {
-      TODO(parentName + "/" + name);
+    else if (name == "Name_array") {
+      readNameArray(parentName + "/" + name, tag1, source.nameArray);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
+
+  skin.sources.push_back(source);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readLibraryControllerSkinJoints(const std::string &parentName, CXMLTag *tag, Skin &skin)
+{
+  SkinJoint joint;
+
+  //---
+
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+  //auto num_options1 = tag1->getNumOptions();
+
+    if (name == "input") {
+      Input input;
+      readInput(parentName + "/" + name, tag1, input);
+
+      joint.inputs.push_back(input);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  skin.joints.push_back(joint);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readLibraryControllerSkinWeights(const std::string &parentName, CXMLTag *tag, Skin &skin)
+{
+  SkinWeights weights;
+
+  //---
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if (opt_name == "count") {
+      if (! CStrUtil::toInteger(opt_value, &weights.count))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
+  auto children = tag->getChildren();
+
+  auto num_children = tag->getNumChildren();
+
+  for (size_t i = 0; i < num_children; ++i) {
+    const auto *token = children[i];
+
+    if (! token->isTag())
+      continue;
+
+    auto *tag1 = token->getTag();
+
+    const auto &name = tag1->getName();
+
+    auto num_options1 = tag1->getNumOptions();
+
+    if      (name == "input") {
+      Input input;
+      readInput(parentName + "/" + name, tag1, input);
+
+      weights.inputs.push_back(input);
+    }
+    else if (name == "vcount") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      std::vector<std::string> words;
+      CStrUtil::toWords(value, words);
+
+      for (const auto &word : words) {
+        int ii;
+        if (! CStrUtil::toInteger(word, &ii))
+          errorMsg("Invalid integer '" + word + "'");
+
+        weights.vcount.push_back(ii);
+      }
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else if (name == "v") {
+      assert(num_options1 == 0);
+
+      const auto &value = tag1->getText();
+
+      std::vector<std::string> words;
+      CStrUtil::toWords(value, words);
+
+      for (const auto &word : words) {
+        int ii;
+        if (! CStrUtil::toInteger(word, &ii))
+          errorMsg("Invalid integer '" + word + "'");
+
+        weights.v.push_back(ii);
+      }
+
+      assert(tag1->getNumTagChildren() == 0);
+    }
+    else
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
+  }
+
+  skin.weights.push_back(weights);
 
   return true;
 }
@@ -2730,6 +3096,12 @@ bool
 CImportDAE::
 readLibraryAnimations(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2744,20 +3116,15 @@ readLibraryAnimations(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "animation") {
-      struct Animation {
-        std::string id;
-        std::string name;
-      };
-
       Animation animation;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2769,13 +3136,13 @@ readLibraryAnimations(const std::string &parentName, CXMLTag *tag)
           animation.name = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
-      readLibraryAnimation(parentName + "/" + name, tag1);
+      readLibraryAnimation(parentName + "/" + name, tag1, animation);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2783,7 +3150,7 @@ readLibraryAnimations(const std::string &parentName, CXMLTag *tag)
 
 bool
 CImportDAE::
-readLibraryAnimation(const std::string &parentName, CXMLTag *tag)
+readLibraryAnimation(const std::string &parentName, CXMLTag *tag, Animation &animation)
 {
   auto children = tag->getChildren();
 
@@ -2799,63 +3166,41 @@ readLibraryAnimation(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if      (name == "source") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readLibraryAnimationSource(parentName + "/" + name, tag1);
+      readLibraryAnimationSource(parentName + "/" + name, tag1, animation);
     }
     else if (name == "sampler") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
-
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if      (opt_name == "id") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      readLibraryAnimationSampler(parentName + "/" + name, tag1);
+      readLibraryAnimationSampler(parentName + "/" + name, tag1, animation);
     }
     else if (name == "channel") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      AnimationChannel channel;
+
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
+        const auto &opt_value = option->getValue();
 
         if      (opt_name == "source") {
-          TODO(parentName + "/" + name + " : " + opt_name);
+          channel.source = opt_value;
         }
         else if (opt_name == "target") {
-          TODO(parentName + "/" + name + " : " + opt_name);
+          channel.target = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       assert(tag1->getNumChildren() == 0);
+
+      animation.channels.push_back(channel);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -2863,8 +3208,29 @@ readLibraryAnimation(const std::string &parentName, CXMLTag *tag)
 
 bool
 CImportDAE::
-readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag)
+readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag, Animation &animation)
 {
+  AnimationSource source;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      source.id = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2879,30 +3245,53 @@ readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    //auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if      (name == "float_array") {
-      TODO(parentName + "/" + name);
+      readFloatArray(parentName + "/" + name, tag1, source.valueArray);
     }
     else if (name == "technique_common") {
-      TODO(parentName + "/" + name);
+      readTechniqueCommon(parentName + "/" + name, tag1, source.techniqueCommon);
     }
     else if (name == "Name_array") {
-      TODO(parentName + "/" + name);
+      readNameArray(parentName + "/" + name, tag1, source.nameArray);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
+
+  animation.sources.push_back(source);
 
   return true;
 }
 
 bool
 CImportDAE::
-readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag)
+readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag, Animation &animation)
 {
+  AnimationSampler sampler;
+
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      sampler.id = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2917,32 +3306,213 @@ readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
-
-    const auto &options = tag1->getOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
     if (name == "input") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      Input input;
+      readInput(parentName + "/" + name, tag1, input);
 
-        const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
-
-        if      (opt_name == "semantic") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else if (opt_name == "source") {
-          TODO(parentName + "/" + name + " : " + opt_name);
-        }
-        else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
-      }
-
-      assert(tag1->getNumTagChildren() == 0);
+      sampler.inputs.push_back(input);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
+
+  animation.samplers.push_back(sampler);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readInput(const std::string &parentName, CXMLTag *tag, Input &input)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t j = 0; j < num_options; ++j) {
+    auto *option = options[j];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "semantic") {
+      input.semantic = opt_value;
+    }
+    else if (opt_name == "source") {
+      if (opt_value[0] == '#')
+        input.source = opt_value.substr(1);
+      else
+        std::cerr << "Invalid source value '" << opt_value << "'\n";
+    }
+    else if (opt_name == "set") {
+      if (! CStrUtil::toInteger(opt_value, &input.set))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else if (opt_name == "offset") {
+      if (! CStrUtil::toInteger(opt_value, &input.offset))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  assert(tag->getNumChildren() == 0);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readFloatArray(const std::string &parentName, CXMLTag *tag, FloatArray &array)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t i = 0; i < num_options; ++i) {
+    auto *option = options[i];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      array.id = opt_value;
+    }
+    else if (opt_name == "count") {
+      if (! CStrUtil::toInteger(opt_value, &array.count))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  const auto &value = tag->getText();
+
+  std::vector<std::string> words;
+  CStrUtil::toWords(value, words);
+
+  for (const auto &word : words) {
+    double r;
+    if (! CStrUtil::toReal(word, &r))
+      std::cerr << "Invalid " << parentName << " value '" << word << "'\n";
+
+    array.values.push_back(r);
+  }
+
+  assert(tag->getNumTagChildren() == 0);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readNameArray(const std::string &parentName, CXMLTag *tag, NameArray &array)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t i = 0; i < num_options; ++i) {
+    auto *option = options[i];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "id") {
+      array.id = opt_value;
+    }
+    else if (opt_name == "count") {
+      if (! CStrUtil::toInteger(opt_value, &array.count))
+        errorMsg("Invalid integer '" + opt_value + "'");
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  const auto &value = tag->getText();
+
+  std::vector<std::string> words;
+  CStrUtil::toWords(value, words);
+
+  for (const auto &word : words)
+    array.values.push_back(word);
+
+  assert(tag->getNumTagChildren() == 0);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readColor(const std::string &parentName, CXMLTag *tag, Color &c)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t i = 0; i < num_options; ++i) {
+    auto *option = options[i];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "sid") {
+      c.sid = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  const auto &value = tag->getText();
+
+  std::vector<std::string> words;
+  CStrUtil::toWords(value, words);
+
+  assert(words.size() == 4);
+
+  if (! CStrUtil::toReal(words[0], &c.r))
+    std::cerr << "Invalid " << parentName << " value '" << words[0] << "'\n";
+  if (! CStrUtil::toReal(words[1], &c.g))
+    std::cerr << "Invalid " << parentName << " value '" << words[1] << "'\n";
+  if (! CStrUtil::toReal(words[2], &c.b))
+    std::cerr << "Invalid " << parentName << " value '" << words[2] << "'\n";
+  if (! CStrUtil::toReal(words[3], &c.a))
+    std::cerr << "Invalid " << parentName << " value '" << words[3] << "'\n";
+
+  assert(tag->getNumTagChildren() == 0);
+
+  return true;
+}
+
+bool
+CImportDAE::
+readFloat(const std::string &parentName, CXMLTag *tag, Float &f)
+{
+  auto num_options = tag->getNumOptions();
+
+  const auto &options = tag->getOptions();
+
+  for (size_t i = 0; i < num_options; ++i) {
+    auto *option = options[i];
+
+    const auto &opt_name  = option->getName ();
+    const auto &opt_value = option->getValue();
+
+    if      (opt_name == "sid") {
+      f.sid = opt_value;
+    }
+    else
+      errorMsg("Unrecognised " + parentName + " option '" + opt_name + "'");
+  }
+
+  const auto &value = tag->getText();
+
+  if (! CStrUtil::toReal(value, &f.value))
+    std::cerr << "Invalid " << parentName << " value '" << value << "'\n";
+
+  assert(tag->getNumTagChildren() == 0);
 
   return true;
 }
@@ -2951,6 +3521,12 @@ bool
 CImportDAE::
 readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag)
 {
+  auto num_options = tag->getNumOptions();
+
+  assert(num_options == 0);
+
+  //---
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -2965,15 +3541,15 @@ readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "visual_scene") {
       VisualScene visualScene;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -2985,7 +3561,7 @@ readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag)
           visualScene.name = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readLibraryVisualScene(parentName + "/" + name, tag1, visualScene);
@@ -2994,7 +3570,7 @@ readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag)
         visualScene.print();
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3018,15 +3594,15 @@ readLibraryVisualScene(const std::string &parentName, CXMLTag *tag, VisualScene 
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "node") {
       auto *node = new Node;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -3044,7 +3620,7 @@ readLibraryVisualScene(const std::string &parentName, CXMLTag *tag, VisualScene 
           node->type = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readNode(parentName + "/" + name, tag1, node);
@@ -3052,7 +3628,7 @@ readLibraryVisualScene(const std::string &parentName, CXMLTag *tag, VisualScene 
       scene.nodes.push_back(node);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3076,22 +3652,22 @@ readNode(const std::string &parentName, CXMLTag *tag, Node *parentNode)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if      (name == "matrix") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
-      //const auto &opt_value = option->getValue();
+        const auto &opt_value = option->getValue();
 
         if (opt_name == "sid") {
-          TODO(parentName + "/" + name + " : " + opt_name);
+          parentNode->matrix.sid = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       const auto &value = tag1->getText();
@@ -3104,23 +3680,38 @@ readNode(const std::string &parentName, CXMLTag *tag, Node *parentNode)
       for (const auto &word : words) {
         double r;
         if (! CStrUtil::toReal(word, &r))
-          std::cerr << "Invalid real '" << word << "'\n";
+          errorMsg("Invalid real '" + word + "'");
 
         reals.push_back(r);
       }
 
       if (reals.size() == 16)
-        parentNode->matrix = CMatrix3D(&reals[0], 16);
+        parentNode->matrix.matrix = CMatrix3D(&reals[0], 16);
       else
         std::cerr << "Invalid matrix size\n";
 
       assert(tag1->getNumTagChildren() == 0);
     }
+    else if (name == "rotate") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "translate") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "scale") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "instance_geometry") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "extra") {
+      TODO(parentName + "/" + name);
+    }
     else if (name == "node") {
       auto *node = new Node;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -3138,16 +3729,22 @@ readNode(const std::string &parentName, CXMLTag *tag, Node *parentNode)
           node->type = opt_value;
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readNode(parentName + "/" + name, tag1, node);
 
       parentNode->children.push_back(node);
     }
+    else if (name == "instance_camera") {
+      TODO(parentName + "/" + name);
+    }
+    else if (name == "instance_light") {
+      TODO(parentName + "/" + name);
+    }
     else if (name == "instance_controller") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -3159,13 +3756,16 @@ readNode(const std::string &parentName, CXMLTag *tag, Node *parentNode)
             std::cerr << "Invalid url value '" << opt_value << "'\n";
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       readNodeInstanceController(parentName + "/" + name, tag1, parentNode);
     }
+    else if (name == "extra") {
+      TODO(parentName + "/" + name);
+    }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3190,12 +3790,12 @@ readNodeInstanceController(const std::string &parentName, CXMLTag *tag,
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+    //const auto &options1 = tag1->getOptions();
 
     if      (name == "skeleton") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       const auto &value = tag1->getText();
 
@@ -3207,12 +3807,12 @@ readNodeInstanceController(const std::string &parentName, CXMLTag *tag,
       assert(tag1->getNumTagChildren() == 0);
     }
     else if (name == "bind_material") {
-      assert(num_options == 0);
+      assert(num_options1 == 0);
 
       readNodeBindMaterial(parentName + "/" + name, tag1, parentNode);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3236,17 +3836,18 @@ readNodeBindMaterial(const std::string &parentName, CXMLTag *tag, Node *parentNo
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+  //auto num_options1 = tag1->getNumOptions();
 
-    //const auto &options = tag1->getOptions();
+  //const auto &options1 = tag1->getOptions();
 
     if (name == "technique_common") {
-      assert(num_options == 0);
+      //TechniqueCommon techniqueCommon;
+      //readTechniqueCommon(parentName + "/" + name, tag1, techniqueCommon);
 
       readNodeBindMaterialCommon(parentName + "/" + name, tag1, parentNode);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3256,6 +3857,9 @@ bool
 CImportDAE::
 readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *)
 {
+  auto num_options = tag->getNumOptions();
+  assert(num_options == 0);
+
   auto children = tag->getChildren();
 
   auto num_children = tag->getNumChildren();
@@ -3270,15 +3874,15 @@ readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "instance_material") {
       std::string symbol, target;
 
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -3293,7 +3897,7 @@ readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *)
             std::cerr << "Invalid target value '" << opt_value << "'\n";
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
 
       idMaterialNameMap_[symbol] = target;
@@ -3301,7 +3905,7 @@ readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *)
       assert(tag1->getNumTagChildren() == 0);
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3325,13 +3929,13 @@ readScene(const std::string &parentName, CXMLTag *tag, Scene &scene)
 
     const auto &name = tag1->getName();
 
-    auto num_options = tag1->getNumOptions();
+    auto num_options1 = tag1->getNumOptions();
 
-    const auto &options = tag1->getOptions();
+    const auto &options1 = tag1->getOptions();
 
     if (name == "instance_visual_scene") {
-      for (size_t j = 0; j < num_options; ++j) {
-        auto *option = options[j];
+      for (size_t j = 0; j < num_options1; ++j) {
+        auto *option = options1[j];
 
         const auto &opt_name  = option->getName ();
         const auto &opt_value = option->getValue();
@@ -3343,11 +3947,11 @@ readScene(const std::string &parentName, CXMLTag *tag, Scene &scene)
             std::cerr << "Invalid url value '" << opt_value << "'\n";
         }
         else
-          std::cerr << "Unrecognised " << name << " option '" << opt_name << "'\n";
+          errorMsg("Unrecognised " + name + " option '" + opt_name + "'");
       }
     }
     else
-      std::cerr << "Unrecognised tag '" << parentName << "/" << name << "'\n";
+      errorMsg("Unrecognised tag '" + parentName + "/" + name + "'");
   }
 
   return true;
@@ -3355,10 +3959,25 @@ readScene(const std::string &parentName, CXMLTag *tag, Scene &scene)
 
 void
 CImportDAE::
+errorMsg(const std::string &msg) const
+{
+  std::cerr << "Error: " << msg << "\n";
+}
+
+void
+CImportDAE::
 TODO(const std::string &name) const
 {
 //if (isDebug())
-    std::cerr << "TODO: " << name << "\n";
+    std::cerr << "TODO Tag: " << name << "\n";
+}
+
+void
+CImportDAE::
+TODOOption(const std::string &name) const
+{
+//if (isDebug())
+    std::cerr << "TODO Option: " << name << "\n";
 }
 
 void

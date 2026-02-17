@@ -141,6 +141,8 @@ connectSlots(bool b)
 {
   CQUtil::connectDisconnect(b,
     canvas_->app(), SIGNAL(textureAdded()), this, SLOT(needsUpdateSlot()));
+  CQUtil::connectDisconnect(b,
+    canvas_->app(), SIGNAL(textureChanged()), this, SLOT(needsUpdateSlot()));
 
   CQUtil::connectDisconnect(b,
     table_, SIGNAL(currentItemChanged(QTableWidgetItem *, QTableWidgetItem *)),
@@ -171,7 +173,7 @@ tableClickSlot(const QModelIndex &index)
   else
     return;
 
-  canvas_->app()->textureAdded();
+  canvas_->app()->textureChanged();
 
   updateAll();
 }

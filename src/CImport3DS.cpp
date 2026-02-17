@@ -2,6 +2,8 @@
 #include <CGeometry3D.h>
 #include <CMathGeom3D.h>
 
+#include <deque>
+
 #define M3D_VERSION_ID       0x0002
 #define FLT_COLOR_24_ID      0x0010
 #define INT_COLOR_24_ID      0x0011
@@ -26,6 +28,8 @@
 #define LIGHT_ID             0x4600
 #define SPOTLIGHT_ID         0x4610
 #define CAMERA_ID            0x4700
+#define CAM_UNKNWN01_ID      0x4710
+#define CAM_UNKNWN02_ID      0x4720
 #define M3DMAGIC_ID          0x4d4d
 #define HIERARCHY_ID         0x4f00
 #define MAT_NAME_ID          0xa000
@@ -41,7 +45,7 @@
 #define MAT_SELF_ILLUMP_ID   0xa081 // percent
 #define MAT_SHADING_ID       0xa100
 #define MAT_SHADING_TYPE_ID  0xa1e0
-#define TEXTURE_1_ID         0xa200
+#define MAT_TEXTURE_ID       0xa200
 #define MAT_GLOSSY_ID        0xa204
 #define MAP_OPACITY_ID       0xa210
 #define REFLECT_MAP_ID       0xa220
@@ -58,7 +62,7 @@
 #define POS_TRACK_ID         0xb020
 #define ROT_TRACK_ID         0xb021
 #define SCALE_TRACK_ID       0xb022
-#define HIER_POS_IF          0xb030
+#define HIER_POS_ID          0xb030
 
 struct ChunkName {
   ushort      id;
@@ -90,22 +94,34 @@ chunk_names[] = {
   { LIGHT_ID           , "LIGHT"           , },
   { SPOTLIGHT_ID       , "SPOTLIGHT"       , },
   { CAMERA_ID          , "CAMERA"          , },
+  { CAM_UNKNWN01_ID    , "CAM_UNKNWN01"    , },
+  { CAM_UNKNWN02_ID    , "CAM_UNKNWN02"    , },
   { M3DMAGIC_ID        , "M3DMAGIC"        , },
   { MAT_NAME_ID        , "MAT_NAME"        , },
   { MAT_AMBIENT_ID     , "MAT_AMBIENT"     , },
   { MAT_DIFFUSE_ID     , "MAT_DIFFUSE"     , },
   { MAT_SPECULAR_ID    , "MAT_SPECULAR"    , },
   { MAT_SHININESS_ID   , "MAT_SHININESS"   , },
+  { MAT_SHININESSP_ID  , "MAT_SHININESSP"  , },
   { MAT_TRANSPARENCY_ID, "MAT_TRANSPARENCY", },
   { MAT_TWO_SIDED_ID   , "MAT_TWO_SIDED"   , },
   { MAT_SHADING_ID     , "MAT_SHADING"     , },
   { MAT_SHADING_TYPE_ID, "MAT_SHADING_TYPE", },
-  { TEXTURE_1_ID       , "TEXTURE_1"       , },
+  { MAT_TEXTURE_ID     , "MAT_TEXTURE"     , },
   { MAT_GLOSSY_ID      , "MAT_GLOSSY"      , },
   { MAP_OPACITY_ID     , "MAP_OPACITY"     , },
   { BUMP_MAP_ID        , "BUMP_MAP"        , },
   { MAT_ENTRY_ID       , "MAT_ENTRY"       , },
   { KEY_FRAME_ID       , "KEY_FRAME"       , },
+  { MESH_INFO_ID       , "MESH_INFO_ID"    , },
+  { SPOTLIGHT_INFO_ID  , "SPOTLIGHT_INFO"  , },
+  { FRAMES_BLOCK_ID    , "FRAMES_BLOCK"    , },
+  { OBJECT_NAME_ID     , "OBJECT_NAME"     , },
+  { OBJECT_PIVOT_ID    , "OBJECT_PIVOT"    , },
+  { POS_TRACK_ID       , "POS_TRACK"       , },
+  { ROT_TRACK_ID       , "ROT_TRACK"       , },
+  { SCALE_TRACK_ID     , "SCALE_TRACK"     , },
+  { HIER_POS_ID        , "HIER_POS"        , },
   { 0                  , nullptr           , },
 };
 
@@ -154,6 +170,10 @@ read(CFile &file)
       case NAMED_OBJECT_ID: {
         CGeomObject3D *object;
         readNamedObject(&chunk1, object);
+        break;
+      }
+      case KEY_FRAME_ID: {
+        readKeyFrame(&chunk1);
         break;
       }
       default:
@@ -250,6 +270,7 @@ readMatEntry(CImport3DSChunk *chunk)
         readMatSpecular(&chunk1);
         break;
       case MAT_SHININESS_ID:
+      case MAT_SHININESSP_ID:
         readMatShininess(&chunk1);
         break;
       case MAT_TRANSPARENCY_ID:
@@ -261,7 +282,7 @@ readMatEntry(CImport3DSChunk *chunk)
       case MAT_SHADING_ID:
         readMatShading(&chunk1);
         break;
-      case TEXTURE_1_ID: {
+      case MAT_TEXTURE_ID: {
         TextureData texture;
         readMatTexture(&chunk1, texture);
         break;
@@ -443,18 +464,20 @@ readMatShininess(CImport3DSChunk *chunk)
 {
   CImport3DSChunk chunk1(chunk);
 
-  ushort shininess;
-  float  f_shininess;
+  float f_shininess { 0.0 };
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
-      case INT_PERCENTAGE_ID:
+      case INT_PERCENTAGE_ID: {
+        ushort shininess;
         readIntPercentage(chunk, &shininess);
         f_shininess = shininess;
         break;
-      case FLOAT_PERCENTAGE_ID:
+      }
+      case FLOAT_PERCENTAGE_ID: {
         readFloatPercentage(chunk, &f_shininess);
         break;
+      }
       default:
         skipChunk(&chunk1);
         break;
@@ -472,18 +495,20 @@ readMatTransparency(CImport3DSChunk *chunk)
 {
   CImport3DSChunk chunk1(chunk);
 
-  ushort transparency;
-  float  f_transparency;
+  float f_transparency { 0.0 };
 
   while (readChunk(&chunk1)) {
     switch (chunk1.id) {
-      case INT_PERCENTAGE_ID:
+      case INT_PERCENTAGE_ID: {
+        ushort transparency;
         readIntPercentage(chunk, &transparency);
         f_transparency = transparency;
         break;
-      case FLOAT_PERCENTAGE_ID:
+      }
+      case FLOAT_PERCENTAGE_ID: {
         readFloatPercentage(chunk, &f_transparency);
         break;
+      }
       default:
         skipChunk(&chunk1);
         break;
@@ -541,15 +566,24 @@ readMatTexture(CImport3DSChunk *chunk, TextureData &texture)
       texture.filename = readString(chunk);
 
       break;
+    case INT_PERCENTAGE_ID: {
+      ushort iblend;
+      readIntPercentage(chunk, &iblend);
+      texture.blend = iblend/100.0;
+      break;
+    }
     default:
       errorMsg("Unhandled texture data type : " + std::to_string(type));
       break;
   }
 
+  skipChunk(chunk);
+
   if (isDebug()) {
     auto pad = getChunkPad(chunk);
 
-    std::cout << pad << "Texture: " << texture.filename << "\n";
+    std::cout << pad << "Texture:" <<
+      " Id=" << texture.filename << " Blend=" << texture.blend << "\n";
   }
 
   return true;
@@ -643,6 +677,11 @@ readNamedObject(CImport3DSChunk *chunk, CGeomObject3D* &object)
 
         break;
       }
+      case CAMERA_ID: {
+        Camera camera;
+        readCamera(&chunk1, &camera);
+        break;
+      }
       default:
         skipChunk(&chunk1);
         break;
@@ -652,6 +691,13 @@ readNamedObject(CImport3DSChunk *chunk, CGeomObject3D* &object)
   scene_->addObject(object);
 
   return true;
+}
+
+bool
+CImport3DS::
+readKeyFrame(CImport3DSChunk *)
+{
+  return false;
 }
 
 bool
@@ -685,6 +731,24 @@ readNTriObject(CImport3DSChunk *chunk, CGeomObject3D *object)
         break;
     }
   }
+
+  return true;
+}
+
+bool
+CImport3DS::
+readCamera(CImport3DSChunk *chunk, Camera *camera)
+{
+  readFloat(chunk, &camera->xPos);
+  readFloat(chunk, &camera->yPos);
+  readFloat(chunk, &camera->zPos);
+
+  readFloat(chunk, &camera->xTgt);
+  readFloat(chunk, &camera->yTgt);
+  readFloat(chunk, &camera->zTgt);
+
+  readFloat(chunk, &camera->roll);
+  readFloat(chunk, &camera->fov );
 
   return true;
 }
@@ -1032,6 +1096,9 @@ bool
 CImport3DS::
 skipChunk(CImport3DSChunk *chunk)
 {
+  if (chunk->left <= 0)
+    return true;
+
   if (isDebug()) {
     auto pad = getChunkPad(chunk);
 
@@ -1167,7 +1234,7 @@ readFloat(CImport3DSChunk *chunk, float *f)
 
 std::string
 CImport3DS::
-getChunkName(CImport3DSChunk *chunk)
+getChunkName(CImport3DSChunk *chunk, bool showId)
 {
   static char name[256];
 
@@ -1175,14 +1242,21 @@ getChunkName(CImport3DSChunk *chunk)
     return "<NULL>";
 
   for (int i = 0; chunk_names[i].name != nullptr; ++i) {
-    if (chunk_names[i].id != chunk->id) continue;
+    if (chunk_names[i].id != chunk->id)
+      continue;
 
-    sprintf(name, "%s (%x)", chunk_names[i].name, chunk->id);
+    if (showId)
+      sprintf(name, "%s (%x)", chunk_names[i].name, chunk->id);
+    else
+      sprintf(name, "%s", chunk_names[i].name);
 
     return std::string(name);
   }
 
-  sprintf(name, "???? (%x)", chunk->id);
+  if (showId)
+    sprintf(name, "???? (%x)", chunk->id);
+  else
+    strcpy(name, "????");
 
   return std::string(name);
 }
@@ -1203,7 +1277,22 @@ printChunk(CImport3DSChunk *chunk)
 {
   auto pad = getChunkPad(chunk);
 
-  std::cout << pad << "Chunk " << getChunkName(chunk) << " " << chunk->left << "\n";
+  std::cout << pad << "Chunk ";
+
+  std::deque<CImport3DSChunk *> parents;
+
+  auto *parent = chunk->parent;
+
+  while (parent) {
+    parents.push_front(parent);
+
+    parent = parent->parent;
+  }
+
+  for (auto *p: parents)
+    std::cout << getChunkName(p, /*showId*/false) << "/";
+
+  std::cout << getChunkName(chunk) << " " << chunk->left << "\n";
 }
 
 uint

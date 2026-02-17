@@ -26,6 +26,7 @@ class CQCamera3DOverlay;
 class CQCamera3DOverlay2D;
 class CQCamera3DFont;
 class CQCamera3DAxes;
+class CQCamera3DGrid;
 class CQCamera3DGeomObject;
 class CQCamera3DGeomFace;
 class CQCamera3DOpWidget;
@@ -167,6 +168,13 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CQCamera3DAxes *axes() const { return axes_; }
 
   bool isShowAxes() const;
+
+  //---
+
+  // axes
+  CQCamera3DGrid *grid() const { return grid_; }
+
+  bool isShowGrid() const;
 
   //---
 
@@ -375,7 +383,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   bool loadTextureMap(const std::string &fileName);
 
-  void addTextureFile(const std::string &fileName);
+  std::string addTextureFile(const std::string &fileName, bool update);
 
   //---
 
@@ -384,6 +392,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void setInitMaterialMap(const std::string &s) { initMaterialMap_ = s; }
 
   bool loadMaterialMap(const std::string &fileName);
+  bool saveMaterialMap(const std::string &fileName);
 
   //---
 
@@ -551,6 +560,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   // axis
   CQCamera3DAxes *axes_ { nullptr };
+
+  //---
+
+  // grid
+  CQCamera3DGrid *grid_ { nullptr };
 
   //---
 

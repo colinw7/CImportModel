@@ -23,6 +23,7 @@ SOURCES += \
 CQCamera3DAnnotation.cpp \
 CQCamera3DApp.cpp \
 CQCamera3DAxes.cpp \
+CQCamera3DGrid.cpp \
 CQCamera3DBasis.cpp \
 CQCamera3DBBox.cpp \
 CQCamera3DBillboard.cpp \
@@ -85,6 +86,7 @@ CDisplayRange2D.h \
 CQCamera3DAnnotation.h \
 CQCamera3DApp.h \
 CQCamera3DAxes.h \
+CQCamera3DGrid.h \
 CQCamera3DBasis.h \
 CQCamera3DBBox.h \
 CQCamera3DBillboard.h \

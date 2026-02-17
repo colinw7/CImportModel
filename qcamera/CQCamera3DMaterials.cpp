@@ -30,7 +30,9 @@ CQCamera3DMaterials(CQCamera3DApp *app) :
   camera_->moveAroundX(0.01);
 
   connect(app_, SIGNAL(currentMaterialChanged()), this, SLOT(invalidateSlot()));
+
   connect(app_, SIGNAL(materialChanged()), this, SLOT(invalidateSlot()));
+  connect(app_, SIGNAL(textureChanged()), this, SLOT(invalidateSlot()));
 }
 
 void

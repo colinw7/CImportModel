@@ -85,7 +85,8 @@ main(int argc, char **argv)
       }
       else if (arg == "h" || arg == "help") {
         std::cerr << "CQCamera3D "
-         "[-3ds|-3drw|-asc|-blend|-cob|-dae|-dxf|-fbx|-gltf|-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
+         "[-3ds|-3drw|-asc|-blend|-cob|-dae|-dxf|-fbx|-gltf|"
+          "-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
          "[-swap_xy|swap_yz|swap_zx] "
          "[-invert_x|-invert_y|-invert_z] "
          "[-texture_map <file>] [<file>]"

@@ -55,6 +55,7 @@ OBJECTS_DIR   = ./
 SOURCES       = CQCamera3DAnnotation.cpp \
 		CQCamera3DApp.cpp \
 		CQCamera3DAxes.cpp \
+		CQCamera3DGrid.cpp \
 		CQCamera3DBasis.cpp \
 		CQCamera3DBBox.cpp \
 		CQCamera3DBillboard.cpp \
@@ -141,6 +142,7 @@ SOURCES       = CQCamera3DAnnotation.cpp \
 OBJECTS       = CQCamera3DAnnotation.o \
 		CQCamera3DApp.o \
 		CQCamera3DAxes.o \
+		CQCamera3DGrid.o \
 		CQCamera3DBasis.o \
 		CQCamera3DBBox.o \
 		CQCamera3DBillboard.o \
@@ -324,6 +326,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQCamera3DAnnotation.h \
 		CQCamera3DApp.h \
 		CQCamera3DAxes.h \
+		CQCamera3DGrid.h \
 		CQCamera3DBasis.h \
 		CQCamera3DBBox.h \
 		CQCamera3DBillboard.h \
@@ -383,6 +386,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		stb/stb_truetype.h CQCamera3DAnnotation.cpp \
 		CQCamera3DApp.cpp \
 		CQCamera3DAxes.cpp \
+		CQCamera3DGrid.cpp \
 		CQCamera3DBasis.cpp \
 		CQCamera3DBBox.cpp \
 		CQCamera3DBillboard.cpp \
@@ -654,8 +658,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents CDisplayRange2D.h CQCamera3DAnnotation.h CQCamera3DApp.h CQCamera3DAxes.h CQCamera3DBasis.h CQCamera3DBBox.h CQCamera3DBillboard.h CQCamera3DBones.h CQCamera3DCamera.h CQCamera3DCanvas.h CQCamera3DCanvasMouseModeIFace.h CQCamera3DControl.h CQCamera3DFaceData.h CQCamera3DFont.h CQCamera3DLight.h CQCamera3DMain.h CQCamera3DMaterials.h CQCamera3DMouseMode.h CQCamera3DNormals.h CQCamera3DObject.h CQCamera3DObjectData.h CQCamera3DOptions.h CQCamera3DOpWidget.h CQCamera3DOverlay2D.h CQCamera3DOverlay.h CQCamera3DOverview.h CQCamera3DOverviewMouseModeIFace.h CQCamera3DShaderProgram.h CQCamera3DShape.h CQCamera3DShapes.h CQCamera3DSidebar.h CQCamera3DStatus.h CQCamera3DTextures.h CQCamera3DToolbar.h CQCamera3DUVMap.h CQCamera3DUtil.h CQCamera3DWidget.h CQCamera3DGeomObject.h CQCamera3DGeomFace.h CQCamera3DGeomLine.h CQCamera3DAnimChooser.h CQCamera3DMaterialChooser.h CQCamera3DTextureChooser.h CQCamera3DBonesList.h CQCamera3DCameraList.h CQCamera3DLightList.h CQCamera3DMaterialList.h CQCamera3DObjectsList.h CQCamera3DTextureList.h CQGLUtil.cpp CQGLBuffer.h CQGLTexture.h CQPoint3DEdit.h CQPoint4DEdit.h CQMatrix3D.h CQTextLabel.h CQTreeWidget.h CQRubberBand.h CQDocumentLabel.h CWindowRange2D.h stb/stb_truetype.h $(DISTDIR)/
-	$(COPY_FILE) --parents CQCamera3DAnnotation.cpp CQCamera3DApp.cpp CQCamera3DAxes.cpp CQCamera3DBasis.cpp CQCamera3DBBox.cpp CQCamera3DBillboard.cpp CQCamera3DBones.cpp CQCamera3DCamera.cpp CQCamera3DCanvas.cpp CQCamera3DCanvasMouseModeIFace.cpp CQCamera3DControl.cpp CQCamera3DFont.cpp CQCamera3DLight.cpp CQCamera3DMain.cpp CQCamera3DMaterials.cpp CQCamera3DMouseMode.cpp CQCamera3DNormals.cpp CQCamera3DObject.cpp CQCamera3DObjectData.cpp CQCamera3DOptions.cpp CQCamera3DOpWidget.cpp CQCamera3DOverlay2D.cpp CQCamera3DOverlay.cpp CQCamera3DOverview.cpp CQCamera3DOverviewMouseModeIFace.cpp CQCamera3DShaderProgram.cpp CQCamera3DShape.cpp CQCamera3DShapes.cpp CQCamera3DSidebar.cpp CQCamera3DStatus.cpp CQCamera3DToolbar.cpp CQCamera3DUVMap.cpp CQCamera3DTextures.cpp CQCamera3DWidget.cpp CQCamera3DGeomObject.cpp CQCamera3DGeomFace.cpp CQCamera3DGeomLine.cpp CQCamera3DAnimChooser.cpp CQCamera3DMaterialChooser.cpp CQCamera3DTextureChooser.cpp CQCamera3DBonesList.cpp CQCamera3DCameraList.cpp CQCamera3DLightList.cpp CQCamera3DMaterialList.cpp CQCamera3DObjectsList.cpp CQCamera3DTextureList.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQPoint4DEdit.cpp CQMatrix3D.cpp CQTextLabel.cpp CQTreeWidget.cpp CQRubberBand.cpp CQDocumentLabel.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents CDisplayRange2D.h CQCamera3DAnnotation.h CQCamera3DApp.h CQCamera3DAxes.h CQCamera3DGrid.h CQCamera3DBasis.h CQCamera3DBBox.h CQCamera3DBillboard.h CQCamera3DBones.h CQCamera3DCamera.h CQCamera3DCanvas.h CQCamera3DCanvasMouseModeIFace.h CQCamera3DControl.h CQCamera3DFaceData.h CQCamera3DFont.h CQCamera3DLight.h CQCamera3DMain.h CQCamera3DMaterials.h CQCamera3DMouseMode.h CQCamera3DNormals.h CQCamera3DObject.h CQCamera3DObjectData.h CQCamera3DOptions.h CQCamera3DOpWidget.h CQCamera3DOverlay2D.h CQCamera3DOverlay.h CQCamera3DOverview.h CQCamera3DOverviewMouseModeIFace.h CQCamera3DShaderProgram.h CQCamera3DShape.h CQCamera3DShapes.h CQCamera3DSidebar.h CQCamera3DStatus.h CQCamera3DTextures.h CQCamera3DToolbar.h CQCamera3DUVMap.h CQCamera3DUtil.h CQCamera3DWidget.h CQCamera3DGeomObject.h CQCamera3DGeomFace.h CQCamera3DGeomLine.h CQCamera3DAnimChooser.h CQCamera3DMaterialChooser.h CQCamera3DTextureChooser.h CQCamera3DBonesList.h CQCamera3DCameraList.h CQCamera3DLightList.h CQCamera3DMaterialList.h CQCamera3DObjectsList.h CQCamera3DTextureList.h CQGLUtil.cpp CQGLBuffer.h CQGLTexture.h CQPoint3DEdit.h CQPoint4DEdit.h CQMatrix3D.h CQTextLabel.h CQTreeWidget.h CQRubberBand.h CQDocumentLabel.h CWindowRange2D.h stb/stb_truetype.h $(DISTDIR)/
+	$(COPY_FILE) --parents CQCamera3DAnnotation.cpp CQCamera3DApp.cpp CQCamera3DAxes.cpp CQCamera3DGrid.cpp CQCamera3DBasis.cpp CQCamera3DBBox.cpp CQCamera3DBillboard.cpp CQCamera3DBones.cpp CQCamera3DCamera.cpp CQCamera3DCanvas.cpp CQCamera3DCanvasMouseModeIFace.cpp CQCamera3DControl.cpp CQCamera3DFont.cpp CQCamera3DLight.cpp CQCamera3DMain.cpp CQCamera3DMaterials.cpp CQCamera3DMouseMode.cpp CQCamera3DNormals.cpp CQCamera3DObject.cpp CQCamera3DObjectData.cpp CQCamera3DOptions.cpp CQCamera3DOpWidget.cpp CQCamera3DOverlay2D.cpp CQCamera3DOverlay.cpp CQCamera3DOverview.cpp CQCamera3DOverviewMouseModeIFace.cpp CQCamera3DShaderProgram.cpp CQCamera3DShape.cpp CQCamera3DShapes.cpp CQCamera3DSidebar.cpp CQCamera3DStatus.cpp CQCamera3DToolbar.cpp CQCamera3DUVMap.cpp CQCamera3DTextures.cpp CQCamera3DWidget.cpp CQCamera3DGeomObject.cpp CQCamera3DGeomFace.cpp CQCamera3DGeomLine.cpp CQCamera3DAnimChooser.cpp CQCamera3DMaterialChooser.cpp CQCamera3DTextureChooser.cpp CQCamera3DBonesList.cpp CQCamera3DCameraList.cpp CQCamera3DLightList.cpp CQCamera3DMaterialList.cpp CQCamera3DObjectsList.cpp CQCamera3DTextureList.cpp CQGLTexture.cpp CQGLUtil.cpp CQPoint3DEdit.cpp CQPoint4DEdit.cpp CQMatrix3D.cpp CQTextLabel.cpp CQTreeWidget.cpp CQRubberBand.cpp CQDocumentLabel.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -1414,6 +1418,61 @@ CQCamera3DAxes.o: CQCamera3DAxes.cpp CQCamera3DAxes.h \
 		../../CUtil/include/CInterval.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DAxes.o CQCamera3DAxes.cpp
 
+CQCamera3DGrid.o: CQCamera3DGrid.cpp CQCamera3DGrid.h \
+		CQCamera3DObject.h \
+		CQCamera3DFaceData.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CUtil/include/CRGBName.h \
+		../../CMath/include/CPoint3D.h \
+		../../CMath/include/CPoint2D.h \
+		../../CMath/include/CIPoint3D.h \
+		CQCamera3DCanvas.h \
+		CQCamera3DWidget.h \
+		../../CImageLib/include/CImagePtr.h \
+		CQCamera3DApp.h \
+		../../CUtil/include/CGeom3DType.h \
+		../../CMath/include/CMatrix3D.h \
+		../../CMath/include/CMathGen.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CMath/include/CVector3D.h \
+		../../CMath/include/CMathUtil.h \
+		../../COS/include/COSNaN.h \
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CGaussianMatrix.h \
+		../../CMath/include/CBBox3D.h \
+		../../CMath/include/CBBox2D.h \
+		../../CMath/include/CVector2D.h \
+		../../CMath/include/CSize2D.h \
+		../../CMath/include/CISize2D.h \
+		CQCamera3DMouseModeIFace.h \
+		../../CMath/include/CGLMatrix3D.h \
+		../../CMath/include/CGLVector3D.h \
+		../../CMath/include/CMatrix3DH.h \
+		../../CMath/include/CPlane3D.h \
+		../../CMath/include/CLine3D.h \
+		../../CMath/include/CMathGeom3D.h \
+		../../CMath/include/CTriangle3D.h \
+		../../CMath/include/CShape3D.h \
+		../../CMath/include/CPolygonOrientation.h \
+		../../CMath/include/CMathGeom2D.h \
+		../../CUtil/include/CLineJoinType.h \
+		../../CMath/include/CLine2D.h \
+		../../CMath/include/CShape2D.h \
+		../../CMath/include/C3Bezier2D.h \
+		../../CMath/include/C2Bezier2D.h \
+		CQCamera3DShaderProgram.h \
+		CQCamera3DCamera.h \
+		CGLCameraIFace.h \
+		CQCamera3DFont.h \
+		../../CMath/include/CGLVector2D.h \
+		CQCamera3DShapes.h \
+		CQGLBuffer.h \
+		../../CMath/include/CPoint4D.h \
+		CQGLUtil.h \
+		../../CUtil/include/CInterval.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DGrid.o CQCamera3DGrid.cpp
+
 CQCamera3DBasis.o: CQCamera3DBasis.cpp CQCamera3DBasis.h \
 		CQCamera3DObject.h \
 		CQCamera3DFaceData.h \
@@ -1826,6 +1885,7 @@ CQCamera3DCanvas.o: CQCamera3DCanvas.cpp CQCamera3DCanvas.h \
 		CQCamera3DControl.h \
 		CQCamera3DStatus.h \
 		CQCamera3DAxes.h \
+		CQCamera3DGrid.h \
 		CQCamera3DFont.h \
 		../../CMath/include/CGLVector2D.h \
 		CQCamera3DTexture.h \
@@ -1988,6 +2048,7 @@ CQCamera3DControl.o: CQCamera3DControl.cpp CQCamera3DControl.h \
 		CQCamera3DStatus.h \
 		CQCamera3DAxes.h \
 		CQCamera3DObject.h \
+		CQCamera3DGrid.h \
 		CQCamera3DUVMap.h \
 		CQCamera3DNormals.h \
 		CQCamera3DBasis.h \

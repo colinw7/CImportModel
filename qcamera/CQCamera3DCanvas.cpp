@@ -15,6 +15,7 @@
 #include <CQCamera3DControl.h>
 #include <CQCamera3DStatus.h>
 #include <CQCamera3DAxes.h>
+#include <CQCamera3DGrid.h>
 #include <CQCamera3DFont.h>
 #include <CQCamera3DTexture.h>
 #include <CQCamera3DGeomObject.h>
@@ -117,6 +118,9 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   //---
 
   connect(this, SIGNAL(stateChanged()), this, SLOT(updateStatus()));
+
+  connect(app_, SIGNAL(materialChanged()), this, SLOT(updateObjectsData()));
+  connect(app_, SIGNAL(textureChanged()), this, SLOT(updateObjectsData()));
 
   connect(app_, SIGNAL(animNameChanged()), this, SLOT(updateObjectsData()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
@@ -263,6 +267,8 @@ initializeGL()
 
   axes_ = new CQCamera3DAxes(this);
 
+  grid_ = new CQCamera3DGrid(this);
+
   //---
 
   addObjectsData();
@@ -355,16 +361,16 @@ loadTextureMap(const std::string &fileName)
   }
 
   for (auto &pt : textureMap) {
-    const auto &data = pt.second;
+    auto &data = pt.second;
 
     if (data.diffuse != "" && data.diffuse != "none")
-      addTextureFile(data.diffuse);
+      data.diffuse = addTextureFile(data.diffuse, /*update*/false);
     if (data.normal != "" && data.normal != "none")
-      addTextureFile(data.normal);
+      data.normal = addTextureFile(data.normal, /*update*/false);
     if (data.specular != "" && data.specular != "none")
-      addTextureFile(data.specular);
+      data.specular = addTextureFile(data.specular, /*update*/false);
     if (data.emissive != "" && data.emissive != "none")
-      addTextureFile(data.emissive);
+      data.emissive = addTextureFile(data.emissive, /*update*/false);
   }
 
   auto *scene = app_->getScene();
@@ -404,6 +410,8 @@ loadTextureMap(const std::string &fileName)
         object->setEmissiveTexture(texture);
     }
   }
+
+  Q_EMIT textureAdded();
 
   objectsChanged();
 
@@ -451,33 +459,33 @@ loadMaterialMap(const std::string &fileName)
     CStrUtil::toWords(line, words);
     if (words.size() < 2) continue;
 
-    MaterialMapData maerialData;
+    MaterialMapData materialData;
 
-    maerialData.diffuse = words[1];
+    materialData.diffuse = words[1];
 
     if (words.size() > 2)
-      maerialData.normal = words[2];
+      materialData.normal = words[2];
 
     if (words.size() > 3)
-      maerialData.specular = words[3];
+      materialData.specular = words[3];
 
     if (words.size() > 4)
-      maerialData.emissive = words[4];
+      materialData.emissive = words[4];
 
-    materialMap[words[0]] = maerialData;
+    materialMap[words[0]] = materialData;
   }
 
   for (auto &pt : materialMap) {
-    const auto &data = pt.second;
+    auto &data = pt.second;
 
     if (data.diffuse != "" && data.diffuse != "none")
-      addTextureFile(data.diffuse);
+      data.diffuse = addTextureFile(data.diffuse, /*update*/false);
     if (data.normal != "" && data.normal != "none")
-      addTextureFile(data.normal);
+      data.normal = addTextureFile(data.normal, /*update*/false);
     if (data.specular != "" && data.specular != "none")
-      addTextureFile(data.specular);
+      data.specular = addTextureFile(data.specular, /*update*/false);
     if (data.emissive != "" && data.emissive != "none")
-      addTextureFile(data.emissive);
+      data.emissive = addTextureFile(data.emissive, /*update*/false);
   }
 
   auto *scene = app_->getScene();
@@ -523,12 +531,12 @@ loadMaterialMap(const std::string &fileName)
   return true;
 }
 
-void
+std::string
 CQCamera3DCanvas::
-addTextureFile(const std::string &fileName)
+addTextureFile(const std::string &fileName, bool update)
 {
   if (fileName == "")
-    return;
+    return "";
 
   auto fileName1 = fileName;
   bool flipped   = false;
@@ -552,7 +560,7 @@ addTextureFile(const std::string &fileName)
     CImageFileSrc src(fileName1);
 
     auto image = CImageMgrInst->createImage(src);
-    if (! image->isValid()) return;
+    if (! image->isValid()) return "";
 
     auto *gtexture1 = CGeometry3DInst->createTexture(image);
 
@@ -561,14 +569,17 @@ addTextureFile(const std::string &fileName)
 
     gtexture1->setName(name1);
 
-    (void) initGLTexture(gtexture2);
+    //(void) initGLTexture(gtexture2);
 
     scene->addTexture(gtexture1);
 
     gtexture2->setFlipped(flipped);
 
-    Q_EMIT textureAdded();
+    if (update)
+      Q_EMIT textureAdded();
   }
+
+  return fileName1;
 }
 
 void
@@ -672,6 +683,15 @@ drawContents(CGLCameraIFace *camera)
 
   //---
 
+  // draw grid
+  if (isShowGrid()) {
+    grid_->updateGeometry();
+
+    grid_->drawGeometry();
+  }
+
+  //---
+
   // draw model objects
   drawObjectsData();
 
@@ -749,6 +769,13 @@ CQCamera3DCanvas::
 isShowAxes() const
 {
   return (axes_ && axes_->isVisible());
+}
+
+bool
+CQCamera3DCanvas::
+isShowGrid() const
+{
+  return (grid_ && grid_->isVisible());
 }
 
 CQCamera3DShaderProgram *

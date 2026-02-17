@@ -73,9 +73,25 @@ class CImportDAE : public CImportBase {
     std::string magfilter;
   };
 
+  struct TextureWrap {
+    std::string sid;
+  };
+
+  struct TextureTechnique {
+    std::string profile;
+  };
+
   struct Texture {
     std::string texture;
     std::string texcoord;
+
+    std::string extra_type;
+
+    double offsetU { 0.0 };
+    double offsetV { 0.0 };
+    double scaleU  { 0.0 };
+    double scaleV  { 0.0 };
+    double angle   { 0.0 };
   };
 
   struct LibraryEffect {
@@ -89,6 +105,11 @@ class CImportDAE : public CImportBase {
     Texture normalTexture;
     Texture emissionTexture;
     Texture specularTexture;
+    Texture transparentTexture;
+
+    std::string transparentOpaque;
+
+    std::string technique_profile;
 
     void print() {
       std::cerr << "LibraryEffect: id=" << id << " name=" << name <<
@@ -96,14 +117,30 @@ class CImportDAE : public CImportBase {
                    " diffuseTexture: " << diffuseTexture.texture <<
                    " normalTexture: " << normalTexture.texture <<
                    " emissionTexture:: " << emissionTexture.texture <<
-                   " specularTexture: " << specularTexture.texture << "\n";
+                   " specularTexture: " << specularTexture.texture <<
+                   " transparentTexture: " << transparentTexture.texture << "\n";
     }
   };
 
   using LibraryEffectP = std::unique_ptr<LibraryEffect>;
 
+  struct LibraryController {
+    std::string id;
+    std::string name;
+  };
+
+  struct Geometry {
+    std::string id;
+    std::string name;
+  };
+
   struct NewParam {
     std::string sid;
+  };
+
+  struct Matrix {
+    std::string sid;
+    CMatrix3D   matrix;
   };
 
   struct Node {
@@ -115,13 +152,13 @@ class CImportDAE : public CImportBase {
     std::string instanceController;
     std::string skeleton;
 
-    CMatrix3D matrix;
+    Matrix matrix;
 
     std::vector<Node *> children;
 
     void print(const std::string &indent) {
       std::cerr << indent << "Node: id=" << id << " name=" << name <<
-                   " sid=" << sid << " type=" << type << " matrix=" << matrix << "\n";
+                   " sid=" << sid << " type=" << type << " matrix=" << matrix.matrix << "\n";
 
       for (auto *node : children)
         node->print(indent + "  ");
@@ -142,34 +179,69 @@ class CImportDAE : public CImportBase {
     }
   };
 
-  struct MeshSourceParam {
+  struct Input {
+    std::string semantic;
+    std::string source;
+    int         set    { -1 };
+    int         offset { -1 };
+  };
+
+  struct Float {
+    std::string sid;
+    double      value;
+  };
+
+  struct Color {
+    std::string sid;
+    double      r;
+    double      g;
+    double      b;
+    double      a;
+  };
+
+  struct FloatArray {
+    std::string         id;
+    int                 count { -1 };
+    std::vector<double> values;
+  };
+
+  struct NameArray {
+    std::string              id;
+    int                      count { -1 };
+    std::vector<std::string> values;
+  };
+
+  struct Param {
     std::string name;
     std::string type;
+  };
+
+  struct TechniqueCommon {
+    int accessorCount  { -1 };
+    int accessorStride { -1 };
+    int accessorOffset { -1 };
+
+    std::vector<Param> params;
+    std::string        source;
   };
 
   struct MeshSource {
     std::string id;
     std::string name;
 
-    std::vector<double> values;
-    std::string         valuesId;
-    int                 valuesCount { -1 };
+    FloatArray valueArray;
 
-    int accessorCount  { -1 };
-    int accessorStride { -1 };
-    int accessorOffset { -1 };
-
-    std::vector<MeshSourceParam> params;
-    std::string                  source;
+    TechniqueCommon techniqueCommon;
 
     void print() const {
-      std::cerr << "MeshSource: id=" << id << " values=" << values.size() << "\n";
+      std::cerr << "MeshSource: id=" << id << " values=" << valueArray.values.size() << "\n";
     //std::cerr << "count=" << count << "\n";
     //std::cerr << "stride=" << stride << "\n";
-    //std::cerr << "params=" << params.size() << "\n";
+    //std::cerr << "params=" << techniqueCommon.params.size() << "\n";
 
-      assert(int(values.size()) == accessorCount*accessorStride);
-      assert(int(params.size()) == accessorStride);
+      assert(int(valueArray.values.size()) ==
+        techniqueCommon.accessorCount*techniqueCommon.accessorStride);
+      assert(int(techniqueCommon.params.size()) == techniqueCommon.accessorStride);
     }
   };
 
@@ -181,9 +253,8 @@ class CImportDAE : public CImportBase {
     NORMAL
   };
 
-  struct MeshVerticesInput {
+  struct MeshVerticesInput : public Input {
     MeshVerticesInputType type { MeshVerticesInputType::NONE };
-    std::string           source;
   };
 
   struct MeshVertices {
@@ -201,14 +272,12 @@ class CImportDAE : public CImportBase {
     NONE,
     VERTEX,
     NORMAL,
-    TEXCOORD
+    TEXCOORD,
+    COLOR
   };
 
-  struct MeshPolyListInput {
-    MeshPolyListInputType type   { MeshPolyListInputType::NONE };
-    std::string           source;
-    int                   offset { 0 };
-    int                   set    { 0 };
+  struct MeshPolyListInput : public Input {
+    MeshPolyListInputType type { MeshPolyListInputType::NONE };
   };
 
   struct MeshTriangles {
@@ -249,6 +318,66 @@ class CImportDAE : public CImportBase {
 
   using MeshPolyListP = std::unique_ptr<MeshPolyList>;
 
+  struct SkinSource {
+    std::string id;
+    int         count;
+
+    FloatArray  valueArray;
+
+    TechniqueCommon techniqueCommon;
+
+    NameArray nameArray;
+  };
+
+  struct SkinJoint {
+    std::vector<Input> inputs;
+  };
+
+  struct SkinWeights {
+    int                count;
+    std::vector<Input> inputs;
+    std::vector<int>   vcount;
+    std::vector<int>   v;
+  };
+
+  struct Skin {
+    std::string              source;
+    CMatrix3D                bind_shape_matrix;
+    std::vector<SkinSource>  sources;
+    std::vector<SkinJoint>   joints;
+    std::vector<SkinWeights> weights;
+  };
+
+  struct AnimationChannel {
+    std::string source;
+    std::string target;
+  };
+
+  struct AnimationSource {
+    std::string id;
+
+    FloatArray  valueArray;
+
+    TechniqueCommon techniqueCommon;
+
+    NameArray nameArray;
+  };
+
+  struct AnimationSampler {
+    std::string id;
+
+    std::vector<Input> inputs;
+  };
+
+  struct Animation {
+    std::string id;
+    std::string name;
+
+    std::vector<AnimationChannel> channels;
+    std::vector<AnimationSource>  sources;
+    std::vector<AnimationSampler> samplers;
+  };
+
   struct Scene {
     std::string url;
   };
@@ -278,23 +407,27 @@ class CImportDAE : public CImportBase {
                                          LibraryEffectP &effect);
   bool readLibraryEffectProfileDisplacement(const std::string &parentName, CXMLTag *tag,
                                             LibraryEffectP &effect);
-  bool readNormalTexture(const std::string &parentName, CXMLTag *tag);
   bool readLibraryEffectProfileSurface(const std::string &parentName, CXMLTag *tag,
                                        Surface &surface);
   bool readLibraryEffectSampler2D(const std::string &parentName, CXMLTag *tag, NewParam &param,
                                   Sampler2D &sampler);
   bool readAmbient(const std::string &parentName, CXMLTag *tag);
   bool readDiffuse(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
-  bool readDiffuseTexture(const std::string &parentName, CXMLTag *tag);
   bool readEmission(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
-  bool readEmissionTexture(const std::string &parentName, CXMLTag *tag);
   bool readSpecular(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
-  bool readSpecularTexture(const std::string &parentName, CXMLTag *tag);
   bool readShininess(const std::string &parentName, CXMLTag *tag);
   bool readReflective(const std::string &parentName, CXMLTag *tag);
   bool readReflectivity(const std::string &parentName, CXMLTag *tag);
-  bool readTransparent(const std::string &parentName, CXMLTag *tag);
+  bool readTransparent(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
   bool readTransparency(const std::string &parentName, CXMLTag *tag);
+  bool readTexture(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureExtra(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureTechnique(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureWrapU(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureWrapV(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureBlendMode(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureOffsets(const std::string &parentName, CXMLTag *tag, Texture &texture);
+  bool readTextureAmount(const std::string &parentName, CXMLTag *tag, Texture &texture);
   bool readLibraryGeometries(const std::string &parentName, CXMLTag *tag);
   bool readGeometry(const std::string &parentName, CXMLTag *tag);
   bool readMesh(const std::string &parentName, CXMLTag *tag);
@@ -302,25 +435,36 @@ class CImportDAE : public CImportBase {
   bool readMeshVertices(const std::string &parentName, CXMLTag *tag, MeshVerticesP &meshVertices);
   bool readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &polyList);
   bool readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &triangles);
-  bool readTechniqueCommon(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSource);
+  bool readTechniqueCommon(const std::string &parentName, CXMLTag *tag,
+                           TechniqueCommon &techniqueCommon);
   bool readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag,
-                                   MeshSourceP &meshSource);
+                                   TechniqueCommon &techniqueCommon);
   bool readLibraryControllers(const std::string &parentName, CXMLTag *tag);
   bool readLibraryController(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag);
+  bool readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag, Skin &skin);
+  bool readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag, Skin &skin);
+  bool readLibraryControllerSkinJoints(const std::string &parentName, CXMLTag *tag, Skin &skin);
+  bool readLibraryControllerSkinWeights(const std::string &parentName, CXMLTag *tag, Skin &skin);
   bool readLibraryAnimations(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryAnimation(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag);
+  bool readLibraryAnimation(const std::string &parentName, CXMLTag *tag, Animation &animation);
+  bool readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag, Animation &animation);
+  bool readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag, Animation &animation);
   bool readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag);
   bool readLibraryVisualScene(const std::string &parentName, CXMLTag *tag, VisualScene &scene);
+  bool readInput(const std::string &parentName, CXMLTag *tag, Input &input);
+  bool readFloatArray(const std::string &parentName, CXMLTag *tag, FloatArray &array);
+  bool readNameArray(const std::string &parentName, CXMLTag *tag, NameArray &array);
+  bool readFloat(const std::string &parentName, CXMLTag *tag, Float &f);
+  bool readColor(const std::string &parentName, CXMLTag *tag, Color &c);
   bool readNode(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readNodeInstanceController(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readNodeBindMaterial(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readScene(const std::string &parentName, CXMLTag *tag, Scene &scene);
 
+  void errorMsg(const std::string &name) const;
+
+  void TODOOption(const std::string &name) const;
   void TODO(const std::string &name) const;
   void SKIP(const std::string &name) const;
 

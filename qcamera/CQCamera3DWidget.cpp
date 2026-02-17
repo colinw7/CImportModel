@@ -68,14 +68,13 @@ enablePolygonLine()
 
 CQGLTexture *
 CQCamera3DWidget::
-getGLTexture(CGeomTexture *texture, bool add)
+getGLTexture(CGeomTexture *texture, bool /*add*/)
 {
   auto *texture1 = dynamic_cast<CQCamera3DTexture *>(texture);
   assert(texture1);
 
   if (! texture1->glTexture(this)) {
-    if (! add)
-      return nullptr;
+    //if (! add) return nullptr;
 
     initGLTexture(texture1);
 

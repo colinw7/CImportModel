@@ -262,8 +262,9 @@ class CQCamera3DApp : public QFrame {
 
   void modelAdded();
 
-  void textureAdded();
   void currentTextureChanged();
+  void textureAdded();
+  void textureChanged();
 
   void currentMaterialChanged();
   void materialAdded();
