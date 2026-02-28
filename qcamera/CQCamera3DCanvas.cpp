@@ -64,7 +64,9 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
     camera->setPerspective(perspective);
 
-    connect(camera, SIGNAL(stateChanged()), this, SLOT(cameraChanged()));
+    camera->setVisible(false);
+
+    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChanged()));
 
     cameras_.push_back(camera);
 
@@ -271,7 +273,7 @@ initializeGL()
 
   //---
 
-  addObjectsData();
+  addScene();
 
   //---
 
@@ -692,8 +694,8 @@ drawContents(CGLCameraIFace *camera)
 
   //---
 
-  // draw model objects
-  drawObjectsData();
+  // draw scene
+  drawScene();
 
   //---
 
@@ -754,7 +756,7 @@ setCurrentCameraInd(uint ind)
   for (auto *camera : cameras_) {
     bool found1 = (camera->id() == ind);
 
-    camera->setVisible(found1);
+    //camera->setVisible(found1);
 
     if (found1)
       found = found1;
@@ -795,16 +797,16 @@ void
 CQCamera3DCanvas::
 updateObjectsData()
 {
-  addObjectsData();
+  addScene();
 
   update();
 }
 
 void
 CQCamera3DCanvas::
-addObjectsData()
+addScene()
 {
-  CQPerfTrace trace("CQCamera3DCanvas::addObjectsData");
+  CQPerfTrace trace("CQCamera3DCanvas::addScene");
 
   bbox_ = CBBox3D();
 
@@ -813,19 +815,15 @@ addObjectsData()
   int    boneNodeIds[4];
   double boneWeights[4];
 
-  int io = 0;
-
   auto *scene = app_->getScene();
 
   for (auto *object : scene->getObjects()) {
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
-    //(void) initObjectData(io, object);
-
     //---
 
-    auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+    auto modelMatrix = CMatrix3DH(object->getHierTransform());
     auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
 
     //---
@@ -925,7 +923,7 @@ addObjectsData()
           vertex.setViewed(vertex.getModel());
         }
 
-        face->calcNormal(normal);
+        face->calcModelNormal(normal);
       }
 
       //---
@@ -953,7 +951,9 @@ addObjectsData()
         auto normal1 = normal;
         auto color1  = color;
 
-        if (vertex.hasNormal())
+        if      (face->hasVertexNormals())
+          normal1 = face->getVertexNormal(iv);
+        else if (vertex.hasNormal())
           normal1 = vertex.getNormal();
 
         if (vertex.hasColor())
@@ -1126,8 +1126,6 @@ addObjectsData()
     //---
 
     buffer->load();
-
-    ++io;
   }
 
   if (! bbox_.isSet()) {
@@ -1238,9 +1236,9 @@ updateStatus()
 
 void
 CQCamera3DCanvas::
-drawObjectsData()
+drawScene()
 {
-  CQPerfTrace trace("CQCamera3DCanvas::drawObjectsData");
+  CQPerfTrace trace("CQCamera3DCanvas::drawScene");
 
   auto *program = this->shaderProgram();
 
@@ -1262,16 +1260,12 @@ drawObjectsData()
   // add light data to shader program
   addShaderLights(program);
 
-  //---
+//---
 
   glPointSize(pointSize());
   glLineWidth(lineWidth());
 
   paintData_.reset();
-
-  //---
-
-  bool isAnim = (app_->animName() != "");
 
   //---
 
@@ -1318,6 +1312,13 @@ drawObjectsData()
     auto &selectedVertices  = selectedObjectVertices [object->getInd()];
     auto &selectedFaceEdges = selectedObjectFaceEdges[object->getInd()];
 
+    auto *animObject = object->getAnimObject();
+
+    bool isAnim = false;
+
+    if (app_->isAnimEnabled())
+      isAnim = (animObject && animObject->animName() != "");
+
     //---
 
     // mesh matrix
@@ -1328,13 +1329,13 @@ drawObjectsData()
 
     // model matrix
     //auto modelMatrix = CMatrix3DH::identity();
-    auto modelMatrix = object1->getHierTransform();
+    auto modelMatrix = object->getHierTransform();
     program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
 
     //---
 
     // anim
-    program->setUniformValue("useBonePoints", isAnim); // per object ?
+    program->setUniformValue("useBonePoints", isAnim);
 
     if (isAnim) {
       updateNodeMatrices(object);
@@ -1654,17 +1655,17 @@ updateNodeMatrices(CGeomObject3D *object)
 {
   CQPerfTrace trace("CQCamera3DCanvas::updateNodeMatrices");
 
-  // anim data always on root object
-  auto *rootObject = object->getRootObject();
+  // anim data on anim object
+  auto *animObject = object->getAnimObject();
 
-  if (rootObject == paintData_.rootObject)
+  if (animObject == paintData_.animObject)
     return;
 
-  paintData_.rootObject = rootObject;
+  paintData_.animObject = animObject;
 
   //---
 
-  const auto &nodeMatrices = app_->getObjectNodeMatrices(object);
+  const auto &nodeMatrices = app_->getObjectNodeMatrices(animObject);
 
   //---
 
@@ -1675,6 +1676,11 @@ updateNodeMatrices(CGeomObject3D *object)
 
   for (const auto &pn : nodeMatrices) {
     auto nodeId = pn.first;
+
+    if (nodeId < 0) {
+      std::cerr << "Invalid node id " << nodeId << "\n";
+      continue;
+    }
 
     if (nodeId >= PaintData::NUM_NODE_MATRICES) {
       std::cerr << "Too few node matrices for node " << nodeId << "\n";
@@ -1854,6 +1860,28 @@ selectObject(CGeomObject3D *object, bool clear, bool update)
 
   if (! object->getSelected()) {
     object->setSelected(true);
+    changed = true;
+  }
+
+  if (changed && update) {
+    updateCurrentObject();
+
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+
+  return changed;
+}
+
+bool
+CQCamera3DCanvas::
+deselectObject(CGeomObject3D *object, bool update)
+{
+  bool changed = false;
+
+  if (object->getSelected()) {
+    object->setSelected(false);
     changed = true;
   }
 
@@ -2336,8 +2364,6 @@ selectObjectAtMouse()
 {
   auto *camera = getCurrentCamera();
 
-  auto useAnim = (app_->animName() != "");
-
   auto selectType = calcSelectType();
 
   //---
@@ -2357,7 +2383,8 @@ selectObjectAtMouse()
 
   //---
 
-  auto objectNodeMatrices = app_->calcNodeMatrices();
+  //auto objectNodeMatrices = app_->calcNodeMatrices();
+  const auto &objectNodeMatrices = app_->getNodeMatrices();
 
   auto viewMatrix       = camera->viewMatrix();
   auto projectionMatrix = camera->worldMatrix();
@@ -2403,13 +2430,25 @@ selectObjectAtMouse()
 
     //---
 
-    auto *rootObject = object->getRootObject();
+    auto *animObject = object->getAnimObject();
 
-    auto &nodeMatrices = objectNodeMatrices[rootObject->getInd()];
+    bool isAnim = false;
+
+    if (app_->isAnimEnabled())
+      isAnim = (animObject && animObject->animName() != "");
+
+    const CQCamera3DApp::NodeMatrices *nodeMatrices = nullptr;
+
+    if (isAnim) {
+      auto pm = objectNodeMatrices.find(animObject->getInd());
+
+      if (pm != objectNodeMatrices.end())
+        nodeMatrices = &(*pm).second;
+    }
 
     //---
 
-    auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+    auto modelMatrix = CMatrix3DH(object->getHierTransform());
     auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
 
     //---
@@ -2433,8 +2472,8 @@ selectObjectAtMouse()
 
         //---
 
-        if (useAnim)
-          p = app_->adjustAnimPoint(vertex, p, nodeMatrices);
+        if (isAnim)
+          p = app_->adjustAnimPoint(vertex, p, *nodeMatrices);
 
         p = meshMatrix*p;
 
@@ -2604,7 +2643,7 @@ selectObjectAtMouse()
   }
 
   if (changed) {
-    addObjectsData();
+    addScene();
 
     updateCurrentObject();
 
@@ -3000,7 +3039,7 @@ faceKeyPress(QKeyEvent *e)
     if (face->getNormalSet())
       n = face->getNormal();
     else
-      face->calcNormal(n);
+      face->calcModelNormal(n);
 
     return n;
   };
@@ -3048,7 +3087,7 @@ edgeKeyPress(QKeyEvent *e)
   if (face->getNormalSet())
     n = face->getNormal();
   else
-    face->calcNormal(n);
+    face->calcModelNormal(n);
 
   auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
 
@@ -3082,6 +3121,7 @@ pointKeyPress(QKeyEvent *e)
   auto *vertex = currentVertex();
   if (! vertex) return;
 
+  // TODO: check face normal
   auto n = vertex->getNormal();
 
   auto d = bbox_.getMaxSize()/100.0;

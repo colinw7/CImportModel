@@ -32,7 +32,7 @@ class CQCamera3DCameraList : public QFrame {
 
   CGLCameraIFace * cameraFromIndex(const QModelIndex &index) const;
 
-  void updateAll();
+  void updateAll(bool geom=false);
 
   void resizeEvent(QResizeEvent *) override;
 

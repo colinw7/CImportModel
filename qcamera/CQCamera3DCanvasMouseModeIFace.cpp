@@ -100,7 +100,7 @@ void
 CQCamera3DCanvasMouseModeIFace::
 endUpdateObjects()
 {
-  canvas_->addObjectsData();
+  canvas_->addScene();
   canvas_->update();
 }
 

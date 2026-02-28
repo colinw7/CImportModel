@@ -10,6 +10,7 @@
 #include <QColor>
 
 #include <vector>
+#include <optional>
 #include <cassert>
 
 class CQGLBuffer {
@@ -24,6 +25,8 @@ class CQGLBuffer {
     Point(float x, float y, float z) :
      x(x), y(y), z(z) {
     }
+
+    CPoint3D point() const { return CPoint3D(x, y, z); }
   };
 
   struct Color {
@@ -36,6 +39,8 @@ class CQGLBuffer {
     Color(float r, float g, float b) :
      r(r), g(g), b(b) {
     }
+
+    CPoint3D point() const { return CPoint3D(r, g, b); }
   };
 
   struct TexturePoint {
@@ -47,6 +52,8 @@ class CQGLBuffer {
     TexturePoint(float x, float y) :
      x(x), y(y) {
     }
+
+    CPoint2D point() const { return CPoint2D(x, y); }
   };
 
   struct Vector {
@@ -92,7 +99,7 @@ class CQGLBuffer {
   };
 
  public:
-  CQGLBuffer(QOpenGLShaderProgram *program) {
+  CQGLBuffer(QOpenGLShaderProgram *program=nullptr) {
     data_.program = program;
 
     data_.vObj         = new QOpenGLVertexArrayObject;
@@ -117,6 +124,11 @@ class CQGLBuffer {
 
     return *this;
   }
+
+  //---
+
+  QOpenGLShaderProgram *program() const { return data_.program; }
+  void setProgram(QOpenGLShaderProgram *p) { data_.program = p; }
 
   //---
 
@@ -252,17 +264,26 @@ class CQGLBuffer {
   //---
 
   struct PointData {
-    Point        point;
-    Point        normal;
-    Color        color;
-    TexturePoint texturePoint;
+    std::optional<Point>        point;
+    std::optional<Point>        normal;
+    std::optional<Color>        color;
+    std::optional<TexturePoint> texturePoint;
+    std::optional<IVector>      boneId;
+    std::optional<Vector>       boneWeight;
   };
 
-  void getPointData(int i, PointData &data) {
+  void getPointData(int i, PointData &data) const {
+    assert(i < int(data_.points.size()));
+
     if (hasPointPart  ()) data.point        = data_.points[i];
     if (hasNormalPart ()) data.normal       = data_.normals[i];
     if (hasColorPart  ()) data.color        = data_.colors[i];
     if (hasTexturePart()) data.texturePoint = data_.texturePoints[i];
+
+    if (hasBonesPart()) {
+      data.boneId     = data_.boneIds[i];
+      data.boneWeight = data_.boneWeights[i];
+    }
   }
 
   //---
@@ -352,6 +373,8 @@ class CQGLBuffer {
     data_.vObj->release();
   }
 
+  //---
+
   void bind() {
     assert(data_.dataValid);
 
@@ -369,6 +392,8 @@ class CQGLBuffer {
 
     data_.vObj->release();
   }
+
+  //---
 
   void drawTriangles() {
     glDrawArrays(GL_TRIANGLES, 0, int(numPoints()));
@@ -559,14 +584,14 @@ class CQGLBuffer {
     unsigned int  numIndData { 0 };
     unsigned int  span       { 0 };
     bool          dataValid  { false };
-    Points        points;
-    Points        normals;
-    Colors        colors;
-    TexturePoints texturePoints;
-    BoneIds       boneIds;
-    BoneWeights   boneWeights;
-    Indices       indices;
-    bool          indicesSet { false };
+    Points        points;                  // vertex point
+    Points        normals;                 // vertex normal
+    Colors        colors;                  // vertex color
+    TexturePoints texturePoints;           // vertex texture point
+    BoneIds       boneIds;                 // vertex bone id
+    BoneWeights   boneWeights;             // vertex bone weight
+    Indices       indices;                 // vertex point indices
+    bool          indicesSet { false };    // is vertex point indices set
   };
 
   Data data_;

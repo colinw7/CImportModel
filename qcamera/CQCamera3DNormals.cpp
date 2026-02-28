@@ -109,14 +109,14 @@ addBufferNormals(CQCamera3DGeomObject *object)
 
     for (const auto *face : faces) {
       CPoint3D p1;
-      face->getMidPoint(p1);
+      face->getModelMidPoint(p1);
 
       CVector3D n;
 
       if (face->getNormalSet())
         n = face->getNormal();
       else
-        face->calcNormal(n);
+        face->calcModelNormal(n);
 
       auto p2 = p1 + lineSize*n.normalize();
 

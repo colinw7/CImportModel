@@ -49,6 +49,10 @@
 #include <svg/face_select_svg.h>
 #include <svg/object_select_svg.h>
 
+#include <svg/depth3d_svg.h>
+#include <svg/cull3d_svg.h>
+#include <svg/front3d_svg.h>
+
 #include <svg/wireframe_svg.h>
 #include <svg/solid_fill_svg.h>
 #include <svg/texture_fill_svg.h>
@@ -398,6 +402,7 @@ setCurrentBoneNode(int i)
 
 //---
 
+#if 0
 void
 CQCamera3DApp::
 setAnimName(const QString &s)
@@ -405,9 +410,7 @@ setAnimName(const QString &s)
   if (s != animName_) {
     animName_ = s;
 
-    objectNodeMatricesValid_ = false;
-
-    Q_EMIT animNameChanged();
+    signalAnimTimeChange();
   }
 }
 
@@ -418,10 +421,18 @@ setAnimTime(double r)
   if (r != animTime_) {
     animTime_ = r;
 
-    objectNodeMatricesValid_ = false;
-
-    Q_EMIT animTimeChanged();
+    signalAnimTimeChange();
   }
+}
+#endif
+
+void
+CQCamera3DApp::
+signalAnimTimeChange()
+{
+  invalidateNodeMatrices();
+
+  Q_EMIT animTimeChanged();
 }
 
 //---
@@ -448,6 +459,12 @@ loadModel(const QString &fileName, CGeom3DType format, LoadData &loadData)
   im->setSwapXY(loadData.swapXY);
   im->setSwapYZ(loadData.swapYZ);
   im->setSwapZX(loadData.swapZX);
+
+  if (loadData.triangulate)
+    im->setTriangulate(true);
+
+  if (loadData.textureDir != "")
+    im->setTextureDir(loadData.textureDir);
 
   CFile file(fileName.toStdString());
 
@@ -557,7 +574,7 @@ getTextureById(int id) const
 
 //---
 
-std::vector<CQCamera3DApp::AnimData>
+QStringList
 CQCamera3DApp::
 getAnimNames() const
 {
@@ -566,32 +583,25 @@ getAnimNames() const
 
   AnimObjects animObjects;
 
-  auto rootObjects = this->getRootObjects();
+  auto animObjects1 = this->getAnimObjects();
 
-  for (auto *rootObject : rootObjects) {
-    std::vector<std::string> animNames1;
-    rootObject->getAnimationNames(animNames1);
+  for (auto *animObject : animObjects1) {
+    std::vector<std::string> animNames;
+    animObject->getAnimationNames(animNames);
 
-    for (const auto &animName1 : animNames1) {
-      auto animName2 = QString::fromStdString(animName1);
+    for (const auto &animName : animNames) {
+      auto animName1 = QString::fromStdString(animName);
 
-      animObjects[animName2].push_back(rootObject);
+      animObjects[animName1].push_back(animObject);
     }
   }
 
-  std::vector<AnimData> animNames;
+  QStringList animNames;
 
   for (const auto &pa : animObjects) {
-    AnimData animData;
+    auto name= pa.first;
 
-    animData.name = pa.first;
-
-    auto *rootObject = pa.second[0];
-
-    rootObject->getAnimationTranslationRange(animData.name.toStdString(),
-                                             animData.tmin, animData.tmax);
-
-    animNames.push_back(animData);
+    animNames.push_back(name);
   }
 
   return animNames;
@@ -621,6 +631,41 @@ getRootObjects() const
   }
 
   return rootObjects;
+}
+
+void
+CQCamera3DApp::
+stepAnimObjects()
+{
+  for (auto *animObject : getAnimObjects())
+    animObject->stepAnimTime();
+
+  signalAnimTimeChange();
+}
+
+std::vector<CGeomObject3D *>
+CQCamera3DApp::
+getAnimObjects() const
+{
+  std::set<CGeomObject3D *>    animObjectSet;
+  std::vector<CGeomObject3D *> animObjects;
+
+  auto *scene = this->getScene();
+
+  const auto &objects = scene->getObjects();
+
+  for (auto *object : objects) {
+    auto *animObject = object->getAnimObject();
+    if (! animObject) continue;
+
+    if (animObjectSet.find(animObject) == animObjectSet.end()) {
+      animObjectSet.insert(animObject);
+
+      animObjects.push_back(animObject);
+    }
+  }
+
+  return animObjects;
 }
 
 //---
@@ -658,30 +703,27 @@ calcNodeMatrices() const
 {
   ObjectNodeMatrices objectNodeMatrices;
 
-  auto animName = this->animName().toStdString();
-  auto animTime = this->animTime();
+  auto animObjects = getAnimObjects();
 
-  auto rootObjects = getRootObjects();
-
-  for (auto *rootObject : rootObjects) {
-    if (! rootObject->getVisible())
+  for (auto *animObject : animObjects) {
+    if (! animObject->getVisible())
       continue;
 
-    auto animName1 = rootObject->animName();
+    auto animName = animObject->animName();
+    if (animName == "") continue;
 
-    if (animName1 == "")
-      animName1 = animName;
+    auto animTime = animObject->animTime();
 
-    auto &nodeMatrices = objectNodeMatrices[rootObject->getInd()];
+    auto &nodeMatrices = objectNodeMatrices[animObject->getInd()];
 
-    rootObject->updateNodesAnimationData(animName1, animTime);
+    animObject->updateNodesAnimationData(animName, animTime);
 
-    auto meshMatrix        = rootObject->getMeshGlobalTransform();
+    auto meshMatrix        = animObject->getMeshGlobalTransform();
     auto inverseMeshMatrix = meshMatrix.inverse();
 
     //---
 
-    for (const auto &pn : rootObject->getNodes()) {
+    for (const auto &pn : animObject->getNodes()) {
       auto &node = const_cast<CGeomNodeData &>(pn.second);
       //if (! node.isJoint()) continue;
 

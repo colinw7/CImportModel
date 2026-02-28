@@ -50,7 +50,7 @@ MaterialView(App *app) :
   connect(app_, SIGNAL(materialChanged()), this, SLOT(invalidateSlot()));
 
   auto *camera1 = dynamic_cast<Camera *>(camera_);
-  connect(camera1, SIGNAL(stateChanged()), this, SLOT(invalidateSlot()));
+  connect(camera1, SIGNAL(stateChangedSignal()), this, SLOT(invalidateSlot()));
 }
 
 void

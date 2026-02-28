@@ -17,30 +17,6 @@ class Camera : public QObject, public CGLCameraIFace {
 
   //---
 
-  // set perspective values
-
-  // field of view
-  void setFov(double r) override;
-
-  // pixel aspect
-  void setAspect(double r) override;
-
-  // near z
-  void setNear(double r) override;
-
-  // far z
-  void setFar(double r) override;
-
-  //---
-
-  // origin (for rotation center)
-  void setOrigin(const CVector3D &p) override;
-
-  // position (for camera position)
-  void setPosition(const CVector3D &p) override;
-
-  //---
-
   // get perspective matrix
   CMatrix3DH perspectiveMatrix() const override;
 
@@ -59,9 +35,12 @@ class Camera : public QObject, public CGLCameraIFace {
   void moveAroundY(double) override { }
   void moveAroundZ(double) override { }
 
+ private:
+  void stateChanged() override { Q_EMIT stateChangedSignal(); }
+
  Q_SIGNALS:
   // send when state (data values) changed
-  void stateChanged();
+  void stateChangedSignal();
 };
 
 }

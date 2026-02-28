@@ -116,20 +116,16 @@ class CQCamera3DApp : public QFrame {
   using Objects = std::vector<CGeomObject3D *>;
 
   struct LoadData {
-    bool invertX { false };
-    bool invertY { false };
-    bool invertZ { false };
-    bool swapXY  { false };
-    bool swapYZ  { false };
-    bool swapZX  { false };
+    bool        invertX     { false };
+    bool        invertY     { false };
+    bool        invertZ     { false };
+    bool        swapXY      { false };
+    bool        swapYZ      { false };
+    bool        swapZX      { false };
+    bool        triangulate { false };
+    std::string textureDir;
 
     Objects objects;
-  };
-
-  struct AnimData {
-    QString name;
-    double  tmin { 0.0 };
-    double  tmax { 0.0 };
   };
 
   using NodeMatrices       = std::map<int, CMatrix3D>;
@@ -202,14 +198,10 @@ class CQCamera3DApp : public QFrame {
   int currentBoneNode() const { return currentBoneNode_; }
   void setCurrentBoneNode(int i);
 
-  const QString &animName() const { return animName_; }
-  void setAnimName(const QString &s);
+  //---
 
-  double animTime() const { return animTime_; }
-  void setAnimTime(double r);
-
-  double animTimeStep() const { return animTimeStep_; }
-  void setAnimTimeStep(double r) { animTimeStep_ = r; }
+  bool isAnimEnabled() const { return animEnabled_; }
+  void setAnimEnabled(bool b) { animEnabled_ = b; }
 
   //---
 
@@ -222,11 +214,18 @@ class CQCamera3DApp : public QFrame {
   CPoint3D adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
                            const NodeMatrices &nodeMatrices) const;
 
+  void invalidateNodeMatrices() { objectNodeMatricesValid_ = false; }
+
   //---
 
-  std::vector<AnimData> getAnimNames() const;
+  QStringList getAnimNames() const;
 
   std::vector<CGeomObject3D *> getRootObjects() const;
+  std::vector<CGeomObject3D *> getAnimObjects() const;
+
+  void stepAnimObjects();
+
+  void signalAnimTimeChange();
 
   //---
 
@@ -319,9 +318,7 @@ class CQCamera3DApp : public QFrame {
   int currentBoneNode_   { -1 };
 
   // anim
-  QString animName_;
-  double  animTime_     { 0.0 };
-  double  animTimeStep_ { 100.0 };
+  bool animEnabled_ { true };
 
   ObjectNodeMatrices objectNodeMatrices_;
   bool               objectNodeMatricesValid_ { false };

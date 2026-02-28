@@ -124,16 +124,6 @@ class CImportDAE : public CImportBase {
 
   using LibraryEffectP = std::unique_ptr<LibraryEffect>;
 
-  struct LibraryController {
-    std::string id;
-    std::string name;
-  };
-
-  struct Geometry {
-    std::string id;
-    std::string name;
-  };
-
   struct NewParam {
     std::string sid;
   };
@@ -149,11 +139,16 @@ class CImportDAE : public CImportBase {
     std::string sid;
     std::string type;
 
+    int ind { -1 };
+
     std::string instanceController;
     std::string skeleton;
 
     Matrix matrix;
 
+    CMatrix3D inverseBindMatrix;
+
+    Node*               parent { nullptr };
     std::vector<Node *> children;
 
     void print(const std::string &indent) {
@@ -169,13 +164,13 @@ class CImportDAE : public CImportBase {
     std::string id;
     std::string name;
 
-    std::vector<Node *> nodes;
+    std::map<std::string, Node *> nodes;
 
     void print() {
       std::cerr << "VisualScene: id=" << id << " name=" << name << "\n";
 
-      for (auto *node : nodes)
-        node->print("  ");
+      for (const auto &pn : nodes)
+        pn.second->print("  ");
     }
   };
 
@@ -225,14 +220,19 @@ class CImportDAE : public CImportBase {
     std::string        source;
   };
 
-  struct MeshSource {
+  struct Source {
     std::string id;
     std::string name;
 
+    int count { -1 };
+
     FloatArray valueArray;
+    NameArray  nameArray;
 
     TechniqueCommon techniqueCommon;
+  };
 
+  struct MeshSource : public Source {
     void print() const {
       std::cerr << "MeshSource: id=" << id << " values=" << valueArray.values.size() << "\n";
     //std::cerr << "count=" << count << "\n";
@@ -318,15 +318,21 @@ class CImportDAE : public CImportBase {
 
   using MeshPolyListP = std::unique_ptr<MeshPolyList>;
 
-  struct SkinSource {
+  using IdMeshSource       = std::map<std::string, MeshSourceP>;
+  using IdMeshVertices     = std::map<std::string, MeshVerticesP>;
+  using MeshPolyLists      = std::vector<MeshPolyListP>;
+  using MeshTrianglesArray = std::vector<MeshTrianglesP>;
+
+  struct Geometry {
     std::string id;
-    int         count;
+    std::string name;
 
-    FloatArray  valueArray;
+    IdMeshSource       idMeshSource;
+    IdMeshVertices     idMeshVertices;
+    MeshPolyLists      meshPolyLists;
+    MeshTrianglesArray meshTrianglesArray;
 
-    TechniqueCommon techniqueCommon;
-
-    NameArray nameArray;
+    CGeomObject3D *object { nullptr };
   };
 
   struct SkinJoint {
@@ -341,26 +347,23 @@ class CImportDAE : public CImportBase {
   };
 
   struct Skin {
-    std::string              source;
-    CMatrix3D                bind_shape_matrix;
-    std::vector<SkinSource>  sources;
-    std::vector<SkinJoint>   joints;
-    std::vector<SkinWeights> weights;
+    std::string                   source;
+    CMatrix3D                     bind_shape_matrix;
+    std::map<std::string, Source> sources;
+    std::vector<SkinJoint>        joints;
+    std::vector<SkinWeights>      weights;
+  };
+
+  struct LibraryController {
+    std::string id;
+    std::string name;
+
+    Skin skin;
   };
 
   struct AnimationChannel {
     std::string source;
     std::string target;
-  };
-
-  struct AnimationSource {
-    std::string id;
-
-    FloatArray  valueArray;
-
-    TechniqueCommon techniqueCommon;
-
-    NameArray nameArray;
   };
 
   struct AnimationSampler {
@@ -369,13 +372,39 @@ class CImportDAE : public CImportBase {
     std::vector<Input> inputs;
   };
 
+  enum class AnimationInterpolation {
+      NONE,
+      LINEAR
+    };
+
+  struct AnimationData {
+    std::vector<double>                 range;
+    std::vector<CMatrix3D>              matrices;
+    std::vector<AnimationInterpolation> interpolations;
+
+    void clear() {
+      range         .clear();
+      matrices      .clear();
+      interpolations.clear();
+    }
+  };
+
   struct Animation {
     std::string id;
     std::string name;
 
-    std::vector<AnimationChannel> channels;
-    std::vector<AnimationSource>  sources;
-    std::vector<AnimationSampler> samplers;
+    std::vector<AnimationChannel>           channels;
+    std::vector<Source>                     sources;
+    std::map<std::string, AnimationSampler> samplers;
+
+    AnimationData data;
+
+    struct NodeData {
+      Node*       node { nullptr };
+      std::string data;
+    };
+
+    std::vector<NodeData> nodeDatas;
   };
 
   struct Scene {
@@ -383,15 +412,24 @@ class CImportDAE : public CImportBase {
   };
 
  private:
+  void addGeometry();
+  void addGeometry(Geometry *geometry);
+
+  bool processAnimation();
+  bool processAnimation(LibraryController *controller);
+
   LibraryEffect* getMaterialEffect(const std::string &name) const;
   std::string    getEffectTexture(LibraryEffect *effect, const std::string &texture);
 
-  bool readAssert(const std::string &parentName, CXMLTag *tag);
+  bool readAsset(const std::string &parentName, CXMLTag *tag);
+
   bool readLibraryImages(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryMaterials(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryEffects(const std::string &parentName, CXMLTag *tag);
   bool readLibraryImage(const std::string &parentName, CXMLTag *tag, ImageP &image);
+
+  bool readLibraryMaterials(const std::string &parentName, CXMLTag *tag);
   bool readLibraryMaterial(const std::string &parentName, CXMLTag *tag, MaterialP &material);
+
+  bool readLibraryEffects(const std::string &parentName, CXMLTag *tag);
   bool readLibraryEffect(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
   bool readLibraryEffectProfileCommon(const std::string &parentName, CXMLTag *tag,
                                       LibraryEffectP &effect);
@@ -411,6 +449,7 @@ class CImportDAE : public CImportBase {
                                        Surface &surface);
   bool readLibraryEffectSampler2D(const std::string &parentName, CXMLTag *tag, NewParam &param,
                                   Sampler2D &sampler);
+
   bool readAmbient(const std::string &parentName, CXMLTag *tag);
   bool readDiffuse(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
   bool readEmission(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
@@ -420,6 +459,7 @@ class CImportDAE : public CImportBase {
   bool readReflectivity(const std::string &parentName, CXMLTag *tag);
   bool readTransparent(const std::string &parentName, CXMLTag *tag, LibraryEffectP &effect);
   bool readTransparency(const std::string &parentName, CXMLTag *tag);
+
   bool readTexture(const std::string &parentName, CXMLTag *tag, Texture &texture);
   bool readTextureExtra(const std::string &parentName, CXMLTag *tag, Texture &texture);
   bool readTextureTechnique(const std::string &parentName, CXMLTag *tag, Texture &texture);
@@ -428,41 +468,53 @@ class CImportDAE : public CImportBase {
   bool readTextureBlendMode(const std::string &parentName, CXMLTag *tag, Texture &texture);
   bool readTextureOffsets(const std::string &parentName, CXMLTag *tag, Texture &texture);
   bool readTextureAmount(const std::string &parentName, CXMLTag *tag, Texture &texture);
+
   bool readLibraryGeometries(const std::string &parentName, CXMLTag *tag);
-  bool readGeometry(const std::string &parentName, CXMLTag *tag);
-  bool readMesh(const std::string &parentName, CXMLTag *tag);
-  bool readMeshSource(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSource);
-  bool readMeshVertices(const std::string &parentName, CXMLTag *tag, MeshVerticesP &meshVertices);
-  bool readMeshPolylist(const std::string &parentName, CXMLTag *tag, MeshPolyListP &polyList);
-  bool readMeshTriangles(const std::string &parentName, CXMLTag *tag, MeshTrianglesP &triangles);
+  bool readLibraryGeometry(const std::string &parentName, CXMLTag *tag);
+
+  bool readGeometryMesh(const std::string &parentName, CXMLTag *tag, Geometry *geometry);
+  bool readGeometryMeshSource(const std::string &parentName, CXMLTag *tag, MeshSourceP &meshSource);
+  bool readGeometryMeshVertices(const std::string &parentName, CXMLTag *tag,
+                                MeshVerticesP &meshVertices);
+  bool readGeometryMeshPolylist(const std::string &parentName, CXMLTag *tag,
+                                MeshPolyListP &polyList);
+  bool readGeometryMeshTriangles(const std::string &parentName, CXMLTag *tag,
+                                MeshTrianglesP &triangles);
+
   bool readTechniqueCommon(const std::string &parentName, CXMLTag *tag,
                            TechniqueCommon &techniqueCommon);
   bool readTechniqueCommonAccessor(const std::string &parentName, CXMLTag *tag,
                                    TechniqueCommon &techniqueCommon);
+
   bool readLibraryControllers(const std::string &parentName, CXMLTag *tag);
   bool readLibraryController(const std::string &parentName, CXMLTag *tag);
   bool readLibraryControllerSkin(const std::string &parentName, CXMLTag *tag, Skin &skin);
   bool readLibraryControllerSkinSource(const std::string &parentName, CXMLTag *tag, Skin &skin);
   bool readLibraryControllerSkinJoints(const std::string &parentName, CXMLTag *tag, Skin &skin);
   bool readLibraryControllerSkinWeights(const std::string &parentName, CXMLTag *tag, Skin &skin);
+
   bool readLibraryAnimations(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryAnimation(const std::string &parentName, CXMLTag *tag, Animation &animation);
-  bool readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag, Animation &animation);
-  bool readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag, Animation &animation);
+  bool readLibraryAnimation(const std::string &parentName, CXMLTag *tag);
+  bool readLibraryAnimationSource(const std::string &parentName, CXMLTag *tag,
+                                  Animation &animation);
+  bool readLibraryAnimationSampler(const std::string &parentName, CXMLTag *tag,
+                                  Animation &animation);
+
   bool readLibraryVisualScenes(const std::string &parentName, CXMLTag *tag);
-  bool readLibraryVisualScene(const std::string &parentName, CXMLTag *tag, VisualScene &scene);
+  bool readLibraryVisualScene(const std::string &parentName, CXMLTag *tag);
+
   bool readInput(const std::string &parentName, CXMLTag *tag, Input &input);
   bool readFloatArray(const std::string &parentName, CXMLTag *tag, FloatArray &array);
   bool readNameArray(const std::string &parentName, CXMLTag *tag, NameArray &array);
   bool readFloat(const std::string &parentName, CXMLTag *tag, Float &f);
   bool readColor(const std::string &parentName, CXMLTag *tag, Color &c);
-  bool readNode(const std::string &parentName, CXMLTag *tag, Node *node);
+  bool readNode(const std::string &parentName, CXMLTag *tag, VisualScene &scene, Node *node);
   bool readNodeInstanceController(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readNodeBindMaterial(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readNodeBindMaterialCommon(const std::string &parentName, CXMLTag *tag, Node *node);
   bool readScene(const std::string &parentName, CXMLTag *tag, Scene &scene);
 
-  void errorMsg(const std::string &name) const;
+  bool errorMsg(const std::string &name) const;
 
   void TODOOption(const std::string &name) const;
   void TODO(const std::string &name) const;
@@ -478,24 +530,39 @@ class CImportDAE : public CImportBase {
 
   //---
 
-  using IdImage            = std::map<std::string, ImageP>;
-  using IdMaterial         = std::map<std::string, MaterialP>;
-  using IdLibraryEffect    = std::map<std::string, LibraryEffectP>;
-  using IdMeshSource       = std::map<std::string, MeshSourceP>;
-  using IdMeshVertices     = std::map<std::string, MeshVerticesP>;
-  using MeshPolyLists      = std::vector<MeshPolyListP>;
-  using MeshTrianglesArray = std::vector<MeshTrianglesP>;
-  using IdMaterialNameMap  = std::map<std::string, std::string>;
+  using IdImage             = std::map<std::string, ImageP>;
+  using IdMaterialNameMap   = std::map<std::string, std::string>;
+  using IdMaterial          = std::map<std::string, MaterialP>;
+  using IdLibraryEffect     = std::map<std::string, LibraryEffectP>;
+  using IdVisualScene       = std::map<std::string, VisualScene>;
+  using IdGeometry          = std::map<std::string, Geometry *>;
+  using IdAnimation         = std::map<std::string, Animation>;
+  using IdLibraryController = std::map<std::string, LibraryController *>;
 
-  IdImage            idImage_;
-  IdMeshSource       idMeshSource_;
-  IdMeshVertices     idMeshVertices_;
-  MeshPolyLists      meshPolyLists_;
-  MeshTrianglesArray meshTrianglesArray_;
+  // <library_images>
+  IdImage idLibraryImage_;
 
+  // <library_materials>
+  IdMaterial        idLibraryMaterial_;
   IdMaterialNameMap idMaterialNameMap_;
-  IdMaterial        idMaterial_;
-  IdLibraryEffect   idLibraryEffect_;
+
+  // <library_effects>
+  IdLibraryEffect idLibraryEffect_;
+
+  // <library_geometries>
+  IdGeometry idLibraryGeometry_;
+
+  // <library_controllers >
+  IdLibraryController idLibraryController_;
+
+  // <library_animations>
+  IdAnimation idLibraryAnimation_;
+
+  // <library_visual_scenes>
+  IdVisualScene idLibraryVisualScene_;
+
+  // <scene>
+  Scene daeScene_;
 };
 
 #endif

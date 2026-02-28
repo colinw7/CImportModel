@@ -104,6 +104,8 @@ class CDisplayRange2D {
     bbox = BBox(Point(wxmin, wymin), Point(wxmax, wymax));
   }
 
+  CSize2D getWindowSize() const { return CSize2D(window_.dx(), window_.dy()); }
+
   double getWindowWidth () const { return window_.dx(); }
   double getWindowHeight() const { return window_.dy(); }
 

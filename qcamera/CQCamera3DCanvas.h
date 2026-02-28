@@ -150,8 +150,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CGLCameraIFace* getCameraById(uint id) const;
 
+#if 0
   bool isShowCamera() const { return showCamera_; }
   void setShowCamera(bool b) { showCamera_ = b; }
+#endif
 
   void updateQuadCameras();
 
@@ -304,6 +306,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void selectAllObjects();
   bool selectObjects(const Objects &objects, bool clear, bool update=true);
   bool selectObject(CGeomObject3D *object, bool clear, bool update=true);
+  bool deselectObject(CGeomObject3D *object, bool update=true);
 
   bool selectFaces(const Faces &faces, bool clear, bool update=true);
   bool selectFace(CGeomFace3D *face, bool clear, bool update=true);
@@ -462,7 +465,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void drawContents(CGLCameraIFace *camera);
 
  private:
-  void drawObjectsData();
+  void drawScene();
 
   void addShaderLights(CQCamera3DShaderProgram *program);
 
@@ -509,7 +512,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
  public Q_SLOTS:
   void updateObjectsData();
 
-  void addObjectsData();
+  void addScene();
 
  private Q_SLOTS:
   void updateStatus();
@@ -539,12 +542,12 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   struct PaintData {
     enum { NUM_NODE_MATRICES = 128 };
 
-    CGeomObject3D*          rootObject { nullptr };
+    CGeomObject3D*          animObject { nullptr };
     std::vector<CMatrix3D>  nodeMatrices;
     std::vector<QMatrix4x4> nodeQMatrices;
 
     void reset() {
-      rootObject = nullptr;
+      animObject = nullptr;
 
       nodeMatrices .clear();
       nodeQMatrices.clear();
@@ -571,7 +574,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   // cameras
   Cameras cameras_;
   uint    cameraInd_  { 0 };
-  bool    showCamera_ { false };
+//bool    showCamera_ { false };
 
   struct CameraData {
     CGLCameraIFace* camera      { nullptr };

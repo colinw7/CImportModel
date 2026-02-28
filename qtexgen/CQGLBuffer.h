@@ -104,7 +104,7 @@ class CQGLBuffer {
   };
 
  public:
-  CQGLBuffer(QOpenGLShaderProgram *program) {
+  CQGLBuffer(QOpenGLShaderProgram *program=nullptr) {
     data_.program = program;
 
     data_.vObj         = new QOpenGLVertexArrayObject;
@@ -129,6 +129,11 @@ class CQGLBuffer {
 
     return *this;
   }
+
+  //---
+
+  QOpenGLShaderProgram *program() const { return data_.program; }
+  void setProgram(QOpenGLShaderProgram *p) { data_.program = p; }
 
   //---
 
@@ -295,7 +300,7 @@ class CQGLBuffer {
     std::optional<Vector>       boneWeight;
   };
 
-  void getPointData(int i, PointData &data) {
+  void getPointData(int i, PointData &data) const {
     assert(i < int(data_.points.size()));
 
     if (hasPointPart  ()) data.point        = data_.points[i];
@@ -396,6 +401,8 @@ class CQGLBuffer {
     data_.vObj->release();
   }
 
+  //---
+
   void bind() {
     assert(data_.dataValid);
 
@@ -413,6 +420,8 @@ class CQGLBuffer {
 
     data_.vObj->release();
   }
+
+  //---
 
   void drawTriangles() {
     glDrawArrays(GL_TRIANGLES, 0, int(numPoints()));

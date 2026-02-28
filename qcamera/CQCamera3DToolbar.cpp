@@ -112,8 +112,12 @@ CQCamera3DToolbar(CQCamera3DApp *app) :
 
   ui.addStretch();
 
-  wireframeButton_   = ui.addIconButton("wireframe"  , "WIREFRAME"   , "Wireframe");
-  solidFillButton_   = ui.addIconButton("solidFill"  , "SOLID_FILL"  , "Solid Fill");
+  depthTestButton_ = ui.addIconCheckButton("depthTest", "DEPTH3D", "Depth Test");
+  cullFaceButton_  = ui.addIconCheckButton("cullFace" , "CULL3D" , "Cull Face" );
+  frontFaceButton_ = ui.addIconCheckButton("frontFace", "FRONT3D", "Front Face");
+
+  wireframeButton_   = ui.addIconButton("wireframe"  , "WIREFRAME"   , "Wireframe"   );
+  solidFillButton_   = ui.addIconButton("solidFill"  , "SOLID_FILL"  , "Solid Fill"  );
   textureFillButton_ = ui.addIconButton("textureFill", "TEXTURE_FILL", "Texture Fill");
 
   //---
@@ -164,13 +168,17 @@ void
 CQCamera3DToolbar::
 connectSlots(bool b)
 {
+  auto *canvas = this->canvas();
+
   CQUtil::connectDisconnect(b,
     app_, SIGNAL(viewTypeChanged()), this, SLOT(viewTypeSlot()));
 
   CQUtil::connectDisconnect(b,
-    canvas(), SIGNAL(selectTypeChanged()), this, SLOT(updateWidgets()));
+    canvas, SIGNAL(selectTypeChanged()), this, SLOT(updateWidgets()));
   CQUtil::connectDisconnect(b,
-    canvas(), SIGNAL(editModeChanged()), this, SLOT(updateWidgets()));
+    canvas, SIGNAL(editModeChanged()), this, SLOT(updateWidgets()));
+  CQUtil::connectDisconnect(b,
+    canvas, SIGNAL(glStateChanged()), this, SLOT(updateWidgets()));
 
   CQUtil::connectDisconnect(b,
     overview(), SIGNAL(selectTypeChanged()), this, SLOT(updateWidgets()));
@@ -197,6 +205,13 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b,
     overviewSelectData_.objectSelectButton, SIGNAL(toggled(bool)),
     this, SLOT(objectSelectSlot(bool)));
+
+  CQUtil::connectDisconnect(b,
+    depthTestButton_, SIGNAL(clicked(bool)), this, SLOT(depthTestSlot(bool)));
+  CQUtil::connectDisconnect(b,
+    cullFaceButton_, SIGNAL(clicked(bool)), this, SLOT(cullFaceSlot(bool)));
+  CQUtil::connectDisconnect(b,
+    frontFaceButton_, SIGNAL(clicked(bool)), this, SLOT(frontFaceSlot(bool)));
 
   CQUtil::connectDisconnect(b,
     wireframeButton_, SIGNAL(clicked()), this, SLOT(wireframeSlot()));
@@ -310,11 +325,17 @@ updateWidgets()
 {
   connectSlots(false);
 
+  auto *canvas = this->canvas();
+
+  depthTestButton_->setChecked(canvas->isDepthTest());
+  cullFaceButton_ ->setChecked(canvas->isCullFace());
+  frontFaceButton_->setChecked(canvas->isFrontFace());
+
   if      (viewType_ == CQCamera3DViewType::MODEL) {
-    auto editMode = canvas()->editMode();
+    auto editMode = canvas->editMode();
 
     if (editMode == CQCamera3DCanvas::EditMode::EDIT)
-      canvasSelectData_.selectType = canvas()->selectType();
+      canvasSelectData_.selectType = canvas->selectType();
 
     canvasSelectData_.editModeCombo->
       setCurrentIndex(editMode == CQCamera3DCanvas::EditMode::EDIT ? 1 : 0);
@@ -479,6 +500,39 @@ addTorusSlot()
     canvas()->addTorus();
   else if (viewType_ == CQCamera3DViewType::OVERVIEW)
     overview()->addTorus();
+}
+
+void
+CQCamera3DToolbar::
+depthTestSlot(bool b)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setDepthTest(b);
+
+  canvas->update();
+}
+
+void
+CQCamera3DToolbar::
+cullFaceSlot(bool b)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setCullFace(b);
+
+  canvas->update();
+}
+
+void
+CQCamera3DToolbar::
+frontFaceSlot(bool b)
+{
+  auto *canvas = this->canvas();
+
+  canvas->setFrontFace(b);
+
+  canvas->update();
 }
 
 void

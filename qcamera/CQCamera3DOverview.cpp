@@ -68,8 +68,6 @@ CQCamera3DOverview(CQCamera3DApp *app) :
 
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-  auto *canvas = app_->canvas();
-
   setFocusPolicy(Qt::StrongFocus);
 
   setMouseTracking(true);
@@ -92,9 +90,9 @@ CQCamera3DOverview(CQCamera3DApp *app) :
   views_.push_back(&zview_);
   views_.push_back(&pview_);
 
-  views2_.push_back(&xview_);
-  views2_.push_back(&yview_);
-  views2_.push_back(&zview_);
+  views2d_.push_back(&xview_);
+  views2d_.push_back(&yview_);
+  views2d_.push_back(&zview_);
 
   //---
 
@@ -107,6 +105,8 @@ CQCamera3DOverview(CQCamera3DApp *app) :
   hideOptions();
 
   //---
+
+  auto *canvas = app_->canvas();
 
   connect(app_, SIGNAL(animNameChanged()), this, SLOT(invalidate()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(invalidate()));
@@ -204,7 +204,7 @@ updateRange()
   zview_.range.setPixelRange(x1, y2, x2, y3); // XZ
   pview_.range.setPixelRange(x2, y2, x3, y3); // 3D
 
-  for (auto *view : views2_)
+  for (auto *view : views2d_)
     view->range.setEqualScale(isEqualScale());
 
   for (auto *v : views_)
@@ -233,7 +233,12 @@ paintEvent(QPaintEvent *)
 
   // set window ranges from object bbox
   if (! bboxSet_) {
-    auto bbox = canvas->bbox();
+    CBBox3D bbox;
+
+    if (modelBBox_.isSet())
+      bbox = modelBBox_;
+    else
+      bbox = canvas->bbox();
 
     auto c = bbox.getCenter();
 
@@ -319,7 +324,7 @@ paintEvent(QPaintEvent *)
     painter.drawText(r, view.name);
   };
 
-  for (auto *view : views2_)
+  for (auto *view : views2d_)
     drawTitle(*view);
 }
 
@@ -344,6 +349,10 @@ drawModel()
   // draw geom data
   for (auto &pg : drawData_.objectGeomData) {
     const auto &geomData = pg.second;
+
+    drawData_.modelMatrix = geomData.modelMatrix;
+    drawData_.meshMatrix  = geomData.meshMatrix;
+    drawData_.filled      = geomData.filled;
 
     for (auto *faceData : geomData.faceDatas) {
       if (faceData->filled)
@@ -413,10 +422,6 @@ updateModel()
 
   //---
 
-  drawData_.useAnim = (app_->animName() != "");
-
-  //---
-
   // reset geom data
   for (auto &pg : drawData_.objectGeomData) {
     const auto &geomData = pg.second;
@@ -443,20 +448,29 @@ updateModel()
       app_ = overview->app();
     }
 
+    const CBBox3D &bbox() const { return bbox_; }
+
     bool beginVisitObject(CGeomObject3D *object) override {
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
+      auto *animObject = object->getAnimObject();
+
+      geomData_ = &drawData_.objectGeomData[object];
+
+      geomData_->filled      = drawData_.filled;
+      geomData_->modelMatrix = CMatrix3DH(object->getHierTransform());
+
+      if (overview_->app()->isAnimEnabled())
+        geomData_->meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+      else
+        geomData_->meshMatrix = CMatrix3DH::identity();
+
+      if (overview_->app()->isAnimEnabled())
+        geomData_->useAnim = (animObject && animObject->animName() != "");
+      else
+        geomData_->useAnim = false;
 
       //---
 
-      drawData_.modelMatrix = CMatrix3DH(object1->getHierTransform());
-      drawData_.meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
-
-      //---
-
-      auto *rootObject = object->getRootObject();
-
-      nodeMatrices_ = &app_->getObjectNodeMatrices(rootObject);
+      nodeMatrices_ = (geomData_->useAnim ? &app_->getObjectNodeMatrices(animObject) : nullptr);
 
       //---
 
@@ -464,9 +478,7 @@ updateModel()
 
       //---
 
-      geomData_ = &drawData_.objectGeomData[object];
-
-      bbox_ = CBBox3D();
+      objBBox_ = CBBox3D();
 
       return true;
     }
@@ -475,7 +487,9 @@ updateModel()
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
       assert(object1);
 
-      object1->setBBox(bbox_);
+      object1->setBBox(objBBox_);
+
+      bbox_ += objBBox_;
     }
 
     bool beginVisitFace(CGeomFace3D *face) override {
@@ -513,7 +527,7 @@ updateModel()
 
       //---
 
-      faceData_->filled = drawData_.filled;
+      faceData_->filled = geomData_->filled;
 
       if (faceData_->filled) {
         auto *faceMaterial = faceData_->face->getMaterialP();
@@ -550,7 +564,7 @@ updateModel()
 
       faceData_->points.push_back(p);
 
-      bbox_ += drawData_.modelMatrix*p;
+      objBBox_ += geomData_->modelMatrix*p;
 
       if (vertex->isSelected()) {
         auto *vertexData = new VertexData;
@@ -584,7 +598,7 @@ updateModel()
 
         lineData->points.push_back(p);
 
-        bbox_ += drawData_.modelMatrix*p;
+        objBBox_ += geomData_->modelMatrix*p;
 
         const auto &vertex = object_->getVertex(v);
 
@@ -632,16 +646,16 @@ updateModel()
     }
 
     CPoint3D vertexPoint(const CGeomVertex3D *vertex) const {
-      const auto &model  = vertex->getModel();
+      const auto &model = vertex->getModel();
 
       auto p = model;
 
       //---
 
-      if (drawData_.useAnim)
+      if (geomData_->useAnim)
         p = app_->adjustAnimPoint(*vertex, p, *nodeMatrices_);
 
-      return drawData_.meshMatrix*p;
+      return geomData_->meshMatrix*p;
     }
 
    private:
@@ -658,6 +672,7 @@ updateModel()
     FaceData* faceData_ { nullptr };
 
     CBBox3D bbox_;
+    CBBox3D objBBox_;
 
     const CQCamera3DApp::NodeMatrices *nodeMatrices_ { nullptr };
   };
@@ -667,6 +682,10 @@ updateModel()
   SceneVisitor visitor(this, scene, drawData_);
 
   visitor.visit();
+
+  modelBBox_ = visitor.bbox();
+
+  bboxSet_ = true;
 }
 
 void
@@ -678,50 +697,80 @@ drawCameras()
 
   auto *canvas = app_->canvas();
 
-#if 0
+#if 1
+  auto *icamera = canvas->getInteractiveCamera();
+
   for (auto *camera : canvas->cameras()) {
-    if (camera->isPerspective())
+    bool draw = camera->isVisible();
+
+    if (camera == icamera && editType_ == EditType::CAMERA)
+      draw = true;
+
+    if (draw)
       drawCamera(camera);
   }
 #else
-  auto *camera = canvas->getInteractiveCamera();
-
   drawCamera(camera);
 #endif
 
-  drawEyeLine();
+  if (isEyeLineVisible())
+    drawEyeLine();
 }
 
 void
 CQCamera3DOverview::
 drawCamera(CGLCameraIFace *camera)
 {
+  auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+
+  CQCamera3DCamera::Shape shape;
+  camera1->getCameraShape(shape);
+
   auto pos    = camera->position();
   auto origin = camera->origin();
 
-  // draw camera position, origin and direction vectors
+  //---
 
-//auto o = CVector3D(0, 0, 0);
-
-  drawData_.painter->setPen(QColor(0, 0, 255, 255));
   drawData_.painter->setBrush(Qt::NoBrush);
 
+  //---
+
+  // draw camera position, origin and direction vectors
+  auto drawCameraVector = [&](const CVector3D &v, const QColor &c, const QString &text) {
+    drawData_.painter->setPen(c);
+    drawVector(pos, v, text);
+  };
+
   auto front = camera->front();
-  auto up    = camera->up();
+  auto up    = camera->up   ();
   auto right = camera->right();
 
   drawPoint(pos   , "P");
   drawPoint(origin, "O");
 
-  drawVector(pos, front, "F");
-  drawVector(pos, up   , "U");
-  drawVector(pos, right, "R");
+  drawCameraVector(front, QColor(255, 0, 0, 255), "F");
+  drawCameraVector(up,    QColor(0, 255, 0, 255), "U");
+  drawCameraVector(right, QColor(0, 0, 255, 255), "R");
+
+  //---
+
+  // draw view frustrum
+  drawData_.painter->setPen(Qt::black);
+
+  drawLine(shape.p11, shape.p12, "");
+  drawLine(shape.p12, shape.p22, "");
+  drawLine(shape.p22, shape.p21, "");
+  drawLine(shape.p21, shape.p11, "");
+
+  drawLine(pos.point(), shape.p11, "");
+  drawLine(pos.point(), shape.p12, "");
+  drawLine(pos.point(), shape.p22, "");
+  drawLine(pos.point(), shape.p21, "");
 
   //---
 
   // draw camera orbit
-
-  drawData_.painter->setPen(Qt::red);
+  drawData_.painter->setPen(QColor(100, 100, 100));
 
   drawSphere(origin.point(), pos.point());
 }
@@ -933,6 +982,33 @@ drawCone(const CVector3D &p, const CVector3D &d, double a) const
 
 void
 CQCamera3DOverview::
+drawLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label) const
+{
+  auto drawLine2D = [&](const ViewData &view, const CPoint2D &p1, const CPoint2D &p2,
+                        const QString &label) {
+    drawData_.painter->setClipRect(view.rect);
+
+    double px1, py1;
+    view.range.windowToPixel(p1.x, p1.y, &px1, &py1);
+    double px2, py2;
+    view.range.windowToPixel(p2.x, p2.y, &px2, &py2);
+
+    drawData_.painter->drawLine(px1, py1, px2, py2);
+
+    if (label != "")
+      drawData_.painter->drawText(px2, py2, label);
+  };
+
+  auto x1 = p1.getX(), y1 = p1.getY(), z1 = p1.getZ();
+  auto x2 = p2.getX(), y2 = p2.getY(), z2 = p2.getZ();
+
+  drawLine2D(xview_, CPoint2D(x1, y1), CPoint2D(x2, y2), label); // XY
+  drawLine2D(yview_, CPoint2D(z1, y1), CPoint2D(z2, y2), label); // ZY
+  drawLine2D(zview_, CPoint2D(x1, z1), CPoint2D(x2, z2), label); // XZ
+}
+
+void
+CQCamera3DOverview::
 drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
 {
   auto drawVector2D = [&](const ViewData &view, const CPoint2D &p,
@@ -948,7 +1024,8 @@ drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
 
     drawData_.painter->drawLine(px1, py1, px2, py2);
 
-    drawData_.painter->drawText(px2, py2, label);
+    if (label != "")
+      drawData_.painter->drawText(px2, py2, label);
   };
 
   auto x1 = p.getX(), y1 = p.getY(), z1 = p.getZ();
@@ -1024,7 +1101,8 @@ drawPoint(const CVector3D &p, const QString &label) const
     drawData_.painter->drawLine(px - 4, py, px + 4, py);
     drawData_.painter->drawLine(px, py - 4, px, py + 4);
 
-    drawData_.painter->drawText(px, py, label);
+    if (label != "")
+      drawData_.painter->drawText(px, py, label);
   };
 
   drawPoint2D(xview_, CPoint2D(p.getX(), p.getY()), label); // XY
@@ -1070,7 +1148,7 @@ mousePressEvent(QMouseEvent *e)
   mouseData_.isControl = (e->modifiers() & Qt::ControlModifier);
 
   mouseData_.pressPixel = e->pos();
-  mouseData_.movePixel  = mouseData_.pressPixel;
+  mouseData_.movePixel1 = mouseData_.pressPixel;
 
   //---
 
@@ -1079,7 +1157,7 @@ mousePressEvent(QMouseEvent *e)
 
   if (mouseData_.button == Qt::LeftButton) {
     if      (editType() == EditType::SELECT) {
-      rubberBand_->setBounds(mouseData_.pressPixel, mouseData_.movePixel);
+      rubberBand_->setBounds(mouseData_.pressPixel, mouseData_.movePixel1);
       rubberBand_->show();
     }
     else if (editType() == EditType::CURSOR) {
@@ -1111,7 +1189,7 @@ mouseMoveEvent(QMouseEvent *e)
 
   //---
 
-  mouseData_.movePixel = e->pos();
+  mouseData_.movePixel2 = e->pos();
 
   //---
 
@@ -1119,9 +1197,9 @@ mouseMoveEvent(QMouseEvent *e)
   int y = e->y();
 
   if (mouseData_.pressed) {
-    if (mouseData_.button == Qt::LeftButton) {
+    if      (mouseData_.button == Qt::LeftButton) {
       if      (editType() == EditType::SELECT) {
-        rubberBand_->setBounds(mouseData_.pressPixel, mouseData_.movePixel);
+        rubberBand_->setBounds(mouseData_.pressPixel, mouseData_.movePixel2);
       }
       else if (editType() == EditType::CAMERA) {
         if      (mouseData_.isShift)
@@ -1134,6 +1212,39 @@ mouseMoveEvent(QMouseEvent *e)
           setLightPosition(x, y);
         else if (mouseData_.isControl)
           setLightDirection(x, y);
+      }
+    }
+    else if (mouseData_.button == Qt::MiddleButton) {
+      CPoint2D p2;
+      if      (xview_.pressRange(mouseData_.movePixel2.x(), mouseData_.movePixel2.y(), p2)) {
+        CPoint2D p1;
+        xview_.pressRange(mouseData_.movePixel1.x(), mouseData_.movePixel1.y(), p1);
+
+        auto dx = p1.x - p2.x;
+        auto dy = p1.y - p2.y;
+
+        xview_.range.scroll(dx, dy);
+        invalidate();
+      }
+      else if (yview_.pressRange(mouseData_.movePixel2.x(), mouseData_.movePixel2.y(), p2)) {
+        CPoint2D p1;
+        yview_.pressRange(mouseData_.movePixel1.x(), mouseData_.movePixel1.y(), p1);
+
+        auto dx = p1.x - p2.x;
+        auto dy = p1.y - p2.y;
+
+        yview_.range.scroll(dx, dy);
+        invalidate();
+      }
+      else if (zview_.pressRange(mouseData_.movePixel2.x(), mouseData_.movePixel2.y(), p2)) {
+        CPoint2D p1;
+        zview_.pressRange(mouseData_.movePixel1.x(), mouseData_.movePixel1.y(), p1);
+
+        auto dx = p1.x - p2.x;
+        auto dy = p1.y - p2.y;
+
+        zview_.range.scroll(dx, dy);
+        invalidate();
       }
     }
   }
@@ -1156,6 +1267,8 @@ mouseMoveEvent(QMouseEvent *e)
     if (ind_ != ind)
       invalidate();
   }
+
+  mouseData_.movePixel1 = mouseData_.movePixel2;
 }
 
 void
@@ -1169,14 +1282,14 @@ mouseReleaseEvent(QMouseEvent *e)
 
   //---
 
-  mouseData_.movePixel = e->pos();
+  mouseData_.movePixel2 = e->pos();
 
   if (mouseData_.button == Qt::LeftButton) {
     if (editType() == EditType::SELECT) {
       bool clear = ! mouseData_.isControl;
 
-      int dx = std::abs(mouseData_.pressPixel.x() - mouseData_.movePixel.x());
-      int dy = std::abs(mouseData_.pressPixel.y() - mouseData_.movePixel.y());
+      int dx = std::abs(mouseData_.pressPixel.x() - mouseData_.movePixel2.x());
+      int dy = std::abs(mouseData_.pressPixel.y() - mouseData_.movePixel2.y());
 
       if (dx < 4 && dy < 4)
         selectObjectAt(mouseData_.pressPixel, clear);
@@ -1342,10 +1455,7 @@ selectObjectIn(const QPoint &p, const QRect &r, bool clear)
     for (auto &pg : drawData_.objectGeomData) {
       auto *object = pg.first;
 
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
-
-      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+      auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
       const auto &geomData = pg.second;
 
@@ -1385,10 +1495,7 @@ selectObjectIn(const QPoint &p, const QRect &r, bool clear)
     for (auto &pg : drawData_.objectGeomData) {
       auto *object = pg.first;
 
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
-
-      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+      auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
       const auto &geomData = pg.second;
 
@@ -1418,10 +1525,7 @@ selectObjectIn(const QPoint &p, const QRect &r, bool clear)
     for (auto &pg : drawData_.objectGeomData) {
       auto *object = pg.first;
 
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
-
-      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+      auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
       const auto &geomData = pg.second;
 
@@ -1465,10 +1569,7 @@ selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear)
   for (auto &pg : drawData_.objectGeomData) {
     auto *object = pg.first;
 
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-    assert(object1);
-
-    auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+    auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
     const auto &geomData = pg.second;
 
@@ -1556,10 +1657,7 @@ selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear)
     for (auto &pg : drawData_.objectGeomData) {
       auto *object = pg.first;
 
-      auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-      assert(object1);
-
-      auto modelMatrix = CMatrix3DH(object1->getHierTransform());
+      auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
       const auto &geomData = pg.second;
 

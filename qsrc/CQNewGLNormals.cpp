@@ -74,9 +74,12 @@ addBufferNormals(CQNewGLObject *object)
 
     srcBuffer->getPointData(ip, pointData);
 
-    auto n = CVector3D(pointData.normal.x, pointData.normal.y, pointData.normal.z);
+    if (! pointData.normal)
+      continue;
 
-    auto p1 = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
+    auto n = CVector3D(pointData.normal->x, pointData.normal->y, pointData.normal->z);
+
+    auto p1 = CPoint3D(pointData.point->x, pointData.point->y, pointData.point->z);
     auto p2 = p1 + lineSize*n.normalize();
 
     auto pm1 = modelMatrix*p1;

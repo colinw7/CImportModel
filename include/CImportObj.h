@@ -88,8 +88,8 @@ class CImportObj : public CImportBase {
   };
 
   using Materials     = std::map<std::string, Material *>;
-  using TexturePoints = std::vector<CPoint3D>;
-  using NormalPoints  = std::vector<CPoint3D>;
+//using TexturePoints = std::vector<CPoint3D>;
+//using NormalPoints  = std::vector<CPoint3D>;
 
   CGeomScene3D*  scene_    { nullptr };
   SceneP         pscene_;
@@ -102,8 +102,8 @@ class CImportObj : public CImportBase {
   int            vnnum_    { 0 };
   int            vtnum_    { 0 };
   std::string    groupName_;
-  TexturePoints  texturePoints_;
-  NormalPoints   normalPoints_;
+//TexturePoints  texturePoints_;
+//NormalPoints   normalPoints_;
 
   bool splitByMaterial_ { true };
 };

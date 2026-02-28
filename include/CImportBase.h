@@ -87,6 +87,9 @@ class CImportBase {
 
   //---
 
+  bool isTriangulate() const { return triangulate_; }
+  void setTriangulate(bool b) { triangulate_ = b; }
+
   bool isFlipTexture() const { return flipTexture_; }
   void setFlipTexture(bool b) { flipTexture_ = b; }
 
@@ -153,6 +156,8 @@ class CImportBase {
   bool swapXY_ { false };
   bool swapYZ_ { false };
   bool swapZX_ { false };
+
+  bool triangulate_ { false };
 
   bool        flipTexture_ { false };
   std::string textureDir_;

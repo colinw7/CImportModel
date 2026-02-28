@@ -5,6 +5,8 @@
 #include <CQCamera3DShapes.h>
 #include <CPlane3D.h>
 
+class CGLCameraIFace;
+
 class CQCamera3DShape : public CQCamera3DObject {
  public:
   CQCamera3DShape(CQCamera3DCanvas *canvas);
@@ -26,6 +28,7 @@ class CQCamera3DShape : public CQCamera3DObject {
 
  private:
   void addCameras();
+  void addCamera(CGLCameraIFace *camera);
 
   void addPlanes();
 
@@ -41,6 +44,9 @@ class CQCamera3DShape : public CQCamera3DObject {
 
   CPlane3D addPlane(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3, const CPoint3D &p4,
                     const CVector3D &n, const CRGBA &c, bool draw=false);
+
+  void addTriangle(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3,
+                   const CVector3D &n, const CRGBA &c);
 
  private:
   bool wireframe_ { true };

@@ -12,70 +12,6 @@ Camera::
 {
 }
 
-void
-Camera::
-setFov(double r)
-{
-  if (r != fov_) { // check for change
-    CGLCameraIFace::setFov(r);
-
-    Q_EMIT stateChanged();
-  }
-}
-
-void
-Camera::
-setAspect(double r)
-{
-  if (r != aspect_) { // check for change
-    CGLCameraIFace::setAspect(r);
-
-    Q_EMIT stateChanged();
-  }
-}
-
-void
-Camera::
-setNear(double r)
-{
-  if (r != near_) { // check for change
-    CGLCameraIFace::setNear(r);
-
-    Q_EMIT stateChanged();
-  }
-}
-
-void
-Camera::
-setFar(double r)
-{
-  if (r != far_) { // check for change
-    CGLCameraIFace::setFar(r);
-
-    Q_EMIT stateChanged();
-  }
-}
-
-//---
-
-void
-Camera::
-setOrigin(const CVector3D &p)
-{
-  CGLCameraIFace::setOrigin(p);
-
-  Q_EMIT stateChanged();
-}
-
-void
-Camera::
-setPosition(const CVector3D &p)
-{
-  CGLCameraIFace::setPosition(p);
-
-  Q_EMIT stateChanged();
-}
-
 //---
 
 // get perspective matrix
@@ -83,10 +19,6 @@ CMatrix3DH
 Camera::
 perspectiveMatrix() const
 {
-  auto degToRad = [](double a) {
-    return M_PI*a/180.0;
-  };
-
   CMatrix3DH matrix;
 
   double near = this->near();

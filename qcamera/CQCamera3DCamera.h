@@ -115,7 +115,18 @@ class CQCamera3DCamera : public QObject, public CGLCameraIFace {
   CVector3D unrollYawPitchPoint(const CVector3D &p) const;
 #endif
 
+  struct Shape {
+    CPoint3D p11;
+    CPoint3D p12;
+    CPoint3D p21;
+    CPoint3D p22;
+  };
+
+  void getCameraShape(Shape &shape) const;
+
  private:
+  void stateChanged() override { Q_EMIT stateChangedSignal(); }
+
   // given euler angles calc front/up/right vectors
   void calcVectors();
 
@@ -123,8 +134,8 @@ class CQCamera3DCamera : public QObject, public CGLCameraIFace {
   void calcAngles();
 
  Q_SIGNALS:
-  // send when state (data values) changed
-  void stateChanged();
+  // sent when state (data values) changed
+  void stateChangedSignal();
 
  private:
   bool matrixValid_ { false };

@@ -2,10 +2,13 @@
 #define CIMPORT_SCENE_H
 
 #include <CImportBase.h>
+
 #include <CFile.h>
 #include <CMatrix3D.h>
 #include <CRGBA.h>
+
 #include <map>
+#include <optional>
 
 class CGeomScene3D;
 class CGeomObject3D;
@@ -36,6 +39,12 @@ class CImportScene : public CImportBase {
   bool write(CFile *file, CGeomScene3D *scene) const override;
 
  private:
+  struct TransformData {
+    CMatrix3D               matrix { CMatrix3D::identity() };
+    std::optional<CPoint3D> center;
+    std::optional<CPoint3D> fit;
+  };
+
   void           readScene();
   void           addObject(const std::string &name);
   void           readPrimitive(const std::string &name);
@@ -44,12 +53,13 @@ class CImportScene : public CImportBase {
   void           readLines(CGeomObject3D *object, int pface_num);
   void           readVertices(CGeomObject3D *object);
   void           readNormals(CGeomObject3D *object);
+  void           readTexturePoints(CGeomObject3D *object);
   void           readRotate(CGeomObject3D *object, int num_patches);
   void           readColors();
   void           readTextures();
   void           readMaterial(const std::string &name);
   void           readCSG(const std::string &name);
-  CMatrix3D      readTransforms();
+  TransformData  readTransformData();
   CGeomObject3D *getObject(const std::string &name);
   CGeomObject3D *getPrimitive(const std::string &name);
 

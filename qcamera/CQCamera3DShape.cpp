@@ -39,8 +39,7 @@ updateGeometry()
 
   //---
 
-  if (canvas_->isShowCamera())
-    addCameras();
+  addCameras();
 
   //---
 
@@ -61,31 +60,56 @@ void
 CQCamera3DShape::
 addCameras()
 {
-  CQCamera3DShapes::ShapeData shapeData;
-
-  shapeData.color = CRGBA(1, 0, 0);
-
-  auto bbox = canvas_->bbox();
-
   for (auto *camera : canvas_->cameras()) {
     if (! camera->isVisible())
       continue;
 
-    auto p1 = camera->origin  ().point();
-  //auto p2 = camera->position().point();
-
-    auto s1 = bbox.getMaxSize()/50.0;
-    auto s2 = bbox.getMaxSize()/1000.0;
-
-  //addSphere(p1, s);
-  //addCylinder(p1, p2, 0.02, shapeData);
-
-    auto p3 = p1 + 10*camera->up   ()*s1;
-    auto p4 = p1 + 10*camera->right()*s1;
-
-    addCylinder(p1, p3, s2, shapeData);
-    addCylinder(p1, p4, s2, shapeData);
+    addCamera(camera);
   }
+}
+
+void
+CQCamera3DShape::
+addCamera(CGLCameraIFace *camera)
+{
+  auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+
+  CQCamera3DCamera::Shape shape;
+  camera1->getCameraShape(shape);
+
+  CQCamera3DShapes::ShapeData shapeData;
+
+  shapeData.color = CRGBA(1.0, 0.0, 0.0);
+  shapeData.alpha = 0.2;
+
+  auto bbox    = canvas_->bbox();
+  auto boxSize = bbox.getMaxSize();
+
+  auto s1 = boxSize/5.0;
+  auto s2 = boxSize/250.0;
+
+//auto p1 = camera->origin  ().point();
+  auto p2 = camera->position().point();
+
+  auto p3 = p2 + camera->front()*s1;
+  auto p4 = p2 + camera->up   ()*s1;
+  auto p5 = p2 + camera->right()*s1;
+
+  shapeData.num_patches = 4;
+
+  addCylinder(p2, p3, s2, shapeData);
+  addCylinder(p2, p4, s2, shapeData);
+  addCylinder(p2, p5, s2, shapeData);
+
+  auto c = CRGBA(0.0, 1.0, 0.0, 0.1);
+
+  addTriangle(shape.p11, shape.p12, shape.p22, CVector3D(0, 0, -1), c);
+  addTriangle(shape.p12, shape.p22, shape.p21, CVector3D(0, 0, -1), c);
+
+  addTriangle(p2, shape.p11, shape.p12, CVector3D( 0,  1, 0), c);
+  addTriangle(p2, shape.p12, shape.p22, CVector3D( 1,  0, 0), c);
+  addTriangle(p2, shape.p22, shape.p21, CVector3D( 0, -1, 0), c);
+  addTriangle(p2, shape.p21, shape.p11, CVector3D(-1,  0, 0), c);
 }
 
 void
@@ -256,6 +280,34 @@ addPlane(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3, const CPoin
 
 void
 CQCamera3DShape::
+addTriangle(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3,
+            const CVector3D &n, const CRGBA &c)
+{
+  auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c) {
+    buffer_->addPoint(p.x, p.y, p.z);
+    buffer_->addNormal(n.getX(), n.getY(), n.getZ());
+    buffer_->addColor(c);
+    buffer_->addTexturePoint(0, 0);
+  };
+
+  CQCamera3DFaceData faceData;
+
+  faceData.alpha = c.getAlpha();
+
+  faceData.pos = faceDataList_.pos;
+  faceData.len = 3;
+
+  addPoint(p1, n, c);
+  addPoint(p2, n, c);
+  addPoint(p3, n, c);
+
+  faceDataList_.faceDatas.push_back(faceData);
+
+  faceDataList_.pos += faceData.len;
+}
+
+void
+CQCamera3DShape::
 drawGeometry()
 {
   glDisable(GL_CULL_FACE);
@@ -282,6 +334,7 @@ drawGeometry()
   auto modelMatrix = CMatrix3DH::identity();
   program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
 
+  // camera pos
   program->setUniformValue("viewPos", CQGLUtil::toVector(camera->position()));
 
   //---
@@ -289,7 +342,19 @@ drawGeometry()
   // render shapes
   buffer_->bind();
 
+  std::vector<CQCamera3DFaceData> transparentFaceDatas;
+
+  glDisable(GL_BLEND);
+  glDepthMask(GL_TRUE);
+
+  program->setUniformValue("transparency", 1.0f);
+
   for (const auto &faceData : faceDataList_.faceDatas) {
+    if (faceData.alpha < 1.0) {
+      transparentFaceDatas.push_back(faceData);
+      continue;
+    }
+
     if (! faceData.lines) {
       if (isWireframe()) {
         program->setUniformValue("isWireframe", true);
@@ -312,9 +377,43 @@ drawGeometry()
     }
   }
 
-  buffer_->unbind();
+  if (! transparentFaceDatas.empty()) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    for (const auto &faceData : transparentFaceDatas) {
+      program->setUniformValue("transparency", float(faceData.alpha));
+
+      if (! faceData.lines) {
+        if (isWireframe()) {
+          program->setUniformValue("isWireframe", true);
+
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+          glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+        }
+
+        program->setUniformValue("isWireframe", false);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+      }
+      else {
+        program->setUniformValue("isWireframe", false);
+
+        glDrawArrays(GL_LINES, faceData.pos, faceData.len);
+      }
+    }
+
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+  }
 
   //---
+
+  buffer_->unbind();
 
   program->release();
 }

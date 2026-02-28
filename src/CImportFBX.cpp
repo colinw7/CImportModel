@@ -3912,7 +3912,11 @@ processDataTree(PropDataTree *tree)
                   for (const auto &pa3 : pd3.second) {
                     auto propName3 = getPropertyArrayName(pa3.second);
 
-                    if      (propName3 == "CurrentTextureBlendMode") {
+                    if      (propName3 == "AlphaSource") {
+                    }
+                    else if (propName3 == "CurrentTextureBlendMode") {
+                    }
+                    else if (propName3 == "PremultiplyAlpha") {
                     }
                     else if (propName3 == "UseMipMap") {
                     }
@@ -5255,6 +5259,9 @@ loadTexture(TextureData *textureData, std::string &fileName)
 
       auto p = fname2.rfind('/');
 
+      if (p == std::string::npos)
+        p = fname2.rfind('\\'); // DOS format
+
       if (p != std::string::npos)
         fname2 = fname2.substr(p + 1);
 
@@ -5280,17 +5287,21 @@ loadTexture(TextureData *textureData, std::string &fileName)
     return false;
   }
 
-  CImageFileSrc src(fileName);
+  auto *texture = scene_->getTextureByName(fileName);
 
-  auto image = CImageMgrInst->createImage(src);
+  if (! texture) {
+    CImageFileSrc src(fileName);
 
-  image->flipH();
+    auto image = CImageMgrInst->createImage(src);
 
-  textureData->texture = CGeometry3DInst->createTexture(image);
+    image->flipH();
 
-  textureData->texture->setName(fileName);
+    textureData->texture = CGeometry3DInst->createTexture(image);
 
-  scene_->addTexture(textureData->texture);
+    textureData->texture->setName(fileName);
+
+    scene_->addTexture(textureData->texture);
+  }
 
   return true;
 }

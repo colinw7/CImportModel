@@ -78,15 +78,14 @@ class CQCamera3DOverview : public QFrame {
       if (xmin > xmax) std::swap(xmin, xmax);
       if (ymin > ymax) std::swap(ymin, ymax);
 
-      if (x < xmin || y < ymin || x > xmax || y > ymax)
-        return false;
+      bool rc = (x >= xmin && y >= ymin && x <= xmax && y <= ymax);
 
       double x1, y1;
       range.pixelToWindow(x, y, &x1, &y1);
 
       p = CPoint2D(x1, y1);
 
-      return true;
+      return rc;
     }
 
     CPoint2D viewPoint(const CPoint3D &p) const {
@@ -129,6 +128,9 @@ class CQCamera3DOverview : public QFrame {
 
   bool isLightsVisible() const { return lightsVisible_; }
   void setLightsVisible(bool b) { lightsVisible_ = b; update(); }
+
+  bool isEyeLineVisible() const { return eyeLineVisible_; }
+  void setEyeLineVisible(bool b) { eyeLineVisible_ = b; update(); }
 
   //---
 
@@ -201,6 +203,7 @@ class CQCamera3DOverview : public QFrame {
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
 
+  void drawLine  (const CPoint3D &p1, const CPoint3D &p2, const QString &label) const;
   void drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const;
 
   void drawCircle(const CPoint3D &o, double r);
@@ -258,8 +261,8 @@ class CQCamera3DOverview : public QFrame {
   ViewData zview_;
   ViewData pview_;
 
-  std::vector<ViewData *> views_;  // all views
-  std::vector<ViewData *> views2_; // 2d views
+  std::vector<ViewData *> views_;   // all views
+  std::vector<ViewData *> views2d_; // 2d views
 
   int ind_ { -1 };
 
@@ -269,9 +272,10 @@ class CQCamera3DOverview : public QFrame {
   EditType   editType_   { EditType::SELECT };
   SelectType selectType_ { SelectType::OBJECT };
 
-  ModelType modelType_     { ModelType::WIREFRAME };
-  bool      cameraVisible_ { false };
-  bool      lightsVisible_ { false };
+  ModelType modelType_      { ModelType::WIREFRAME };
+  bool      cameraVisible_  { false };
+  bool      lightsVisible_  { false };
+  bool      eyeLineVisible_ { false };
 
   struct MouseData {
     bool   pressed   { false };
@@ -279,7 +283,8 @@ class CQCamera3DOverview : public QFrame {
     bool   isControl { false };
     int    button    { 0 };
     QPoint pressPixel;
-    QPoint movePixel;
+    QPoint movePixel1;
+    QPoint movePixel2;
   };
 
   MouseData mouseData_;
@@ -289,6 +294,11 @@ class CQCamera3DOverview : public QFrame {
   using VertexDatas = std::vector<VertexData *>;
 
   struct GeomData {
+    CMatrix3DH modelMatrix;
+    CMatrix3DH meshMatrix;
+    bool       filled  { true };
+    bool       useAnim { false };
+
     FaceDatas   faceDatas;
     LineDatas   lineDatas;
     VertexDatas vertexDatas;
@@ -313,7 +323,6 @@ class CQCamera3DOverview : public QFrame {
     CMatrix3DH     meshMatrix;
     ObjectGeomData objectGeomData;
     bool           filled  { true };
-    bool           useAnim { false };
 
     mutable ViewSortedPolygon2DArray viewSortedPolygon2DArray;
     mutable ViewSortedLine2DArray    viewSortedLine2DArray;
@@ -324,6 +333,8 @@ class CQCamera3DOverview : public QFrame {
 
   bool   bboxSet_ { false };
   double xs_ { 0.0 }, ys_ { 0.0 }, zs_ { 0.0 };
+
+  CBBox3D modelBBox_;
 
   QPixmap lightPixmap_;
 

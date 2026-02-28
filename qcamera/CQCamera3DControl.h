@@ -7,14 +7,18 @@
 
 class CGLCameraIFace;
 class CQCamera3DObjectsList;
+class CQCamera3DObjectChooser;
 class CQCamera3DLightList;
 class CQCamera3DCameraList;
-class CQCamera3DTextureChooser;
 class CQCamera3DTextureList;
-class CQCamera3DMaterialChooser;
+class CQCamera3DTextureChooser;
 class CQCamera3DMaterialList;
+class CQCamera3DMaterialChooser;
+class CQCamera3DAnimObjectChooser;
 class CQCamera3DAnimChooser;
+class CQCamera3DAnimTimeEdit;
 class CQCamera3DBonesList;
+class CQCamera3DBoneChooser;
 
 class CQMatrix3D;
 class CQPoint3DEdit;
@@ -46,6 +50,7 @@ class CQCamera3DControl : public QFrame {
   void updateWidgets();
   void updateTextureWidgets(bool disconnect=true);
   void updateCameraWidgets (bool disconnect=true);
+  void updateAnimWidgets   (bool disconnect=true);
 
   void mainTabSlot(int);
 
@@ -73,12 +78,14 @@ class CQCamera3DControl : public QFrame {
   void showBBoxSlot(int);
   void bboxOrientSlot(int);
 
+#if 0
   void depthTestSlot(int);
   void cullSlot(int);
   void frontFaceSlot(int);
+#endif
 
   // Camera
-  void showCameraSlot(int);
+//void showCameraSlot(int);
   void showEyeLineSlot(int);
   void showPlanesSlot(int);
 
@@ -165,8 +172,8 @@ class CQCamera3DControl : public QFrame {
   void mouseBasisSlot(int);
 
   // Selection
+  void objectChooserSlot();
 //void selectTypeSlot(int);
-
   void objectVisSlot(int);
 
 #if 0
@@ -272,6 +279,7 @@ class CQCamera3DControl : public QFrame {
   // Animation
   void timerSlot();
 
+  void animObjectSlot();
   void animNameSlot();
   void animTimeSlot(double t);
   void animTimeStepSlot(double t);
@@ -279,6 +287,8 @@ class CQCamera3DControl : public QFrame {
   void playSlot();
   void pauseSlot();
   void stepSlot();
+
+  void animNodeSlot();
 
   void animStep();
 
@@ -326,16 +336,18 @@ class CQCamera3DControl : public QFrame {
     QCheckBox* showBBoxCheck   { nullptr };
     QCheckBox* bboxOrientCheck { nullptr };
 
+#if 0
     QCheckBox* depthTestCheck { nullptr };
     QCheckBox* cullFaceCheck  { nullptr };
     QCheckBox* frontFaceCheck { nullptr };
+#endif
   };
 
   GeneralData generalData_;
 
   // Camera
   struct CameraData {
-    QCheckBox* showCheck    { nullptr };
+//  QCheckBox* showCheck    { nullptr };
     QCheckBox* eyeLineCheck { nullptr };
     QCheckBox* planesCheck  { nullptr };
 
@@ -423,9 +435,10 @@ class CQCamera3DControl : public QFrame {
 
   // Selection
   struct SelectionData {
-    QComboBox*   typeCombo { nullptr };
-    CQTextLabel* indLabel  { nullptr };
-    QCheckBox*   visCheck  { nullptr };
+    QComboBox*               typeCombo  { nullptr };
+    CQCamera3DObjectChooser* objChooser { nullptr };
+    CQTextLabel*             indLabel   { nullptr };
+    QCheckBox*               visCheck   { nullptr };
 
     CQPoint3DEdit* centerEdit     { nullptr };
     CQPoint3DEdit* sizeEdit       { nullptr };
@@ -540,13 +553,15 @@ class CQCamera3DControl : public QFrame {
 
   // Animation
   struct AnimData {
-    CQCamera3DAnimChooser* animCombo    { nullptr };
-    CQRealSpin*            timeEdit     { nullptr };
-    CQRealSpin*            timeStepEdit { nullptr };
-    CQIconButton*          playButton   { nullptr };
-    CQIconButton*          pauseButton  { nullptr };
-    CQIconButton*          stepButton   { nullptr };
-    CQTextLabel*           nodeLabel    { nullptr };
+    CQCamera3DAnimObjectChooser* objectChooser { nullptr };
+    CQCamera3DAnimChooser*       animCombo     { nullptr };
+    CQCamera3DAnimTimeEdit*      timeEdit      { nullptr };
+    CQRealSpin*                  timeStepEdit  { nullptr };
+    CQIconButton*                playButton    { nullptr };
+    CQIconButton*                pauseButton   { nullptr };
+    CQIconButton*                stepButton    { nullptr };
+    CQCamera3DBoneChooser*       nodeCombo     { nullptr };
+//  CQTextLabel*                 nodeLabel     { nullptr };
 
     QComboBox*    translationInterpCombo { nullptr };
     QTableWidget* animTranslationTable   { nullptr };

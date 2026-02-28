@@ -1,5 +1,8 @@
 #include <CQCamera3DAnimChooser.h>
 #include <CQCamera3DApp.h>
+#include <CQCamera3DGeomObject.h>
+
+#include <CGeomScene3D.h>
 
 #include <CQUtil.h>
 
@@ -7,6 +10,8 @@ CQCamera3DAnimChooser::
 CQCamera3DAnimChooser(CQCamera3DApp *app) :
  app_(app)
 {
+  setObjectName("animChooser");
+
   connectSlots(true);
 
   connect(app_, SIGNAL(modelAdded()), this, SLOT(needsUpdateSlot()));
@@ -26,26 +31,11 @@ needsUpdateSlot()
 
 void
 CQCamera3DAnimChooser::
-setAnimName(const QString &name)
+setObjectInd(int objectInd)
 {
-  auto animNames = app_->getAnimNames();
+  objectInd_ = objectInd;
 
-  int ind = 0;
-
-  for (const auto &animName : animNames) {
-    if (animName.name == name) {
-      tmin_ = animName.tmin;
-      tmax_ = animName.tmax;
-
-      setCurrentIndex(ind + 1);
-
-      return;
-    }
-
-    ++ind;
-  }
-
-  setCurrentIndex(0);
+  needsUpdateSlot();
 }
 
 void
@@ -61,21 +51,38 @@ updateWidgets()
 
   //---
 
-  int currentInd = currentIndex();
-
   clear();
 
   addItem("", QVariant(-1));
 
   int ind = 0;
 
-  auto animNames = app_->getAnimNames();
+  AnimData animData;
+  getAnimData(animData);
 
-  for (const auto &animName : animNames) {
-    addItem(animName.name, QVariant(ind++));
+  for (const auto &animName1 : animData.names) {
+    addItem(animName1, QVariant(ind++));
   }
 
-  setCurrentIndex(currentInd);
+  //---
+
+  int currentIndex = 0;
+
+  ind = 0;
+
+  for (const auto &animName1 : animData.names) {
+    if (animName1 == animData.name) {
+      animData_ = animData;
+
+      currentIndex = ind + 1;
+
+      break;
+    }
+
+    ++ind;
+  }
+
+  setCurrentIndex(currentIndex);
 
   //---
 
@@ -94,26 +101,61 @@ void
 CQCamera3DAnimChooser::
 currentIndexChanged(int ind)
 {
-  animName_ = "";
-  tmin_     = 0.0;
-  tmax_     = 0.0;
-
-  auto animNames = app_->getAnimNames();
+  AnimData animData;
+  getAnimData(animData);
 
   int ind1 = 1;
 
-  for (const auto &animName : animNames) {
+  QString animName;
+
+  for (const auto &animName1 : animData.names) {
     if (ind == ind1) {
-      tmin_ = animName.tmin;
-      tmax_ = animName.tmax;
-
-      animName_ = animName.name;
-
+      animName = animName1;
       break;
     }
 
     ++ind1;
   }
 
+  auto *object = getObject();
+
+  if (object) {
+    object->setAnimName(animName.toStdString());
+
+    updateWidgets();
+  }
+
+  app_->invalidateNodeMatrices();
+
   Q_EMIT animChanged();
+}
+
+CGeomObject3D *
+CQCamera3DAnimChooser::
+getObject() const
+{
+  auto *scene = app_->getScene();
+
+  return scene->getObjectByInd(objectInd_);
+}
+
+void
+CQCamera3DAnimChooser::
+getAnimData(AnimData &animData) const
+{
+  auto *object = getObject();
+
+  if (object) {
+    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
+
+    animData.names = object1->getAnimNames();
+    animData.name  = QString::fromStdString(object1->animName());
+
+    object->getAnimationTranslationRange(object1->animName(), animData.tmin, animData.tmax);
+
+    animData.timeStep = object1->animTimeStep();
+  }
+  else {
+    animData.names = app_->getAnimNames();
+  }
 }

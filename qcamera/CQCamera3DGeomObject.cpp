@@ -120,3 +120,26 @@ addFaceData(const CQCamera3DFaceData &faceData)
 {
   faceDatas_.push_back(faceData);
 }
+
+//---
+
+QStringList
+CQCamera3DGeomObject::
+getAnimNames() const
+{
+  QStringList animNames;
+
+  auto *animObject = getAnimObject();
+  if (! animObject) return animNames;
+
+  std::vector<std::string> animNames1;
+  animObject->getAnimationNames(animNames1);
+
+  for (const auto &animName1 : animNames1) {
+    auto animName = QString::fromStdString(animName1);
+
+    animNames.push_back(animName);
+  }
+
+  return animNames;
+}

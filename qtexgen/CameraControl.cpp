@@ -81,7 +81,7 @@ connectSlots(bool b)
   auto *camera  = app_->materialView()->camera();
   auto *camera1 = dynamic_cast<Camera *>(camera);
 
-  CQUtil::connectDisconnect(b, camera1, SIGNAL(stateChanged()),
+  CQUtil::connectDisconnect(b, camera1, SIGNAL(stateChangedSignal()),
                             this, SLOT(updateWidgets()));
 
   CQUtil::connectDisconnect(b, xPosEdit_, SIGNAL(realValueChanged(double)),

@@ -849,7 +849,7 @@ readFaceArray(CImport3DSChunk *chunk, CGeomObject3D *object)
 
     CVector3D normal;
 
-    face.calcNormal(normal);
+    face.calcModelNormal(normal);
 
     face.setNormal(normal);
 

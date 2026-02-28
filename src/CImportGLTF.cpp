@@ -859,13 +859,54 @@ getAccessorBufferData(const IndName &accessorBufferView, long accessorByteOffset
           uriDataMap_[buffer.uri] = UriData(data1, uint(len1));
         }
         else {
-          CFile file1(buffer.uri);
+          // TODO: add modelDir config ?
+          auto remapBinFile = [&](const std::string &fname) {
+            if (CFile::exists(fname))
+              return fname;
+
+            auto fname1 = remapFile(fname);
+
+            if (CFile::exists(fname1))
+              return fname1;
+
+            if (textureDir() != "") {
+              auto fname2 = fname;
+
+              auto p = fname2.rfind('/');
+
+              if (p == std::string::npos)
+                p = fname2.rfind('\\'); // DOS format
+
+              if (p != std::string::npos)
+                fname2 = fname2.substr(p + 1);
+
+              if (CFile::exists(fname2))
+                return fname2;
+
+              auto fname3 = textureDir() + "/" + fname2;
+
+              if (CFile::exists(fname3))
+                return fname3;
+            }
+
+            return std::string();
+          };
+
+          auto filename = remapBinFile(buffer.uri);
+
+          if (filename == "") {
+            (void) errorMsg("Failed to find buffer file '" + buffer.uri + "'");
+            return nullptr;
+          }
+
+          CFile file1(filename);
 
           uchar *data1;
           size_t len1;
 
           if (! file1.readAll(&data1, &len1)) {
-            (void) errorMsg("Invalid buffer file '" + buffer.uri + "'"); return nullptr;
+            (void) errorMsg("Failed to read buffer file '" + filename + "'");
+            return nullptr;
           }
 
           uriDataMap_[buffer.uri] = UriData(data1, uint(len1));
@@ -1168,6 +1209,11 @@ processAnim()
         }
 
         auto nodeInd = int(node->indName.ind);
+
+        if (! rootObject_->hasNode(nodeInd)) {
+          errorMsg("Invalid Node " + std::to_string(nodeInd));
+          continue;
+        }
 
         auto ni = imeshData->fscalars.size();
 
@@ -2186,10 +2232,47 @@ getImageData(const Image &image, const uchar* &data, long &len)
   }
   else if (image.uri != "") {
     if (! image.image) {
+      auto remapTextureFile = [&](const std::string &fname) {
+        if (CFile::exists(fname))
+          return fname;
+
+        auto fname1 = remapFile(fname);
+
+        if (CFile::exists(fname1))
+          return fname1;
+
+        if (textureDir() != "") {
+          auto fname2 = fname;
+
+          auto p = fname2.rfind('/');
+
+          if (p == std::string::npos)
+            p = fname2.rfind('\\'); // DOS format
+
+          if (p != std::string::npos)
+            fname2 = fname2.substr(p + 1);
+
+          if (CFile::exists(fname2))
+            return fname2;
+
+          auto fname3 = textureDir() + "/" + fname2;
+
+          if (CFile::exists(fname3))
+            return fname3;
+        }
+
+        return std::string();
+      };
+
       image.image = CImageMgrInst->createImage();
 
-      if (! image.image->read(image.uri))
+      auto filename = remapTextureFile(image.uri);
+
+      if (filename == "")
         return errorMsg("Invalid image file '" + image.uri + "'");
+
+      if (! image.image->read(filename))
+        return errorMsg("Failed to read image file '" + filename + "'");
     }
   }
   else {

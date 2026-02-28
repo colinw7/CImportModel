@@ -192,7 +192,9 @@ addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r
 
   auto h = p1.distanceTo(p2);
 
-  CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h, 20);
+  CGeomCylinder3D::ConfigData configData;
+  configData.num_patches = 20;
+  CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h);
   CGeomCylinder3D::addNormals(object, 2*r, h);
 
   //---

@@ -55,6 +55,10 @@ class CQCamera3DToolbar : public QFrame {
   void addConeSlot();
   void addTorusSlot();
 
+  void depthTestSlot(bool b);
+  void cullFaceSlot(bool b);
+  void frontFaceSlot(bool b);
+
   void wireframeSlot();
   void solidFillSlot();
   void textureFillSlot();
@@ -106,6 +110,10 @@ class CQCamera3DToolbar : public QFrame {
   QFrame* menuFrame_ { nullptr };
 
   QMenuBar* menuBar_ { nullptr };
+
+  CQIconButton* depthTestButton_ { nullptr };
+  CQIconButton* cullFaceButton_  { nullptr };
+  CQIconButton* frontFaceButton_ { nullptr };
 
   CQIconButton* wireframeButton_   { nullptr };
   CQIconButton* solidFillButton_   { nullptr };

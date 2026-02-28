@@ -111,7 +111,7 @@ void
 CQCamera3DOverviewMouseModeIFace::
 endUpdateObjects()
 {
-  canvas_->addObjectsData();
+  canvas_->addScene();
   overview_->update();
 }
 

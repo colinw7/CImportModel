@@ -1,11 +1,11 @@
 #ifndef CQCamera3DWidget_H
 #define CQCamera3DWidget_H
 
-#include <QGLWidget>
-#include <QOpenGLExtraFunctions>
-
 #include <CImagePtr.h>
 #include <CPoint2D.h>
+
+#include <QGLWidget>
+#include <QOpenGLExtraFunctions>
 
 class CQCamera3DApp;
 class CQCamera3DTexture;
@@ -41,22 +41,22 @@ class CQCamera3DWidget : public QGLWidget, public QOpenGLExtraFunctions {
   //---
 
   bool isDepthTest() const { return depthTest_; }
-  void setDepthTest(bool b) { depthTest_ = b; }
+  void setDepthTest(bool b) { depthTest_ = b; Q_EMIT glStateChanged(); }
 
   bool isCullFace() const { return cullFace_; }
-  void setCullFace(bool b) { cullFace_ = b; }
+  void setCullFace(bool b) { cullFace_ = b; Q_EMIT glStateChanged(); }
 
   bool isFrontFace() const { return frontFace_; }
-  void setFrontFace(bool b) { frontFace_ = b; }
+  void setFrontFace(bool b) { frontFace_ = b; Q_EMIT glStateChanged(); }
 
   bool isPolygonLine() const { return polygonLine_; }
-  void setPolygonLine(bool b) { polygonLine_ = b; }
+  void setPolygonLine(bool b) { polygonLine_ = b; Q_EMIT glStateChanged(); }
 
   double pointSize() const { return pointSize_; }
-  void setPointSize(double r) { pointSize_ = r; update(); }
+  void setPointSize(double r) { pointSize_ = r; update(); Q_EMIT glStateChanged(); }
 
   double lineWidth() const { return lineWidth_; }
-  void setLineWidth(double r) { lineWidth_ = r; update(); }
+  void setLineWidth(double r) { lineWidth_ = r; update(); Q_EMIT glStateChanged(); }
 
   //---
 
@@ -84,6 +84,8 @@ class CQCamera3DWidget : public QGLWidget, public QOpenGLExtraFunctions {
   CQGLTexture *makeTexture(const CImagePtr &image) const;
 
  Q_SIGNALS:
+  void glStateChanged();
+
   void textureAdded();
 
  protected:

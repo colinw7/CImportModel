@@ -24,6 +24,14 @@ perspectiveMatrix() const
   return perspectiveMatrix_;
 }
 
+// get orthographic matrix
+CMatrix3DH
+Camera::
+orthoMatrix() const
+{
+  return CMatrix3DH::identity();
+}
+
 // get view matrix
 CMatrix3DH
 Camera::
@@ -56,10 +64,6 @@ void
 Camera::
 calcPerspectiveMatrix()
 {
-  auto degToRad = [](double a) {
-    return M_PI*a/180.0;
-  };
-
   double near = this->near();
   double far  = this->far();
 

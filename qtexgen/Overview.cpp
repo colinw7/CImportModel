@@ -6,8 +6,6 @@
 #include <Status.h>
 #include <App.h>
 
-#include <Camera.h>
-#include <Light.h>
 #include <CQGLBuffer.h>
 
 #include <CGeomScene3D.h>
@@ -50,12 +48,12 @@ Overview(App *app) :
 
   auto *camera = app_->materialView()->camera();
 
-  connect(dynamic_cast<Camera *>(camera), SIGNAL(stateChanged()), this, SLOT(invalidate()));
+  connect(dynamic_cast<Camera *>(camera), SIGNAL(stateChangedSignal()), this, SLOT(invalidate()));
 
   //---
 
- connect(app_->materialView(), SIGNAL(lightAdded()), this, SLOT(invalidate()));
- connect(app_->materialView(), SIGNAL(lightChanged()), this, SLOT(invalidate()));
+  connect(app_->materialView(), SIGNAL(lightAdded()), this, SLOT(invalidate()));
+  connect(app_->materialView(), SIGNAL(lightChanged()), this, SLOT(invalidate()));
 }
 
 Overview::

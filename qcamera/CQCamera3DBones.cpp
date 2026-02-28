@@ -186,11 +186,6 @@ paintEvent(QPaintEvent *)
 
   //---
 
-  //useAnim_ = (app_->animName() != "");
-  useAnim_ = true;
-
-  //---
-
   drawBones();
 
   if (isShowModel())
@@ -244,20 +239,19 @@ drawModel()
     if (! object->getVisible())
       continue;
 
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-    assert(object1);
+    auto *animObject = object->getAnimObject();
 
-    auto *rootObject = object->getRootObject();
+    bool useAnim = (animObject && animObject->animName() != "");
 
     //---
 
-    modelMatrix_ = CMatrix3DH(object1->getHierTransform());
+    modelMatrix_ = CMatrix3DH(object->getHierTransform());
 
     auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
 
     //---
 
-    const auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
+    auto *nodeMatrices = (animObject ? &app_->getObjectNodeMatrices(animObject) : nullptr);
 
     //---
 
@@ -279,8 +273,8 @@ drawModel()
 
         //---
 
-        if (useAnim_)
-          p = app_->adjustAnimPoint(vertex, p, nodeMatrices);
+        if (useAnim)
+          p = app_->adjustAnimPoint(vertex, p, *nodeMatrices);
 
         p = meshMatrix*p;
 
@@ -299,7 +293,7 @@ drawModel()
           int nodeId = -1;
 
           if (jointNodeData.node >= 0)
-            nodeId = rootObject->mapNodeIndex(jointNodeData.node);
+            nodeId = animObject->mapNodeIndex(jointNodeData.node);
 
           if (nodeId >= 0) {
             JointNode jointNode;
@@ -331,14 +325,14 @@ drawModel()
     painter_->setBrush(Qt::white);
 
     for (auto &jointNode : selectedJointNodes) {
-      auto *rootObject = jointNode.object->getRootObject();
+      auto *animObject = jointNode.object->getAnimObject();
 
-      auto &node = rootObject->getNode(jointNode.nodeId);
+      auto &node = animObject->getNode(jointNode.nodeId);
 
       if (isOnlyJoints() && ! node.isJoint())
         continue;
 
-      auto m = getNodeTransform(rootObject, const_cast<CGeomNodeData &>(node));
+      auto m = getNodeTransform(animObject, const_cast<CGeomNodeData &>(node));
 
       auto c = m*CPoint3D(0.0, 0.0, 0.0);
 
@@ -359,18 +353,20 @@ drawModel()
       auto *object = v->getObject();
     //auto *object = scene->getObjectP(currentBoneObject);
 
+      auto *animObject = object->getAnimObject();
+
+      bool useAnim = (animObject && animObject->animName() != "");
+
       auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
 
       const auto &model = v->getModel();
 
       auto p = model;
 
-      if (useAnim_) {
-        auto *rootObject = object->getRootObject();
+      if (useAnim) {
+        auto *nodeMatrices = &app_->getObjectNodeMatrices(animObject);
 
-        auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
-
-        p = app_->adjustAnimPoint(*v, p, nodeMatrices);
+        p = app_->adjustAnimPoint(*v, p, *nodeMatrices);
       }
 
       p = meshMatrix*p;
@@ -392,13 +388,13 @@ updateBonesBBox()
   yview_.bbox = CBBox2D();
   zview_.bbox = CBBox2D();
 
-  auto rootObjects = app_->getRootObjects();
+  auto animObjects = app_->getAnimObjects();
 
-  for (auto *rootObject : rootObjects) {
-    if (! rootObject->getVisible())
+  for (auto *animObject : animObjects) {
+    if (! animObject->getVisible())
       continue;
 
-    for (const auto &pn : rootObject->getNodes()) {
+    for (const auto &pn : animObject->getNodes()) {
       auto &node = const_cast<CGeomNodeData &>(pn.second);
 
       if (isOnlyJoints() && ! node.isJoint())
@@ -406,14 +402,14 @@ updateBonesBBox()
 
       //---
 
-    //auto *object = node.rootObject()->getMeshObject();
+    //auto *object = node.animObject()->getMeshObject();
 
     //auto meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
       auto meshMatrix = CMatrix3DH::identity();
 
       //---
 
-      auto m = rootObject->getNodeHierTransform(node);
+      auto m = animObject->getNodeHierTransform(node);
 
       auto c = m*CPoint3D(0.0, 0.0, 0.0);
 
@@ -433,24 +429,21 @@ drawBones()
 
   painter_->setPen(Qt::black);
 
-  auto rootObjects = app_->getRootObjects();
+  auto animObjects = app_->getAnimObjects();
 
   objectNodes_.clear();
 
-  for (auto *rootObject : rootObjects) {
-    if (! rootObject->getVisible())
+  for (auto *animObject : animObjects) {
+    if (! animObject->getVisible())
       continue;
 
-    auto *rootObject1 = dynamic_cast<CQCamera3DGeomObject *>(rootObject);
-    assert(rootObject1);
+    //---
+
+    modelMatrix_ = CMatrix3DH(animObject->getHierTransform());
 
     //---
 
-    modelMatrix_ = CMatrix3DH(rootObject1->getHierTransform());
-
-    //---
-
-    for (const auto &pn : rootObject->getNodes()) {
+    for (const auto &pn : animObject->getNodes()) {
       auto &node = const_cast<CGeomNodeData &>(pn.second);
 
       if (isOnlyJoints() && ! node.isJoint())
@@ -458,20 +451,20 @@ drawBones()
 
       //---
 
-      auto *meshObject = node.rootObject()->getMeshObject();
+      auto *meshObject = node.animObject()->getMeshObject();
 
       auto meshMatrix = CMatrix3DH(meshObject->getMeshGlobalTransform());
 
       //---
 
       bool isSelected =
-       (int(rootObject->getInd()) == currentBoneObject && node.ind() == currentBoneNode);
+       (int(animObject->getInd()) == currentBoneObject && node.ind() == currentBoneNode);
 
       painter_->setBrush(isSelected ? Qt::red: Qt::white);
 
       //---
 
-      auto m = getNodeTransform(rootObject, node);
+      auto m = getNodeTransform(animObject, node);
 
       auto c = m*CPoint3D(0.0, 0.0, 0.0);
 
@@ -486,17 +479,17 @@ drawBones()
         drawModelPoint(CVector3D(c), QString::fromStdString(node.name()));
 #endif
 
-      objectNodes_[rootObject->getInd()][node.ind()] = c;
+      objectNodes_[animObject->getInd()][node.ind()] = c;
 
       if (node.parent() >= 0) {
-        auto &pnode = const_cast<CGeomNodeData &>(rootObject->getNode(node.parent()));
+        auto &pnode = const_cast<CGeomNodeData &>(animObject->getNode(node.parent()));
 
         if (pnode.isValid() && (! isOnlyJoints() || pnode.isJoint())) {
-          auto *pmeshObject = pnode.rootObject()->getMeshObject();
+          auto *pmeshObject = pnode.animObject()->getMeshObject();
 
           auto pmeshMatrix = CMatrix3DH(pmeshObject->getMeshGlobalTransform());
 
-          auto m1 = getNodeTransform(rootObject, pnode);
+          auto m1 = getNodeTransform(animObject, pnode);
 
           auto c1 = m1*CPoint3D(0.0, 0.0, 0.0);
 
@@ -946,48 +939,18 @@ updateBBox(const CPoint3D &c)
 
 CMatrix3D
 CQCamera3DBones::
-getNodeTransform(CGeomObject3D *rootObject, CGeomNodeData &nodeData) const
+getNodeTransform(CGeomObject3D *animObject, CGeomNodeData &nodeData) const
 {
-  auto animName = rootObject->animName();
-  auto animTime = app_->animTime();
-
-  if (animName == "")
-    animName = app_->animName().toStdString();
+  auto animName = animObject->animName();
+  auto animTime = animObject->animTime();
 
   auto *object = nodeData.object();
 
   if (! object)
-    object = rootObject;
+    object = animObject;
 
-#if 0
-  std::optional<CMatrix3D> m1, m2, m3;
-
-  if (nodeData.isJoint())
-    m1 = nodeData.inverseBindMatrix().inverse();
-
-  if (animName != "")
-    m2 = object->getNodeAnimHierTransform(nodeData, animName, animTime);
-  else
-    m2 = object->getNodeHierTransform(nodeData);
-
-  auto &nodeMatrices = app_->getObjectNodeMatrices(rootObject);
-
-  auto pn1 = nodeMatrices.find(nodeData.index());
-
-  if (pn1 != nodeMatrices.end())
-    m3 = (*pn1).second;
-
-  if (m3)
-    return (*m3).inverse();
-
-  if (m1)
-    return *m1;
-
-  return *m2;
-#else
   if (animName != "")
     return object->getNodeAnimHierTransform(nodeData, animName, animTime);
   else
     return object->getNodeHierTransform(nodeData);
-#endif
 }

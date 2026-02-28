@@ -147,6 +147,15 @@ read(CFile &file)
 
   //---
 
+  if (isTriangulate()) {
+    auto faces = object_->getFaces();
+
+    for (auto *face : faces)
+      face->triangulate();
+  }
+
+  //---
+
   if (isSplitByMaterial()) {
     std::vector<CGeomObject3D *> newObjects;
 
@@ -239,7 +248,7 @@ readTextureVertex(const std::string &line)
 
   object_->addTexturePoint(p);
 
-  texturePoints_.push_back(p);
+//texturePoints_.push_back(p);
 
   return true;
 }
@@ -393,10 +402,13 @@ readFace(const std::string &line)
 
   assert(ntp == nn1);
 
-  std::vector<CPoint2D> texturePoints1;
+  std::vector<CPoint2D>  texturePoints1;
+  std::vector<CVector3D> normals1;
 
   for (size_t i = 0; i < ntp; ++i) {
-    auto &v = object_->getVertex(face->getVertex(uint(i)));
+    auto ind = vertices[i];
+
+    auto &v = object_->getVertex(ind);
 
     auto ti = texturePoints[i];
 
@@ -414,6 +426,8 @@ readFace(const std::string &line)
 
     if (ni >= 0) {
       const auto &n = object_->normal(uint(ni));
+
+      normals1.push_back(n);
 
       v.setNormal(n);
     }
@@ -495,6 +509,9 @@ readFace(const std::string &line)
 
   if (texturePoints1.size() == ntp)
     face->setTexturePoints(texturePoints1);
+
+  if (normals1.size() == nn1)
+    face->setVertexNormals(normals1);
 
   return true;
 }

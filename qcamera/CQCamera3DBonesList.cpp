@@ -57,13 +57,13 @@ updateWidgets()
 
   objectNodeItems_.clear();
 
-  auto rootObjects = app_->getRootObjects();
+  auto animObjects = app_->getAnimObjects();
 
-  for (auto *object : rootObjects) {
+  for (auto *object : animObjects) {
     for (const auto &pn : object->getNodes()) {
-      const auto &node = pn.second;
+      const auto &nodeData = pn.second;
 
-      createNodeItem(object, node.ind());
+      createNodeItem(object, nodeData.ind());
     }
   }
 
@@ -81,7 +81,7 @@ createNodeItem(CGeomObject3D *object, int nodeId)
   auto po = objectNodeItems_.find(objId);
 
   if (po == objectNodeItems_.end())
-    po = objectNodeItems_.insert(po, ObjectNodeItems::value_type(object->getInd(), NodeItems()));
+    po = objectNodeItems_.insert(po, ObjectNodeItems::value_type(objId, NodeItems()));
 
   auto &nodeItems = (*po).second;
 
@@ -95,8 +95,12 @@ createNodeItem(CGeomObject3D *object, int nodeId)
   const auto &nodeData = object->getNode(nodeId);
   if (! nodeData.isValid()) return nullptr;
 
-  auto objectName = QString(" %1").arg(QString::fromStdString(nodeData.name()));
+  QString objectName;
 
+  if (nodeData.parent() < 0)
+    objectName = QString("%1: ").arg(QString::fromStdString(object->getName()));
+
+  objectName += QString("%1").arg(QString::fromStdString(nodeData.name()));
   objectName += QString(" (%1)").arg(nodeId);
   objectName += QString(" (#%1)").arg(nodeData.index());
 
@@ -152,9 +156,9 @@ currentItemSlot(QTreeWidgetItem *item, QTreeWidgetItem *)
   boneInd_ = p.y();
 
 #if 0
-  auto rootObjects = app_->getRootObjects();
+  auto animObjects = app_->getAnimObjects();
 
-  for (auto *object : rootObjects) {
+  for (auto *object : animObjects) {
     BoneData boneData;
     getBoneData(object, boneInd_, boneData);
 
@@ -182,16 +186,16 @@ getBoneNode(int objId, int boneInd) const
   if (objId < 0 || boneInd < 0)
     return nullptr;
 
-  auto rootObjects = app_->getRootObjects();
+  auto animObjects = app_->getAnimObjects();
 
-  for (auto *object : rootObjects) {
+  for (auto *object : animObjects) {
     if (int(object->getInd()) != objId)
       continue;
 
-    const auto &node = object->getNode(boneInd);
-    if (! node.isValid()) continue;
+    const auto &nodeData = object->getNode(boneInd);
+    if (! nodeData.isValid()) continue;
 
-    return const_cast<CGeomNodeData *>(&node);
+    return const_cast<CGeomNodeData *>(&nodeData);
   }
 
   return nullptr;

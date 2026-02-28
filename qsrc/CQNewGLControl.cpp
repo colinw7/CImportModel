@@ -3767,7 +3767,7 @@ getMatrix() const
   if      (matrixType_ == MatrixType::INVERSE_BIND)
     matrix = node->inverseBindMatrix();
   else if (matrixType_ == MatrixType::LOCAL)
-    matrix = node->localTransform();
+    matrix = node->calcLocalTransform();
   else if (matrixType_ == MatrixType::GLOBAL)
     matrix = node->globalTransform();
   else if (matrixType_ == MatrixType::ANIM) {

@@ -61,14 +61,18 @@ CQCamera3DGeomFace.cpp \
 CQCamera3DGeomLine.cpp \
 \
 CQCamera3DAnimChooser.cpp \
+CQCamera3DAnimObjectChooser.cpp \
+CQCamera3DAnimTimeEdit.cpp \
 CQCamera3DMaterialChooser.cpp \
 CQCamera3DTextureChooser.cpp \
 \
 CQCamera3DBonesList.cpp \
+CQCamera3DBoneChooser.cpp \
 CQCamera3DCameraList.cpp \
 CQCamera3DLightList.cpp \
 CQCamera3DMaterialList.cpp \
 CQCamera3DObjectsList.cpp \
+CQCamera3DObjectChooser.cpp \
 CQCamera3DTextureList.cpp \
 \
 CQGLTexture.cpp \
@@ -126,14 +130,18 @@ CQCamera3DGeomFace.h \
 CQCamera3DGeomLine.h \
 \
 CQCamera3DAnimChooser.h \
+CQCamera3DAnimObjectChooser.h \
+CQCamera3DAnimTimeEdit.h \
 CQCamera3DMaterialChooser.h \
 CQCamera3DTextureChooser.h \
 \
 CQCamera3DBonesList.h \
+CQCamera3DBoneChooser.h \
 CQCamera3DCameraList.h \
 CQCamera3DLightList.h \
 CQCamera3DMaterialList.h \
 CQCamera3DObjectsList.h \
+CQCamera3DObjectChooser.h \
 CQCamera3DTextureList.h \
 \
 CQGLUtil.cpp \

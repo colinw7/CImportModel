@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DCamera_t {
     QByteArrayData data[3];
-    char stringdata0[31];
+    char stringdata0[37];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -33,11 +33,12 @@ struct qt_meta_stringdata_CQCamera3DCamera_t {
 static const qt_meta_stringdata_CQCamera3DCamera_t qt_meta_stringdata_CQCamera3DCamera = {
     {
 QT_MOC_LITERAL(0, 0, 16), // "CQCamera3DCamera"
-QT_MOC_LITERAL(1, 17, 12), // "stateChanged"
-QT_MOC_LITERAL(2, 30, 0) // ""
+QT_MOC_LITERAL(1, 17, 18), // "stateChangedSignal"
+QT_MOC_LITERAL(2, 36, 0) // ""
 
     },
-    "CQCamera3DCamera\0stateChanged\0"
+    "CQCamera3DCamera\0stateChangedSignal\0"
+    ""
 };
 #undef QT_MOC_LITERAL
 
@@ -69,14 +70,14 @@ void CQCamera3DCamera::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         auto *_t = static_cast<CQCamera3DCamera *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->stateChanged(); break;
+        case 0: _t->stateChangedSignal(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
             using _t = void (CQCamera3DCamera::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCamera::stateChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCamera::stateChangedSignal)) {
                 *result = 0;
                 return;
             }
@@ -128,7 +129,7 @@ int CQCamera3DCamera::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void CQCamera3DCamera::stateChanged()
+void CQCamera3DCamera::stateChangedSignal()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
 }

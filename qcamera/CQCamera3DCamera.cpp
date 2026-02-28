@@ -18,8 +18,6 @@ setFov(double r)
 {
   if (r != fov_) { // check for change
     CGLCameraIFace::setFov(r);
-
-    Q_EMIT stateChanged();
   }
 }
 
@@ -29,8 +27,6 @@ setAspect(double r)
 {
   if (r != aspect_) { // check for change
     CGLCameraIFace::setAspect(r);
-
-    Q_EMIT stateChanged();
   }
 }
 
@@ -40,8 +36,6 @@ setNear(double r)
 {
   if (r != near_) { // check for change
     CGLCameraIFace::setNear(r);
-
-    Q_EMIT stateChanged();
   }
 }
 
@@ -51,8 +45,6 @@ setFar(double r)
 {
   if (r != far_) { // check for change
     CGLCameraIFace::setFar(r);
-
-    Q_EMIT stateChanged();
   }
 }
 
@@ -68,18 +60,16 @@ setOrigin(const CVector3D &p)
 
   matrixValid_ = false;
 
-  Q_EMIT stateChanged();
+  Q_EMIT stateChangedSignal();
 }
 
 void
 CQCamera3DCamera::
 setPosition(const CVector3D &p)
 {
-  CGLCameraIFace::setPosition(p);
-
   matrixValid_ = false;
 
-  Q_EMIT stateChanged();
+  CGLCameraIFace::setPosition(p);
 }
 
 //---
@@ -114,11 +104,9 @@ CQCamera3DCamera::
 setPitch(double r)
 {
   if (r != pitch_) {
-    CGLCameraIFace::setPitch(r);
-
     matrixValid_ = false;
 
-    Q_EMIT stateChanged();
+    CGLCameraIFace::setPitch(r);
   }
 }
 
@@ -127,11 +115,9 @@ CQCamera3DCamera::
 setYaw(double r)
 {
   if (r != yaw_) {
-    CGLCameraIFace::setYaw(r);
-
     matrixValid_ = false;
 
-    Q_EMIT stateChanged();
+    CGLCameraIFace::setYaw(r);
   }
 }
 
@@ -140,11 +126,9 @@ CQCamera3DCamera::
 setRoll(double r)
 {
   if (r != roll_) {
-    CGLCameraIFace::setRoll(r);
-
     matrixValid_ = false;
 
-    Q_EMIT stateChanged();
+    CGLCameraIFace::setRoll(r);
   }
 }
 
@@ -181,7 +165,7 @@ moveAroundX(double d)
 
   rotationMatrix_ = calcRotationMatrix();
 
-  Q_EMIT stateChanged();
+  Q_EMIT stateChangedSignal();
 }
 
 // rotate around origin in y axis (yaw) - XZ
@@ -219,7 +203,7 @@ moveAroundY(double d)
 
   rotationMatrix_ = calcRotationMatrix();
 
-  Q_EMIT stateChanged();
+  Q_EMIT stateChangedSignal();
 }
 
 // rotate around origin in z axis (roll) - XY
@@ -250,7 +234,7 @@ moveAroundZ(double d)
 
   rotationMatrix_ = calcRotationMatrix();
 
-  Q_EMIT stateChanged();
+  Q_EMIT stateChangedSignal();
 }
 
 CVector3D
@@ -542,4 +526,38 @@ calcAngles()
 //  roll_  = 0;
 
   calcVectors();
+}
+
+void
+CQCamera3DCamera::
+getCameraShape(Shape &shape) const
+{
+  auto pos    = this->position();
+  auto origin = this->origin();
+
+  auto dist = CVector3D(pos, origin).length();
+
+  auto front = this->front();
+  auto up    = this->up   ();
+  auto right = this->right();
+
+  auto fov = CMathGen::DegToRad(this->fov());
+
+  auto m1 = CMatrix3D::rotation(-fov/2.0, up   );
+  auto m2 = CMatrix3D::rotation( fov/2.0, up   );
+  auto m3 = CMatrix3D::rotation(-fov/2.0, right);
+  auto m4 = CMatrix3D::rotation( fov/2.0, right);
+
+  auto front1 = m1*front;
+  auto front2 = m2*front;
+
+  auto front11 = m3*front1;
+  auto front12 = m4*front1;
+  auto front21 = m3*front2;
+  auto front22 = m4*front2;
+
+  shape.p11 = (pos + dist*front11).point();
+  shape.p12 = (pos + dist*front12).point();
+  shape.p21 = (pos + dist*front21).point();
+  shape.p22 = (pos + dist*front22).point();
 }

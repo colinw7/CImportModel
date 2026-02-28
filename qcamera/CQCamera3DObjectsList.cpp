@@ -195,8 +195,12 @@ treeClickSlot(const QModelIndex &index)
   auto *object = objectFromIndex(index);
   if (! object) return;
 
-  if      (index.column() == 1)
-    object->setSelected(! object->getSelected());
+  if      (index.column() == 1) {
+    if (! object->getSelected())
+      canvas_->selectObject(object, /*clear*/false, /*update*/true);
+    else
+      canvas_->deselectObject(object, /*update*/true);
+  }
   else if (index.column() == 2)
     object->setVisible(! object->getVisible());
   else

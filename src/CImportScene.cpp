@@ -171,6 +171,8 @@ read(CFile &file)
     }
   }
 
+  //pscene_->removeAllPrimitives();
+
   return true;
 }
 
@@ -306,7 +308,7 @@ addObject(const std::string &name)
 
   object1->setScene(scene_);
 
-  scene_->addObject(object1);
+  scene_->addObject(object1, /*hier*/true);
 }
 
 void
@@ -314,15 +316,16 @@ CImportScene::
 readPrimitive(const std::string &name)
 {
   enum Cmds {
-    PRIMITIVE_FACES_CMD     = 1,
-    PRIMITIVE_SUB_FACES_CMD = 2,
-    PRIMITIVE_LINES_CMD     = 3,
-    PRIMITIVE_SUB_LINES_CMD = 4,
-    PRIMITIVE_POINTS_CMD    = 5,
-    PRIMITIVE_NORMALS_CMD   = 6,
-    PRIMITIVE_ROTATE_CMD    = 7,
-    PRIMITIVE_OBJECT_CMD    = 8,
-    PRIMITIVE_END_CMD       = 9
+    PRIMITIVE_FACES_CMD          = 1,
+    PRIMITIVE_SUB_FACES_CMD      = 2,
+    PRIMITIVE_LINES_CMD          = 3,
+    PRIMITIVE_SUB_LINES_CMD      = 4,
+    PRIMITIVE_POINTS_CMD         = 5,
+    PRIMITIVE_NORMALS_CMD        = 6,
+    PRIMITIVE_TEXTURE_POINTS_CMD = 7,
+    PRIMITIVE_ROTATE_CMD         = 8,
+    PRIMITIVE_OBJECT_CMD         = 9,
+    PRIMITIVE_END_CMD            = 10
   };
 
   static const char *
@@ -333,6 +336,7 @@ readPrimitive(const std::string &name)
     "SubLines",
     "Points",
     "Normals",
+    "TexturePoints",
     "Rotate",
     "Object",
     "End",
@@ -399,6 +403,11 @@ readPrimitive(const std::string &name)
 
         break;
       }
+      case PRIMITIVE_TEXTURE_POINTS_CMD: {
+        readTexturePoints(primitive);
+
+        break;
+      }
       case PRIMITIVE_NORMALS_CMD: {
         readNormals(primitive);
 
@@ -416,9 +425,9 @@ readPrimitive(const std::string &name)
         auto format    = CImportBase::filenameToType(modelName);
 
         // import model
-        auto *model = CImportBase::createModel(format, "");
+        auto *im = CImportBase::createModel(format, "");
 
-        if (! model) {
+        if (! im) {
           errorMsg("Invalid format for file '" + modelName + "'");
           break;
         }
@@ -436,22 +445,46 @@ readPrimitive(const std::string &name)
 
         CFile file(fileName);
 
-        if (! model->read(file)) {
+        if (! im->read(file)) {
           errorMsg("Failed to read model '" + fileName + "'");
           break;
         }
 
-        auto *scene = model->releaseScene();
+        auto *scene = im->releaseScene();
 
-        delete model;
+        delete im;
 
         delete primitive;
 
         primitive = nullptr;
 
+        uint numTop = 0;
+
         for (auto *object : scene->getObjects()) {
-          primitive = object;
-          break;
+          if (! object->parent()) {
+            ++numTop;
+
+            primitive = object;
+          }
+
+          object->setScene(scene_);
+        }
+
+        if (numTop > 1) {
+          primitive = CGeometry3DInst->createObject3D(scene_, modelName);
+
+          for (auto *object : scene->getObjects()) {
+            if (! object->parent())
+              primitive->addChild(object);
+          }
+        }
+
+        for (auto *material : scene->getMaterials()) {
+          scene_->addMaterial(material);
+        }
+
+        for (auto *texture : scene->textures()) {
+          scene_->addTexture(texture);
         }
 
         if (primitive)
@@ -468,6 +501,17 @@ readPrimitive(const std::string &name)
         break;
     }
   }
+
+  //---
+
+  if (isTriangulate()) {
+    auto faces = primitive->getFaces();
+
+    for (auto *face : faces)
+      face->triangulate();
+  }
+
+  //---
 
   scene_->addPrimitive(primitive);
 }
@@ -521,6 +565,8 @@ readObject(const std::string &name)
   };
 
   //---
+
+  TransformData transformData;
 
   auto *object = CGeometry3DInst->createObject3D(scene_, name);
 
@@ -609,6 +655,8 @@ readObject(const std::string &name)
         object->setScene(scene_);
 
         object->setName(name);
+
+        //scene_->addObject(object, /*hier*/true);
 
         break;
       }
@@ -715,9 +763,7 @@ readObject(const std::string &name)
         break;
       }
       case OBJECT_TRANSFORMS_CMD: {
-        auto matrix = readTransforms();
-
-        object->transform(matrix);
+        transformData = readTransformData();
 
         break;
       }
@@ -730,6 +776,61 @@ readObject(const std::string &name)
         break;
     }
   }
+
+  auto transform = transformData.matrix;
+
+  if (transformData.center || transformData.fit) {
+    CBBox3D bbox;
+    //object->getModelBBox(bbox);
+    object->getMeshBBox(bbox);
+
+    auto c = bbox.getCenter();
+    auto s = bbox.getSize();
+
+    auto m = CMatrix3D::translation(-c.x, -c.y, -c.z);
+
+    if (transformData.fit) {
+      auto fit = transformData.fit.value();
+
+      auto sx = (fit.x > 0 ? fit.x/s.x() : -1);
+      auto sy = (fit.y > 0 ? fit.y/s.y() : -1);
+      auto sz = (fit.z > 0 ? fit.z/s.z() : -1);
+
+      double scale1 = -1;
+
+      if (sx > 0)
+        scale1 = sx;
+
+      if (sy > 0)
+        scale1 = (scale1 > 0 ? std::min(scale1, sy) : sy);
+
+      if (sz > 0)
+        scale1 = (scale1 > 0 ? std::min(scale1, sz) : sz);
+
+      if (scale1 > 0) {
+        auto m1 = CMatrix3D::scale(scale1, scale1, scale1);
+
+        m = m1*m;
+      }
+    }
+
+    if (transformData.center) {
+      auto pos = transformData.center.value();
+
+      auto m1 = CMatrix3D::translation(pos.x, pos.y, pos.z);
+
+      m = m1*m;
+    }
+    else {
+      auto m1 = CMatrix3D::translation(c.x, c.y, c.z);
+
+      m = m1*m;
+    }
+
+    transform = transform*m;
+  }
+
+  object->setTransform(transform);
 
   scene_->addPrimitive(object);
 }
@@ -768,6 +869,7 @@ readFaces(CGeomObject3D *object, int pfaceNum)
 
         break;
       default: {
+        // <points> [ : <face_color> | M=<material> | T=<texture_point> ]
         std::vector<int> points;
 
         int i = 0;
@@ -827,42 +929,86 @@ readFaces(CGeomObject3D *object, int pfaceNum)
         else
           faceNum = object->addFace(facePoints);
 
+        auto *face = object->getFaceP(faceNum);
+
         //---
 
         if (i < int(words.size()) && words.getWord(i) == ":") {
           i++;
 
-          auto word = words.getWord(i);
+          while (i < int(words.size())) {
+            auto word = words.getWord(i);
 
-          if (word.size() > 2 && word.substr(0, 2) == "M=") {
-            auto materialName = word.substr(2);
+            if      (word.size() > 2 && word.substr(0, 2) == "M=") {
+              auto materialName = word.substr(2);
 
-            auto *material = getMaterial(materialName);
+              auto *material = getMaterial(materialName);
 
-            if (material) {
-              if (pfaceNum != -1)
-                errorMsg("Sub face material not supported");
-              else {
-                auto *face = object->getFaceP(faceNum);
-
-                face->setMaterialP(material);
+              if (material) {
+                if (pfaceNum != -1)
+                  errorMsg("Sub face material not supported");
+                else {
+                  face->setMaterialP(material);
+                }
               }
             }
-          }
-          else {
-            auto faceColor = words.getInteger(i, -1);
+            else if (word.size() > 2 && word.substr(0, 2) == "T=") {
+              auto fields = CStrUtil::toFields(word.substr(2), ",");
 
-            CRGBA rgba;
+              if (fields.size() != facePoints.size())
+                errorMsg("Invalid texture points");
+              else {
+                std::vector<CPoint2D> tpoints;
 
-            if (faceColor >= 0 && faceColor < int(colors_.size()))
-              rgba = CRGBName::toRGBA(colors_[uint(faceColor)]);
-            else
-              rgba = wordToColor(words.getWord(i));
+                for (const auto &field : fields) {
+                  int tp;
+                  if (! CStrUtil::toInteger(field.getWord(), &tp)) {
+                    errorMsg("Invalid texture points");
+                    continue;
+                  }
 
-            if (pfaceNum != -1)
-              object->setSubFaceColor(uint(pfaceNum), faceNum, rgba);
-            else
-              object->setFaceColor(faceNum, rgba);
+                  auto p = object->texturePoint(tp - 1);
+
+                  tpoints.push_back(CPoint2D(p.x, p.y));
+                }
+
+                face->setTexturePoints(tpoints);
+              }
+            }
+            else if (word.size() > 2 && word.substr(0, 2) == "N=") {
+              auto fields = CStrUtil::toFields(word.substr(2), ",");
+
+              if (fields.size() != 3)
+                errorMsg("Invalid normal");
+              else {
+                double x, y, z;
+                if (! CStrUtil::toReal(fields[0].getWord(), &x) ||
+                    ! CStrUtil::toReal(fields[1].getWord(), &y) ||
+                    ! CStrUtil::toReal(fields[2].getWord(), &z)) {
+                    errorMsg("Invalid normal");
+                }
+                else {
+                  face->setNormal(CVector3D(x, y, z));
+                }
+              }
+            }
+            else {
+              auto faceColor = words.getInteger(i, -1);
+
+              CRGBA rgba;
+
+              if (faceColor >= 0 && faceColor < int(colors_.size()))
+                rgba = CRGBName::toRGBA(colors_[uint(faceColor)]);
+              else
+                rgba = wordToColor(words.getWord(i));
+
+              if (pfaceNum != -1)
+                object->setSubFaceColor(uint(pfaceNum), faceNum, rgba);
+              else
+                object->setFaceColor(faceNum, rgba);
+            }
+
+            ++i;
           }
         }
 
@@ -959,6 +1105,51 @@ readVertices(CGeomObject3D *object)
         auto z = words.getReal(2);
 
         object->addVertex(CPoint3D(x, y, z));
+
+        break;
+      }
+    }
+  }
+}
+
+void
+CImportScene::
+readTexturePoints(CGeomObject3D *object)
+{
+  enum Cmds {
+    POINTS_END_CMD = 1
+  };
+
+  static const char *
+  points_commands[] = {
+    "End",
+    nullptr,
+  };
+
+  //---
+
+  std::string line;
+
+  bool endCommand = false;
+
+  while (! endCommand && file_->readLine(line)) {
+    if (isSkipLine(line))
+      continue;
+
+    auto words = LineWords(line);
+
+    int command_num = lookupCommand(words.getWord(0), points_commands);
+
+    switch (command_num) {
+      case POINTS_END_CMD:
+        endCommand = true;
+
+        break;
+      default: {
+        auto x = words.getReal(0);
+        auto y = words.getReal(1);
+
+        object->addTexturePoint(CPoint2D(x, y));
 
         break;
       }
@@ -1157,27 +1348,65 @@ readTextures()
 
         break;
       default: {
+        auto remapTextureFile = [&](const std::string &fname) {
+          if (CFile::exists(fname))
+            return fname;
+
+          auto fname1 = remapFile(fname);
+
+          if (CFile::exists(fname1))
+            return fname1;
+
+          if (textureDir() != "") {
+            auto fname2 = fname;
+
+            auto p = fname2.rfind('/');
+
+            if (p == std::string::npos)
+              p = fname2.rfind('\\'); // DOS format
+
+            if (p != std::string::npos)
+              fname2 = fname2.substr(p + 1);
+
+            if (CFile::exists(fname2))
+              return fname2;
+
+            auto fname3 = textureDir() + "/" + fname2;
+
+            if (CFile::exists(fname3))
+              return fname3;
+          }
+
+          return std::string();
+        };
+
         auto filename = words.getWord(0);
 
-        CFile file(filename);
+        auto filename1 = remapTextureFile(filename);
 
-        CImageFileSrc src(file);
+        if (filename1 != "") {
+          CFile file(filename1);
 
-        auto image = CImageMgrInst->createImage(src);
+          CImageFileSrc src(file);
 
-        auto *texture = CGeometry3DInst->createTexture(image);
+          auto image = CImageMgrInst->createImage(src);
 
-        texture->setFilename(filename);
+          auto *texture = CGeometry3DInst->createTexture(image);
 
-        if (words.size() > 1) {
-          auto name = words.getWord(1);
+          texture->setFilename(filename1);
 
-          texture->setName(name);
+          if (words.size() > 1) {
+            auto name = words.getWord(1);
+
+            texture->setName(name);
+          }
+          else
+            texture->setName(filename1);
+
+          textures_.push_back(texture);
         }
         else
-          texture->setName(filename);
-
-        textures_.push_back(texture);
+          errorMsg("Invalid texture file '" + filename + "'");
 
         break;
       }
@@ -1600,9 +1829,9 @@ readCSG(const std::string &name)
   CSGMgrInst->setFactory(nullptr);
 }
 
-CMatrix3D
+CImportScene::TransformData
 CImportScene::
-readTransforms()
+readTransformData()
 {
   enum Cmds {
     TRANSFORMS_TRANSLATE_CMD = 1,
@@ -1610,7 +1839,9 @@ readTransforms()
     TRANSFORMS_ROTATE_X_CMD  = 3,
     TRANSFORMS_ROTATE_Y_CMD  = 4,
     TRANSFORMS_ROTATE_Z_CMD  = 5,
-    TRANSFORMS_END_CMD       = 6
+    TRANSFORMS_CENTER_CMD    = 6,
+    TRANSFORMS_FIT_CMD       = 7,
+    TRANSFORMS_END_CMD       = 8
   };
 
   static const char *
@@ -1620,15 +1851,15 @@ readTransforms()
     "RotateX",
     "RotateY",
     "RotateZ",
+    "Center",
+    "Fit",
     "End",
     nullptr,
   };
 
   //---
 
-  CMatrix3D transform_matrix;
-
-  transform_matrix.setIdentity();
+  TransformData transformData;
 
   std::string line;
 
@@ -1652,7 +1883,7 @@ readTransforms()
 
         matrix1.setTranslation(x, y, z);
 
-        transform_matrix = matrix1*transform_matrix;
+        transformData.matrix = matrix1*transformData.matrix;
 
         break;
       }
@@ -1665,7 +1896,7 @@ readTransforms()
 
         matrix1.setScale(x, y, z);
 
-        transform_matrix = matrix1*transform_matrix;
+        transformData.matrix = matrix1*transformData.matrix;
 
         break;
       }
@@ -1676,7 +1907,7 @@ readTransforms()
 
         matrix1.setRotation(CMathGen::X_AXIS_3D, CMathGen::DegToRad(angle));
 
-        transform_matrix = matrix1*transform_matrix;
+        transformData.matrix = matrix1*transformData.matrix;
 
         break;
       }
@@ -1687,7 +1918,7 @@ readTransforms()
 
         matrix1.setRotation(CMathGen::Y_AXIS_3D, CMathGen::DegToRad(angle));
 
-        transform_matrix = matrix1*transform_matrix;
+        transformData.matrix = matrix1*transformData.matrix;
 
         break;
       }
@@ -1698,7 +1929,25 @@ readTransforms()
 
         matrix1.setRotation(CMathGen::Z_AXIS_3D, CMathGen::DegToRad(angle));
 
-        transform_matrix = matrix1*transform_matrix;
+        transformData.matrix = matrix1*transformData.matrix;
+
+        break;
+      }
+      case TRANSFORMS_CENTER_CMD: {
+        auto x = words.getReal(1);
+        auto y = words.getReal(2);
+        auto z = words.getReal(3);
+
+        transformData.center = CPoint3D(x, y, z);
+
+        break;
+      }
+      case TRANSFORMS_FIT_CMD: {
+        auto x = words.getReal(1);
+        auto y = words.getReal(2);
+        auto z = words.getReal(3);
+
+        transformData.fit = CPoint3D(x, y, z);
 
         break;
       }
@@ -1712,7 +1961,7 @@ readTransforms()
     }
   }
 
-  return transform_matrix;
+  return transformData;
 }
 
 CGeomObject3D *

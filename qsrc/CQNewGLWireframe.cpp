@@ -53,11 +53,15 @@ addBufferWireframe(CQNewGLObject *object, int &offset)
 
     srcBuffer->getPointData(ip, pointData);
 
-    auto p = CPoint3D(pointData.point .x, pointData.point .y, pointData.point .z);
-    auto n = CPoint3D(pointData.normal.x, pointData.normal.y, pointData.normal.z);
+    auto p = CPoint3D(pointData.point->x, pointData.point->y, pointData.point->z);
 
     buffer_->addPoint (float(p.x), float(p.y), float(p.z));
-    buffer_->addNormal(float(n.x), float(n.y), float(n.z));
+
+    if (pointData.normal) {
+      auto n = CPoint3D(pointData.normal->x, pointData.normal->y, pointData.normal->z);
+
+      buffer_->addNormal(float(n.x), float(n.y), float(n.z));
+    }
   }
 
   int offset1 = 0;

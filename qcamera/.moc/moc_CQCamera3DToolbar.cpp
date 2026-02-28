@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DToolbar_t {
-    QByteArrayData data[32];
-    char stringdata0[413];
+    QByteArrayData data[36];
+    char stringdata0[456];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -57,13 +57,17 @@ QT_MOC_LITERAL(21, 259, 13), // "addSphereSlot"
 QT_MOC_LITERAL(22, 273, 15), // "addCylinderSlot"
 QT_MOC_LITERAL(23, 289, 11), // "addConeSlot"
 QT_MOC_LITERAL(24, 301, 12), // "addTorusSlot"
-QT_MOC_LITERAL(25, 314, 13), // "wireframeSlot"
-QT_MOC_LITERAL(26, 328, 13), // "solidFillSlot"
-QT_MOC_LITERAL(27, 342, 15), // "textureFillSlot"
-QT_MOC_LITERAL(28, 358, 13), // "updateWidgets"
-QT_MOC_LITERAL(29, 372, 12), // "metaEditSlot"
-QT_MOC_LITERAL(30, 385, 15), // "performanceSlot"
-QT_MOC_LITERAL(31, 401, 11) // "optionsSlot"
+QT_MOC_LITERAL(25, 314, 13), // "depthTestSlot"
+QT_MOC_LITERAL(26, 328, 1), // "b"
+QT_MOC_LITERAL(27, 330, 12), // "cullFaceSlot"
+QT_MOC_LITERAL(28, 343, 13), // "frontFaceSlot"
+QT_MOC_LITERAL(29, 357, 13), // "wireframeSlot"
+QT_MOC_LITERAL(30, 371, 13), // "solidFillSlot"
+QT_MOC_LITERAL(31, 385, 15), // "textureFillSlot"
+QT_MOC_LITERAL(32, 401, 13), // "updateWidgets"
+QT_MOC_LITERAL(33, 415, 12), // "metaEditSlot"
+QT_MOC_LITERAL(34, 428, 15), // "performanceSlot"
+QT_MOC_LITERAL(35, 444, 11) // "optionsSlot"
 
     },
     "CQCamera3DToolbar\0viewTypeSlot\0\0"
@@ -74,7 +78,8 @@ QT_MOC_LITERAL(31, 401, 11) // "optionsSlot"
     "frontSlot\0backSlot\0localSlot\0selectAllSlot\0"
     "selectNoneSlot\0addPlaneSlot\0addCubeSlot\0"
     "addCircleSlot\0addSphereSlot\0addCylinderSlot\0"
-    "addConeSlot\0addTorusSlot\0wireframeSlot\0"
+    "addConeSlot\0addTorusSlot\0depthTestSlot\0"
+    "b\0cullFaceSlot\0frontFaceSlot\0wireframeSlot\0"
     "solidFillSlot\0textureFillSlot\0"
     "updateWidgets\0metaEditSlot\0performanceSlot\0"
     "optionsSlot"
@@ -87,7 +92,7 @@ static const uint qt_meta_data_CQCamera3DToolbar[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      30,   14, // methods
+      33,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -95,36 +100,39 @@ static const uint qt_meta_data_CQCamera3DToolbar[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,  164,    2, 0x08 /* Private */,
-       3,    1,  165,    2, 0x08 /* Private */,
-       4,    1,  168,    2, 0x08 /* Private */,
-       5,    1,  171,    2, 0x08 /* Private */,
-       6,    1,  174,    2, 0x08 /* Private */,
-       7,    1,  177,    2, 0x08 /* Private */,
-       8,    0,  180,    2, 0x08 /* Private */,
-       9,    0,  181,    2, 0x08 /* Private */,
-      10,    0,  182,    2, 0x08 /* Private */,
-      11,    0,  183,    2, 0x08 /* Private */,
-      12,    0,  184,    2, 0x08 /* Private */,
-      13,    0,  185,    2, 0x08 /* Private */,
-      14,    0,  186,    2, 0x08 /* Private */,
-      15,    1,  187,    2, 0x08 /* Private */,
-      16,    0,  190,    2, 0x08 /* Private */,
-      17,    0,  191,    2, 0x08 /* Private */,
-      18,    0,  192,    2, 0x08 /* Private */,
-      19,    0,  193,    2, 0x08 /* Private */,
-      20,    0,  194,    2, 0x08 /* Private */,
-      21,    0,  195,    2, 0x08 /* Private */,
-      22,    0,  196,    2, 0x08 /* Private */,
-      23,    0,  197,    2, 0x08 /* Private */,
-      24,    0,  198,    2, 0x08 /* Private */,
-      25,    0,  199,    2, 0x08 /* Private */,
-      26,    0,  200,    2, 0x08 /* Private */,
-      27,    0,  201,    2, 0x08 /* Private */,
-      28,    0,  202,    2, 0x08 /* Private */,
-      29,    0,  203,    2, 0x08 /* Private */,
-      30,    0,  204,    2, 0x08 /* Private */,
-      31,    0,  205,    2, 0x08 /* Private */,
+       1,    0,  179,    2, 0x08 /* Private */,
+       3,    1,  180,    2, 0x08 /* Private */,
+       4,    1,  183,    2, 0x08 /* Private */,
+       5,    1,  186,    2, 0x08 /* Private */,
+       6,    1,  189,    2, 0x08 /* Private */,
+       7,    1,  192,    2, 0x08 /* Private */,
+       8,    0,  195,    2, 0x08 /* Private */,
+       9,    0,  196,    2, 0x08 /* Private */,
+      10,    0,  197,    2, 0x08 /* Private */,
+      11,    0,  198,    2, 0x08 /* Private */,
+      12,    0,  199,    2, 0x08 /* Private */,
+      13,    0,  200,    2, 0x08 /* Private */,
+      14,    0,  201,    2, 0x08 /* Private */,
+      15,    1,  202,    2, 0x08 /* Private */,
+      16,    0,  205,    2, 0x08 /* Private */,
+      17,    0,  206,    2, 0x08 /* Private */,
+      18,    0,  207,    2, 0x08 /* Private */,
+      19,    0,  208,    2, 0x08 /* Private */,
+      20,    0,  209,    2, 0x08 /* Private */,
+      21,    0,  210,    2, 0x08 /* Private */,
+      22,    0,  211,    2, 0x08 /* Private */,
+      23,    0,  212,    2, 0x08 /* Private */,
+      24,    0,  213,    2, 0x08 /* Private */,
+      25,    1,  214,    2, 0x08 /* Private */,
+      27,    1,  217,    2, 0x08 /* Private */,
+      28,    1,  220,    2, 0x08 /* Private */,
+      29,    0,  223,    2, 0x08 /* Private */,
+      30,    0,  224,    2, 0x08 /* Private */,
+      31,    0,  225,    2, 0x08 /* Private */,
+      32,    0,  226,    2, 0x08 /* Private */,
+      33,    0,  227,    2, 0x08 /* Private */,
+      34,    0,  228,    2, 0x08 /* Private */,
+      35,    0,  229,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -150,6 +158,9 @@ static const uint qt_meta_data_CQCamera3DToolbar[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void, QMetaType::Bool,   26,
+    QMetaType::Void, QMetaType::Bool,   26,
+    QMetaType::Void, QMetaType::Bool,   26,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -190,13 +201,16 @@ void CQCamera3DToolbar::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
         case 20: _t->addCylinderSlot(); break;
         case 21: _t->addConeSlot(); break;
         case 22: _t->addTorusSlot(); break;
-        case 23: _t->wireframeSlot(); break;
-        case 24: _t->solidFillSlot(); break;
-        case 25: _t->textureFillSlot(); break;
-        case 26: _t->updateWidgets(); break;
-        case 27: _t->metaEditSlot(); break;
-        case 28: _t->performanceSlot(); break;
-        case 29: _t->optionsSlot(); break;
+        case 23: _t->depthTestSlot((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 24: _t->cullFaceSlot((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 25: _t->frontFaceSlot((*reinterpret_cast< bool(*)>(_a[1]))); break;
+        case 26: _t->wireframeSlot(); break;
+        case 27: _t->solidFillSlot(); break;
+        case 28: _t->textureFillSlot(); break;
+        case 29: _t->updateWidgets(); break;
+        case 30: _t->metaEditSlot(); break;
+        case 31: _t->performanceSlot(); break;
+        case 32: _t->optionsSlot(); break;
         default: ;
         }
     }
@@ -231,13 +245,13 @@ int CQCamera3DToolbar::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 30)
+        if (_id < 33)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 30;
+        _id -= 33;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 30)
+        if (_id < 33)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 30;
+        _id -= 33;
     }
     return _id;
 }

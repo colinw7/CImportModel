@@ -30,6 +30,7 @@ struct CQCamera3DFaceData {
   CRGBA            specular        { 0, 0, 0 };
   CRGBA            emission        { 0, 0, 0, 0 };
   double           shininess       { 1.0 };
+  double           alpha           { 1.0 };
   std::vector<int> vertices;
 };
 

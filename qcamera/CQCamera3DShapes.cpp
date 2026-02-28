@@ -110,6 +110,8 @@ addCube(CQGLBuffer *buffer, const CMatrix3D &mt, const CMatrix3D &mr, const CMat
   for (GLint i = 5; i >= 0; i--) {
     CQCamera3DFaceData faceData;
 
+    faceData.alpha = data.alpha;
+
     faceData.pos = faceDataList.pos;
     faceData.len = 4;
 
@@ -195,6 +197,8 @@ addOrientBox(CQGLBuffer *buffer, const CPoint3D &center, const CVector3D &xv,
   for (GLint i = 5; i >= 0; i--) {
     CQCamera3DFaceData faceData;
 
+    faceData.alpha = data.alpha;
+
     faceData.pos = faceDataList.pos;
     faceData.len = 4;
 
@@ -255,6 +259,8 @@ addCone(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
 
     CQCamera3DFaceData faceData;
 
+    faceData.alpha = data.alpha;
+
     faceData.pos = faceDataList.pos;
     faceData.len = vertices.size();
 
@@ -281,7 +287,8 @@ addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r
   auto h = p1.distanceTo(p2);
 
   CGeomCylinder3D::ConfigData configData;
-  configData.num_patches = 20;
+
+  configData.num_patches = (data.num_patches > 0 ? data.num_patches : 20);
 
   CGeomCylinder3D::addGeometry(object, CPoint3D(0.0, 0.0, 0.0), 2*r, h, configData);
   CGeomCylinder3D::addNormals(object, 2*r, h);
@@ -313,6 +320,8 @@ addCylinder(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double r
     const auto &vertices = face->getVertices();
 
     CQCamera3DFaceData faceData;
+
+    faceData.alpha = data.alpha;
 
     faceData.pos = faceDataList.pos;
     faceData.len = vertices.size();
@@ -376,6 +385,8 @@ addSphere(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, const Shap
     const auto &vertices = face->getVertices();
 
     CQCamera3DFaceData faceData;
+
+    faceData.alpha = data.alpha;
 
     faceData.pos = faceDataList.pos;
     faceData.len = vertices.size();
@@ -443,6 +454,8 @@ addPyramid(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double w,
 
     CQCamera3DFaceData faceData;
 
+    faceData.alpha = data.alpha;
+
     faceData.pos = faceDataList.pos;
     faceData.len = vertices.size();
 
@@ -494,6 +507,8 @@ addTorus(CQGLBuffer *buffer, const CPoint3D &p1, const CPoint3D &p2, double rfac
     const auto &vertices = face->getVertices();
 
     CQCamera3DFaceData faceData;
+
+    faceData.alpha = data.alpha;
 
     faceData.pos = faceDataList.pos;
     faceData.len = vertices.size();

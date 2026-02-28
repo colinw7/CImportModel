@@ -113,10 +113,12 @@ paintEvent(QPaintEvent *)
 
         buffer->getPointData(faceData.pos + ip, pointData);
 
-        auto x1 = pointData.texturePoint.x*iw;
-        auto y1 = pointData.texturePoint.y*ih;
+        if (pointData.texturePoint) {
+          auto x1 = pointData.texturePoint->x*iw;
+          auto y1 = pointData.texturePoint->y*ih;
 
-        tpoints.push_back(QPointF(x1, y1));
+          tpoints.push_back(QPointF(x1, y1));
+        }
       }
 
       painter.drawPolygon(&tpoints[0], tpoints.size());

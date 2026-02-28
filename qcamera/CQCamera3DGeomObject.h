@@ -2,6 +2,7 @@
 #define CQCamera3DGeomObject_H
 
 #include <CQCamera3DFaceData.h>
+#include <CQCamera3DApp.h>
 
 #include <CGeomObject3D.h>
 #include <CMathGen.h>
@@ -58,6 +59,10 @@ class CQCamera3DGeomObject : public CGeomObject3D {
   CQGLBuffer *initBuffer(CQCamera3DWidget *widget);
 
   void addFaceData(const CQCamera3DFaceData &faceData);
+
+  //---
+
+  QStringList getAnimNames() const;
 
  private:
   CBBox3D bbox_;

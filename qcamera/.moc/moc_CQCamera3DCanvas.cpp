@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DCanvas_t {
     QByteArrayData data[17];
-    char stringdata0[239];
+    char stringdata0[233];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -46,9 +46,9 @@ QT_MOC_LITERAL(10, 129, 15), // "editModeChanged"
 QT_MOC_LITERAL(11, 145, 17), // "selectTypeChanged"
 QT_MOC_LITERAL(12, 163, 15), // "editTypeChanged"
 QT_MOC_LITERAL(13, 179, 17), // "updateObjectsData"
-QT_MOC_LITERAL(14, 197, 14), // "addObjectsData"
-QT_MOC_LITERAL(15, 212, 12), // "updateStatus"
-QT_MOC_LITERAL(16, 225, 13) // "cameraChanged"
+QT_MOC_LITERAL(14, 197, 8), // "addScene"
+QT_MOC_LITERAL(15, 206, 12), // "updateStatus"
+QT_MOC_LITERAL(16, 219, 13) // "cameraChanged"
 
     },
     "CQCamera3DCanvas\0stateChanged\0\0"
@@ -57,7 +57,7 @@ QT_MOC_LITERAL(16, 225, 13) // "cameraChanged"
     "objectsChanged\0eyeLineChanged\0"
     "editModeChanged\0selectTypeChanged\0"
     "editTypeChanged\0updateObjectsData\0"
-    "addObjectsData\0updateStatus\0cameraChanged"
+    "addScene\0updateStatus\0cameraChanged"
 };
 #undef QT_MOC_LITERAL
 
@@ -133,7 +133,7 @@ void CQCamera3DCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         case 9: _t->selectTypeChanged(); break;
         case 10: _t->editTypeChanged(); break;
         case 11: _t->updateObjectsData(); break;
-        case 12: _t->addObjectsData(); break;
+        case 12: _t->addScene(); break;
         case 13: _t->updateStatus(); break;
         case 14: _t->cameraChanged(); break;
         default: ;

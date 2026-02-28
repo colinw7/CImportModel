@@ -210,7 +210,7 @@ updateObjectBones(CBBox3D &bbox)
     if      (bonesTransform() == BonesTransform::INVERSE_BIND)
       return nodeData.inverseBindMatrix().inverse();
     else if (bonesTransform() == BonesTransform::LOCAL)
-      return nodeData.localTransform();
+      return nodeData.calcLocalTransform();
     else if (bonesTransform() == BonesTransform::GLOBAL)
       return nodeData.globalTransform();
     else

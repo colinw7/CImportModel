@@ -104,7 +104,7 @@ updateBufferHull(CQNewGLObject *object, CHull3D &hull)
 
     srcBuffer->getPointData(ip, pointData);
 
-    auto p = CPoint3D(pointData.point.x, pointData.point.y, pointData.point.z);
+    auto p = CPoint3D(pointData.point->x, pointData.point->y, pointData.point->z);
 
     hull.addVertex(p.x, p.y, p.z);
   }

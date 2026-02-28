@@ -83,9 +83,9 @@ updateCameras()
   int nc = canvas_->cameras().size();
 
   table_->setRowCount   (nc + 1);
-  table_->setColumnCount(2);
+  table_->setColumnCount(3);
 
-  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Current");
+  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Current" << "Visible");
 
   int r = 0;
 
@@ -100,12 +100,17 @@ updateCameras()
 
     auto *nameItem  = new QTableWidgetItem(QString::fromStdString(cameraName));
     auto *stateItem = new QTableWidgetItem("");
+    auto *drawItem  = new QTableWidgetItem("");
 
-    table_->setItem(r  , 0, nameItem);
-    table_->setItem(r++, 1, stateItem);
+    table_->setItem(r, 0, nameItem);
+    table_->setItem(r, 1, stateItem);
+    table_->setItem(r, 2, drawItem);
 
     nameItem ->setData(Qt::UserRole, camera->id());
     stateItem->setData(Qt::UserRole, camera->id());
+    drawItem ->setData(Qt::UserRole, camera->id());
+
+    ++r;
   }
 
   selectedInd_ = -1;
@@ -149,12 +154,16 @@ tableClickSlot(const QModelIndex &index)
   auto *camera = cameraFromIndex(index);
   if (! camera) return;
 
+  auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+
   if      (index.column() == 1)
     canvas_->setCurrentCamera(camera);
+  else if (index.column() == 2)
+    camera1->setVisible(! camera1->isVisible());
   else
     return;
 
-  updateAll();
+  updateAll(true);
 }
 
 CGLCameraIFace *
@@ -204,13 +213,16 @@ cameraFromIndex(const QModelIndex &index) const
 
 void
 CQCamera3DCameraList::
-updateAll()
+updateAll(bool geom)
 {
   table_->update();
   table_->viewport()->update();
 
   header_->viewport()->update();
   header_->update();
+
+  if (geom)
+    canvas_->updateObjectsData();
 
   canvas_->update();
 }
@@ -253,12 +265,19 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
   if (! camera)
     return QItemDelegate::paint(painter, option, index);
 
+  auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+
   auto *canvas = list_->canvas();
 
-  if      (index.column() == 1) {
-    bool current = (canvas->getCurrentCamera() == camera);
+  if      (index.column() == 1 || index.column() == 2) {
+    bool checked = false;
 
-    Qt::CheckState checkState = (current ? Qt::Checked : Qt::Unchecked);
+    if (index.column() == 1)
+      checked = (canvas->getCurrentCamera() == camera);
+    else
+      checked = camera1->isVisible();
+
+    Qt::CheckState checkState = (checked ? Qt::Checked : Qt::Unchecked);
 
     QFontMetrics fm(list_->font());
 
@@ -311,14 +330,16 @@ updateColumnSizes()
 {
   QFontMetrics fm(list_->font());
 
-  auto tw = fm.horizontalAdvance("Flip") + 8;
+  auto tw1 = fm.horizontalAdvance("Current") + 8;
+  auto tw2 = fm.horizontalAdvance("Visible") + 8;
 
   auto *vbar = list_->table()->verticalHeader();
 
-  int w = width() - tw - vbar->width() - 8;
+  int w = width() - tw1 - tw2 - 2*vbar->width() - 8;
 
-  resizeSection(1, tw);
-  resizeSection(0, w);
+  resizeSection(2, tw2);
+  resizeSection(1, tw1);
+  resizeSection(0, w  );
 }
 
 void

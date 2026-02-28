@@ -10,8 +10,10 @@ class CQGLBuffer;
 namespace CQCamera3DShapes {
 
 struct ShapeData {
-  CRGBA    color { 1, 1, 1};
-  CPoint3D size  { 1, 1, 1};
+  CRGBA    color       { 1, 1, 1 };
+  CPoint3D size        { 1, 1, 1 };
+  double   alpha       { 1 };
+  int      num_patches { -1 };
 };
 
 void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const ShapeData &data,

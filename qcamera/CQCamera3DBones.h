@@ -4,8 +4,6 @@
 #include <CQCamera3DApp.h>
 
 #include <CWindowRange2D.h>
-//#include <CDisplayRange2D.h>
-#include <CWindowRange2D.h>
 #include <CMatrix3DH.h>
 #include <CBBox3D.h>
 #include <CPoint3D.h>
@@ -205,8 +203,6 @@ class CQCamera3DBones : public QFrame {
   CMatrix3DH projectionMatrix_;
   CMatrix3DH viewMatrix_;
   CMatrix3DH modelMatrix_;
-
-  bool useAnim_ { false };
 
   ObjectNodeCenters objectNodes_;
 

@@ -26,6 +26,9 @@ main(int argc, char **argv)
   bool        invertX = false;
   bool        invertY = false;
   bool        invertZ = false;
+  bool        triangulate = false;
+  bool        anim = true;
+  std::string textureDir;
   std::string textureMap;
   std::string materialMap;
 
@@ -67,6 +70,17 @@ main(int argc, char **argv)
       else if (arg == "invert_z") {
         invertZ = true;
       }
+      else if (arg == "triangulate") {
+        triangulate = true;
+      }
+      else if (arg == "texture_dir") {
+        ++i;
+
+        if (i < argc)
+          textureDir = argv[i];
+        else
+          std::cerr << "Missing filename for " << argv[i - 1] << "\n";
+      }
       else if (arg == "texture_map") {
         ++i;
 
@@ -83,14 +97,21 @@ main(int argc, char **argv)
         else
           std::cerr << "Missing filename for " << argv[i - 1] << "\n";
       }
+      else if (arg == "no_anim") {
+        anim = false;
+      }
       else if (arg == "h" || arg == "help") {
         std::cerr << "CQCamera3D "
          "[-3ds|-3drw|-asc|-blend|-cob|-dae|-dxf|-fbx|-gltf|"
           "-obj|-plg|-ply|-scene|-stl|-v3d|-vox|-x3d] "
          "[-swap_xy|swap_yz|swap_zx] "
          "[-invert_x|-invert_y|-invert_z] "
-         "[-texture_map <file>] [<file>]"
-         "[-material_map <file>] [<file>]"
+         "[-triangulate] "
+         "[-texture_dir <dir>] "
+         "[-texture_map <file>] "
+         "[-material_map <file>] "
+         "[-no_anim] "
+         "[<file>]"
          "\n";
         return 0;
       }
@@ -131,18 +152,23 @@ main(int argc, char **argv)
   if (modelName != "") {
     CQCamera3DApp::LoadData loadData;
 
-    loadData.invertX = invertX;
-    loadData.invertY = invertY;
-    loadData.invertZ = invertZ;
-    loadData.swapXY  = swapXY;
-    loadData.swapYZ  = swapYZ;
-    loadData.swapZX  = swapZX;
+    loadData.invertX     = invertX;
+    loadData.invertY     = invertY;
+    loadData.invertZ     = invertZ;
+    loadData.swapXY      = swapXY;
+    loadData.swapYZ      = swapYZ;
+    loadData.swapZX      = swapZX;
+    loadData.triangulate = triangulate;
+    loadData.textureDir  = textureDir;
 
     if (! app->loadModel(modelName, format, loadData))
       std::cerr << "Failed to load model '" << modelName.toStdString() << "'\n";
   }
 
   //---
+
+  if (! anim)
+    app->setAnimEnabled(false);
 
   auto *canvas = app->canvas();
 
