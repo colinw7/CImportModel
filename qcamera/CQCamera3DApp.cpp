@@ -74,6 +74,8 @@
 
 #include <svg/menu_svg.h>
 
+#include <svg/view_follow_svg.h>
+
 #include <set>
 #include <iostream>
 
@@ -378,11 +380,25 @@ timerSlot()
 
 //---
 
+CGeomObject3D *
+CQCamera3DApp::
+currentBoneObject() const
+{
+  if (currentBoneObjectInd_ >= 0)
+    return scene_->getObjectByInd(currentBoneObjectInd_);
+  else {
+    auto animObjects = getAnimObjects();
+    if (animObjects.empty()) return nullptr;
+
+    return animObjects[0];
+  }
+}
+
 void
 CQCamera3DApp::
-setCurrentBoneObject(int i)
+setCurrentBoneObjectInd(int ind)
 {
-  currentBoneObject_ = i;
+  currentBoneObjectInd_ = ind;
 
   bones_->update();
 
@@ -402,29 +418,15 @@ setCurrentBoneNode(int i)
 
 //---
 
-#if 0
-void
-CQCamera3DApp::
-setAnimName(const QString &s)
-{
-  if (s != animName_) {
-    animName_ = s;
-
-    signalAnimTimeChange();
-  }
-}
 
 void
 CQCamera3DApp::
-setAnimTime(double r)
+signalAnimStateChange()
 {
-  if (r != animTime_) {
-    animTime_ = r;
+  invalidateNodeMatrices();
 
-    signalAnimTimeChange();
-  }
+  Q_EMIT animStateChanged();
 }
-#endif
 
 void
 CQCamera3DApp::
@@ -727,6 +729,9 @@ calcNodeMatrices() const
       auto &node = const_cast<CGeomNodeData &>(pn.second);
       //if (! node.isJoint()) continue;
 
+      if (node.index() < 0)
+        continue;
+
       nodeMatrices[node.index()] = node.calcNodeAnimMatrix(inverseMeshMatrix);
     }
   }
@@ -740,6 +745,9 @@ adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
                 const NodeMatrices &nodeMatrices) const
 {
   const auto &jointData = vertex.getJointData();
+
+  if (! jointData.set)
+    return p;
 
   struct NodeWeight {
     int    nodeId { -1 };
@@ -772,13 +780,10 @@ adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
     auto p1 = CPoint3D(0, 0, 0);
 
     for (const auto &nodeWeight : nodeWeights) {
-      auto pm = nodeMatrices.find(nodeWeight.nodeId);
+      CMatrix3D boneTransform;
 
-      if (pm != nodeMatrices.end()) {
-        const auto &boneTransform = (*pm).second;
-
+      if (getNodeMatrix(nodeMatrices, nodeWeight.nodeId, boneTransform))
         p1 += nodeWeight.weight*(boneTransform*p);
-      }
       else
         p1 += nodeWeight.weight*p;
     }
@@ -787,6 +792,18 @@ adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
   }
   else
     return p;
+}
+
+bool
+CQCamera3DApp::
+getNodeMatrix(const NodeMatrices &nodeMatrices, int nodeId, CMatrix3D &m) const
+{
+  auto pm = nodeMatrices.find(nodeId);
+  if (pm == nodeMatrices.end()) return false;
+
+  m = (*pm).second;
+
+  return true;
 }
 
 //---

@@ -24,6 +24,7 @@ class CQMatrix3D;
 class CQPoint3DEdit;
 class CQPoint4DEdit;
 class CQRealSpin;
+class CQIntegerSpin;
 class CQColorEdit;
 class CQTextLabel;
 class CQIconButton;
@@ -35,6 +36,7 @@ class QComboBox;
 class QCheckBox;
 class QToolButton;
 class QLineEdit;
+class QLabel;
 
 class CQCamera3DControl : public QFrame {
   Q_OBJECT
@@ -262,6 +264,8 @@ class CQCamera3DControl : public QFrame {
   void textureWrapSlot(int i);
 
   // Bones
+  void bonesObjectSlot();
+
   void bonesModelSlot(int);
   void bonesBoneNodeSlot(int i);
   void bonesPointJointsSlot(int i);
@@ -282,7 +286,9 @@ class CQCamera3DControl : public QFrame {
   void animObjectSlot();
   void animNameSlot();
   void animTimeSlot(double t);
+  void animTimeTypeSlot(int);
   void animTimeStepSlot(double t);
+  void animTimeFramesSlot(int n);
 
   void playSlot();
   void pauseSlot();
@@ -437,7 +443,8 @@ class CQCamera3DControl : public QFrame {
   struct SelectionData {
     QComboBox*               typeCombo  { nullptr };
     CQCamera3DObjectChooser* objChooser { nullptr };
-    CQTextLabel*             indLabel   { nullptr };
+    QLabel*                  indLabel   { nullptr };
+    CQTextLabel*             indText    { nullptr };
     QCheckBox*               visCheck   { nullptr };
 
     CQPoint3DEdit* centerEdit     { nullptr };
@@ -528,6 +535,8 @@ class CQCamera3DControl : public QFrame {
 
   // Bones
   struct BonesData {
+    CQCamera3DAnimObjectChooser* objectChooser { nullptr };
+
     QCheckBox* modelCheck       { nullptr };
     QCheckBox* boneNodesCheck   { nullptr };
     QCheckBox* pointJointsCheck { nullptr };
@@ -553,15 +562,17 @@ class CQCamera3DControl : public QFrame {
 
   // Animation
   struct AnimData {
-    CQCamera3DAnimObjectChooser* objectChooser { nullptr };
-    CQCamera3DAnimChooser*       animCombo     { nullptr };
-    CQCamera3DAnimTimeEdit*      timeEdit      { nullptr };
-    CQRealSpin*                  timeStepEdit  { nullptr };
-    CQIconButton*                playButton    { nullptr };
-    CQIconButton*                pauseButton   { nullptr };
-    CQIconButton*                stepButton    { nullptr };
-    CQCamera3DBoneChooser*       nodeCombo     { nullptr };
-//  CQTextLabel*                 nodeLabel     { nullptr };
+    CQCamera3DAnimObjectChooser* objectChooser  { nullptr };
+    CQCamera3DAnimChooser*       animCombo      { nullptr };
+    CQCamera3DAnimTimeEdit*      timeEdit       { nullptr };
+    QComboBox*                   timeTypeCombo  { nullptr };
+    CQRealSpin*                  timeStepEdit   { nullptr };
+    CQIntegerSpin*               timeFramesEdit { nullptr };
+    CQIconButton*                playButton     { nullptr };
+    CQIconButton*                pauseButton    { nullptr };
+    CQIconButton*                stepButton     { nullptr };
+    CQCamera3DBoneChooser*       nodeCombo      { nullptr };
+//  CQTextLabel*                 nodeLabel      { nullptr };
 
     QComboBox*    translationInterpCombo { nullptr };
     QTableWidget* animTranslationTable   { nullptr };

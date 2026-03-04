@@ -628,6 +628,8 @@ class CImportGLTF : public CImportBase {
 
   bool processNodeMesh(Node *node);
 
+  void initNodeData(Node *node, CGeomNodeData &nodeData) const;
+
   bool createNodeObject(Node *node, const CMatrix3D &m1);
   void createNodeObj(Node *node);
 

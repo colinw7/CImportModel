@@ -53,7 +53,9 @@ updateWidgets()
 
   clear();
 
-  addItem("", QVariant(-1));
+  addItem("", QVariant(-1)); // no anim
+
+  addItem("<default>", QVariant(-2)); // default anim
 
   int ind = 0;
 
@@ -68,18 +70,23 @@ updateWidgets()
 
   int currentIndex = 0;
 
-  ind = 0;
+  if      (animData.name == "<default>") {
+    currentIndex = 1;
+  }
+  else if (animData.name != "") {
+    int ind = 0;
 
-  for (const auto &animName1 : animData.names) {
-    if (animName1 == animData.name) {
-      animData_ = animData;
+    for (const auto &animName1 : animData.names) {
+      if (animName1 == animData.name) {
+        animData_ = animData;
 
-      currentIndex = ind + 1;
+        currentIndex = ind + 2;
 
-      break;
+        break;
+      }
+
+      ++ind;
     }
-
-    ++ind;
   }
 
   setCurrentIndex(currentIndex);
@@ -101,26 +108,36 @@ void
 CQCamera3DAnimChooser::
 currentIndexChanged(int ind)
 {
-  AnimData animData;
-  getAnimData(animData);
-
-  int ind1 = 1;
-
   QString animName;
 
-  for (const auto &animName1 : animData.names) {
-    if (ind == ind1) {
-      animName = animName1;
-      break;
-    }
+  if     (ind == 0) {
+    animName = "";
+  }
+  else if (ind == 1) {
+    animName = "<default>";
+  }
+  else if (ind >= 2) {
+    int ind1 = 2;
 
-    ++ind1;
+    AnimData animData;
+    getAnimData(animData);
+
+    for (const auto &animName1 : animData.names) {
+      if (ind == ind1) {
+        animName = animName1;
+        break;
+      }
+
+      ++ind1;
+    }
   }
 
   auto *object = getObject();
 
   if (object) {
     object->setAnimName(animName.toStdString());
+
+    app_->signalAnimStateChange();
 
     updateWidgets();
   }

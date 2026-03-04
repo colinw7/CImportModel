@@ -1464,30 +1464,12 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
         if (! getNode(joint, node1))
           continue;
 
-        auto ind = node1->indName.ind;
-
         CGeomNodeData nodeData;
+        initNodeData(node1, nodeData);
 
-        nodeData.setParent(node1->parent ? int(node1->parent->indName.ind) : -1);
+        auto ind = int(node1->indName.ind);
 
-        nodeData.setJoint(node1->isJoint);
-
-        if (node1->inverseBindMatrix)
-          nodeData.setInverseBindMatrix(node1->inverseBindMatrix->matrix().toCMatrix());
-
-        nodeData.resizeChildren(uint(node1->children.size()));
-
-        nodeData.setName(node1->name);
-
-        for (size_t ic = 0; ic < node1->children.size(); ++ic)
-          nodeData.setChild(uint(ic), int(node1->children[ic].ind));
-
-        auto ind1 = int(ind);
-
-        if (! rootObject_->hasNode(ind1))
-          rootObject_->addNode(ind1, nodeData);
-
-        auto &nodeData1 = rootObject_->editNode(ind1);
+        auto &nodeData1 = rootObject_->editNode(ind);
 
         if (nodeData1.index() != node1->order) {
           if (nodeData1.index() == -1) {
@@ -1498,8 +1480,6 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
           else
             (void) errorMsg("node index/order mismatch");
         }
-
-        nodeData1.setObject(node1->object);
 
         node1->added   = true;
         node1->skinned = true;
@@ -1525,33 +1505,18 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
       if (node1->added) continue;
 
       CGeomNodeData nodeData;
+      initNodeData(node1, nodeData);
 
-      nodeData.setParent(node1->parent ? int(node1->parent->indName.ind) : -1);
-
-      if (node1->inverseBindMatrix)
-        nodeData.setInverseBindMatrix(node1->inverseBindMatrix->matrix().toCMatrix());
-
-      nodeData.resizeChildren(uint(node1->children.size()));
-
-      for (size_t ic = 0; ic < node1->children.size(); ++ic) {
-        nodeData.setChild(uint(ic), int(node1->children[ic].ind));
-
+      for (size_t ic = 0; ic < node1->children.size(); ++ic)
         nodeIds.push_back(node1->children[ic]);
-      }
 
-      nodeData.setName(node1->name);
+      auto ind = int(node1->indName.ind);
 
-      auto ind1 = int(indName.ind);
-
-      rootObject_->addNode(ind1, nodeData);
-
-      auto &nodeData1 = rootObject_->editNode(ind1);
+      auto &nodeData1 = rootObject_->editNode(ind);
 
       assert(nodeData1.index() == -1);
 
       nodeData1.setIndex(++maxIndex);
-
-      nodeData1.setObject(node1->object);
 
       node1->added = true;
     }
@@ -1561,37 +1526,43 @@ createNodeObject(Node *node, const CMatrix3D & /*hierTranslate*/)
       auto &node1 = pn.second;
       if (node1.added) continue;
 
-      auto ind = pn.first.ind;
-
       CGeomNodeData nodeData;
-
-      nodeData.setParent(node1.parent ? int(node1.parent->indName.ind) : -1);
-
-      nodeData.setJoint(node1.isJoint);
-
-      if (node1.inverseBindMatrix)
-        nodeData.setInverseBindMatrix(node1.inverseBindMatrix->matrix().toCMatrix());
-
-      nodeData.resizeChildren(uint(node1.children.size()));
-
-      for (size_t ic = 0; ic < node1.children.size(); ++ic)
-        nodeData.setChild(uint(ic), int(node1.children[ic].ind));
-
-      nodeData.setName(node1.name);
-
-      rootObject_->addNode(int(ind), nodeData);
-
-      if (node1.object) {
-        auto &nodeData1 = rootObject_->editNode(int(ind));
-
-        nodeData1.setObject(node1.object);
-      }
+      initNodeData(&node1, nodeData);
 
       node1.added = true;
     }
   }
 
   return true;
+}
+
+void
+CImportGLTF::
+initNodeData(Node *node, CGeomNodeData &nodeData) const
+{
+  auto ind = int(node->indName.ind);
+
+  if (! rootObject_->hasNode(ind))
+    rootObject_->addNode(ind, nodeData);
+
+  auto &nodeData1 = rootObject_->editNode(ind);
+
+  nodeData1.setParent(node->parent ? int(node->parent->indName.ind) : -1);
+
+  nodeData1.setJoint(node->isJoint);
+
+  if (node->inverseBindMatrix)
+    nodeData1.setInverseBindMatrix(node->inverseBindMatrix->matrix().toCMatrix());
+
+  nodeData1.resizeChildren(uint(node->children.size()));
+
+  nodeData1.setName(node->name);
+
+  for (size_t ic = 0; ic < node->children.size(); ++ic)
+    nodeData1.setChild(uint(ic), int(node->children[ic].ind));
+
+  if (node->object)
+    nodeData1.setObject(node->object);
 }
 
 void
@@ -1609,15 +1580,16 @@ createNodeObj(Node *node)
 
   scene_->addObject(node->object);
 
-  node->object->setMeshNode(int(node->indName.ind));
+  if (! node->added) {
+    CGeomNodeData nodeData;
+    initNodeData(node, nodeData);
 
-//node->object->transform(node->hierTransform.inverse());
+    node->added = true;
+  }
 
   auto ind = int(node->indName.ind);
 
-  auto &nodeData1 = rootObject_->editNode(ind);
-
-  nodeData1.setObject(node->object);
+  node->object->setMeshNode(ind);
 }
 
 CMatrix3D

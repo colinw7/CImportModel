@@ -45,16 +45,18 @@ class CQCamera3DUI {
     auto *layout1 = new QHBoxLayout(frame);
     layout1->setMargin(2); layout1->setSpacing(2);
 
-    auto *label = new QLabel(labelStr);
-    label->setObjectName("label");
+    label_ = new QLabel(labelStr);
+    label_->setObjectName("label");
 
-    layout1->addWidget(label);
+    layout1->addWidget(label_);
     layout1->addWidget(w);
 
     currentLayout_->addWidget(frame);
 
     return w;
   }
+
+  QLabel *lastLabel() const { return label_; }
 
   template<typename WIDGET1, typename WIDGET2>
   std::pair<WIDGET1 *, WIDGET2 *>
@@ -325,7 +327,6 @@ class CQCamera3DUI {
   QFrame*               currentFrame_ { nullptr };
   std::vector<QFrame *> frameStack_;
 
-
   QTabWidget*               currentTab_ { nullptr };
   std::vector<QTabWidget *> tabStack_;
 
@@ -335,6 +336,8 @@ class CQCamera3DUI {
   QMenuBar*            menuBar_     { nullptr };
   QMenu*               currentMenu_ { nullptr };
   std::vector<QMenu *> menuStack_;
+
+  QLabel* label_ { nullptr };
 };
 
 #endif

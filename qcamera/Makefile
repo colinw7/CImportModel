@@ -1444,7 +1444,8 @@ CQCamera3DApp.o: CQCamera3DApp.cpp CQCamera3DApp.h \
 		svg/deselected_svg.h \
 		svg/visible_svg.h \
 		svg/invisible_svg.h \
-		svg/menu_svg.h
+		svg/menu_svg.h \
+		svg/view_follow_svg.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DApp.o CQCamera3DApp.cpp
 
 CQCamera3DAxes.o: CQCamera3DAxes.cpp CQCamera3DAxes.h \
@@ -2192,6 +2193,7 @@ CQCamera3DControl.o: CQCamera3DControl.cpp CQCamera3DControl.h \
 		CQMatrix3D.h \
 		CQPoint3DEdit.h \
 		CQPoint4DEdit.h \
+		../../CQUtil/include/CQIntegerSpin.h \
 		../../CQUtil/include/CQColorEdit.h \
 		CQTextLabel.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DControl.o CQCamera3DControl.cpp
@@ -3429,6 +3431,10 @@ CQCamera3DStatus.o: CQCamera3DStatus.cpp CQCamera3DStatus.h \
 		../../CMath/include/CVector2D.h \
 		../../CMath/include/CSize2D.h \
 		../../CMath/include/CISize2D.h \
+		CQCamera3DUI.h \
+		../../CQUtil/include/CQIconButton.h \
+		../../CQUtil/include/CQUtil.h \
+		../../CQUtil/include/CQUtilMeta.h \
 		CQDocumentLabel.h \
 		CQTextLabel.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DStatus.o CQCamera3DStatus.cpp

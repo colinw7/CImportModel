@@ -108,7 +108,7 @@ CQCamera3DOverview(CQCamera3DApp *app) :
 
   auto *canvas = app_->canvas();
 
-  connect(app_, SIGNAL(animNameChanged()), this, SLOT(invalidate()));
+  connect(app_, SIGNAL(animStateChanged()), this, SLOT(invalidate()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(invalidate()));
 
   connect(canvas, SIGNAL(stateChanged()), this, SLOT(invalidate()));
@@ -391,8 +391,11 @@ drawModel()
     drawData_.painter->setClipRect(view->rect);
 
     for (auto &pp : pv.second) {
-      for (auto &ppoints : pp.second) {
-        drawData_.painter->drawPolygon(&ppoints[0], int(ppoints.size()));
+      for (auto &pd : pp.second) {
+        drawData_.painter->setPen(pd.pen);
+        drawData_.painter->setBrush(pd.brush);
+
+        drawData_.painter->drawPolygon(&pd.points[0], int(pd.points.size()));
       }
     }
   }
@@ -412,6 +415,31 @@ drawModel()
       }
     }
   }
+
+  //---
+
+  auto *canvas = app_->canvas();
+
+  auto bbox = canvas->bbox();
+
+  auto r = bbox.getMaxSize()/100.0;
+
+  for (auto i = 0; i < drawData_.numPointLabels; ++i) {
+    if (! drawData_.pointLabels[i].show)
+      continue;
+
+    if      (i == 0)
+      drawData_.painter->setBrush(QColor(255, 0, 0));
+    else if (i == 1)
+      drawData_.painter->setBrush(QColor(0, 255, 0));
+    else if (i == 2)
+      drawData_.painter->setBrush(QColor(0, 0, 255));
+    else if (i == 3)
+      drawData_.painter->setBrush(QColor(255, 0, 255));
+
+    for (auto &pp : drawData_.pointLabels[i].points)
+      drawCircle(pp.point, r, pp.label);
+  }
 }
 
 void
@@ -419,6 +447,9 @@ CQCamera3DOverview::
 updateModel()
 {
   drawData_.filled = (modelType() == ModelType::SOLID);
+
+  for (auto i = 0; i < drawData_.numPointLabels; ++i)
+    drawData_.pointLabels[i].points.clear();
 
   //---
 
@@ -451,28 +482,49 @@ updateModel()
     const CBBox3D &bbox() const { return bbox_; }
 
     bool beginVisitObject(CGeomObject3D *object) override {
-      auto *animObject = object->getAnimObject();
-
       geomData_ = &drawData_.objectGeomData[object];
 
       geomData_->filled      = drawData_.filled;
       geomData_->modelMatrix = CMatrix3DH(object->getHierTransform());
+      geomData_->meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
+
+      //---
+
+      animObject_ = object->getAnimObject();
+
+      auto animName = (animObject_ ? animObject_->animName() : "");
 
       if (overview_->app()->isAnimEnabled())
-        geomData_->meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
-      else
-        geomData_->meshMatrix = CMatrix3DH::identity();
-
-      if (overview_->app()->isAnimEnabled())
-        geomData_->useAnim = (animObject && animObject->animName() != "");
+        geomData_->useAnim = (animObject_ && animName != "");
       else
         geomData_->useAnim = false;
 
+      if (geomData_->useAnim) {
+        auto meshNodeId = object->getMeshNode();
+
+        CGeomNodeData *node = nullptr;
+
+        if (meshNodeId >= 0)
+          node = const_cast<CGeomNodeData *>(&animObject_->getNode(meshNodeId));
+
+        auto isJointed = (node && object->isJointed());
+
+        if (node && ! isJointed) {
+          auto animTime = animObject_->animTime();
+
+          geomData_->meshMatrix =
+            CMatrix3DH(object->getNodeAnimHierTransform(*node, animName, animTime));
+        }
+      }
+
       //---
 
-      nodeMatrices_ = (geomData_->useAnim ? &app_->getObjectNodeMatrices(animObject) : nullptr);
+      nodeMatrices_ = (geomData_->useAnim ? &app_->getObjectNodeMatrices(animObject_) : nullptr);
 
       //---
+
+      objVisible_  = object->getVisible();
+      objSelected_ = object->getHierSelected();
 
       objectMaterial_ = object->getMaterialP();
 
@@ -545,7 +597,7 @@ updateModel()
 
       faceData_->stroked = true;
 
-      bool selected = (object_->getHierSelected() || faceData_->face->getSelected());
+      bool selected = (objSelected_ || faceData_->face->getSelected());
 
       if (selected)
         faceData_->strokeColor = CRGBA::red();
@@ -554,7 +606,10 @@ updateModel()
 
       //---
 
-      geomData_->faceDatas.push_back(faceData_);
+      if (objVisible_)
+        geomData_->faceDatas.push_back(faceData_);
+      else
+        delete faceData_;
 
       faceData_ = nullptr;
     }
@@ -569,17 +624,18 @@ updateModel()
       if (vertex->isSelected()) {
         auto *vertexData = new VertexData;
 
-        geomData_->vertexDatas.push_back(vertexData);
-
         vertexData->p     = p;
         vertexData->color = CRGBA::red();
+
+        if (objVisible_)
+          geomData_->vertexDatas.push_back(vertexData);
+        else
+          delete vertexData;
       }
     }
 
     void visitLine(CGeomLine3D *line) override {
       auto *lineData = new LineData;
-
-      geomData_->lineDatas.push_back(lineData);
 
       lineData->line = const_cast<CGeomLine3D *>(line);
 
@@ -605,10 +661,13 @@ updateModel()
         if (vertex.isSelected()) {
           auto *vertexData = new VertexData;
 
-          geomData_->vertexDatas.push_back(vertexData);
-
           vertexData->p     = p;
           vertexData->color = CRGBA::red();
+
+          if (objVisible_)
+            geomData_->vertexDatas.push_back(vertexData);
+          else
+            delete vertexData;
         }
       }
 
@@ -620,6 +679,11 @@ updateModel()
         lineData->color = CRGBA::red();
       else
         lineData->color = CRGBA(0, 0, 0, 0.2);
+
+      if (objVisible_)
+        geomData_->lineDatas.push_back(lineData);
+      else
+        delete lineData;
     }
 
     bool beginVisitSubFace(CGeomFace3D *face) override {
@@ -652,8 +716,10 @@ updateModel()
 
       //---
 
-      if (geomData_->useAnim)
-        p = app_->adjustAnimPoint(*vertex, p, *nodeMatrices_);
+      if (geomData_->useAnim) {
+        if (vertex->hasJointData())
+          p = app_->adjustAnimPoint(*vertex, p, *nodeMatrices_);
+      }
 
       return geomData_->meshMatrix*p;
     }
@@ -665,6 +731,11 @@ updateModel()
     CQCamera3DOverview*           overview_ { nullptr };
     CQCamera3DOverview::DrawData& drawData_;
     CQCamera3DApp*                app_      { nullptr };
+
+    CGeomObject3D *animObject_ { nullptr };
+
+    bool objVisible_  { false };
+    bool objSelected_ { false };
 
     CGeomMaterial* objectMaterial_ { nullptr };
 
@@ -810,7 +881,7 @@ drawCursor()
 
   drawData_.painter->setPen(QColor(255, 0, 0));
 
-  drawCircle(p, r);
+  drawCircle(p, r, "");
 }
 
 void
@@ -839,7 +910,7 @@ drawLights()
     else if (light->getType() == CGeomLight3DType::POINT) {
       auto r = light->getPointRadius();
 
-      drawCircle(p, r);
+      drawCircle(p, r, "P");
     }
     else if (light->getType() == CGeomLight3DType::SPOT) {
       auto d = light->getSpotDirection();
@@ -857,16 +928,19 @@ CQCamera3DOverview::
 drawModelPolygon(const std::vector<CPoint3D> &points) const
 {
   auto drawPolygon2D = [&](const ViewData &view, double pos, const std::vector<CPoint2D> &points) {
-    Polygon2D ppoints;
+    PolygonData polygonData;
+
+    polygonData.pen   = drawData_.painter->pen();
+    polygonData.brush = drawData_.painter->brush();
 
     for (const auto &p : points) {
       double px, py;
       view.range.windowToPixel(p.x, p.y, &px, &py);
 
-      ppoints.push_back(QPointF(px, py));
+      polygonData.points.push_back(QPointF(px, py));
     }
 
-    drawData_.viewSortedPolygon2DArray[view.ind][-pos].push_back(ppoints);
+    drawData_.viewSortedPolygon2DArray[view.ind][-pos].push_back(polygonData);
   };
 
   std::vector<CPoint2D> xpoints, ypoints, zpoints, ppoints;
@@ -896,16 +970,20 @@ CQCamera3DOverview::
 drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const
 {
   auto drawLine2D = [&](const ViewData &view, double pos, const CPoint2D &p1, const CPoint2D &p2) {
+    PolygonData polygonData;
+
+    polygonData.pen   = drawData_.painter->pen();
+    polygonData.brush = drawData_.painter->brush();
+
     double px1, py1;
     view.range.windowToPixel(p1.x, p1.y, &px1, &py1);
     double px2, py2;
     view.range.windowToPixel(p2.x, p2.y, &px2, &py2);
 
-    std::vector<QPointF> ppoints;
-    ppoints.push_back(QPointF(px1, py1));
-    ppoints.push_back(QPointF(px2, py2));
+    polygonData.points.push_back(QPointF(px1, py1));
+    polygonData.points.push_back(QPointF(px2, py2));
 
-    drawData_.viewSortedLine2DArray[view.ind][-pos].push_back(ppoints);
+    drawData_.viewSortedLine2DArray[view.ind][-pos].push_back(polygonData);
   };
 
   auto pm1 = drawData_.modelMatrix*p1;
@@ -1038,9 +1116,9 @@ drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
 
 void
 CQCamera3DOverview::
-drawCircle(const CPoint3D &origin, double r)
+drawCircle(const CPoint3D &origin, double r, const QString &label)
 {
-  auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r) {
+  auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r, const QString &label) {
     drawData_.painter->setClipRect(view.rect);
 
     double px1, py1;
@@ -1049,15 +1127,18 @@ drawCircle(const CPoint3D &origin, double r)
     view.range.windowToPixel(o.x + r, o.y + r, &px2, &py2);
 
     drawData_.painter->drawEllipse(QRectF(px1, py1, px2 - px1, py2 - py1));
+
+    if (label != "")
+      drawData_.painter->drawText(px2, py2, label);
   };
 
   auto xo = CPoint2D(origin.x, origin.y);
   auto yo = CPoint2D(origin.z, origin.y);
   auto zo = CPoint2D(origin.x, origin.z);
 
-  drawCircle2D(xview_, xo, r); // XY
-  drawCircle2D(yview_, yo, r); // ZY
-  drawCircle2D(zview_, zo, r); // XZ
+  drawCircle2D(xview_, xo, r, label); // XY
+  drawCircle2D(yview_, yo, r, label); // ZY
+  drawCircle2D(zview_, zo, r, label); // XZ
 }
 
 void
@@ -1397,6 +1478,21 @@ keyPressEvent(QKeyEvent *e)
       v->range.reset();
 
     bboxSet_ = false;
+  }
+  else if (k == Qt::Key_1) {
+    drawData_.pointLabels[0].show = ! drawData_.pointLabels[0].show;
+  }
+  else if (k == Qt::Key_2) {
+    drawData_.pointLabels[1].show = ! drawData_.pointLabels[1].show;
+  }
+  else if (k == Qt::Key_3) {
+    drawData_.pointLabels[2].show = ! drawData_.pointLabels[2].show;
+  }
+  else if (k == Qt::Key_4) {
+    drawData_.pointLabels[3].show = ! drawData_.pointLabels[3].show;
+  }
+  else if (k == Qt::Key_5) {
+    drawData_.pointLabels[4].show = ! drawData_.pointLabels[4].show;
   }
 
   canvas->update();

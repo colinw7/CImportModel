@@ -135,20 +135,16 @@ class CDisplayRange2D {
   bool getFlipX() const { return ((pixel_.xmax - pixel_.xmin)*(window_.xmax - window_.xmin) < 0); }
   bool getFlipY() const { return ((pixel_.ymax - pixel_.ymin)*(window_.ymax - window_.ymin) < 0); }
 
+  //---
+
   void zoomIn(double factor=2.0) {
     assert(factor > 0.0);
 
-    zoomOut(1.0/factor);
+    setZoomFactor(zoomFactor_/factor);
   }
 
   void zoomOut(double factor=2.0) {
-    zoomFactor_ *= factor;
-
-    double window_hwidth  = 0.5*window_size_.x*factor;
-    double window_hheight = 0.5*window_size_.y*factor;
-
-    zoomTo(window_center_.x - window_hwidth, window_center_.y - window_hheight,
-           window_center_.x + window_hwidth, window_center_.y + window_hheight);
+    setZoomFactor(zoomFactor_*factor);
   }
 
   void zoomTo(double wxmin, double wymin, double wxmax, double wymax) {
@@ -159,15 +155,46 @@ class CDisplayRange2D {
 
   double zoomFactor() const { return zoomFactor_; }
 
+  void setZoomFactor(double f) {
+    auto zoomFactor1 = zoomFactor_;
+
+    zoomFactor_ = f;
+
+    auto factor = zoomFactor_/zoomFactor1;
+
+    double window_hwidth  = 0.5*window_size_.x*factor;
+    double window_hheight = 0.5*window_size_.y*factor;
+
+    zoomTo(window_center_.x - window_hwidth, window_center_.y - window_hheight,
+           window_center_.x + window_hwidth, window_center_.y + window_hheight);
+  }
+
+  //---
+
   void scroll(double offset_x, double offset_y) {
     scrollX(offset_x);
     scrollY(offset_y);
   }
 
-  void scrollX(double offset_x) { window1_.incX(offset_x); recalc(); }
-  void scrollY(double offset_y) { window1_.incY(offset_y); recalc(); }
+  void scrollX(double offset_x) { offset_x_ += offset_x; window1_.incX(offset_x); recalc(); }
+  void scrollY(double offset_y) { offset_y_ += offset_y; window1_.incY(offset_y); recalc(); }
 
-  void reset() { window1_ = window_; zoomFactor_ = 1.0; recalc(); }
+  double getOffsetX() const { return offset_x_; }
+  double getOffsetY() const { return offset_y_; }
+
+  void setOffsetX(double x) { scrollX(x - offset_x_); }
+  void setOffsetY(double y) { scrollY(y - offset_y_); }
+
+  //---
+
+  void reset() {
+    window1_    = window_;
+    zoomFactor_ = 1.0;
+    offset_x_   = 0.0;
+    offset_y_   = 0.0;
+
+    recalc();
+  }
 
   void recalc() {
     flipPX_ = (pixel_ .xmin > pixel_ .xmax);
@@ -503,6 +530,9 @@ class CDisplayRange2D {
   bool flipWY_ { false };
 
   double zoomFactor_ { 1.0 };
+
+  double offset_x_ { 0.0 };
+  double offset_y_ { 0.0 };
 };
 
 #endif

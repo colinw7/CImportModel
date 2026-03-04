@@ -85,15 +85,20 @@ updateWidgets()
       currentInd = ind;
     }
 
-    auto name     = QString::fromStdString(object->getName());
-    auto meshName = QString::fromStdString(object->getMeshName());
+    auto name = QString::fromStdString(object->getName());
 
+#if 0
     QString label;
+
+    auto meshName = QString::fromStdString(object->getMeshName());
 
     if (meshName != "")
       label = QString("%1 (Mesh: %2, #%3)").arg(name).arg(meshName).arg(object->getInd());
     else
       label = QString("%1 (#%3)").arg(name).arg(object->getInd());
+#else
+    auto label = QString("%1 (#%2)").arg(name).arg(object->getInd());
+#endif
 
     addItem(label, int(object->getInd()));
 

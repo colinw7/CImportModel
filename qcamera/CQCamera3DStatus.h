@@ -7,6 +7,7 @@ class CQCamera3DApp;
 
 class CQDocumentLabel;
 class CQTextLabel;
+class CQIconButton;
 
 class CQCamera3DStatus : public QFrame {
   Q_OBJECT
@@ -19,6 +20,9 @@ class CQCamera3DStatus : public QFrame {
   void setModelLabel(const QString &label);
   void setMouseLabel(const QString &label);
 
+ private Q_SLOTS:
+  void viewFollowSlot(bool b);
+
  private:
   CQCamera3DApp* app_ { nullptr };
 
@@ -26,6 +30,8 @@ class CQCamera3DStatus : public QFrame {
   CQTextLabel*     stateLabel_ { nullptr };
   CQTextLabel*     modelLabel_ { nullptr };
   CQTextLabel*     mouseLabel_ { nullptr };
+
+  CQIconButton *viewFollowButton_ { nullptr };
 };
 
 #endif

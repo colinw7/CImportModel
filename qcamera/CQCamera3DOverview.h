@@ -9,6 +9,8 @@
 #include <CRGBA.h>
 
 #include <QFrame>
+#include <QBrush>
+#include <QPen>
 
 #include <map>
 
@@ -206,7 +208,7 @@ class CQCamera3DOverview : public QFrame {
   void drawLine  (const CPoint3D &p1, const CPoint3D &p2, const QString &label) const;
   void drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const;
 
-  void drawCircle(const CPoint3D &o, double r);
+  void drawCircle(const CPoint3D &o, double r, const QString &label);
   void drawSphere(const CPoint3D &o, const CPoint3D &r);
 
   void drawPoint(const CVector3D &p, const QString &label) const;
@@ -304,15 +306,38 @@ class CQCamera3DOverview : public QFrame {
     VertexDatas vertexDatas;
   };
 
+  using Polygon2D = std::vector<QPointF>;
+
+  struct PolygonData {
+    QBrush    brush;
+    QPen      pen;
+    Polygon2D points;
+  };
+
   using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
 
-  using Polygon2D                = std::vector<QPointF>;
-  using Polygon2DArray           = std::vector<Polygon2D>;
+  using Polygon2DArray           = std::vector<PolygonData>;
   using SortedPolygon2DArray     = std::map<double, Polygon2DArray>;
   using SortedPoint2DArray       = std::map<double, Polygon2D>;
   using ViewSortedPolygon2DArray = std::map<int, SortedPolygon2DArray>;
   using ViewSortedLine2DArray    = std::map<int, SortedPolygon2DArray>;
   using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;
+
+  struct PointLabel {
+    CPoint3D point;
+    QString  label;
+
+    PointLabel() { }
+
+    PointLabel(const CPoint3D &p, const QString &l) :
+     point(p), label(l) {
+    }
+  };
+
+  struct PointLabels {
+    bool                    show { false };
+    std::vector<PointLabel> points;
+  };
 
   // draw data
   struct DrawData {
@@ -323,6 +348,9 @@ class CQCamera3DOverview : public QFrame {
     CMatrix3DH     meshMatrix;
     ObjectGeomData objectGeomData;
     bool           filled  { true };
+
+    int         numPointLabels { 5 };
+    PointLabels pointLabels[5];
 
     mutable ViewSortedPolygon2DArray viewSortedPolygon2DArray;
     mutable ViewSortedLine2DArray    viewSortedLine2DArray;

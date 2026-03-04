@@ -127,22 +127,30 @@ class CQCamera3DBones : public QFrame {
   void mouseReleaseEvent(QMouseEvent *e) override;
   void mouseMoveEvent   (QMouseEvent *e) override;
 
+  void wheelEvent(QWheelEvent *) override;
+
   void keyPressEvent(QKeyEvent *e) override;
 
  private:
   void updateRange();
 
-  void updateBonesBBox();
+  bool updateBonesBBox();
 
   void drawBones();
-  void drawModel();
+  void drawBoneObject(CGeomObject3D *object);
 
-  void drawCube(const CPoint3D &c, double s) const;
+  void drawModel();
+  void drawHierModel(CGeomObject3D *object);
+  void drawObjectModel(CGeomObject3D *object);
+
+  void drawModelCube(const CPoint3D &c, double s) const;
 
   void drawModelPolygon(const std::vector<CPoint3D> &points) const;
   void drawPolygon(const std::vector<CPoint3D> &points, bool model=false) const;
 
   void drawModelLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label="") const;
+
+  void drawBBox(const CBBox3D &bbox);
 
   void drawCircle(const CVector3D &o, double r);
 
@@ -160,11 +168,13 @@ class CQCamera3DBones : public QFrame {
 
   void updateBBox(const CPoint3D &p);
 
-  CMatrix3D getNodeTransform(CGeomObject3D *rootObject, CGeomNodeData &nodeData) const;
+  CMatrix3D getNodeTransform(CGeomObject3D *rootObject, const CGeomNodeData &nodeData) const;
+
+ public Q_SLOTS:
+  void invalidate();
 
  private:
-  using NodeCenters       = std::map<uint, CPoint3D>;
-  using ObjectNodeCenters = std::map<uint, NodeCenters>;
+  using NodeCenters = std::map<uint, CPoint3D>;
 
   //---
 
@@ -181,30 +191,41 @@ class CQCamera3DBones : public QFrame {
   int ind_ { -1 };
 
   bool equalScale_ { true };
-  bool autoFit_    { false };
+  bool autoFit_    { true };
 
   bool showModel_       { false };
   bool showBoneNodes_   { false };
   bool showPointJoints_ { false };
   bool onlyJoints_      { false };
 
-  bool   pressed_     { false };
-  int    mouseButton_ { 0 };
-  QPoint pressPixel_;
-  QPoint movePixel_;
+  struct MouseData {
+    bool   pressed   { false };
+    bool   isShift   { false };
+    bool   isControl { false };
+    int    button    { 0 };
+    QPoint pressPixel;
+    QPoint movePixel1;
+    QPoint movePixel2;
+  };
+
+  MouseData mouseData_;
 
   // draw data
-  QPainter *painter_ { nullptr };
+  struct DrawData {
+    QPainter*  painter { nullptr };
+    CMatrix3DH projectionMatrix;
+    CMatrix3DH viewMatrix;
+    CMatrix3DH modelMatrix;
+    CMatrix3DH meshMatrix;
+  };
+
+  DrawData drawData_;
 
   CBBox3D bbox_;
   bool    bboxSet_ { false };
   double  xs_ { 0.0 }, ys_ { 0.0 }, zs_ { 0.0 };
 
-  CMatrix3DH projectionMatrix_;
-  CMatrix3DH viewMatrix_;
-  CMatrix3DH modelMatrix_;
-
-  ObjectNodeCenters objectNodes_;
+  NodeCenters nodeCenters_;
 
   CQRubberBand* rubberBand_ { nullptr };
 };

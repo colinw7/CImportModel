@@ -55,15 +55,15 @@ updateWidgets()
 
   tree_->clear();
 
-  objectNodeItems_.clear();
+  nodeItems_.clear();
 
-  auto animObjects = app_->getAnimObjects();
+  auto *animObject = app_->currentBoneObject();
 
-  for (auto *object : animObjects) {
-    for (const auto &pn : object->getNodes()) {
+  if (animObject) {
+    for (const auto &pn : animObject->getNodes()) {
       const auto &nodeData = pn.second;
 
-      createNodeItem(object, nodeData.ind());
+      createNodeItem(animObject, nodeData.ind());
     }
   }
 
@@ -76,18 +76,9 @@ QTreeWidgetItem *
 CQCamera3DBonesList::
 createNodeItem(CGeomObject3D *object, int nodeId)
 {
-  int objId = object->getInd();
+  auto pn = nodeItems_.find(nodeId);
 
-  auto po = objectNodeItems_.find(objId);
-
-  if (po == objectNodeItems_.end())
-    po = objectNodeItems_.insert(po, ObjectNodeItems::value_type(objId, NodeItems()));
-
-  auto &nodeItems = (*po).second;
-
-  auto pn = nodeItems.find(nodeId);
-
-  if (pn != nodeItems.end())
+  if (pn != nodeItems_.end())
     return (*pn).second;
 
   //---
@@ -139,9 +130,9 @@ createNodeItem(CGeomObject3D *object, int nodeId)
     tree_->addTopLevelItem(item);
   }
 
-  item->setData(0, Qt::UserRole, QPoint(objId, nodeId));
+  item->setData(0, Qt::UserRole, nodeId);
 
-  nodeItems[nodeId] = item;
+  nodeItems_[nodeId] = item;
 
   return item;
 }
@@ -150,10 +141,7 @@ void
 CQCamera3DBonesList::
 currentItemSlot(QTreeWidgetItem *item, QTreeWidgetItem *)
 {
-  auto p = item->data(0, Qt::UserRole).toPoint();
-
-  objId_   = p.x();
-  boneInd_ = p.y();
+  boneInd_ = item->data(0, Qt::UserRole).toInt();
 
 #if 0
   auto animObjects = app_->getAnimObjects();
@@ -176,45 +164,32 @@ CGeomNodeData *
 CQCamera3DBonesList::
 currentBoneNode() const
 {
-  return getBoneNode(objId_, boneInd_);
+  return getBoneNode(boneInd_);
 }
 
 CGeomNodeData *
 CQCamera3DBonesList::
-getBoneNode(int objId, int boneInd) const
+getBoneNode(int boneInd) const
 {
-  if (objId < 0 || boneInd < 0)
+  if (boneInd < 0)
     return nullptr;
 
-  auto animObjects = app_->getAnimObjects();
+  auto *animObject = app_->currentBoneObject();
+  if (! animObject) return nullptr;
 
-  for (auto *object : animObjects) {
-    if (int(object->getInd()) != objId)
-      continue;
+  const auto &nodeData = animObject->getNode(boneInd);
+  if (! nodeData.isValid()) return nullptr;
 
-    const auto &nodeData = object->getNode(boneInd);
-    if (! nodeData.isValid()) continue;
-
-    return const_cast<CGeomNodeData *>(&nodeData);
-  }
-
-  return nullptr;
+  return const_cast<CGeomNodeData *>(&nodeData);
 }
 
 void
 CQCamera3DBonesList::
-setCurrentBoneNode(int objId, int nodeId)
+setCurrentBoneNode(int nodeId)
 {
-  auto po = objectNodeItems_.find(objId);
+  auto pn = nodeItems_.find(nodeId);
 
-  if (po == objectNodeItems_.end())
-    return;
-
-  const auto &nodeItems = (*po).second;
-
-  auto pn = nodeItems.find(nodeId);
-
-  if (pn == nodeItems.end())
+  if (pn == nodeItems_.end())
     return;
 
   connectSlots(false);
@@ -236,7 +211,6 @@ setCurrentBoneNode(int objId, int nodeId)
     parentItem = parentItem->parent();
   }
 
-  objId_   = objId;
   boneInd_ = nodeId;
 
   connectSlots(true);

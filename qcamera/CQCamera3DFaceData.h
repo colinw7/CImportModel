@@ -16,8 +16,8 @@ struct CQCamera3DFaceData {
   bool             selected        { false };
   bool             visible         { true };
   bool             wireframe       { false };
-  int              lineWidth       { -1 };
   bool             lines           { false };
+  int              lineWidth       { -1 };
   int              pos             { 0 };
   int              len             { 0 };
   CPoint3D         position        { 0, 0, 0 };

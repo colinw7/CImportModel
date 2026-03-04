@@ -45,6 +45,7 @@
 #include <CQPoint3DEdit.h>
 #include <CQPoint4DEdit.h>
 #include <CQRealSpin.h>
+#include <CQIntegerSpin.h>
 #include <CQColorEdit.h>
 #include <CQIconButton.h>
 #include <CQTextLabel.h>
@@ -569,7 +570,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 #endif
 
   selectionData_.objChooser = ui.addLabelEdit("Object", new CQCamera3DObjectChooser(app_));
-  selectionData_.indLabel   = ui.addLabelEdit("Name", new CQTextLabel);
+  selectionData_.indText    = ui.addLabelEdit("Name", new CQTextLabel);
+  selectionData_.indLabel   = ui.lastLabel();
   selectionData_.visCheck   = ui.addLabelEdit("Visible", new QCheckBox);
 
   selectionData_.colorEdit = ui.addLabelEdit("Color", new CQColorEdit);
@@ -917,6 +919,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   ui.startTabPage("Bones");
 
+  bonesData_.objectChooser = ui.addLabelEdit("Object", new CQCamera3DAnimObjectChooser(app_));
+
   ui.startGroup("Show");
 
   bonesData_.modelCheck       = ui.addLabelEdit("Model", new QCheckBox);
@@ -966,7 +970,20 @@ CQCamera3DControl(CQCamera3DApp *app) :
   animData_.objectChooser = ui.addLabelEdit("Object", new CQCamera3DAnimObjectChooser(app_));
   animData_.animCombo     = ui.addLabelEdit("Anim"  , new CQCamera3DAnimChooser(app_));
   animData_.timeEdit      = ui.addLabelEdit("Time"  , new CQCamera3DAnimTimeEdit(app_));
-  animData_.timeStepEdit  = ui.addLabelEdit("Step"  , new CQRealSpin);
+
+  animData_.timeTypeCombo = new QComboBox;
+  animData_.timeTypeCombo->addItems(QStringList() << "Step" << "Frames");
+
+  auto *timeTypeFrame  = new QFrame;
+  auto *timeTypeLayout = new QHBoxLayout(timeTypeFrame);
+
+  animData_.timeStepEdit   = new CQRealSpin;
+  animData_.timeFramesEdit = new CQIntegerSpin;
+
+  timeTypeLayout->addWidget(animData_.timeStepEdit);
+  timeTypeLayout->addWidget(animData_.timeFramesEdit);
+
+  ui.addEdit(animData_.timeTypeCombo, timeTypeFrame).second;
 
   auto addToolButton = [&](const QString &name, const QString &iconName,
                            const QString &tip, const char *slotName) {
@@ -1186,7 +1203,10 @@ updateWidgets()
   selectionData_.colorEdit->setEnabled(false);
 
   selectionData_.objChooser->setObject(nullptr);
-  selectionData_.indLabel->setText("");
+
+  selectionData_.indLabel->setText("Name");
+  selectionData_.indText ->setText("");
+
   selectionData_.visCheck->setChecked(false);
 
   selectionData_.materialNameChooser->setMaterialName("");
@@ -1197,6 +1217,17 @@ updateWidgets()
     auto *object = canvas->currentObject();
 
     if (object) {
+      selectionData_.indLabel->setText("Mesh");
+
+      auto meshName = QString::fromStdString(object->getMeshName());
+
+      auto label = QString("%1 (Node: %2)").arg(meshName).arg(object->getMeshNode());
+
+      if (object->isJointed())
+        label += " (Jointed)";
+
+      selectionData_.indText ->setText(label);
+
       auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
 
       auto bbox = object1->bbox();
@@ -1309,7 +1340,7 @@ updateWidgets()
     auto *face = canvas->currentFace();
 
     if (face) {
-      selectionData_.indLabel->setText(QString("%1").arg(face->getInd()));
+      selectionData_.indText->setText(QString("%1").arg(face->getInd()));
 
       selectionData_.colorEdit->setEnabled(true);
       selectionData_.colorEdit->setColor(RGBAToQColor(face->getColor()));
@@ -1391,7 +1422,7 @@ updateWidgets()
     auto *vertex = canvas->currentVertex();
 
     if (vertex) {
-      selectionData_.indLabel->setText(QString("%1").arg(vertex->getInd()));
+      selectionData_.indText->setText(QString("%1").arg(vertex->getInd()));
 
       selectionData_.visCheck->setChecked(vertex->isSelected());
     }
@@ -1511,6 +1542,9 @@ updateWidgets()
   // Bones
   auto *bones = app_->bones();
 
+  auto *boneObject = dynamic_cast<CQCamera3DGeomObject *>(app_->currentBoneObject());
+
+  bonesData_.objectChooser   ->setObject (boneObject);
   bonesData_.modelCheck      ->setChecked(bones->isShowModel());
   bonesData_.boneNodesCheck  ->setChecked(bones->isShowBoneNodes());
   bonesData_.pointJointsCheck->setChecked(bones->isShowPointJoints());
@@ -1587,8 +1621,17 @@ updateAnimWidgets(bool disconnect)
   if (disconnect)
     connectSlots(false);
 
+  auto timeType = app_->timeType();
+
+  animData_.timeStepEdit  ->setVisible(timeType == CQCamera3DTimeType::STEP);
+  animData_.timeFramesEdit->setVisible(timeType == CQCamera3DTimeType::FRAMES);
+
   animData_.timeEdit->setRange(animData_.animCombo->tmin(), animData_.animCombo->tmax());
-  animData_.timeStepEdit->setValue(animData_.animCombo->timeStep());
+
+  animData_.timeTypeCombo->setCurrentIndex(timeType == CQCamera3DTimeType::STEP ? 0 : 1);
+
+  animData_.timeStepEdit  ->setValue(animData_.animCombo->timeStep());
+  animData_.timeFramesEdit->setValue(app_->timeFrames());
 
   if (disconnect)
     connectSlots(true);
@@ -1607,7 +1650,7 @@ connectSlots(bool b)
   CQUtil::connectDisconnect(b, app_, SIGNAL(viewTypeChanged()),
                             this, SLOT(viewTypeSlot()));
 
-  CQUtil::connectDisconnect(b, app_, SIGNAL(animNameChanged()),
+  CQUtil::connectDisconnect(b, app_, SIGNAL(animStateChanged()),
                             this, SLOT(updateBones()));
   CQUtil::connectDisconnect(b, app_, SIGNAL(animTimeChanged()),
                             this, SLOT(updateBones()));
@@ -1624,6 +1667,10 @@ connectSlots(bool b)
 
   auto connectCheckBox = [&](QCheckBox *w, const char *slotName) {
     CQUtil::connectDisconnect(b, w, SIGNAL(stateChanged(int)), this, slotName);
+  };
+
+  auto connectIntegerSpin = [&](CQIntegerSpin *w, const char *slotName) {
+    CQUtil::connectDisconnect(b, w, SIGNAL(valueChanged(int)), this, slotName);
   };
 
   auto connectRealSpin = [&](CQRealSpin *w, const char *slotName) {
@@ -1854,6 +1901,8 @@ connectSlots(bool b)
   connectCheckBox(texturesData_.wrapCheck, SLOT(textureWrapSlot(int)));
 
   // Bones
+  CQUtil::connectDisconnect(b, bonesData_.objectChooser, SIGNAL(objectChanged()),
+                            this, SLOT(bonesObjectSlot()));
   connectCheckBox(bonesData_.modelCheck      , SLOT(bonesModelSlot(int)));
   connectCheckBox(bonesData_.boneNodesCheck  , SLOT(bonesBoneNodeSlot(int)));
   connectCheckBox(bonesData_.pointJointsCheck, SLOT(bonesPointJointsSlot(int)));
@@ -1875,10 +1924,12 @@ connectSlots(bool b)
                             this, SLOT(animObjectSlot()));
   CQUtil::connectDisconnect(b, animData_.animCombo, SIGNAL(animChanged()),
                             this, SLOT(animNameSlot()));
-  CQUtil::connectDisconnect(b, animData_.timeEdit, SIGNAL(realValueChanged(double)),
-                            this, SLOT(animTimeSlot(double)));
-  CQUtil::connectDisconnect(b, animData_.timeStepEdit, SIGNAL(realValueChanged(double)),
-                            this, SLOT(animTimeStepSlot(double)));
+
+  connectRealSpin   (animData_.timeEdit      , SLOT(animTimeSlot(double)));
+  connectComboBox   (animData_.timeTypeCombo , SLOT(animTimeTypeSlot(int)));
+  connectRealSpin   (animData_.timeStepEdit  , SLOT(animTimeStepSlot(double)));
+  connectIntegerSpin(animData_.timeFramesEdit, SLOT(animTimeFramesSlot(int)));
+
   CQUtil::connectDisconnect(b, animData_.nodeCombo, SIGNAL(boneChanged()),
                             this, SLOT(animNodeSlot()));
 }
@@ -1887,24 +1938,28 @@ void
 CQCamera3DControl::
 mainTabSlot(int i)
 {
-  connectSlots(false);
+  if (app_->isSyncView()) {
+    connectSlots(false);
 
-  app_->setCurrentView(app_->indToViewType(i));
+    app_->setCurrentView(app_->indToViewType(i));
 
-  connectSlots(true);
+    connectSlots(true);
+  }
 }
 
 void
 CQCamera3DControl::
 viewTypeSlot()
 {
-  connectSlots(false);
+  if (app_->isSyncView()) {
+    connectSlots(false);
 
-  viewType_ = app_->viewType();
+    viewType_ = app_->viewType();
 
-  mainTab_->setCurrentIndex(app_->viewTypeToInd(viewType_));
+    mainTab_->setCurrentIndex(app_->viewTypeToInd(viewType_));
 
-  connectSlots(true);
+    connectSlots(true);
+  }
 }
 
 void
@@ -4062,6 +4117,19 @@ timerSlot()
 
 void
 CQCamera3DControl::
+bonesObjectSlot()
+{
+  auto objId = bonesData_.objectChooser->objectInd();
+
+  app_->setCurrentBoneObjectInd(objId);
+
+  bonesData_.bonesList->updateWidgets();
+
+  updateBones();
+}
+
+void
+CQCamera3DControl::
 bonesModelSlot(int i)
 {
   auto *bones = app_->bones();
@@ -4109,6 +4177,8 @@ bonesTranslationSlot()
 
   node->setLocalTranslation(CTranslate3D(p));
 
+  app_->invalidateNodeMatrices();
+
   bones->update();
 }
 
@@ -4124,6 +4194,8 @@ bonesRotationSlot()
   if (! node) return;
 
   node->setLocalRotation(CRotate3D(p));
+
+  app_->invalidateNodeMatrices();
 
   bones->update();
 }
@@ -4141,6 +4213,8 @@ bonesScaleSlot()
 
   node->setLocalScale(CScale3D(p));
 
+  app_->invalidateNodeMatrices();
+
   bones->update();
 }
 
@@ -4155,8 +4229,13 @@ void
 CQCamera3DControl::
 updateBones()
 {
+  auto *animObject = app_->currentBoneObject();
+  if (! animObject) return;
+
   auto *nodeData = bonesData_.bonesList->currentBoneNode();
   if (! nodeData) return;
+
+  //---
 
   connectSlots(false);
 
@@ -4175,8 +4254,7 @@ updateBones()
 
   bonesData_.jointCheck->setChecked(nodeData->isJoint());
 
-  auto *animObject = nodeData->animObject();
-  auto  animName   = animObject->animName();
+  auto animName = animObject->animName();
 
   auto *object = nodeData->object();
 
@@ -4212,8 +4290,7 @@ updateBones()
     bonesData_.animScaleEdit      ->setValue(nodeData->localScale      ().point());
   }
 
-  app_->setCurrentBoneObject(animObject->getInd());
-  app_->setCurrentBoneNode  (nodeData->ind());
+  app_->setCurrentBoneNode(nodeData->ind());
 
   connectSlots(true);
 }
@@ -4257,6 +4334,15 @@ animTimeSlot(double t)
 
 void
 CQCamera3DControl::
+animTimeTypeSlot(int state)
+{
+  app_->setTimeType(state == 0 ? CQCamera3DTimeType::STEP : CQCamera3DTimeType::FRAMES);
+
+  updateAnimWidgets();
+}
+
+void
+CQCamera3DControl::
 animTimeStepSlot(double t)
 {
   auto *object = animData_.animCombo->getObject();
@@ -4265,6 +4351,27 @@ animTimeStepSlot(double t)
   object->setAnimTimeStep(t);
 
   updateAnim();
+
+  app_->signalAnimStateChange();
+}
+
+void
+CQCamera3DControl::
+animTimeFramesSlot(int n)
+{
+  app_->setTimeFrames(n);
+
+  auto *object = animData_.animCombo->getObject();
+  if (! object) return;
+
+  auto tmin = animData_.animCombo->tmin();
+  auto tmax = animData_.animCombo->tmax();
+
+  object->setAnimTimeStep((tmax - tmin)/n);
+
+  updateAnim();
+
+  app_->signalAnimStateChange();
 }
 
 void
@@ -4315,6 +4422,8 @@ animStep()
     animData_.timeEdit->setValue(object->animTime());
 
   connectSlots(true);
+
+  updateBones();
 }
 
 void
@@ -4325,10 +4434,9 @@ updateCurrentBone()
 
   updateAnim();
 
-  auto objId  = app_->currentBoneObject();
   auto nodeId = app_->currentBoneNode();
 
-  bonesData_.bonesList->setCurrentBoneNode(objId, nodeId);
+  bonesData_.bonesList->setCurrentBoneNode(nodeId);
 
   connectSlots(true);
 

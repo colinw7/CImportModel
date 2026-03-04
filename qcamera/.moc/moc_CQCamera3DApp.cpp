@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DApp_t {
     QByteArrayData data[17];
-    char stringdata0[223];
+    char stringdata0[224];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -44,11 +44,11 @@ QT_MOC_LITERAL(8, 102, 22), // "currentMaterialChanged"
 QT_MOC_LITERAL(9, 125, 13), // "materialAdded"
 QT_MOC_LITERAL(10, 139, 15), // "materialChanged"
 QT_MOC_LITERAL(11, 155, 15), // "boneNodeChanged"
-QT_MOC_LITERAL(12, 171, 15), // "animNameChanged"
-QT_MOC_LITERAL(13, 187, 15), // "animTimeChanged"
-QT_MOC_LITERAL(14, 203, 7), // "tabSlot"
-QT_MOC_LITERAL(15, 211, 1), // "i"
-QT_MOC_LITERAL(16, 213, 9) // "timerSlot"
+QT_MOC_LITERAL(12, 171, 16), // "animStateChanged"
+QT_MOC_LITERAL(13, 188, 15), // "animTimeChanged"
+QT_MOC_LITERAL(14, 204, 7), // "tabSlot"
+QT_MOC_LITERAL(15, 212, 1), // "i"
+QT_MOC_LITERAL(16, 214, 9) // "timerSlot"
 
     },
     "CQCamera3DApp\0viewTypeChanged\0\0timerStep\0"
@@ -56,8 +56,8 @@ QT_MOC_LITERAL(16, 213, 9) // "timerSlot"
     "textureAdded\0textureChanged\0"
     "currentMaterialChanged\0materialAdded\0"
     "materialChanged\0boneNodeChanged\0"
-    "animNameChanged\0animTimeChanged\0tabSlot\0"
-    "i\0timerSlot"
+    "animStateChanged\0animTimeChanged\0"
+    "tabSlot\0i\0timerSlot"
 };
 #undef QT_MOC_LITERAL
 
@@ -129,7 +129,7 @@ void CQCamera3DApp::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 7: _t->materialAdded(); break;
         case 8: _t->materialChanged(); break;
         case 9: _t->boneNodeChanged(); break;
-        case 10: _t->animNameChanged(); break;
+        case 10: _t->animStateChanged(); break;
         case 11: _t->animTimeChanged(); break;
         case 12: _t->tabSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 13: _t->timerSlot(); break;
@@ -209,7 +209,7 @@ void CQCamera3DApp::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         }
         {
             using _t = void (CQCamera3DApp::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DApp::animNameChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DApp::animStateChanged)) {
                 *result = 10;
                 return;
             }
@@ -325,7 +325,7 @@ void CQCamera3DApp::boneNodeChanged()
 }
 
 // SIGNAL 10
-void CQCamera3DApp::animNameChanged()
+void CQCamera3DApp::animStateChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 10, nullptr);
 }

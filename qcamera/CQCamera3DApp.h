@@ -87,6 +87,11 @@ enum class CQCamera3DMoveDirection {
   Z
 };
 
+enum class CQCamera3DTimeType {
+  STEP,
+  FRAMES
+};
+
 //---
 
 struct CQCamera3DSelectData {
@@ -167,6 +172,9 @@ class CQCamera3DApp : public QFrame {
   int viewTypeToInd(const CQCamera3DViewType &viewType) const;
   CQCamera3DViewType indToViewType(int ind) const;
 
+  bool isSyncView() const { return syncView_; }
+  void setSyncView(bool b) { syncView_ = b; }
+
   //---
 
   bool isTimerRunning() const { return timerRunning_; }
@@ -192,8 +200,10 @@ class CQCamera3DApp : public QFrame {
 
   //---
 
-  int currentBoneObject() const { return currentBoneObject_; }
-  void setCurrentBoneObject(int i);
+  CGeomObject3D *currentBoneObject() const;
+
+  int currentBoneObjectInd() const { return currentBoneObjectInd_; }
+  void setCurrentBoneObjectInd(int ind);
 
   int currentBoneNode() const { return currentBoneNode_; }
   void setCurrentBoneNode(int i);
@@ -202,6 +212,12 @@ class CQCamera3DApp : public QFrame {
 
   bool isAnimEnabled() const { return animEnabled_; }
   void setAnimEnabled(bool b) { animEnabled_ = b; }
+
+  const CQCamera3DTimeType &timeType() const { return timeType_; }
+  void setTimeType(const CQCamera3DTimeType &v) { timeType_ = v; }
+
+  int timeFrames() const { return timeFrames_; }
+  void setTimeFrames(int i) { timeFrames_ = i; }
 
   //---
 
@@ -214,6 +230,8 @@ class CQCamera3DApp : public QFrame {
   CPoint3D adjustAnimPoint(const CGeomVertex3D &vertex, const CPoint3D &p,
                            const NodeMatrices &nodeMatrices) const;
 
+  bool getNodeMatrix(const NodeMatrices &nodeMatrices, int nodeId, CMatrix3D &m) const;
+
   void invalidateNodeMatrices() { objectNodeMatricesValid_ = false; }
 
   //---
@@ -225,6 +243,7 @@ class CQCamera3DApp : public QFrame {
 
   void stepAnimObjects();
 
+  void signalAnimStateChange();
   void signalAnimTimeChange();
 
   //---
@@ -271,7 +290,7 @@ class CQCamera3DApp : public QFrame {
 
   void boneNodeChanged();
 
-  void animNameChanged();
+  void animStateChanged();
   void animTimeChanged();
 
  private:
@@ -301,6 +320,8 @@ class CQCamera3DApp : public QFrame {
 
   CQCamera3DStatus* status_ { nullptr };
 
+  bool syncView_ { false };
+
   // timer
   QTimer* timer_        { nullptr };
   bool    timerRunning_ { false };
@@ -314,11 +335,15 @@ class CQCamera3DApp : public QFrame {
   QString currentMaterial_;
 
   // bones
-  int currentBoneObject_ { -1 };
-  int currentBoneNode_   { -1 };
+  int currentBoneObjectInd_ { -1 };
+  int currentBoneNode_      { -1 };
 
   // anim
   bool animEnabled_ { true };
+
+  CQCamera3DTimeType timeType_ { CQCamera3DTimeType::STEP };
+
+  int timeFrames_ { 60 };
 
   ObjectNodeMatrices objectNodeMatrices_;
   bool               objectNodeMatricesValid_ { false };

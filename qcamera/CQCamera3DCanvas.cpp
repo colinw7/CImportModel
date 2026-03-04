@@ -124,7 +124,7 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   connect(app_, SIGNAL(materialChanged()), this, SLOT(updateObjectsData()));
   connect(app_, SIGNAL(textureChanged()), this, SLOT(updateObjectsData()));
 
-  connect(app_, SIGNAL(animNameChanged()), this, SLOT(updateObjectsData()));
+  connect(app_, SIGNAL(animStateChanged()), this, SLOT(updateObjectsData()));
   connect(app_, SIGNAL(animTimeChanged()), this, SLOT(update()));
 }
 
@@ -810,6 +810,8 @@ addScene()
 
   bbox_ = CBBox3D();
 
+  objectMeshData_.clear();
+
   //---
 
   int    boneNodeIds[4];
@@ -825,6 +827,55 @@ addScene()
 
     auto modelMatrix = CMatrix3DH(object->getHierTransform());
     auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
+
+    //---
+
+    auto *animObject = object->getAnimObject();
+
+    auto animName = (animObject ? animObject->animName() : "");
+
+    bool isAnim = false;
+
+    if (app_->isAnimEnabled())
+      isAnim = (animObject && animName != "");
+
+    //double animTime { 0.0 };
+
+    if (isAnim) {
+      //animTime = animObject->animTime();
+
+      auto meshNodeId = object->getMeshNode();
+
+      CGeomNodeData *node = nullptr;
+
+      if (meshNodeId >= 0)
+        node = const_cast<CGeomNodeData *>(&animObject->getNode(meshNodeId));
+
+      auto isJointed = (node && object->isJointed());
+
+      if (node && ! isJointed) {
+        auto &objectMeshData = objectMeshData_[object];
+
+        objectMeshData.nt = object->animTimeFrames();
+
+        (void) animObject->getAnimationTranslationRange(animName,
+                 objectMeshData.tmin, objectMeshData.tmax);
+
+        if (objectMeshData.nt > 1)
+          objectMeshData.dt = (objectMeshData.tmax - objectMeshData.tmin)/(objectMeshData.nt - 1);
+        else
+          objectMeshData.dt = (objectMeshData.tmax - objectMeshData.tmin);
+
+        for (int i = 0; i < objectMeshData.nt; ++i) {
+          auto animTime1 = objectMeshData.tmin + i*objectMeshData.dt;
+
+          auto meshMatrix1 =
+            CMatrix3DH(object->getNodeAnimHierTransform(*node, animName, animTime1));
+
+          objectMeshData.frameMatrix[i] = meshMatrix1;
+        }
+      }
+    }
 
     //---
 
@@ -995,16 +1046,18 @@ addScene()
 
         //---
 
-        const auto &jointData = vertex.getJointData();
+        if (isAnim) {
+          if (vertex.hasJointData()) {
+            const auto &jointData = vertex.getJointData();
 
-        if (jointData.nodeDatas[0].node >= 0) {
-          for (int i = 0; i < 4; ++i) {
-            boneNodeIds[i] = jointData.nodeDatas[i].node;
-            boneWeights[i] = jointData.nodeDatas[i].weight;
+            for (int i = 0; i < 4; ++i) {
+              boneNodeIds[i] = jointData.nodeDatas[i].node;
+              boneWeights[i] = jointData.nodeDatas[i].weight;
+            }
+
+            buffer->addBoneIds    (boneNodeIds[0], boneNodeIds[1], boneNodeIds[2], boneNodeIds[3]);
+            buffer->addBoneWeights(boneWeights[0], boneWeights[1], boneWeights[2], boneWeights[3]);
           }
-
-          buffer->addBoneIds    (boneNodeIds[0], boneNodeIds[1], boneNodeIds[2], boneNodeIds[3]);
-          buffer->addBoneWeights(boneWeights[0], boneWeights[1], boneWeights[2], boneWeights[3]);
         }
 
         //---
@@ -1322,7 +1375,35 @@ drawScene()
     //---
 
     // mesh matrix
-    auto meshMatrix = object->getMeshGlobalTransform();
+    CMatrix3DH meshMatrix;
+    bool       hasMeshMatrix { false };
+
+    if (isAnim) {
+      auto pm = objectMeshData_.find(object);
+
+      if (pm != objectMeshData_.end()) {
+        auto animTime = animObject->animTime();
+
+        const auto &objectMeshData = (*pm).second;
+
+        auto frame = int((animTime - objectMeshData.tmin)/objectMeshData.dt + 0.5);
+
+        auto pf = objectMeshData.frameMatrix.find(frame);
+
+        if (pf != objectMeshData.frameMatrix.end()) {
+          meshMatrix = (*pf).second;
+
+          hasMeshMatrix = true;
+        }
+        else {
+          std::cerr << "Bad meshMatrix anim time\n";
+        }
+      }
+    }
+
+    if (! hasMeshMatrix)
+      meshMatrix = CMatrix3DH(object->getMeshGlobalTransform());
+
     program->setUniformValue("meshMatrix", CQGLUtil::toQMatrix(meshMatrix));
 
     //---
@@ -1665,6 +1746,7 @@ updateNodeMatrices(CGeomObject3D *object)
 
   //---
 
+  // get node matrices for anim name and anim time
   const auto &nodeMatrices = app_->getObjectNodeMatrices(animObject);
 
   //---
@@ -2383,9 +2465,6 @@ selectObjectAtMouse()
 
   //---
 
-  //auto objectNodeMatrices = app_->calcNodeMatrices();
-  const auto &objectNodeMatrices = app_->getNodeMatrices();
-
   auto viewMatrix       = camera->viewMatrix();
   auto projectionMatrix = camera->worldMatrix();
 
@@ -2432,24 +2511,38 @@ selectObjectAtMouse()
 
     auto *animObject = object->getAnimObject();
 
+    auto animName = (animObject ? animObject->animName() : "");
+
     bool isAnim = false;
 
     if (app_->isAnimEnabled())
-      isAnim = (animObject && animObject->animName() != "");
+      isAnim = (animObject && animName != "");
 
-    const CQCamera3DApp::NodeMatrices *nodeMatrices = nullptr;
-
-    if (isAnim) {
-      auto pm = objectNodeMatrices.find(animObject->getInd());
-
-      if (pm != objectNodeMatrices.end())
-        nodeMatrices = &(*pm).second;
-    }
+    auto nodeMatrices = (isAnim ? &app_->getObjectNodeMatrices(animObject) : nullptr);
 
     //---
 
     auto modelMatrix = CMatrix3DH(object->getHierTransform());
     auto meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
+
+    //---
+
+    if (isAnim) {
+      auto meshNodeId = object->getMeshNode();
+
+      CGeomNodeData *node = nullptr;
+
+      if (meshNodeId >= 0)
+        node = const_cast<CGeomNodeData *>(&animObject->getNode(meshNodeId));
+
+      auto isJointed = (node && object->isJointed());
+
+      if (node && ! isJointed) {
+        auto animTime = animObject->animTime();
+
+        meshMatrix = CMatrix3DH(object->getNodeAnimHierTransform(*node, animName, animTime));
+      }
+    }
 
     //---
 
@@ -2460,9 +2553,9 @@ selectObjectAtMouse()
         continue;
 
       // get face points
-      const auto &vertices = face->getVertices();
-
       std::vector<CPoint3D> points;
+
+      const auto &vertices = face->getVertices();
 
       for (const auto &v : vertices) {
         const auto &vertex = object->getVertex(v);
@@ -2472,8 +2565,10 @@ selectObjectAtMouse()
 
         //---
 
-        if (isAnim)
-          p = app_->adjustAnimPoint(vertex, p, *nodeMatrices);
+        if (isAnim) {
+          if (vertex.hasJointData())
+            p = app_->adjustAnimPoint(vertex, p, *nodeMatrices);
+        }
 
         p = meshMatrix*p;
 

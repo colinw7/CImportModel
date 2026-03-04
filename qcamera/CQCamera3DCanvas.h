@@ -688,6 +688,23 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  using FrameMatrix = std::map<int, CMatrix3DH>;
+
+  struct ObjectMeshData {
+    double tmin { 0.0 };
+    double tmax { 1.0 };
+    int    nt   { 10 };
+    double dt   { 0.1 };
+
+    FrameMatrix frameMatrix;
+  };
+
+  using ObjectMeshDataMap = std::map<CGeomObject3D *, ObjectMeshData>;
+
+  ObjectMeshDataMap objectMeshData_;
+
+  //---
+
   // draw types
 
   bool wireframe_ { false };
