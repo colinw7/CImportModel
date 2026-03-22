@@ -228,7 +228,7 @@ addScene()
           vertex.setViewed(vertex.getModel());
         }
 
-        face->calcNormal(normal);
+        face->calcModelNormal(normal);
       }
 
       //---
