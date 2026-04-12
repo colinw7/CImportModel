@@ -83,9 +83,9 @@ updateLights()
   int nl = canvas_->lights().size();
 
   table_->setRowCount   (nl + 1);
-  table_->setColumnCount(2);
+  table_->setColumnCount(3);
 
-  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Enabled");
+  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Enabled" << "Visible");
 
   int r = 0;
 
@@ -96,16 +96,21 @@ updateLights()
   item->setData(Qt::UserRole, -1);
 
   for (auto *light : canvas_->lights()) {
-    auto lightName = QString::fromStdString(light->name());
+    const auto &lightName = light->name();
 
-    auto *nameItem    = new QTableWidgetItem(lightName);
+    auto *nameItem    = new QTableWidgetItem(QString::fromStdString(lightName));
     auto *enabledItem = new QTableWidgetItem("");
+    auto *visibleItem = new QTableWidgetItem("");
 
-    table_->setItem(r  , 0, nameItem);
-    table_->setItem(r++, 1, enabledItem);
+    table_->setItem(r, 0, nameItem);
+    table_->setItem(r, 1, enabledItem);
+    table_->setItem(r, 2, visibleItem);
 
     nameItem   ->setData(Qt::UserRole, light->id());
     enabledItem->setData(Qt::UserRole, light->id());
+    visibleItem->setData(Qt::UserRole, light->id());
+
+    ++r;
   }
 
   selectedInd_ = -1;
@@ -151,10 +156,12 @@ tableClickSlot(const QModelIndex &index)
 
   if      (index.column() == 1)
     light->setEnabled(! light->getEnabled());
+  else if (index.column() == 2)
+    light->setVisible(! light->isVisible());
   else
     return;
 
-  updateAll();
+  updateAll(true);
 }
 
 CQCamera3DLight *
@@ -204,13 +211,16 @@ lightFromIndex(const QModelIndex &index) const
 
 void
 CQCamera3DLightList::
-updateAll()
+updateAll(bool geom)
 {
   table_->update();
   table_->viewport()->update();
 
   header_->viewport()->update();
   header_->update();
+
+  if (geom)
+    canvas_->updateObjectsData();
 
   canvas_->update();
 }
@@ -253,10 +263,15 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
   if (! light)
     return QItemDelegate::paint(painter, option, index);
 
-  if      (index.column() == 1) {
-    bool enabled = light->getEnabled();
+  if      (index.column() == 1 || index.column() == 2) {
+    bool checked = false;
 
-    Qt::CheckState checkState = (enabled ? Qt::Checked : Qt::Unchecked);
+    if      (index.column() == 1)
+      checked = light->getEnabled();
+    else
+      checked = light->isVisible();
+
+    Qt::CheckState checkState = (checked ? Qt::Checked : Qt::Unchecked);
 
     QFontMetrics fm(list_->font());
 
@@ -309,14 +324,16 @@ updateColumnSizes()
 {
   QFontMetrics fm(list_->font());
 
-  auto tw = fm.horizontalAdvance("Enabled") + 8;
+  auto tw1 = fm.horizontalAdvance("Enabled") + 8;
+  auto tw2 = fm.horizontalAdvance("Visible") + 8;
 
   auto *vbar = list_->table()->verticalHeader();
 
-  int w = width() - tw - vbar->width() - 8;
+  int w = width() - tw1 - tw2 - vbar->width() - 8;
 
-  resizeSection(1, tw);
-  resizeSection(0, w);
+  resizeSection(2, tw2);
+  resizeSection(1, tw1);
+  resizeSection(0, w  );
 }
 
 void

@@ -9,6 +9,7 @@
 #include <CGeomSphere3D.h>
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
 
 CQCamera3DAnnotation::
 CQCamera3DAnnotation(CQCamera3DCanvas *canvas) :
@@ -214,8 +215,8 @@ void
 CQCamera3DAnnotation::
 drawGeometry()
 {
-  glDisable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
+  bool oldCullFace  = CQGLStateInst->setCullFace(false);
+  bool oldDepthTest = CQGLStateInst->setDepthTest(false);
 
   //---
 
@@ -299,4 +300,9 @@ drawGeometry()
   //---
 
   program->release();
+
+  //---
+
+  CQGLStateInst->setCullFace(oldCullFace);
+  CQGLStateInst->setDepthTest(oldDepthTest);
 }

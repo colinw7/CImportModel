@@ -32,6 +32,10 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
 
   if (! pobject_)
     pobject_ = ObjectP(object_);
+
+  currentObject_ = object_;
+
+  numObjects_ = 0;
 }
 
 CImportObj::
@@ -62,6 +66,9 @@ read(CFile &file)
 
     // vertex
     if      (len > 2 && line1[0] == 'v' && line1[1] == ' ') {
+      if (numObjects_ == 0)
+        ++numObjects_;
+
       line1 = CStrUtil::stripSpaces(line1.substr(2));
 
       if (! readVertex(line1))
@@ -113,7 +120,44 @@ read(CFile &file)
         error("Invalid face line");
     }
     else if (len > 2 && line1[0] == 'o' && line1[1] == ' ') {
-      // skip object name
+      auto name = CStrUtil::stripSpaces(line1.substr(2));
+
+      if      (numObjects_ == 0) {
+        currentObject_->setName(name);
+      }
+      else if (numObjects_ == 1) {
+        // add current object to new root object
+        object_ = CGeometry3DInst->createObject3D(scene_, "scene");
+
+        scene_->addObject(object_);
+
+        pobject_.release();
+
+        pobject_ = ObjectP(object_);
+
+        object_->addChild(currentObject_); // add current as child
+
+        // add new object to root object
+        currentObject_ = CGeometry3DInst->createObject3D(scene_, name);
+
+        scene_->addObject(currentObject_);
+
+        object_->addChild(currentObject_);
+      }
+      else {
+        // add new object to root object
+        currentObject_ = CGeometry3DInst->createObject3D(scene_, name);
+
+        scene_->addObject(currentObject_);
+
+        object_->addChild(currentObject_);
+      }
+
+      voffset_  = vnum_ ;
+      vnoffset_ = vnnum_;
+      vtoffset_ = vtnum_;
+
+      ++numObjects_;
     }
     else if (len > 2 && line1[0] == 's' && line1[1] == ' ') {
       // skip smoothing group
@@ -147,14 +191,12 @@ read(CFile &file)
 
   //---
 
-  if (isTriangulate()) {
-    auto faces = object_->getFaces();
-
-    for (auto *face : faces)
-      face->triangulate();
-  }
+  if (isTriangulate())
+    object_->triangulate();
 
   //---
+
+  // TODO: handle children
 
   if (isSplitByMaterial()) {
     std::vector<CGeomObject3D *> newObjects;
@@ -195,7 +237,7 @@ readVertex(const std::string &line)
 
   CPoint3D p(x, y, z);
 
-  int ind = object_->addVertex(p);
+  int ind = currentObject_->addVertex(p);
 
   if (words.size() >= 6) {
     if (! CStrUtil::isReal(words[3]) ||
@@ -207,7 +249,7 @@ readVertex(const std::string &line)
     double g = CStrUtil::toReal(words[4]);
     double b = CStrUtil::toReal(words[5]);
 
-    object_->setVertexColor(ind, CRGBA(r, g, b));
+    currentObject_->setVertexColor(ind, CRGBA(r, g, b));
   }
 
   return true;
@@ -246,7 +288,7 @@ readTextureVertex(const std::string &line)
     p = CPoint3D(x, y, z);
   }
 
-  object_->addTexturePoint(p);
+  currentObject_->addTexturePoint(p);
 
 //texturePoints_.push_back(p);
 
@@ -275,7 +317,7 @@ readVertexNormal(const std::string &line)
 
   CVector3D v(x, y, z);
 
-  object_->addNormal(v);
+  currentObject_->addNormal(v);
 
   return true;
 }
@@ -310,9 +352,9 @@ readFace(const std::string &line)
 
   CStrUtil::addWords(line, words);
 
-  auto nv = object_->getNumVertices();
-  auto nt = object_->getNumTextuePoints();
-  auto nn = object_->getNumNormals();
+  auto nv = currentObject_->getNumVertices();
+  auto nt = currentObject_->getNumTextuePoints();
+  auto nn = currentObject_->getNumNormals();
 
   auto num_words = words.size();
 
@@ -383,12 +425,17 @@ readFace(const std::string &line)
 
   //---
 
-  auto faceNum = object_->addFace(vertices);
+  std::vector<uint> vertices1;
 
-  auto *face = object_->getFaceP(faceNum);
+  for (auto &v : vertices)
+    vertices1.push_back(v - voffset_);
+
+  auto faceNum = currentObject_->addFace(vertices1);
+
+  auto *face = currentObject_->getFaceP(faceNum);
 
   if (groupName_ != "") {
-    auto &group = object_->getGroup(groupName_);
+    auto &group = currentObject_->getGroup(groupName_);
 
     group.addFace(faceNum);
 
@@ -406,14 +453,16 @@ readFace(const std::string &line)
   std::vector<CVector3D> normals1;
 
   for (size_t i = 0; i < ntp; ++i) {
-    auto ind = vertices[i];
+    auto ind = vertices[i] - voffset_;
 
-    auto &v = object_->getVertex(ind);
+    auto &v = currentObject_->getVertex(ind);
 
     auto ti = texturePoints[i];
 
     if (ti >= 0) {
-      const auto &p = object_->texturePoint(uint(ti));
+      ti -= vtoffset_;
+
+      const auto &p = currentObject_->texturePoint(uint(ti));
 
       auto p1 = CPoint2D(p.x, p.y);
 
@@ -423,9 +472,10 @@ readFace(const std::string &line)
     }
 
     auto ni = normals[i];
-
     if (ni >= 0) {
-      const auto &n = object_->normal(uint(ni));
+      ni -= vnoffset_;
+
+      const auto &n = currentObject_->normal(uint(ni));
 
       normals1.push_back(n);
 

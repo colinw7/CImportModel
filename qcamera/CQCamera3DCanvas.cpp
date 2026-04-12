@@ -3,6 +3,7 @@
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DFaceData.h>
 #include <CQCamera3DCamera.h>
+#include <CQCamera3DNewCamera.h>
 #include <CQCamera3DLight.h>
 #include <CQCamera3DShape.h>
 #include <CQCamera3DAnnotation.h>
@@ -28,6 +29,8 @@
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
+
 #ifdef CQ_PERF_GRAPH
 #include <CQPerfMonitor.h>
 #else
@@ -73,7 +76,27 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
     return camera;
   };
 
+  auto addNewCamera = [&](const QString &name, bool perspective=true) {
+    auto *camera = new CQCamera3DNewCamera;
+
+    camera->setId(cameras_.size() + 1);
+
+    camera->setName(name.toStdString());
+
+    camera->setPerspective(perspective);
+
+    camera->setVisible(false);
+
+    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChanged()));
+
+    cameras_.push_back(camera);
+
+    return camera;
+  };
+
   perspectiveCamera_ = addCamera("perspective");
+
+  newCamera_ = addNewCamera("new");
 
   debugCamera_ = addCamera("debug");
 
@@ -204,9 +227,13 @@ addLight()
 
   light1->setId(id);
 
+  light1->setVisible(false);
+
   resetLight(light1);
 
   lights_.push_back(light1);
+
+  connect(light1, SIGNAL(stateChangedSignal()), this, SLOT(lightChanged()));
 
   Q_EMIT lightAdded();
 }
@@ -237,7 +264,8 @@ resetLight(CQCamera3DLight *light)
     light->setSpotDirection(CVector3D(0, 0, 1));
   }
 
-  light->setSpotCutOffAngle(90);
+  light->setSpotCutOffAngle(45);
+  light->setSpotOuterCutOffAngle(60);
 }
 
 void
@@ -299,6 +327,16 @@ initializeGL()
 
   for (auto *light : lights_)
     resetLight(light);
+
+  //---
+
+  textureBuffer_.texture = new CQGLTexture;
+
+  textureBuffer_.texture->setFunctions(this);
+
+  shadowTextureBuffer_.texture = new CQGLTexture;
+
+  shadowTextureBuffer_.texture->setFunctions(this);
 
   //---
 
@@ -610,10 +648,13 @@ paintGL()
 {
   CQPerfTrace trace("CQCamera3DCanvas::paintGL");
 
-  // clear canvas
-  glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
+  //---
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // set GL state
+  enableDepthTest  ();
+  enableCullFace   ();
+  enableFrontFace  ();
+  enablePolygonLine();
 
   //---
 
@@ -621,13 +662,108 @@ paintGL()
   int h = pixelHeight();
 
   if (! isQuadView()) {
+    if (isShadowed()) {
+      if (! shadowTextureBuffer_.texture->setShadow(1024, 1024))
+        std::cerr << "Set shadow texture failed\n";
+
+      auto shaderType = ShaderType::SHADOW;
+      std::swap(shaderType_, shaderType);
+
+      shadowTextureBuffer_.texture->bind();
+
+      if (isLightBuffer())
+        shadowTextureBuffer_.camera = currentLight();
+      else
+        shadowTextureBuffer_.camera = getCurrentCamera();
+
+      initCameraData(shadowTextureBuffer_.camera);
+
+      drawScene();
+
+      std::swap(shaderType_, shaderType);
+
+      shadowTextureBuffer_.texture->unbind();
+    }
+
+    //---
+
+    if (isTextureBuffer()) {
+      if (! textureBuffer_.texture->setTarget(pixelWidth(), pixelHeight()))
+        std::cerr << "Set texture shader target failed\n";
+
+      textureBuffer_.texture->bind();
+
+      auto oldMultiSample = CQGLStateInst->setMultiSample(true);
+
+      // clear canvas
+      glViewport(0, 0, pixelWidth(), pixelHeight());
+
+      glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
+
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      if (isShadowed()) {
+        if (isLightBuffer())
+          textureBuffer_.camera = currentLight();
+        else
+          textureBuffer_.camera = getCurrentCamera();
+      }
+      else
+        textureBuffer_.camera = getCurrentCamera();
+
+      drawContents(textureBuffer_.camera);
+
+      textureBuffer_.texture->unbind();
+
+      CQGLStateInst->setMultiSample(oldMultiSample);
+    }
+
+    //---
+
+    auto oldMultiSample = CQGLStateInst->setMultiSample(true);
+
+    // clear canvas
+    glViewport(0, 0, pixelWidth(), pixelHeight());
+
+    glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     auto *camera = getCurrentCamera();
 
-    glViewport(0, 0, w, h);
-
     drawContents(camera);
+
+    //---
+
+    const int textureAreaSize = 256;
+
+    if (isShadowed() && isShadowDebug()) {
+      glViewport(0, 0, textureAreaSize, textureAreaSize);
+
+      drawTexture(shadowTextureBuffer_, /*isDepth*/true);
+    }
+
+    //---
+
+    if (isTextureBuffer()) {
+      glViewport(pixelWidth() - textureAreaSize, pixelHeight() - textureAreaSize,
+                 textureAreaSize, textureAreaSize);
+
+      drawTexture(textureBuffer_, /*isDepth*/false);
+    }
+
+    CQGLStateInst->setMultiSample(oldMultiSample);
   }
   else {
+    auto oldMultiSample = CQGLStateInst->setMultiSample(true);
+
+    // clear canvas
+    glClearColor(bgColor_.redF(), bgColor_.greenF(), bgColor_.blueF(), 1.0f);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //---
+
     int xm = w/2;
     int ym = h/2;
 
@@ -646,6 +782,8 @@ paintGL()
     // right
     glViewport(xm, ym, w - xm, h - ym);
     drawContents(rightCamera_);
+
+    CQGLStateInst->setMultiSample(oldMultiSample);
   }
 }
 
@@ -655,24 +793,7 @@ drawContents(CGLCameraIFace *camera)
 {
   CQPerfTrace trace("CQCamera3DCanvas::drawContents");
 
-  cameraData_.camera = camera;
-
-  // camera projection
-  cameraData_.worldMatrix = cameraData_.camera->worldMatrix();
-
-  // camera/view transformation
-  cameraData_.viewMatrix = cameraData_.camera->viewMatrix();
-
-  // view pos
-  cameraData_.viewPos = cameraData_.camera->position();
-
-  //---
-
-  // set GL state
-  enableDepthTest  ();
-  enableCullFace   ();
-  enableFrontFace  ();
-  enablePolygonLine();
+  initCameraData(camera);
 
   //---
 
@@ -695,7 +816,56 @@ drawContents(CGLCameraIFace *camera)
   //---
 
   // draw scene
-  drawScene();
+  if      (isOutlineObjects()) {
+    // draw scene with stencil test
+    CQGLStateInst->setStencilTest(true);
+
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+    glClear(GL_STENCIL_BUFFER_BIT);
+
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilMask(0xFF);
+
+    drawScene();
+
+    //---
+
+    // draw outline
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilMask(0x00);
+
+    CQGLStateInst->setDepthTest(false);
+
+    auto shaderType = ShaderType::SINGLE_COLOR;
+    std::swap(shaderType_, shaderType);
+
+    drawScene();
+
+    std::swap(shaderType_, shaderType);
+
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+
+    CQGLStateInst->setDepthTest(true);
+
+    //---
+
+    CQGLStateInst->setStencilTest(false);
+  }
+  else if (isAddNormalShader()) {
+    drawScene();
+
+    auto shaderType = ShaderType::NORMAL;
+    std::swap(shaderType_, shaderType);
+
+    drawScene();
+
+    std::swap(shaderType_, shaderType);
+  }
+  else {
+    drawScene();
+  }
 
   //---
 
@@ -736,6 +906,22 @@ drawContents(CGLCameraIFace *camera)
   if (! isQuadView() && viewType_ == ViewType::PERSPECTIVE) {
     overlay_->drawGeometry();
   }
+}
+
+void
+CQCamera3DCanvas::
+initCameraData(CGLCameraIFace *camera)
+{
+  cameraData_.camera = camera;
+
+  // camera projection
+  cameraData_.worldMatrix = cameraData_.camera->worldMatrix();
+
+  // camera/view transformation
+  cameraData_.viewMatrix = cameraData_.camera->viewMatrix();
+
+  // view pos
+  cameraData_.viewPos = cameraData_.camera->position();
 }
 
 void
@@ -782,15 +968,100 @@ isShowGrid() const
 
 CQCamera3DShaderProgram *
 CQCamera3DCanvas::
-shaderProgram()
+modelShaderProgram()
 {
-  if (! shaderProgram_) {
-    shaderProgram_ = new CQCamera3DShaderProgram(app_);
+  if (! modelShaderProgram_) {
+    modelShaderProgram_ = new CQCamera3DShaderProgram(app_);
 
-    shaderProgram_->addShaders("model.vs", "model.fs");
+    modelShaderProgram_->addShaders("model.vs", "model.fs");
   }
 
-  return shaderProgram_;
+  return modelShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+rimLightShaderProgram()
+{
+  if (! rimLightShaderProgram_) {
+    rimLightShaderProgram_ = new CQCamera3DShaderProgram(app_);
+
+    rimLightShaderProgram_->addShaders("rim_light.vs", "rim_light.fs");
+  }
+
+  return rimLightShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+singleColorShaderProgram()
+{
+  if (! singleColorShaderProgram_) {
+    singleColorShaderProgram_ = new CQCamera3DShaderProgram(app_);
+
+    singleColorShaderProgram_->addShaders("single_color.vs", "single_color.fs");
+  }
+
+  return singleColorShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+normalShaderProgram()
+{
+  if (! rimLightShaderProgram_) {
+    rimLightShaderProgram_ = new CQCamera3DShaderProgram(app_);
+
+    rimLightShaderProgram_->addShaders("normal_line.vs", "normal_line.fs");
+
+    rimLightShaderProgram_->addGeometryShader("normal_line.gs");
+  }
+
+  return rimLightShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+textureShaderProgram()
+{
+  if (! textureShaderProgram_) {
+    textureShaderProgram_ = new CQCamera3DShaderProgram(app_);
+
+    textureShaderProgram_->addShaders("texture.vs", "texture.fs");
+  }
+
+  return textureShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+shadowShaderProgram()
+{
+  if (! shadowShaderProgram_) {
+    shadowShaderProgram_ = new CQCamera3DShaderProgram(app_);
+
+    shadowShaderProgram_->addShaders("shadow.vs", "shadow.fs");
+  }
+
+  return shadowShaderProgram_;
+}
+
+CQCamera3DShaderProgram *
+CQCamera3DCanvas::
+shaderProgram()
+{
+  if      (shaderType() == ShaderType::RIM_LIGHT)
+    return rimLightShaderProgram();
+  else if (shaderType() == ShaderType::SINGLE_COLOR)
+    return singleColorShaderProgram();
+  else if (shaderType() == ShaderType::NORMAL)
+    return normalShaderProgram();
+  else if (shaderType() == ShaderType::TEXTURE)
+    return textureShaderProgram();
+  else if (shaderType() == ShaderType::SHADOW)
+    return shadowShaderProgram();
+  else
+    return modelShaderProgram();
 }
 
 void
@@ -816,6 +1087,8 @@ addScene()
 
   int    boneNodeIds[4];
   double boneWeights[4];
+
+  //---
 
   auto *scene = app_->getScene();
 
@@ -909,7 +1182,7 @@ addScene()
 
       //---
 
-      auto *faceMaterial = faceData.face->getMaterialP();
+      auto *faceMaterial = (faceData.face ? faceData.face->getMaterialP() : nullptr);
 
       if (! faceMaterial && objectMaterial)
         faceMaterial = objectMaterial;
@@ -952,6 +1225,11 @@ addScene()
 
       if (emissiveTexture1)
         faceData.emissiveTexture = getGLTexture(emissiveTexture1, /*add*/true);
+
+      //---
+
+      if (faceMaterial && faceMaterial->shininess())
+        faceData.shininess = faceMaterial->shininess().value();
 
       //---
 
@@ -1181,6 +1459,8 @@ addScene()
     buffer->load();
   }
 
+  //---
+
   if (! bbox_.isSet()) {
     bbox_.add(CPoint3D(-1, -1, -1));
     bbox_.add(CPoint3D( 1,  1,  1));
@@ -1299,6 +1579,41 @@ drawScene()
 
   //---
 
+#if 0
+  if (shaderType_ == ShaderType::SHADOW)
+    program->setUniformValue("shadowScale", float(shadowScale()));
+  else
+    program->setUniformValue("shadowBias", float(shadowBias()));
+#endif
+
+#if 1
+  if (shaderType_ == ShaderType::MODEL && isShadowed()) {
+    glActiveTexture(GL_TEXTURE4);
+    shadowTextureBuffer_.texture->bindBuffer();
+
+    program->setUniformValue("shadowMap", 4);
+    program->setUniformValue("useShadowMap", true);
+
+    auto *light = currentLight();
+
+    auto lightMatrix = light->worldMatrix()*light->viewMatrix();
+    program->setUniformValue("lightSpaceMatrix", CQGLUtil::toQMatrix(lightMatrix));
+  }
+  else {
+    program->setUniformValue("useShadowMap", false);
+
+    auto lightMatrix = CMatrix3DH::identity();
+    program->setUniformValue("lightSpaceMatrix", CQGLUtil::toQMatrix(lightMatrix));
+  }
+#else
+  program->setUniformValue("useShadowMap", false);
+
+  auto lightMatrix = CMatrix3DH::identity();
+  program->setUniformValue("lightSpaceMatrix", CQGLUtil::toQMatrix(lightMatrix));
+#endif
+
+  //---
+
   // camera projection
   program->setUniformValue("projection", CQGLUtil::toQMatrix(cameraData_.worldMatrix));
 
@@ -1313,22 +1628,12 @@ drawScene()
   // add light data to shader program
   addShaderLights(program);
 
-//---
+  //---
 
   glPointSize(pointSize());
   glLineWidth(lineWidth());
 
   paintData_.reset();
-
-  //---
-
-  using VertexIndices           = std::vector<int>;
-  using FaceEdgeIndices         = std::map<int, VertexIndices>;
-  using SelectedObjectVertices  = std::map<int, VertexIndices>;
-  using SelectedObjectFaceEdges = std::map<int, FaceEdgeIndices>;
-
-  SelectedObjectVertices  selectedObjectVertices;
-  SelectedObjectFaceEdges selectedObjectFaceEdges;
 
   //---
 
@@ -1344,6 +1649,17 @@ drawScene()
 
   //---
 
+  drawObjects(program);
+
+  //---
+
+  program->release();
+}
+
+void
+CQCamera3DCanvas::
+drawObjects(ShaderProgram *program)
+{
   Objects objects;
 
   if (isLocalMode()) {
@@ -1362,8 +1678,10 @@ drawScene()
     auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
     assert(object1);
 
-    auto &selectedVertices  = selectedObjectVertices [object->getInd()];
-    auto &selectedFaceEdges = selectedObjectFaceEdges[object->getInd()];
+    auto &selectedVertices  = paintData_.selectedObjectVertices [object->getInd()];
+    auto &selectedFaceEdges = paintData_.selectedObjectFaceEdges[object->getInd()];
+
+    //---
 
     auto *animObject = object->getAnimObject();
 
@@ -1409,7 +1727,6 @@ drawScene()
     //---
 
     // model matrix
-    //auto modelMatrix = CMatrix3DH::identity();
     auto modelMatrix = object->getHierTransform();
     program->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
 
@@ -1438,7 +1755,7 @@ drawScene()
     //---
 
     auto drawFace = [&](const CQCamera3DFaceData &faceData, double transparency) {
-      bool faceSelected = faceData.face->getSelected();
+      bool faceSelected = (faceData.face ? faceData.face->getSelected() : false);
 
       bool selected = objectSelected || faceSelected;
 
@@ -1533,8 +1850,8 @@ drawScene()
 
     bool anyTransparent = false;
 
-    glDisable(GL_BLEND);
-    glDepthMask(GL_TRUE);
+    auto oldBlend     = CQGLStateInst->setBlend(false);
+    auto oldDepthMask = CQGLStateInst->setDepthMask(true);
 
     for (const auto &faceData : object1->faceDatas()) {
       if      (faceData.face) {
@@ -1589,18 +1906,22 @@ drawScene()
         assert(false);
     }
 
+    CQGLStateInst->setBlend(oldBlend);
+    CQGLStateInst->setDepthMask(oldDepthMask);
+
     if (anyTransparent) {
-      glEnable(GL_BLEND);
+      auto oldBlend     = CQGLStateInst->setBlend(true);
+      bool oldDepthMask = CQGLStateInst->setDepthMask(false);
+
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      glDepthMask(GL_FALSE);
 
       for (const auto &faceData : object1->faceDatas()) {
         auto *face = faceData.face;
 
-        if (! face->getVisible())
+        if (face && ! face->getVisible())
           continue;
 
-        auto *faceMaterial = face->getMaterialP();
+        auto *faceMaterial = (face ? face->getMaterialP() : nullptr);
 
         if (! faceMaterial && objectMaterial)
           faceMaterial = objectMaterial;
@@ -1611,8 +1932,8 @@ drawScene()
         drawFace(faceData, faceMaterial->transparency());
       }
 
-      glDisable(GL_BLEND);
-      glDepthMask(GL_TRUE);
+      CQGLStateInst->setBlend(oldBlend);
+      CQGLStateInst->setDepthMask(oldDepthMask);
     }
 
     //---
@@ -1645,10 +1966,110 @@ drawScene()
 
     object1->buffer()->unbind();
   }
+}
+
+void
+CQCamera3DCanvas::
+drawTexture(TextureBuffer &textureBuffer, bool isDepth)
+{
+  textureBuffer.shaderProgram = textureShaderProgram();
+
+  textureBuffer.shaderProgram->setUniformValue("near_plane", float(textureBuffer.camera->near()));
+  textureBuffer.shaderProgram->setUniformValue("far_plane", float(textureBuffer.camera->far()));
+
+  if (! textureBuffer.buffer) {
+    textureBuffer.buffer = textureBuffer.shaderProgram->createBuffer();
+
+    textureBuffer.buffer->clearBuffers();
+
+    textureBuffer.faceDataList.clear();
+
+    //---
+
+    struct PointData {
+      CPoint2D p;
+      CPoint2D tp;
+
+      PointData() { }
+
+      PointData(const CPoint2D &p1, const CPoint2D &p2) :
+       p(p1), tp(p2) {
+      }
+    };
+
+    auto addPoint = [&](const PointData &p) {
+      textureBuffer.buffer->addPoint(p.p.x, p.p.y, 0.0);
+      textureBuffer.buffer->addTexturePoint(p.tp.x, p.tp.y);
+    };
+
+    auto addPolygon = [&](const std::vector<PointData> &points) {
+      CQCamera3DFaceData faceData;
+
+      faceData.pos = textureBuffer.faceDataList.pos;
+      faceData.len = points.size();
+
+      for (const auto &p : points) {
+        addPoint(p);
+      }
+
+      textureBuffer.faceDataList.faceDatas.push_back(faceData);
+
+      textureBuffer.faceDataList.pos += faceData.len;
+    };
+
+    auto addRect = [&](const QRectF &rect) {
+      std::vector<PointData> points;
+
+      points.push_back(PointData(CPoint2D(rect.left (), rect.top   ()), CPoint2D(0, 0)));
+      points.push_back(PointData(CPoint2D(rect.right(), rect.top   ()), CPoint2D(1, 0)));
+      points.push_back(PointData(CPoint2D(rect.right(), rect.bottom()), CPoint2D(1, 1)));
+      points.push_back(PointData(CPoint2D(rect.left (), rect.bottom()), CPoint2D(0, 1)));
+
+      addPolygon(points);
+    };
+
+    addRect(QRectF(-1, -1, 2, 2));
+
+    textureBuffer.buffer->load();
+  }
 
   //---
 
-  program->release();
+  CQGLStateInst->setDepthTest(false);
+
+  textureBuffer.shaderProgram->bind();
+
+  //---
+
+  // model matrix
+  auto modelMatrix = CMatrix3DH::identity();
+  textureBuffer.shaderProgram->setUniformValue("model", CQGLUtil::toQMatrix(modelMatrix));
+
+  textureBuffer.shaderProgram->setUniformValue("textureId", 0);
+
+  textureBuffer.shaderProgram->setUniformValue("isDepth", isDepth);
+
+  //---
+
+  textureBuffer.buffer->bind();
+
+  glActiveTexture(GL_TEXTURE0);
+
+  textureBuffer.texture->bindBuffer();
+
+  for (const auto &faceData : textureBuffer.faceDataList.faceDatas) {
+    glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+  }
+
+  textureBuffer.texture->unbindBuffer();
+
+  textureBuffer.buffer->unbind();
+
+  //---
+
+  textureBuffer.shaderProgram->release();
+
+  CQGLStateInst->setDepthTest(true);
 }
 
 void
@@ -1707,11 +2128,22 @@ addShaderLights(CQCamera3DShaderProgram *program)
       program->setUniformValue(toCString(lightName + ".direction"),
         CQGLUtil::toVector(light->getSpotDirection()));
 
-      auto a = light->getSpotCutOffAngle();
+      auto cutOffCos      = std::cos(CMathGen::DegToRad(light->getSpotCutOffAngle()));
+      auto outerCutOffCos = std::cos(CMathGen::DegToRad(light->getSpotOuterCutOffAngle()));
 
-      auto cosv = std::cos(CMathGen::DegToRad(a));
+      program->setUniformValue(toCString(lightName + ".cutoff"), float(cutOffCos));
+      program->setUniformValue(toCString(lightName + ".outerCutoff"), float(outerCutOffCos));
 
-      program->setUniformValue(toCString(lightName + ".cutoff"), float(cosv));
+      program->setUniformValue(toCString(lightName + ".exponent"),
+        float(light->getSpotExponent()));
+    }
+    else if (light->getType() == CGeomLight3DType::FLASHLIGHT) {
+      // eye direction
+      auto cutOffCos      = std::cos(CMathGen::DegToRad(light->getSpotCutOffAngle()));
+      auto outerCutOffCos = std::cos(CMathGen::DegToRad(light->getSpotOuterCutOffAngle()));
+
+      program->setUniformValue(toCString(lightName + ".cutoff"), float(cutOffCos));
+      program->setUniformValue(toCString(lightName + ".outerCutoff"), float(outerCutOffCos));
 
       program->setUniformValue(toCString(lightName + ".exponent"),
         float(light->getSpotExponent()));
@@ -2359,37 +2791,66 @@ mouseMoveEvent(QMouseEvent *e)
   if      (mouseData_.button == Qt::LeftButton) {
   }
   else if (mouseData_.button == Qt::MiddleButton) {
-    // TODO: move current light
     if (viewType_ == ViewType::PERSPECTIVE) {
-      auto *camera = getInteractiveCamera();
+      if (editType_ == EditType::LIGHT) {
+        auto *light = currentLight();
 
-      if      (mouseData_.isShift) {
-        camera->movePosition(0, dx1);
-        camera->movePosition(1, dy1);
-      }
-      else if (mouseData_.isControl) {
-        camera->rotatePosition(2, dx*0.05);
+        if      (mouseData_.isShift) {
+          light->movePosition(0, dx1);
+          light->movePosition(1, dy1);
+        }
+        else if (mouseData_.isControl) {
+          light->rotatePosition(2, dx*0.05);
+        }
+        else {
+          //light->rotatePosition(1, dx*0.05);
+          light->moveAroundY(-dx1);
+
+          //light->rotatePosition(0, dy*0.05);
+          light->moveAroundX(dy1);
+        }
       }
       else {
-        //camera->rotatePosition(1, dx*0.05);
-        camera->moveAroundY(-dx1);
+        auto *camera = getInteractiveCamera();
 
-        //camera->rotatePosition(0, dy*0.05);
-        camera->moveAroundX(dy1);
+        if      (mouseData_.isShift) {
+          camera->movePosition(0, dx1);
+          camera->movePosition(1, dy1);
+        }
+        else if (mouseData_.isControl) {
+          camera->rotatePosition(2, dx*0.05);
+        }
+        else {
+          //camera->rotatePosition(1, dx*0.05);
+          camera->moveAroundY(-dx1);
+
+          //camera->rotatePosition(0, dy*0.05);
+          camera->moveAroundX(dy1);
+        }
       }
     }
   }
   else if (mouseData_.button == Qt::RightButton) {
     if (viewType_ == ViewType::PERSPECTIVE) {
-      auto *camera = getInteractiveCamera();
+      if (editType_ == EditType::LIGHT) {
+        auto *light = currentLight();
 
-      // calc eye line
-      calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
-      setEyeLineLabel();
+        if (mouseData_.isShift) {
+          light->moveOrigin(0, dx1);
+          light->moveOrigin(1, dy1);
+        }
+      }
+      else {
+        auto *camera = getInteractiveCamera();
 
-      if (mouseData_.isShift) {
-        camera->moveOrigin(0, dx1);
-        camera->moveOrigin(1, dy1);
+        // calc eye line
+        calcEyeLine(CPoint3D(mouseData_.press), eyeLine_);
+        setEyeLineLabel();
+
+        if (mouseData_.isShift) {
+          camera->moveOrigin(0, dx1);
+          camera->moveOrigin(1, dy1);
+        }
       }
     }
   }
@@ -2431,9 +2892,16 @@ wheelEvent(QWheelEvent *e)
 
   auto dw = e->angleDelta().y()/250.0;
 
-  auto *camera = getInteractiveCamera();
+  if (editType_ == EditType::LIGHT) {
+    auto *light = currentLight();
 
-  camera->moveFront(dw*d);
+    light->moveFront(dw*d);
+  }
+  else {
+    auto *camera = getInteractiveCamera();
+
+    camera->moveFront(dw*d);
+  }
 
   update();
 }
@@ -3024,9 +3492,37 @@ cameraKeyPress(QKeyEvent *e)
 
 void
 CQCamera3DCanvas::
-lightKeyPress(QKeyEvent *)
+lightKeyPress(QKeyEvent *e)
 {
-  // TODO
+  auto *light = currentLight();
+  if (! light) return;
+
+  auto d = bbox_.getMaxSize()/100.0;
+
+  auto k = e->key();
+
+  if      (k == Qt::Key_A) {
+    light->moveRight(-d);
+  }
+  else if (k == Qt::Key_D) {
+    light->moveRight(d);
+  }
+  else if (k == Qt::Key_W) {
+    light->moveUp(d);
+  }
+  else if (k == Qt::Key_S) {
+    light->moveUp(-d);
+  }
+  else if (k == Qt::Key_Up) {
+    light->moveFront(-d);
+  }
+  else if (k == Qt::Key_Down) {
+    light->moveFront(d);
+  }
+
+  update();
+
+  Q_EMIT stateChanged();
 }
 
 void
@@ -3479,6 +3975,8 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   eyeLine.isSet = true;
 }
 
+//---
+
 void
 CQCamera3DCanvas::
 cameraChanged()
@@ -3541,6 +4039,17 @@ getCameraById(uint id) const
   return nullptr;
 }
 
+//---
+
+void
+CQCamera3DCanvas::
+lightChanged()
+{
+  shape_->updateGeometry();
+
+  update();
+}
+
 CQCamera3DLight *
 CQCamera3DCanvas::
 currentLight() const
@@ -3571,6 +4080,8 @@ getLightById(uint id) const
 
   return nullptr;
 }
+
+//---
 
 void
 CQCamera3DCanvas::

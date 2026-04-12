@@ -158,6 +158,7 @@ class LightTypeInd : public ValueMap<CGeomLight3DType, int> {
     add("Directional", CGeomLight3DType::DIRECTIONAL, 0);
     add("Point"      , CGeomLight3DType::POINT      , 1);
     add("Spot"       , CGeomLight3DType::SPOT       , 2);
+    add("Flashlight" , CGeomLight3DType::FLASHLIGHT , 3);
   };
 
   CGeomLight3DType indToType(int ind) {
@@ -231,6 +232,24 @@ class AnimInterpolationInd : public ValueMap<CGeomAnimationData::Interpolation, 
 
 AnimInterpolationInd animInterpolationInd;
 
+class ShaderTypeInd : public ValueMap<CQCamera3DCanvas::ShaderType, int> {
+ public:
+  ShaderTypeInd() {
+    add("Model"    , CQCamera3DCanvas::ShaderType::MODEL    , 0);
+    add("Rim Light", CQCamera3DCanvas::ShaderType::RIM_LIGHT, 1);
+  };
+
+  CQCamera3DCanvas::ShaderType indToType(int ind) {
+    return lookup(ind);
+  }
+
+  int typeToInd(const CQCamera3DCanvas::ShaderType &type) {
+    return lookup(type);
+  }
+};
+
+ShaderTypeInd shaderTypeInd;
+
 }
 
 CQCamera3DControl::
@@ -279,12 +298,22 @@ CQCamera3DControl(CQCamera3DApp *app) :
   generalData_.showSolidCheck     = ui.addCheck("Solid");
   generalData_.showTexturedCheck  = ui.addCheck("Textured");
   generalData_.showPointsCheck    = ui.addCheck("Points");
+  generalData_.showOutlineCheck   = ui.addCheck("Outline");
+  generalData_.showShadowCheck    = ui.addCheck("Shadow");
+  generalData_.textureBufferCheck = ui.addCheck("Buffer");
 
   ui.addStretch();
 
   ui.endFrame();
 
   generalData_.wireframeColorEdit = ui.addLabelEdit("Wireframe Color", new CQColorEdit);
+
+  ui.endGroup();
+
+  ui.startGroup("Shader");
+
+  generalData_.shaderTypeCombo = ui.addLabelEdit("Shader", new QComboBox);
+  generalData_.shaderTypeCombo->addItems(shaderTypeInd.names());
 
   ui.endGroup();
 
@@ -302,6 +331,7 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   generalData_.normalsPointsCheck = ui.addCheck("Points");
   generalData_.normalsFacesCheck  = ui.addCheck("Faces" );
+  generalData_.normalsShaderCheck = ui.addCheck("Shader");
 
   ui.addStretch();
 
@@ -494,19 +524,32 @@ CQCamera3DControl(CQCamera3DApp *app) :
   lightsData_.colorEdit = ui.addLabelEdit("Color", new CQColorEdit);
 
   // direction light
+  ui.startGroup("Directional");
+
   lightsData_.directionEdit = ui.addLabelEdit("Direction", new CQPoint3DEdit);
 
+  ui.endGroup();
+
   // point light
-  lightsData_.pointRadiusEdit = ui.addLabelEdit("Point Radius", new CQRealSpin);
+  ui.startGroup("Point");
+
+  lightsData_.pointRadiusEdit = ui.addLabelEdit("Radius", new CQRealSpin);
 
   lightsData_.attenuation0Edit = ui.addLabelEdit("Constant Attenuation", new CQRealSpin);
   lightsData_.attenuation1Edit = ui.addLabelEdit("Linear Attenuation", new CQRealSpin);
   lightsData_.attenuation2Edit = ui.addLabelEdit("Quadratic Attenuation", new CQRealSpin);
 
+  ui.endGroup();
+
   // spot light
-  lightsData_.spotDirectionEdit = ui.addLabelEdit("Spot Direction", new CQPoint3DEdit);
-  lightsData_.spotExponentEdit  = ui.addLabelEdit("Spot Exponent", new CQRealSpin);
-  lightsData_.spotCutOffAngle   = ui.addLabelEdit("Spot Cut Off", new CQRealSpin);
+  ui.startGroup("Spot");
+
+  lightsData_.spotDirectionEdit    = ui.addLabelEdit("Direction", new CQPoint3DEdit);
+  lightsData_.spotExponentEdit     = ui.addLabelEdit("Exponent", new CQRealSpin);
+  lightsData_.spotCutOffAngle      = ui.addLabelEdit("Cut Off", new CQRealSpin);
+  lightsData_.spotOuterCutOffAngle = ui.addLabelEdit("Outer Cut Off", new CQRealSpin);
+
+  ui.endGroup();
 
   ui.addStretch();
 
@@ -1085,8 +1128,13 @@ updateWidgets()
   generalData_.showSolidCheck    ->setChecked(canvas->isSolid());
   generalData_.showTexturedCheck ->setChecked(canvas->isTextured());
   generalData_.showPointsCheck   ->setChecked(canvas->isPoints());
+  generalData_.showOutlineCheck  ->setChecked(canvas->isOutlineObjects());
+  generalData_.showShadowCheck   ->setChecked(canvas->isShadowed());
+  generalData_.textureBufferCheck->setChecked(canvas->isTextureBuffer());
 
   generalData_.wireframeColorEdit->setColor(RGBAToQColor(canvas->wireframeColor()));
+
+  generalData_.shaderTypeCombo->setCurrentIndex(shaderTypeInd.typeToInd(canvas->shaderType()));
 
   generalData_.quadViewCheck   ->setChecked(canvas->isQuadView());
   generalData_.debugCameraCheck->setChecked(canvas->isDebugCamera());
@@ -1100,6 +1148,7 @@ updateWidgets()
 
   generalData_.normalsPointsCheck->setChecked(normals ? normals->isPointNormals() : false);
   generalData_.normalsFacesCheck ->setChecked(normals ? normals->isFaceNormals () : false);
+  generalData_.normalsShaderCheck->setChecked(canvas->isAddNormalShader());
   generalData_.normalsSizeEdit   ->setValue(canvas->normalsSize());
   generalData_.normalsColorEdit  ->setColor(canvas->normalsColor());
 
@@ -1118,43 +1167,7 @@ updateWidgets()
   updateCameraWidgets(/*disconnect*/false);
 
   // Lights
-  lightsData_.lightList->updateLights();
-
-  lightsData_.ambientColorEdit   ->setColor(RGBAToQColor(canvas->ambientColor()));
-  lightsData_.ambientStrengthEdit->setValue(canvas->ambientStrength());
-
-  lightsData_.diffuseStrengthEdit->setValue(canvas->diffuseStrength());
-  lightsData_.emissiveStrengthEdit->setValue(canvas->emissiveStrength());
-  lightsData_.specularStrengthEdit->setValue(canvas->specularStrength());
-
-  lightsData_.fixedDiffuseCheck->setChecked(canvas->isFixedDiffuse());
-
-  auto *light = canvas->currentLight();
-
-  lightsData_.typeCombo->setCurrentIndex(lightTypeInd.typeToInd(light->getType()));
-
-#if 0
-  lightsData_.enabledCheck->setChecked(light->getEnabled());
-#endif
-
-  lightsData_.positionEdit->setValue(light->getPosition());
-
-  lightsData_.colorEdit->setColor(RGBAToQColor(light->getDiffuse()));
-
-  /// direction light
-  lightsData_.directionEdit->setValue(light->getDirection().point());
-
-  // point light
-  lightsData_.pointRadiusEdit->setValue(light->getPointRadius());
-
-  lightsData_.attenuation0Edit->setValue(light->getConstantAttenuation());
-  lightsData_.attenuation1Edit->setValue(light->getLinearAttenuation());
-  lightsData_.attenuation2Edit->setValue(light->getQuadraticAttenuation());
-
-  // spot light
-  lightsData_.spotDirectionEdit->setValue(light->getSpotDirection().point());
-  lightsData_.spotExponentEdit ->setValue(light->getSpotExponent());
-  lightsData_.spotCutOffAngle  ->setValue(light->getSpotCutOffAngle());
+  updateLightWidgets(/*disconnect*/false);
 
   // Axis
   auto *axes = canvas->axes();
@@ -1616,6 +1629,58 @@ updateCameraWidgets(bool disconnect)
 
 void
 CQCamera3DControl::
+updateLightWidgets(bool disconnect)
+{
+  if (disconnect)
+    connectSlots(false);
+
+  auto *canvas = app_->canvas();
+
+  lightsData_.lightList->updateLights();
+
+  lightsData_.ambientColorEdit   ->setColor(RGBAToQColor(canvas->ambientColor()));
+  lightsData_.ambientStrengthEdit->setValue(canvas->ambientStrength());
+
+  lightsData_.diffuseStrengthEdit->setValue(canvas->diffuseStrength());
+  lightsData_.emissiveStrengthEdit->setValue(canvas->emissiveStrength());
+  lightsData_.specularStrengthEdit->setValue(canvas->specularStrength());
+
+  lightsData_.fixedDiffuseCheck->setChecked(canvas->isFixedDiffuse());
+
+  auto *light = canvas->currentLight();
+
+  lightsData_.typeCombo->setCurrentIndex(lightTypeInd.typeToInd(light->getType()));
+
+#if 0
+  lightsData_.enabledCheck->setChecked(light->getEnabled());
+#endif
+
+  lightsData_.positionEdit->setValue(light->getPosition());
+
+  lightsData_.colorEdit->setColor(RGBAToQColor(light->getDiffuse()));
+
+  /// direction light
+  lightsData_.directionEdit->setValue(light->getDirection().point());
+
+  // point light
+  lightsData_.pointRadiusEdit->setValue(light->getPointRadius());
+
+  lightsData_.attenuation0Edit->setValue(light->getConstantAttenuation());
+  lightsData_.attenuation1Edit->setValue(light->getLinearAttenuation());
+  lightsData_.attenuation2Edit->setValue(light->getQuadraticAttenuation());
+
+  // spot light
+  lightsData_.spotDirectionEdit   ->setValue(light->getSpotDirection().point());
+  lightsData_.spotExponentEdit    ->setValue(light->getSpotExponent());
+  lightsData_.spotCutOffAngle     ->setValue(light->getSpotCutOffAngle());
+  lightsData_.spotOuterCutOffAngle->setValue(light->getSpotOuterCutOffAngle());
+
+  if (disconnect)
+    connectSlots(true);
+}
+
+void
+CQCamera3DControl::
 updateAnimWidgets(bool disconnect)
 {
   if (disconnect)
@@ -1710,8 +1775,13 @@ connectSlots(bool b)
   connectCheckBox(generalData_.showSolidCheck    , SLOT(showSolidSlot(int)));
   connectCheckBox(generalData_.showTexturedCheck , SLOT(showTexturedSlot(int)));
   connectCheckBox(generalData_.showPointsCheck   , SLOT(showPointsSlot(int)));
+  connectCheckBox(generalData_.showOutlineCheck  , SLOT(showOutlineSlot(int)));
+  connectCheckBox(generalData_.showShadowCheck   , SLOT(showShadowSlot(int)));
+  connectCheckBox(generalData_.textureBufferCheck, SLOT(textureBufferSlot(int)));
 
   connectColorEdit(generalData_.wireframeColorEdit, SLOT(wireframeColorSlot(const QColor &)));
+
+  connectComboBox(generalData_.shaderTypeCombo, SLOT(shaderTypeSlot(int)));
 
   connectCheckBox(generalData_.quadViewCheck   , SLOT(quadViewSlot(int)));
   connectCheckBox(generalData_.debugCameraCheck, SLOT(debugCameraSlot(int)));
@@ -1723,6 +1793,7 @@ connectSlots(bool b)
 
   connectCheckBox (generalData_.normalsPointsCheck, SLOT(normalsPointsSlot(int)));
   connectCheckBox (generalData_.normalsFacesCheck , SLOT(normalsFacesSlot(int)));
+  connectCheckBox (generalData_.normalsShaderCheck, SLOT(normalsShaderSlot(int)));
   connectRealSpin (generalData_.normalsSizeEdit   , SLOT(normalsSizeSlot(double)));
   connectColorEdit(generalData_.normalsColorEdit  , SLOT(normalsColorSlot(const QColor &)));
 
@@ -1786,20 +1857,22 @@ connectSlots(bool b)
 
   connectCheckBox(lightsData_.fixedDiffuseCheck, SLOT(fixedDiffuseSlot(int)));
 
-  connectComboBox (lightsData_.typeCombo        , SLOT(lightTypeSlot(int)));
+  connectComboBox (lightsData_.typeCombo   , SLOT(lightTypeSlot(int)));
 #if 0
-  connectCheckBox (lightsData_.enabledCheck     , SLOT(lightEnabledSlot(int)));
+  connectCheckBox (lightsData_.enabledCheck, SLOT(lightEnabledSlot(int)));
 #endif
-  connectPointEdit(lightsData_.positionEdit     , SLOT(lightPositionSlot()));
-  connectColorEdit(lightsData_.colorEdit        , SLOT(lightColorSlot(const QColor &)));
-  connectPointEdit(lightsData_.directionEdit    , SLOT(lightDirectionSlot()));
-  connectRealSpin (lightsData_.pointRadiusEdit  , SLOT(lightPointRadiusSlot(double)));
-  connectRealSpin (lightsData_.attenuation0Edit , SLOT(lightConstantAttenuationSlot(double)));
-  connectRealSpin (lightsData_.attenuation1Edit , SLOT(lightLinearAttenuationSlot(double)));
-  connectRealSpin (lightsData_.attenuation2Edit , SLOT(lightQuadraticAttenuationSlot(double)));
-  connectPointEdit(lightsData_.spotDirectionEdit, SLOT(lightSpotDirectionSlot()));
-  connectRealSpin (lightsData_.spotExponentEdit , SLOT(lightSpotExponentSlot(double)));
-  connectRealSpin (lightsData_.spotCutOffAngle  , SLOT(lightCutOffAngleSlot(double)));
+
+  connectPointEdit(lightsData_.positionEdit        , SLOT(lightPositionSlot()));
+  connectColorEdit(lightsData_.colorEdit           , SLOT(lightColorSlot(const QColor &)));
+  connectPointEdit(lightsData_.directionEdit       , SLOT(lightDirectionSlot()));
+  connectRealSpin (lightsData_.pointRadiusEdit     , SLOT(lightPointRadiusSlot(double)));
+  connectRealSpin (lightsData_.attenuation0Edit    , SLOT(lightConstantAttenuationSlot(double)));
+  connectRealSpin (lightsData_.attenuation1Edit    , SLOT(lightLinearAttenuationSlot(double)));
+  connectRealSpin (lightsData_.attenuation2Edit    , SLOT(lightQuadraticAttenuationSlot(double)));
+  connectPointEdit(lightsData_.spotDirectionEdit   , SLOT(lightSpotDirectionSlot()));
+  connectRealSpin (lightsData_.spotExponentEdit    , SLOT(lightSpotExponentSlot(double)));
+  connectRealSpin (lightsData_.spotCutOffAngle     , SLOT(lightCutOffAngleSlot(double)));
+  connectRealSpin (lightsData_.spotOuterCutOffAngle, SLOT(lightOuterCutOffAngleSlot(double)));
 
   // Axis
   connectCheckBox(axisData_.xPosEdit.first, SLOT(showXAxesSlot(int)));
@@ -2008,13 +2081,57 @@ showPointsSlot(int i)
 
 void
 CQCamera3DControl::
+showOutlineSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setOutlineObjects(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+showShadowSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setShadowed(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+textureBufferSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setTextureBuffer(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
 wireframeColorSlot(const QColor &c)
 {
   auto *canvas = app_->canvas();
 
-  canvas ->setWireframeColor(QColorToRGBA(c));
+  canvas->setWireframeColor(QColorToRGBA(c));
 
   updateObjects();
+}
+
+void
+CQCamera3DControl::
+shaderTypeSlot(int ind)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setShaderType(shaderTypeInd.indToType(ind));
+
+  canvas->update();
 }
 
 void
@@ -2098,6 +2215,17 @@ normalsFacesSlot(int i)
   if (! normals) return;
 
   normals->setFaceNormals(i);
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+normalsShaderSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setAddNormalShader(i);
 
   updateObjects();
 }
@@ -3149,6 +3277,18 @@ lightCutOffAngleSlot(double r)
   auto *light  = canvas->currentLight();
 
   light->setSpotCutOffAngle(r);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+lightOuterCutOffAngleSlot(double r)
+{
+  auto *canvas = app_->canvas();
+  auto *light  = canvas->currentLight();
+
+  light->setSpotOuterCutOffAngle(r);
 
   canvas->update();
 }

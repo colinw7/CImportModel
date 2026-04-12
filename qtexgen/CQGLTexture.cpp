@@ -4,7 +4,6 @@
 
 #include <QFileInfo>
 #include <QImageReader>
-
 #include <iostream>
 
 #if 0

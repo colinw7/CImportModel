@@ -7,6 +7,8 @@
 
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
+
 #include <CInterval.h>
 
 CQCamera3DGrid::
@@ -43,11 +45,12 @@ void
 CQCamera3DGrid::
 drawGeometry()
 {
-  glEnable(GL_BLEND);
+  auto oldBlend = CQGLStateInst->setBlend(true);
+
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  glDisable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
+  bool oldDepthTest = CQGLStateInst->setDepthTest(false);
+  bool oldCullFace  = CQGLStateInst->setCullFace(false);
 
   auto *program = shaderProgram();
 
@@ -91,7 +94,8 @@ drawGeometry()
 
   //---
 
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
+  CQGLStateInst->setBlend(oldBlend);
+
+  CQGLStateInst->setDepthTest(oldDepthTest);
+  CQGLStateInst->setCullFace(oldCullFace);
 }

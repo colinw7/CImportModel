@@ -4,6 +4,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec3 Color;
 in vec2 TexCoords;
+in vec4 FragPosLightSpace;
 
 out vec4 FragColor;
 
@@ -12,7 +13,8 @@ out vec4 FragColor;
 // type:
 //  0 : Directional (direction)
 //  1 : Point (position)
-//  2 : Spot (position, direction, cutoff, exponent)
+//  2 : Spot (position, direction, cutoff, outer cutoff, exponent)
+//  3 : FlashLight (cutoff, outer cutoff, exponent)
 struct Light {
   int   type;
   bool  enabled;
@@ -21,6 +23,7 @@ struct Light {
   vec3  color;
   float radius;
   float cutoff;
+  float outerCutoff;
   float exponent;
   float attenuation0;
   float attenuation1;
@@ -42,6 +45,10 @@ uniform vec3  specularColor;
 uniform float specularStrength;
 uniform float shininess;
 uniform bool  fixedDiffuse;
+
+//--- Shadows
+uniform sampler2D shadowMap;
+uniform bool      useShadowMap;
 
 //--- Textures
 
@@ -96,9 +103,15 @@ vec3 calcDiffuseColor() {
     return diffuseStrength*Color;
 }
 
-float calcSpecularFactor(vec3 lightDir, vec3 viewDir, vec3 nrm, float shininess) {
-  vec3 reflectDir = reflect(-lightDir, nrm);
+float calcSpecularFactor(vec3 lightDir, vec3 viewDir, vec3 normal, float shininess) {
+  vec3 reflectDir = reflect(-lightDir, normal);
   float specAmt = max(dot(viewDir, reflectDir), 0.0);
+  return pow(specAmt, shininess);
+}
+
+float calcBlinnSpecularFactor(vec3 lightDir, vec3 viewDir, vec3 normal, float shininess) {
+  vec3 halfwayDir = normalize(lightDir + viewDir);
+  float specAmt = max(dot(normal, halfwayDir), 0.0);
   return pow(specAmt, shininess);
 }
 
@@ -118,7 +131,175 @@ vec3 calcEmissionColor() {
 
 //---
 
+float shadowCalculation(vec4 fragPosLightSpace) {
+  // perform perspective divide
+  vec3 projCoords = fragPosLightSpace.xyz/fragPosLightSpace.w;
+
+  // transform to [0,1] range
+  projCoords = projCoords*0.5 + 0.5;
+
+  // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+  float closestDepth = texture(shadowMap, projCoords.xy).r; 
+
+  // get depth of current fragment from light's perspective
+  float currentDepth = projCoords.z;
+
+  float bias = 0.00001;
+
+  // check whether current frag pos is in shadow
+  float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+  //float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+
+  return shadow;
+}
+
+//---
+
+vec3 calcDirectionalLight(int i, vec3 norm, vec3 diffuseColor, vec3 specColor, vec3 viewDir) {
+  float shadow = 0.0;
+  if (useShadowMap) {
+    shadow = shadowCalculation(FragPosLightSpace);
+  }
+
+  float diffFactor = 1.0;
+
+  vec3 lightDir = normalize(-lights[i].direction);
+
+  // diffuse light color
+  if (! fixedDiffuse)
+    diffFactor = calcDiffuseFactor(lightDir, norm);
+
+  vec3 result = (1 - shadow)*diffFactor*lights[i].color*diffuseColor;
+
+  // specular light color
+  float specFactor = calcSpecularFactor(lightDir, viewDir, norm, shininess);
+
+  result += (1 - shadow)*specFactor*lights[i].color*specColor;
+
+  return result;
+}
+
+vec3 calcPointLight(int i, vec3 norm, vec3 diffuseColor, vec3 specColor, vec3 viewDir) {
+  vec3 toLight    = lights[i].position - FragPos;
+  vec3 toLightDir = normalize(toLight);
+
+  // diffuse light color
+  float falloff = 1.0;
+
+  if (lights[i].radius > 0.0) {
+    float dist = length(toLight);
+
+    falloff = 1.0/(lights[i].attenuation0 +
+                   dist*(lights[i].attenuation1 +
+                         dist*lights[i].attenuation2));
+    //falloff = max(0.0, 1.0 - (dist/lights[i].radius));
+  }
+
+  float diffFactor = 1.0;
+
+  if (! fixedDiffuse)
+    diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
+
+  vec3 result = diffFactor*lights[i].color*diffuseColor;
+
+  // specular light color
+  //float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
+  float specFactor = calcBlinnSpecularFactor(toLightDir, viewDir, norm, shininess);
+
+  result += specFactor*lights[i].color*specColor;
+
+  return result;
+}
+
+vec3 calcSpotLight(int i, vec3 norm, vec3 diffuseColor, vec3 specColor, vec3 viewDir) {
+  vec3 toLight    = lights[i].position - FragPos;
+  vec3 toLightDir = normalize(toLight);
+
+  float diffFactor = 1.0;
+
+  if (! fixedDiffuse) {
+    vec3 lightDir = normalize(-lights[i].direction);
+
+    // diffuse light color
+    float angle = max(dot(toLightDir, lightDir), 0.0);
+
+    // cos(0) = 1 (parallel), cos(90) = 0 (perp)
+    // cutoff is cos(angle) so inside if greater
+
+    float falloff = 0.0;
+    if (lights[i].outerCutoff < lights[i].cutoff) {
+      float epsilon = lights[i].cutoff - lights[i].outerCutoff;
+      falloff = clamp((angle - lights[i].outerCutoff)/epsilon, 0.0, 1.0);
+    } else {
+      falloff = clamp(angle/lights[i].cutoff, 0.0, 1.0);
+    }
+    falloff = pow(falloff, lights[i].exponent);
+
+    //forceColor = vec4(falloff, falloff, falloff, 1.0);
+
+    //if (angle > lights[i].cutoff) {
+    //  falloff = pow(angle, lights[i].exponent);
+    //}
+
+    diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
+  }
+
+  vec3 result = diffFactor*lights[i].color*diffuseColor;
+
+  // specular light color
+  //float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
+  float specFactor = calcBlinnSpecularFactor(toLightDir, viewDir, norm, shininess);
+
+  result += specFactor*lights[i].color*specColor;
+
+  return result;
+}
+
+vec3 calcFlashLight(int i, vec3 norm, vec3 diffuseColor, vec3 specColor, vec3 viewDir) {
+  vec3 toLight    = viewPos - FragPos;
+  vec3 toLightDir = normalize(toLight);
+
+  float diffFactor = 1.0;
+
+  if (! fixedDiffuse) {
+    // diffuse light color
+    float angle = max(dot(toLightDir, norm), 0.0);
+
+    // cos(0) = 1 (parallel), cos(90) = 0 (perp)
+    // cutoff is cos(angle) so inside if greater
+
+    float falloff = 0.0;
+    if (lights[i].outerCutoff < lights[i].cutoff) {
+      float epsilon = lights[i].cutoff - lights[i].outerCutoff;
+      falloff = clamp((angle - lights[i].outerCutoff)/epsilon, 0.0, 1.0);
+    } else {
+      falloff = clamp(angle/lights[i].cutoff, 0.0, 1.0);
+    }
+    falloff = pow(falloff, lights[i].exponent);
+
+    //if (angle > lights[i].cutoff) {
+    //  falloff = pow(angle, lights[i].exponent);
+    //}
+
+    diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
+  }
+
+  vec3 result = diffFactor*lights[i].color*diffuseColor;
+
+  // specular light color
+  //float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
+  float specFactor = calcBlinnSpecularFactor(toLightDir, viewDir, norm, shininess);
+
+  result += specFactor*lights[i].color*specColor;
+
+  return result;
+}
+
+//---
+
 void main() {
+  vec4 forceColor = vec4(0, 0, 0, 0);
+
   // normal
   vec3 norm = calcNormal();
 
@@ -144,70 +325,17 @@ void main() {
 
     lighted = true;
 
-    float diffFactor = 1.0;
-
     if      (lights[i].type == 0) { // directional
-      vec3 lightDir = normalize(lights[i].direction);
-
-      // diffuse light color
-      if (! fixedDiffuse)
-        diffFactor = calcDiffuseFactor(lightDir, norm);
-
-      result += diffFactor*lights[i].color*diffuseColor;
-
-      // specular light color
-      float specFactor = calcSpecularFactor(lightDir, viewDir, norm, shininess);
-
-      result += specFactor*lights[i].color*specColor;
+      result += calcDirectionalLight(i, norm, diffuseColor, specColor, viewDir);
     }
     else if (lights[i].type == 1) { // point
-      vec3 toLight    = lights[i].position - FragPos;
-      vec3 toLightDir = normalize(toLight);
-
-      // diffuse light color
-      float falloff = 1.0;
-
-      if (lights[i].radius > 0.0) {
-        float dist = length(toLight);
-
-        falloff = 1.0/(lights[i].attenuation0 +
-                       dist*(lights[i].attenuation1 +
-                             dist*lights[i].attenuation2));
-        //falloff = max(0.0, 1.0 - (dist/lights[i].radius));
-      }
-
-      if (! fixedDiffuse)
-        diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
-
-      result += diffFactor*lights[i].color*diffuseColor;
-
-      // specular light color
-      float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
-
-      result += specFactor*lights[i].color*specColor;
+      result += calcPointLight(i, norm, diffuseColor, specColor, viewDir);
     }
     else if (lights[i].type == 2) { // spot
-      vec3 lightDir = normalize(lights[i].direction);
-
-      vec3 toLight    = lights[i].position - FragPos;
-      vec3 toLightDir = normalize(toLight);
-
-      // diffuse light color
-      float angle = dot(lightDir, toLightDir);
-
-      if (angle > lights[i].cutoff) {
-        float falloff = pow(angle, lights[i].exponent);
-
-        if (! fixedDiffuse)
-          diffFactor = calcDiffuseFactor(toLightDir, norm)*falloff;
-
-        result += diffFactor*lights[i].color*diffuseColor;
-      }
-
-      // specular light color
-      float specFactor = calcSpecularFactor(toLightDir, viewDir, norm, shininess);
-
-      result += specFactor*lights[i].color*specColor;
+      result += calcSpotLight(i, norm, diffuseColor, specColor, viewDir);
+    }
+    else if (lights[i].type == 3) { // flashlight
+      result += calcFlashLight(i, norm, diffuseColor, specColor, viewDir);
     }
   }
 
@@ -243,4 +371,7 @@ void main() {
       FragColor = vec4(selectColor, 1.0);
     }
   }
+
+  if (forceColor.a > 0)
+    FragColor = forceColor;
 }

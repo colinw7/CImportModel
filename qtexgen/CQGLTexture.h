@@ -48,7 +48,6 @@ class CQGLTexture {
   const QOpenGLExtraFunctions *functions() const { return functions_; }
   void setFunctions(QOpenGLExtraFunctions *p) { functions_ = p; }
 
-//void bindTo(GLenum num) const;
   void bind() const;
   void unbind() const;
 

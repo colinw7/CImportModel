@@ -38,6 +38,20 @@ class LineWords {
     return words_[i].getWord();
   }
 
+  bool getBool(uint i, bool def=false) const {
+    if (i >= words_.size())
+      return def;
+
+    auto word = CStrUtil::toLower(getWord(i));
+
+    if      (word == "true" || word == "yes" || word == "1")
+      return true;
+    else if (word == "false" || word == "no" || word == "0")
+      return false;
+    else
+      return def;
+  }
+
   int getInteger(uint i, int def=0) const {
     if (i >= words_.size())
       return def;
@@ -538,7 +552,8 @@ readObject(const std::string &name)
     OBJECT_MATERIAL_CMD          = 15,
     OBJECT_SUB_FACE_MATERIAL_CMD = 16,
     OBJECT_TRANSFORMS_CMD        = 17,
-    OBJECT_END_CMD               = 18
+    OBJECT_SHADOWED_CMD          = 18,
+    OBJECT_END_CMD               = 19
   };
 
   static const char *
@@ -560,6 +575,7 @@ readObject(const std::string &name)
     "Material",
     "SubFace_Material",
     "Transforms",
+    "Shadowed",
     "End",
     nullptr,
   };
@@ -764,6 +780,13 @@ readObject(const std::string &name)
       }
       case OBJECT_TRANSFORMS_CMD: {
         transformData = readTransformData();
+
+        break;
+      }
+      case OBJECT_SHADOWED_CMD: {
+        auto b = words.getBool(1);
+
+        object->setShadowed(b);
 
         break;
       }

@@ -6,8 +6,12 @@
 #include <CPlane3D.h>
 
 class CGLCameraIFace;
+class CQCamera3DLight;
 
 class CQCamera3DShape : public CQCamera3DObject {
+ public:
+  using ShapeData = CQCamera3DShapes::ShapeData;
+
  public:
   CQCamera3DShape(CQCamera3DCanvas *canvas);
 
@@ -30,6 +34,9 @@ class CQCamera3DShape : public CQCamera3DObject {
   void addCameras();
   void addCamera(CGLCameraIFace *camera);
 
+  void addLights();
+  void addLight(CQCamera3DLight *light);
+
   void addPlanes();
 
   void addEyeLine();
@@ -37,16 +44,15 @@ class CQCamera3DShape : public CQCamera3DObject {
 
   void addSphere(const CPoint3D &c, double r);
 
-  void addCube(const CPoint3D &c, double r, const CQCamera3DShapes::ShapeData &shapeData);
+  void addCube(const CPoint3D &c, double r, const ShapeData &shapeData);
 
-  void addCylinder(const CPoint3D &p1, const CPoint3D &p2, double r,
-                   const CQCamera3DShapes::ShapeData &shapeData);
+  void addCylinder(const CPoint3D &p1, const CPoint3D &p2, double r, const ShapeData &shapeData);
 
   CPlane3D addPlane(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3, const CPoint3D &p4,
                     const CVector3D &n, const CRGBA &c, bool draw=false);
 
   void addTriangle(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3,
-                   const CVector3D &n, const CRGBA &c);
+                   const CVector3D &n, const ShapeData &shapeData);
 
  private:
   bool wireframe_ { true };

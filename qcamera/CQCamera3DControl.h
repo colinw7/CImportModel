@@ -52,6 +52,7 @@ class CQCamera3DControl : public QFrame {
   void updateWidgets();
   void updateTextureWidgets(bool disconnect=true);
   void updateCameraWidgets (bool disconnect=true);
+  void updateLightWidgets  (bool disconnect=true);
   void updateAnimWidgets   (bool disconnect=true);
 
   void mainTabSlot(int);
@@ -61,8 +62,13 @@ class CQCamera3DControl : public QFrame {
   void showSolidSlot(int);
   void showTexturedSlot(int);
   void showPointsSlot(int i);
+  void showOutlineSlot(int i);
+  void showShadowSlot(int i);
+  void textureBufferSlot(int i);
 
   void wireframeColorSlot(const QColor &c);
+
+  void shaderTypeSlot(int);
 
   void quadViewSlot(int);
   void debugCameraSlot(int);
@@ -72,6 +78,7 @@ class CQCamera3DControl : public QFrame {
 
   void normalsPointsSlot(int);
   void normalsFacesSlot(int);
+  void normalsShaderSlot(int);
   void normalsSizeSlot(double r);
   void normalsColorSlot(const QColor &c);
 
@@ -148,6 +155,7 @@ class CQCamera3DControl : public QFrame {
   void lightSpotDirectionSlot();
   void lightSpotExponentSlot(double);
   void lightCutOffAngleSlot(double);
+  void lightOuterCutOffAngleSlot(double);
   void addLightSlot();
   void resetLightSlot();
 
@@ -322,8 +330,13 @@ class CQCamera3DControl : public QFrame {
     QCheckBox* showSolidCheck     { nullptr };
     QCheckBox* showTexturedCheck  { nullptr };
     QCheckBox* showPointsCheck    { nullptr };
+    QCheckBox* showOutlineCheck   { nullptr };
+    QCheckBox* showShadowCheck    { nullptr };
+    QCheckBox* textureBufferCheck { nullptr };
 
     CQColorEdit* wireframeColorEdit { nullptr };
+
+    QComboBox* shaderTypeCombo { nullptr };
 
     QCheckBox* quadViewCheck    { nullptr };
     QCheckBox* debugCameraCheck { nullptr };
@@ -334,6 +347,7 @@ class CQCamera3DControl : public QFrame {
 
     QCheckBox*   normalsPointsCheck { nullptr };
     QCheckBox*   normalsFacesCheck  { nullptr };
+    QCheckBox*   normalsShaderCheck { nullptr };
     CQRealSpin*  normalsSizeEdit    { nullptr };
     CQColorEdit* normalsColorEdit   { nullptr };
 
@@ -412,6 +426,7 @@ class CQCamera3DControl : public QFrame {
     CQPoint3DEdit* spotDirectionEdit    { nullptr };
     CQRealSpin*    spotExponentEdit     { nullptr };
     CQRealSpin*    spotCutOffAngle      { nullptr };
+    CQRealSpin*    spotOuterCutOffAngle { nullptr };
   };
 
   LightsData lightsData_;

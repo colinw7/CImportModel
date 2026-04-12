@@ -1,0 +1,19 @@
+#version 330 core
+
+uniform samplerCube textureId;
+uniform bool isWireframe;
+
+in vec4 FragPos;
+in vec3 TexCoords;
+
+out vec4 FragColor;
+
+void main() {
+  if (isWireframe) {
+    FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  } else {
+    FragColor = texture(textureId, TexCoords);
+  //FragColor = texture(textureId, 0.5*(TexCoords.xy + 1.0));
+  //FragColor = vec4(TexCoords, 1.0);
+  }
+}

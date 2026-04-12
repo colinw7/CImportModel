@@ -7,6 +7,8 @@
 
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
+
 #include <CInterval.h>
 
 CQCamera3DAxes::
@@ -228,9 +230,9 @@ drawGeometry()
 
   //---
 
-  glDisable(GL_CULL_FACE);
+  auto oldCullFace = CQGLStateInst->setCullFace(false);
 
   drawTexts();
 
-  glEnable(GL_CULL_FACE);
+  CQGLStateInst->setCullFace(oldCullFace);
 }

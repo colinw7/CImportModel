@@ -14,6 +14,8 @@ main(int argc, char **argv)
 {
   QApplication qapp(argc, argv);
 
+  //---
+
   CQImage::setPrototype();
 
   //---
@@ -27,6 +29,7 @@ main(int argc, char **argv)
   bool        invertY = false;
   bool        invertZ = false;
   bool        triangulate = false;
+  bool        multisample = false;
   bool        anim = true;
   std::string textureDir;
   std::string textureMap;
@@ -73,6 +76,9 @@ main(int argc, char **argv)
       else if (arg == "triangulate") {
         triangulate = true;
       }
+      else if (arg == "multisample") {
+        multisample = true;
+      }
       else if (arg == "texture_dir") {
         ++i;
 
@@ -107,6 +113,7 @@ main(int argc, char **argv)
          "[-swap_xy|swap_yz|swap_zx] "
          "[-invert_x|-invert_y|-invert_z] "
          "[-triangulate] "
+         "[-multisample] "
          "[-texture_dir <dir>] "
          "[-texture_map <file>] "
          "[-material_map <file>] "
@@ -148,6 +155,24 @@ main(int argc, char **argv)
   //---
 
   auto *app = new CQCamera3DApp;
+
+ #if 1
+  app->setMultisample(multisample);
+#else
+  if (multisample) {
+    QSurfaceFormat sformat;
+    sformat.setRenderableType(QSurfaceFormat::OpenGL);
+    sformat.setProfile(QSurfaceFormat::CoreProfile);
+    sformat.setVersion(4, 1);
+    sformat.setSamples(16);
+    sformat.setDepthBufferSize(24);
+    QSurfaceFormat::setDefaultFormat(sformat);
+  }
+#endif
+
+  app->init();
+
+  //---
 
   if (modelName != "") {
     CQCamera3DApp::LoadData loadData;

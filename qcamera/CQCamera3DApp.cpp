@@ -161,9 +161,12 @@ CQCamera3DApp()
   CGeometry3DInst->setFactory(new CQCamera3DGeomFactory);
 
   scene_ = CGeometry3DInst->createScene3D();
+}
 
-  //---
-
+void
+CQCamera3DApp::
+init()
+{
   canvas_    = new CQCamera3DCanvas(this);
   overview_  = new CQCamera3DOverview(this);
   uvMap_     = new CQCamera3DUVMap(this);
@@ -611,6 +614,7 @@ getAnimNames() const
 
 //---
 
+#if 0
 std::vector<CGeomObject3D *>
 CQCamera3DApp::
 getRootObjects() const
@@ -634,6 +638,7 @@ getRootObjects() const
 
   return rootObjects;
 }
+#endif
 
 void
 CQCamera3DApp::

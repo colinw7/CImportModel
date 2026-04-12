@@ -2,13 +2,16 @@
 #include <CQCamera3DShaderProgram.h>
 #include <CQCamera3DCanvas.h>
 #include <CQCamera3DCamera.h>
+#include <CQCamera3DLight.h>
 #include <CQCamera3DShapes.h>
 
 #include <CGeomObject3D.h>
 #include <CGeomSphere3D.h>
 #include <CGeomCylinder3D.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
 
 CQCamera3DShape::
 CQCamera3DShape(CQCamera3DCanvas *canvas) :
@@ -33,13 +36,17 @@ updateGeometry()
 
   xyPlane_ = addPlane(
     CPoint3D(-1, -1, 0), CPoint3D(1, -1, 0), CPoint3D(1, 1, 0), CPoint3D(-1, 1, 0),
-    CVector3D(0, 0, 1), CRGBA(1, 0, 0));
+    CVector3D(0, 0, 1), CRGBA::red());
 
   canvas_->setXYPlane(xyPlane_);
 
   //---
 
   addCameras();
+
+  //---
+
+  addLights();
 
   //---
 
@@ -73,14 +80,16 @@ CQCamera3DShape::
 addCamera(CGLCameraIFace *camera)
 {
   auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+  if (! camera1) return;
 
   CQCamera3DCamera::Shape shape;
   camera1->getCameraShape(shape);
 
   CQCamera3DShapes::ShapeData shapeData;
 
-  shapeData.color = CRGBA(1.0, 0.0, 0.0);
-  shapeData.alpha = 0.2;
+  shapeData.alpha     = 0.2;
+  shapeData.wireframe = true;
+  shapeData.solid     = false;
 
   auto bbox    = canvas_->bbox();
   auto boxSize = bbox.getMaxSize();
@@ -97,19 +106,70 @@ addCamera(CGLCameraIFace *camera)
 
   shapeData.num_patches = 4;
 
+  shapeData.color = CRGBA::red();
   addCylinder(p2, p3, s2, shapeData);
+
+  shapeData.color = CRGBA::green();
   addCylinder(p2, p4, s2, shapeData);
+
+  shapeData.color = CRGBA::blue();
   addCylinder(p2, p5, s2, shapeData);
 
-  auto c = CRGBA(0.0, 1.0, 0.0, 0.1);
+  shapeData.color = CRGBA(0.0, 1.0, 0.0, 0.1);
 
-  addTriangle(shape.p11, shape.p12, shape.p22, CVector3D(0, 0, -1), c);
-  addTriangle(shape.p12, shape.p22, shape.p21, CVector3D(0, 0, -1), c);
+  addTriangle(shape.p11, shape.p12, shape.p22, CVector3D(0, 0, -1), shapeData);
+  addTriangle(shape.p12, shape.p22, shape.p21, CVector3D(0, 0, -1), shapeData);
 
-  addTriangle(p2, shape.p11, shape.p12, CVector3D( 0,  1, 0), c);
-  addTriangle(p2, shape.p12, shape.p22, CVector3D( 1,  0, 0), c);
-  addTriangle(p2, shape.p22, shape.p21, CVector3D( 0, -1, 0), c);
-  addTriangle(p2, shape.p21, shape.p11, CVector3D(-1,  0, 0), c);
+  addTriangle(p2, shape.p11, shape.p12, CVector3D( 0,  1, 0), shapeData);
+  addTriangle(p2, shape.p12, shape.p22, CVector3D( 1,  0, 0), shapeData);
+  addTriangle(p2, shape.p22, shape.p21, CVector3D( 0, -1, 0), shapeData);
+  addTriangle(p2, shape.p21, shape.p11, CVector3D(-1,  0, 0), shapeData);
+}
+
+void
+CQCamera3DShape::
+addLights()
+{
+  for (auto *light : canvas_->lights()) {
+    if (! light->isVisible())
+      continue;
+
+    addLight(light);
+  }
+}
+
+void
+CQCamera3DShape::
+addLight(CQCamera3DLight *light)
+{
+  CQCamera3DShapes::ShapeData shapeData;
+
+  shapeData.alpha     = 0.2;
+  shapeData.wireframe = false;
+  shapeData.solid     = true;
+
+  auto bbox    = canvas_->bbox();
+  auto boxSize = bbox.getMaxSize();
+
+  auto s1 = boxSize/5.0;
+  auto s2 = boxSize/250.0;
+
+  auto p2 = light->getPosition();
+
+  auto p3 = p2 + light->front()*s1;
+  auto p4 = p2 + light->up   ()*s1;
+  auto p5 = p2 + light->right()*s1;
+
+  shapeData.num_patches = 4;
+
+  shapeData.color = CRGBA::red();
+  addCylinder(p2, p3, s2, shapeData);
+
+  shapeData.color = CRGBA::green();
+  addCylinder(p2, p4, s2, shapeData);
+
+  shapeData.color = CRGBA::blue();
+  addCylinder(p2, p5, s2, shapeData);
 }
 
 void
@@ -121,14 +181,14 @@ addPlanes()
     CVector3D(1, 0, 0), CRGBA(0, 1, 0, 0.1), true);
   rightPlane_ = addPlane(
     CPoint3D(1, -1, -1), CPoint3D(1, -1, 1), CPoint3D(1, 1, 1), CPoint3D(1, 1, -1),
-    CVector3D(-1, 0, 0), CRGBA(0, 1, 0), true);
+    CVector3D(-1, 0, 0), CRGBA::green(), true);
 
   topPlane_ = addPlane(
     CPoint3D(-1, 1, -1), CPoint3D(-1, 1, 1), CPoint3D(1, 1, 1), CPoint3D(1, 1, -1),
-    CVector3D(0, -1, 0), CRGBA(0, 0, 1), true);
+    CVector3D(0, -1, 0), CRGBA::blue(), true);
   bottomPlane_ = addPlane(
     CPoint3D(-1, -1, -1), CPoint3D(-1, -1, 1), CPoint3D(1, -1, 1), CPoint3D(1, -1, -1),
-    CVector3D(0, 1, 0), CRGBA(0, 0, 1), true);
+    CVector3D(0, 1, 0), CRGBA::blue(), true);
 }
 
 void
@@ -140,7 +200,7 @@ addEyeLine()
 
   CQCamera3DShapes::ShapeData shapeData;
 
-  shapeData.color = CRGBA(0, 1, 0);
+  shapeData.color = CRGBA::green();
 
   CLine3D line(eyeLine.pv1, eyeLine.pv2);
   double t = 0.0;
@@ -175,11 +235,11 @@ addEyeLine1()
 
   CQCamera3DShapes::ShapeData shapeData;
 
-  shapeData.color = CRGBA(1, 0, 0);
+  shapeData.color = CRGBA::red();
   addSphere(canvas_->intersectPoint1(), 0.1);
 //std::cerr << canvas_->intersectPoint1() << "\n";
 
-  shapeData.color = CRGBA(0, 1, 0);
+  shapeData.color = CRGBA::green();
   addCube(canvas_->intersectPoint2(), 0.01, shapeData);
 //std::cerr << canvas_->intersectPoint2() << "\n";
 
@@ -202,8 +262,10 @@ addSphere(const CPoint3D &c, double r)
   auto p2 = c + CPoint3D(r, r, r);
 
   CQCamera3DFaceDataList faceDataList;
+
   faceDataList.pos = faceDataList_.pos;
   CQCamera3DShapes::addSphere(buffer_, p1, p2, shapeData, 0.0, 2*M_PI, faceDataList);
+
   faceDataList_.add(faceDataList);
   faceDataList_.pos += faceDataList.pos;
 }
@@ -216,9 +278,11 @@ addCube(const CPoint3D &c, double r, const CQCamera3DShapes::ShapeData &shapeDat
   auto p2 = c + CPoint3D(r, r, r);
 
   CQCamera3DFaceDataList faceDataList;
+
   faceDataList.pos = faceDataList_.pos;
   CBBox3D bbox(p1, p2);
   CQCamera3DShapes::addCube(buffer_, bbox, shapeData, faceDataList);
+
   faceDataList_.add(faceDataList);
   faceDataList_.pos += faceDataList.pos;
 }
@@ -229,8 +293,13 @@ addCylinder(const CPoint3D &p1, const CPoint3D &p2, double r,
             const CQCamera3DShapes::ShapeData &shapeData)
 {
   CQCamera3DFaceDataList faceDataList;
+
   faceDataList.pos = faceDataList_.pos;
   CQCamera3DShapes::addCylinder(buffer_, p1, p2, r, shapeData, faceDataList);
+
+  faceDataList.setWireframe(shapeData.wireframe);
+  faceDataList.setSolid(shapeData.solid);
+
   faceDataList_.add(faceDataList);
   faceDataList_.pos += faceDataList.pos;
 }
@@ -281,25 +350,28 @@ addPlane(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3, const CPoin
 void
 CQCamera3DShape::
 addTriangle(const CPoint3D &p1, const CPoint3D &p2, const CPoint3D &p3,
-            const CVector3D &n, const CRGBA &c)
+            const CVector3D &n, const ShapeData &shapeData)
 {
-  auto addPoint = [&](const CPoint3D &p, const CVector3D &n, const CRGBA &c) {
+  auto addPoint = [&](const CPoint3D &p, const CVector3D &n) {
     buffer_->addPoint(p.x, p.y, p.z);
     buffer_->addNormal(n.getX(), n.getY(), n.getZ());
-    buffer_->addColor(c);
+    buffer_->addColor(shapeData.color);
     buffer_->addTexturePoint(0, 0);
   };
 
   CQCamera3DFaceData faceData;
 
-  faceData.alpha = c.getAlpha();
+  faceData.alpha = shapeData.color.getAlpha();
 
   faceData.pos = faceDataList_.pos;
   faceData.len = 3;
 
-  addPoint(p1, n, c);
-  addPoint(p2, n, c);
-  addPoint(p3, n, c);
+  faceData.wireframe = shapeData.wireframe;
+  faceData.solid     = shapeData.solid;
+
+  addPoint(p1, n);
+  addPoint(p2, n);
+  addPoint(p3, n);
 
   faceDataList_.faceDatas.push_back(faceData);
 
@@ -310,7 +382,7 @@ void
 CQCamera3DShape::
 drawGeometry()
 {
-  glDisable(GL_CULL_FACE);
+  auto oldCullFace = CQGLStateInst->setCullFace(false);
 
   //---
 
@@ -344,8 +416,8 @@ drawGeometry()
 
   std::vector<CQCamera3DFaceData> transparentFaceDatas;
 
-  glDisable(GL_BLEND);
-  glDepthMask(GL_TRUE);
+  auto oldBlend     = CQGLStateInst->setBlend(false);
+  auto oldDepthMask = CQGLStateInst->setDepthMask(true);
 
   program->setUniformValue("transparency", 1.0f);
 
@@ -356,7 +428,7 @@ drawGeometry()
     }
 
     if (! faceData.lines) {
-      if (isWireframe()) {
+      if (faceData.wireframe) {
         program->setUniformValue("isWireframe", true);
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -364,11 +436,13 @@ drawGeometry()
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
       }
 
-      program->setUniformValue("isWireframe", false);
+      if (faceData.solid) {
+        program->setUniformValue("isWireframe", false);
 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-      glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+        glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+      }
     }
     else {
       program->setUniformValue("isWireframe", false);
@@ -377,16 +451,20 @@ drawGeometry()
     }
   }
 
+  CQGLStateInst->setBlend(oldBlend);
+  CQGLStateInst->setDepthMask(oldDepthMask);
+
   if (! transparentFaceDatas.empty()) {
-    glEnable(GL_BLEND);
+    auto oldBlend     = CQGLStateInst->setBlend(true);
+    auto oldDepthMask = CQGLStateInst->setDepthMask(false);
+
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
 
     for (const auto &faceData : transparentFaceDatas) {
       program->setUniformValue("transparency", float(faceData.alpha));
 
       if (! faceData.lines) {
-        if (isWireframe()) {
+        if (faceData.wireframe) {
           program->setUniformValue("isWireframe", true);
 
           glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -394,11 +472,13 @@ drawGeometry()
           glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
         }
 
-        program->setUniformValue("isWireframe", false);
+        if (faceData.solid) {
+          program->setUniformValue("isWireframe", false);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+          glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
+        }
       }
       else {
         program->setUniformValue("isWireframe", false);
@@ -407,8 +487,8 @@ drawGeometry()
       }
     }
 
-    glDisable(GL_BLEND);
-    glDepthMask(GL_TRUE);
+    CQGLStateInst->setBlend(oldBlend);
+    CQGLStateInst->setDepthMask(oldDepthMask);
   }
 
   //---
@@ -416,4 +496,8 @@ drawGeometry()
   buffer_->unbind();
 
   program->release();
+
+  //---
+
+  CQGLStateInst->setCullFace(oldCullFace);
 }

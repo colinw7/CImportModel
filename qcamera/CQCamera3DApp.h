@@ -139,6 +139,13 @@ class CQCamera3DApp : public QFrame {
  public:
   CQCamera3DApp();
 
+  void init();
+
+  //---
+
+  bool isMultisample() const { return multisample_; }
+  void setMultisample(bool b) { multisample_ = b; }
+
   //---
 
   CGeomScene3D* getScene() const { return scene_; }
@@ -238,7 +245,7 @@ class CQCamera3DApp : public QFrame {
 
   QStringList getAnimNames() const;
 
-  std::vector<CGeomObject3D *> getRootObjects() const;
+//std::vector<CGeomObject3D *> getRootObjects() const;
   std::vector<CGeomObject3D *> getAnimObjects() const;
 
   void stepAnimObjects();
@@ -294,6 +301,8 @@ class CQCamera3DApp : public QFrame {
   void animTimeChanged();
 
  private:
+  bool multisample_ { false };
+
   QString buildDir_;
 
   // object data

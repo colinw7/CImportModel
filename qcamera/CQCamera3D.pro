@@ -29,6 +29,7 @@ CQCamera3DBBox.cpp \
 CQCamera3DBillboard.cpp \
 CQCamera3DBones.cpp \
 CQCamera3DCamera.cpp \
+CQCamera3DNewCamera.cpp \
 CQCamera3DCanvas.cpp \
 CQCamera3DCanvasMouseModeIFace.cpp \
 CQCamera3DControl.cpp \
@@ -96,6 +97,7 @@ CQCamera3DBBox.h \
 CQCamera3DBillboard.h \
 CQCamera3DBones.h \
 CQCamera3DCamera.h \
+CQCamera3DNewCamera.h \
 CQCamera3DCanvas.h \
 CQCamera3DCanvasMouseModeIFace.h \
 CQCamera3DControl.h \

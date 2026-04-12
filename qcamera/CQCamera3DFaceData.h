@@ -16,6 +16,7 @@ struct CQCamera3DFaceData {
   bool             selected        { false };
   bool             visible         { true };
   bool             wireframe       { false };
+  bool             solid           { true };
   bool             lines           { false };
   int              lineWidth       { -1 };
   int              pos             { 0 };
@@ -42,8 +43,19 @@ struct CQCamera3DFaceDataList {
       faceDatas.push_back(faceData);
   }
 
+  void setWireframe(bool b) {
+    for (auto &faceData : faceDatas)
+      faceData.wireframe = b;
+  }
+
+  void setSolid(bool b) {
+    for (auto &faceData : faceDatas)
+      faceData.solid = b;
+  }
+
   int                             pos { 0 };
   std::vector<CQCamera3DFaceData> faceDatas;
+
 };
 
 #endif

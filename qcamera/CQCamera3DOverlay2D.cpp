@@ -6,8 +6,10 @@
 #include <CGeomObject3D.h>
 #include <CGeomSphere3D.h>
 #include <CGeomCylinder3D.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
 
 CQCamera3DOverlay2D::
 CQCamera3DOverlay2D(CQCamera3DCanvas *canvas) :
@@ -72,7 +74,7 @@ void
 CQCamera3DOverlay2D::
 drawGeometry()
 {
-  glDisable(GL_DEPTH_TEST);
+  CQGLStateInst->setDepthTest(false);
 
   //---
 
@@ -118,4 +120,6 @@ drawGeometry()
   //---
 
   program->release();
+
+  CQGLStateInst->setDepthTest(true);
 }

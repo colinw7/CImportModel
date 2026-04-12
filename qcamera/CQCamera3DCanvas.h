@@ -4,12 +4,15 @@
 #include <CQCamera3DWidget.h>
 #include <CQCamera3DApp.h>
 #include <CQCamera3DMouseModeIFace.h>
+#include <CQCamera3DFaceData.h>
 
 #include <CGLMatrix3D.h>
 #include <CMatrix3DH.h>
 #include <CBBox3D.h>
 #include <CPlane3D.h>
 #include <CRGBA.h>
+
+#include <CEnv.h>
 
 #include <QMatrix4x4>
 
@@ -87,8 +90,22 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
     BACK
   };
 
+  enum class ShaderType {
+    MODEL,
+    RIM_LIGHT,
+    SINGLE_COLOR,
+    NORMAL,
+    TEXTURE,
+    SHADOW
+  };
+
   using AddObjectType = CQCamera3DAddObjectType;
   using MoveDirection = CQCamera3DMoveDirection;
+  using ShaderProgram = CQCamera3DShaderProgram;
+  using FaceDataList  = CQCamera3DFaceDataList;
+
+ private:
+  struct TextureBuffer;
 
  public:
   CQCamera3DCanvas(CQCamera3DApp *app);
@@ -102,7 +119,14 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
-  CQCamera3DShaderProgram *shaderProgram() override;
+  ShaderProgram *modelShaderProgram();
+  ShaderProgram *rimLightShaderProgram();
+  ShaderProgram *singleColorShaderProgram();
+  ShaderProgram *normalShaderProgram();
+  ShaderProgram *textureShaderProgram();
+  ShaderProgram *shadowShaderProgram();
+
+  ShaderProgram *shaderProgram() override;
 
   //---
 
@@ -123,7 +147,10 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
-  // light
+  // lights
+  bool isFixedDiffuse() const { return fixedDiffuse_; }
+  void setFixedDiffuse(bool b) { fixedDiffuse_ = b; }
+
   const Lights &lights() const { return lights_; }
 
   CQCamera3DLight* currentLight() const;
@@ -131,8 +158,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CQCamera3DLight* getLightById(uint id) const;
 
-  bool isFixedDiffuse() const { return fixedDiffuse_; }
-  void setFixedDiffuse(bool b) { fixedDiffuse_ = b; }
+  //---
 
   // font/text
   CQCamera3DFont* getFont() const { return font_; }
@@ -239,6 +265,29 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   bool isPoints() const { return points_; }
   void setPoints(bool b) { points_ = b; }
+
+  //---
+
+  bool isOutlineObjects() const { return outlineObjects_; }
+  void setOutlineObjects(bool b) { outlineObjects_ = b; }
+
+  bool isAddNormalShader() const { return addNormalShader_; }
+  void setAddNormalShader(bool b) { addNormalShader_ = b; }
+
+  bool isShadowed() const { return shadowed_; }
+  void setShadowed(bool b) { shadowed_ = b; }
+
+  bool isTextureBuffer() const { return isTextureBuffer_; }
+  void setTextureBuffer(bool b) { isTextureBuffer_ = b; }
+
+  int isLightBuffer() const { return lightBuffer_; }
+  void setLightBuffer(int i) { lightBuffer_ = i; }
+
+  double shadowBias() const { return shadowBias_; }
+  void setShadowBias(double r) { shadowBias_ = r; }
+
+  bool isShadowDebug() const { return shadowDebug_.getValue(); }
+  void setShadowDebug(bool b) { shadowDebug_.setValue(b); }
 
   //---
 
@@ -411,6 +460,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  const ShaderType &shaderType() const { return shaderType_; }
+  void setShaderType(const ShaderType &t) { shaderType_ = t; }
+
+  //---
+
   const MoveDirection &moveDirection() const { return moveDirection_; }
   void setMoveDirection(const MoveDirection &v);
 
@@ -464,10 +518,16 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void drawContents(CGLCameraIFace *camera);
 
+  void initCameraData(CGLCameraIFace *camera);
+
  private:
   void drawScene();
 
-  void addShaderLights(CQCamera3DShaderProgram *program);
+  void drawObjects(ShaderProgram *program);
+
+  void drawTexture(TextureBuffer &texture, bool isDepth);
+
+  void addShaderLights(ShaderProgram *program);
 
   void updateNodeMatrices(CGeomObject3D *object);
 
@@ -519,6 +579,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void cameraChanged();
 
+  void lightChanged();
+
  Q_SIGNALS:
   void stateChanged();
   void cameraStateChanged();
@@ -540,17 +602,32 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
  private:
   struct PaintData {
+    // anim data
     enum { NUM_NODE_MATRICES = 128 };
 
     CGeomObject3D*          animObject { nullptr };
     std::vector<CMatrix3D>  nodeMatrices;
     std::vector<QMatrix4x4> nodeQMatrices;
 
+    //---
+
+    // selection data
+    using VertexIndices           = std::vector<int>;
+    using FaceEdgeIndices         = std::map<int, VertexIndices>;
+    using SelectedObjectVertices  = std::map<int, VertexIndices>;
+    using SelectedObjectFaceEdges = std::map<int, FaceEdgeIndices>;
+
+    SelectedObjectVertices  selectedObjectVertices;
+    SelectedObjectFaceEdges selectedObjectFaceEdges;
+
     void reset() {
       animObject = nullptr;
 
       nodeMatrices .clear();
       nodeQMatrices.clear();
+
+      selectedObjectVertices .clear();
+      selectedObjectFaceEdges.clear();
     }
   };
 
@@ -593,6 +670,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CGLCameraIFace *leftCamera_        { nullptr };
   CGLCameraIFace *rightCamera_       { nullptr };
 
+  CGLCameraIFace *newCamera_ { nullptr };
+
   CGLCameraIFace *debugCamera_       { nullptr };
   bool            enableDebugCamera_ { false };
 
@@ -605,22 +684,23 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CRGBA wireframeColor_ { CRGBA::white() };
 
   // lighting
-  CRGBA  ambientColor_    { 1.0, 1.0, 1.0 };
+  CRGBA  ambientColor_    { CRGBA::white() };
   double ambientStrength_ { 0.1 };
 
   double diffuseStrength_  { 1.0 };
 
-  CRGBA  specularColor_    { 1.0, 1.0, 1.0 };
+  CRGBA  specularColor_    { CRGBA::white() };
   double specularStrength_ { 0.2 };
 
-  CRGBA  emissiveColor_    { 1.0, 1.0, 1.0 };
+  CRGBA  emissiveColor_    { CRGBA::white() };
   double emissiveStrength_ { 0.1 };
 
   double shininess_ { 32.0 };
 
+  bool fixedDiffuse_ { false };
+
   Lights lights_;
   int    lightInd_ { 0 };
-  bool   fixedDiffuse_ { false };
 
   //---
 
@@ -653,11 +733,15 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   //----
 
   // globals
-  CQCamera3DShaderProgram *shaderProgram_ { nullptr };
+  ShaderProgram *modelShaderProgram_       { nullptr };
+  ShaderProgram *rimLightShaderProgram_    { nullptr };
+  ShaderProgram *singleColorShaderProgram_ { nullptr };
+  ShaderProgram *textureShaderProgram_     { nullptr };
+  ShaderProgram *shadowShaderProgram_      { nullptr };
 
   PaintData paintData_;
 
-   //---
+  //---
 
   // textures
   std::string initTextureMap_;
@@ -679,6 +763,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   EditMode editMode_ { EditMode::OBJECT };
 
   ViewType viewType_ { ViewType::PERSPECTIVE };
+
+  ShaderType shaderType_ { ShaderType::MODEL };
 
   bool localMode_ { false };
 
@@ -711,6 +797,20 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool solid_     { true };
   bool textured_  { true };
   bool points_    { false };
+
+  bool outlineObjects_ { false };
+
+  bool addNormalShader_ { false };
+
+  bool buffered_ { false };
+
+  bool shadowed_        { false };
+  bool isTextureBuffer_ { false };
+  bool lightBuffer_     { true };
+
+  double shadowBias_ { 0.01 };
+
+  CEnvVar<bool> shadowDebug_ { "CQCAMERA_SHADOW_DEBUG" };
 
   //---
 
@@ -749,6 +849,19 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CQCamera3DCanvasMouseModeIFace* mouseModeIFace_ { nullptr };
   CQCamera3DMouseModeMgr*         mouseModeMgr_   { nullptr };
+
+  //---
+
+  struct TextureBuffer {
+    CGLCameraIFace* camera        { nullptr };
+    CQGLTexture*    texture       { nullptr };
+    ShaderProgram*  shaderProgram { nullptr };
+    CQGLBuffer*     buffer        { nullptr };
+    FaceDataList    faceDataList;
+  };
+
+  TextureBuffer textureBuffer_;
+  TextureBuffer shadowTextureBuffer_;
 };
 
 #endif

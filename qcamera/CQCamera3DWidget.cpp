@@ -1,7 +1,9 @@
 #include <CQCamera3DWidget.h>
 #include <CQCamera3DTexture.h>
+#include <CQCamera3DApp.h>
 
 #include <CQGLTexture.h>
+#include <CQGLState.h>
 
 CQCamera3DWidget::
 CQCamera3DWidget(CQCamera3DApp *app) :
@@ -16,6 +18,15 @@ CQCamera3DWidget(CQCamera3DApp *app) :
   setFocusPolicy(Qt::StrongFocus);
 
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+  //---
+
+  if (app->isMultisample()) {
+    QGLFormat sformat;
+    sformat.setSamples(16);
+    sformat.setDepthBufferSize(24);
+    setFormat(sformat);
+  }
 }
 
 CQCamera3DWidget::
@@ -30,9 +41,9 @@ CQCamera3DWidget::
 enableDepthTest()
 {
   if (isDepthTest())
-    glEnable(GL_DEPTH_TEST);
+    CQGLStateInst->setDepthTest(true);
   else
-    glDisable(GL_DEPTH_TEST);
+    CQGLStateInst->setDepthTest(false);
 }
 
 void
@@ -40,16 +51,16 @@ CQCamera3DWidget::
 enableCullFace()
 {
   if (isCullFace())
-    glEnable(GL_CULL_FACE);
+    CQGLStateInst->setCullFace(true);
   else
-    glDisable(GL_CULL_FACE);
+    CQGLStateInst->setCullFace(false);
 }
 
 void
 CQCamera3DWidget::
 enableFrontFace()
 {
-  glFrontFace(isFrontFace() ? GL_CW : GL_CCW);
+  CQGLStateInst->setFrontFace(isFrontFace() ? GL_CW : GL_CCW);
 }
 
 void
@@ -57,9 +68,9 @@ CQCamera3DWidget::
 enablePolygonLine()
 {
   if (isPolygonLine())
-    glEnable(GL_POLYGON_OFFSET_LINE);
+    CQGLStateInst->setPolygonOffsetLine(true);
   else
-    glDisable(GL_POLYGON_OFFSET_LINE);
+    CQGLStateInst->setPolygonOffsetLine(false);
 
   glPolygonOffset(-1.0f, -1.0f);
 }

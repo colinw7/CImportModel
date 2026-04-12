@@ -7,8 +7,10 @@
 #include <CGeomObject3D.h>
 #include <CGeomSphere3D.h>
 #include <CGeomCylinder3D.h>
+
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
 
 CQCamera3DOverlay::
 CQCamera3DOverlay(CQCamera3DCanvas *canvas) :
@@ -58,9 +60,10 @@ void
 CQCamera3DOverlay::
 drawGeometry()
 {
-  glEnable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
-  glFrontFace(GL_CCW);
+  assert(CQGLStateInst->isCullFace());
+
+  auto oldDepthTest = CQGLStateInst->setDepthTest(false);
+  auto oldFrontFace = CQGLStateInst->setFrontFace(GL_CCW);
 
   //---
 
@@ -87,7 +90,11 @@ drawGeometry()
   program->setUniformValue("projection", CQGLUtil::toQMatrix(projectionMatrix));
 
   // camera/view transformation
-  auto viewMatrix = camera1->viewRotationMatrix();
+  auto viewMatrix = CMatrix3DH::identity();
+
+  if (camera1)
+    viewMatrix = camera1->viewRotationMatrix();
+
   program->setUniformValue("view", CQGLUtil::toQMatrix(viewMatrix));
 
   // model matrix
@@ -126,4 +133,9 @@ drawGeometry()
   //---
 
   program->release();
+
+  //---
+
+  CQGLStateInst->setDepthTest(oldDepthTest);
+  CQGLStateInst->setFrontFace(oldFrontFace);
 }

@@ -269,6 +269,27 @@ right() const
 
 //---
 
+void
+CQCamera3DCamera::
+setFront(const CVector3D &front)
+{
+  auto q = CQuaternion::rotationArc(front_, front);
+
+  front_ = front_*q;
+  up_    = up_   *q;
+  right_ = right_*q;
+
+  pitch_ = std::asin(front_.y()); // inverse for front y value in calcVectors
+  yaw_   = std::atan2(-front_.z(), front_.x());
+//roll_  = 0;
+
+  rotationMatrix_ = calcRotationMatrix();
+
+  Q_EMIT stateChangedSignal();
+}
+
+//---
+
 // get perspective matrix
 CMatrix3DH
 CQCamera3DCamera::
@@ -523,7 +544,7 @@ calcAngles()
 
   pitch_ = std::asin(front.y());               // inverse for front y value in calcVectors
   yaw_   = std::atan2(-front.z(), front.x());
-//  roll_  = 0;
+//roll_  = 0;
 
   calcVectors();
 }

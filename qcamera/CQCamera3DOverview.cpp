@@ -284,8 +284,6 @@ paintEvent(QPaintEvent *)
     painter.setBrush(Qt::NoBrush);
   };
 
-  //---
-
   // draw border (sets rect values)
   painter.setPen(Qt::black);
   painter.setBrush(Qt::NoBrush);
@@ -793,6 +791,7 @@ CQCamera3DOverview::
 drawCamera(CGLCameraIFace *camera)
 {
   auto *camera1 = dynamic_cast<CQCamera3DCamera *>(camera);
+  if (! camera1) return;
 
   CQCamera3DCamera::Shape shape;
   camera1->getCameraShape(shape);
@@ -919,6 +918,9 @@ drawLights()
       auto a1 = CMathGen::DegToRad(a)/2.0;
 
       drawCone(CVector3D(p), d, a1);
+    }
+    else if (light->getType() == CGeomLight3DType::FLASHLIGHT) {
+      // TODO
     }
   }
 }
@@ -1116,7 +1118,7 @@ drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const
 
 void
 CQCamera3DOverview::
-drawCircle(const CPoint3D &origin, double r, const QString &label)
+drawCircle(const CPoint3D &origin, double r, const QString &label) const
 {
   auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r, const QString &label) {
     drawData_.painter->setClipRect(view.rect);
@@ -1143,7 +1145,7 @@ drawCircle(const CPoint3D &origin, double r, const QString &label)
 
 void
 CQCamera3DOverview::
-drawSphere(const CPoint3D &origin, const CPoint3D &pos)
+drawSphere(const CPoint3D &origin, const CPoint3D &pos) const
 {
   auto drawCircle2D = [&](const ViewData &view, const CPoint2D &o, double r) {
     drawData_.painter->setClipRect(view.rect);
@@ -1875,6 +1877,8 @@ setLightPosition(int x, int y)
 
   canvas->update();
 
+  canvas->stateChanged();
+
   invalidate();
 }
 
@@ -1892,6 +1896,8 @@ setLightDirection(int x, int y)
   if      (light->getType() == CGeomLight3DType::DIRECTIONAL)
     dir = light->getDirection();
   else if (light->getType() == CGeomLight3DType::SPOT)
+    dir = light->getSpotDirection();
+  else if (light->getType() == CGeomLight3DType::FLASHLIGHT)
     dir = light->getSpotDirection();
   else
     return;
@@ -1912,8 +1918,13 @@ setLightDirection(int x, int y)
   else if (light->getType() == CGeomLight3DType::SPOT) {
     light->setSpotDirection(dir1);
   }
+  else if (light->getType() == CGeomLight3DType::FLASHLIGHT) {
+    light->setSpotDirection(dir1);
+  }
 
   canvas->update();
+
+  canvas->stateChanged();
 
   invalidate();
 }

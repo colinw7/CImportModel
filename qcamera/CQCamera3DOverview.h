@@ -208,8 +208,8 @@ class CQCamera3DOverview : public QFrame {
   void drawLine  (const CPoint3D &p1, const CPoint3D &p2, const QString &label) const;
   void drawVector(const CVector3D &p, const CVector3D &d, const QString &label) const;
 
-  void drawCircle(const CPoint3D &o, double r, const QString &label);
-  void drawSphere(const CPoint3D &o, const CPoint3D &r);
+  void drawCircle(const CPoint3D &o, double r, const QString &label) const;
+  void drawSphere(const CPoint3D &o, const CPoint3D &r) const;
 
   void drawPoint(const CVector3D &p, const QString &label) const;
 
@@ -283,7 +283,7 @@ class CQCamera3DOverview : public QFrame {
     bool   pressed   { false };
     bool   isShift   { false };
     bool   isControl { false };
-    int    button    { 0 };
+    int    button    { Qt::LeftButton };
     QPoint pressPixel;
     QPoint movePixel1;
     QPoint movePixel2;

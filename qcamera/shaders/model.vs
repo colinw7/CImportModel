@@ -11,11 +11,13 @@ out vec3 FragPos;
 out vec3 Normal;
 out vec3 Color;
 out vec2 TexCoords;
+out vec4 FragPosLightSpace;
 
 uniform mat4 meshMatrix;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 lightSpaceMatrix;
 
 uniform bool useBonePoints;
 uniform mat4 globalBoneTransform[128];
@@ -45,6 +47,8 @@ void main() {
 
   Color     = aColor;
   TexCoords = aTexCoords;
+
+  FragPosLightSpace = lightSpaceMatrix*vec4(FragPos, 1.0);
 
   gl_Position = projection*view*vec4(FragPos, 1.0);
 }

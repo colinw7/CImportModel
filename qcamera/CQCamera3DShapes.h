@@ -14,6 +14,8 @@ struct ShapeData {
   CPoint3D size        { 1, 1, 1 };
   double   alpha       { 1 };
   int      num_patches { -1 };
+  bool     wireframe   { false };
+  bool     solid       { true };
 };
 
 void addCube(CQGLBuffer *buffer, const CBBox3D &bbox, const ShapeData &data,

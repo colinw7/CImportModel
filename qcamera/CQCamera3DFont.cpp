@@ -6,6 +6,8 @@
 
 #include <CQGLBuffer.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
+
 #include <CGLVector2D.h>
 #include <CGLVector3D.h>
 
@@ -358,11 +360,12 @@ render(CQCamera3DCanvas *canvas)
   glDepthFunc(GL_LEQUAL);
   //(void) checkError("glDepthFunc");
 
-  glEnable(GL_BLEND);
+  auto oldBlend     = CQGLStateInst->setBlend(true);
+//auto oldDepthMask = CQGLStateInst->setDepthMask(false);
+
   //glBlendFunc(GL_SRC_ALPHA, GL_ONE);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   //if (! checkError("glBlendFunc GL_SRC_ALPHA, GL_ONE")) return;
-  //glDepthMask(GL_FALSE);
 
   //---
 
@@ -422,8 +425,8 @@ render(CQCamera3DCanvas *canvas)
 
   program->release();
 
-  glDisable(GL_BLEND);
-  //glDepthMask(GL_TRUE);
+  CQGLStateInst->setBlend(oldBlend);
+  //CQGLStateInst->setDepthMask(oldDepthMask);
 }
 
 CMatrix3DH

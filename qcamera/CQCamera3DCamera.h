@@ -96,6 +96,10 @@ class CQCamera3DCamera : public QObject, public CGLCameraIFace {
   // rotate around origin in z axis (roll) - XY
   void moveAroundZ(double d) override;
 
+  //---
+
+  void setFront(const CVector3D &front);
+
  public:
   // get view matrix
   CMatrix3DH viewRotationMatrix() const;

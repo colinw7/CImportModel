@@ -1,6 +1,7 @@
 #include <CQCamera3DSidebar.h>
 #include <CQCamera3DApp.h>
 #include <CQCamera3DOverview.h>
+#include <CQCamera3DUI.h>
 
 #include <CQIconButton.h>
 #include <CQUtil.h>
@@ -19,24 +20,10 @@ CQCamera3DSidebar(CQCamera3DApp *app) :
   auto *layout = new QVBoxLayout(this);
   layout->setMargin(0); layout->setSpacing(4);
 
-  auto addToolButton = [&](const QString &name, const QString &iconName, const QString &tip) {
-    auto *button = new CQIconButton;
+  CQCamera3DUI ui(this, layout);
 
-    button->setObjectName(name);
-    button->setIcon(iconName);
-    button->setIconSize(QSize(32, 32));
-    button->setAutoRaise(true);
-    button->setToolTip(tip);
-
-    layout->addWidget(button);
-
-    return button;
-  };
-
-  auto addCheckButton = [&](const QString &name, const QString &iconName, const QString &tip) {
-    auto *button = addToolButton(name, iconName, tip);
-
-    button->setCheckable(true);
+  auto addIconCheckButton = [&](const QString &name, const QString &iconName, const QString &tip) {
+    auto *button = ui.addIconCheckButton(name, iconName, tip);
 
     checkButtons_.push_back(button);
 
@@ -44,21 +31,21 @@ CQCamera3DSidebar(CQCamera3DApp *app) :
   };
 
   // edit mode buttons
-  selectButton_ = addCheckButton("select", "SELECT", "Select");
-  cursorButton_ = addCheckButton("cursor", "CURSOR", "Cursor");
-  cameraButton_ = addCheckButton("camera", "CAMERA", "Camera");
-  lightButton_  = addCheckButton("light" , "LIGHT" , "Light" );
-  moveButton_   = addCheckButton("move"  , "MOVE"  , "Move"  );
-  rotateButton_ = addCheckButton("rotate", "ROTATE", "Rotate");
-  scaleButton_  = addCheckButton("scale" , "SCALE" , "Scale" );
+  selectButton_ = addIconCheckButton("select", "SELECT", "Select");
+  cursorButton_ = addIconCheckButton("cursor", "CURSOR", "Cursor");
+  cameraButton_ = addIconCheckButton("camera", "CAMERA", "Camera");
+  lightButton_  = addIconCheckButton("light" , "LIGHT" , "Light" );
+  moveButton_   = addIconCheckButton("move"  , "MOVE"  , "Move"  );
+  rotateButton_ = addIconCheckButton("rotate", "ROTATE", "Rotate");
+  scaleButton_  = addIconCheckButton("scale" , "SCALE" , "Scale" );
 
   // function buttons
-  extrudeButton_ = addToolButton("extrude", "EXTRUDE" , "Extrude" );
-  loopCutButton_ = addToolButton("loopcut", "LOOP_CUT", "Loop Cut");
+  extrudeButton_ = ui.addIconButton("extrude", "EXTRUDE" , "Extrude" );
+  loopCutButton_ = ui.addIconButton("loopcut", "LOOP_CUT", "Loop Cut");
 
   selectButton_->setChecked(true);
 
-  layout->addStretch(1);
+  ui.addStretch();
 
   connectSlots(true);
 }

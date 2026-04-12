@@ -98,17 +98,17 @@ updateCameras()
   for (auto *camera : canvas_->cameras()) {
     const auto &cameraName = camera->name();
 
-    auto *nameItem  = new QTableWidgetItem(QString::fromStdString(cameraName));
-    auto *stateItem = new QTableWidgetItem("");
-    auto *drawItem  = new QTableWidgetItem("");
+    auto *nameItem    = new QTableWidgetItem(QString::fromStdString(cameraName));
+    auto *stateItem   = new QTableWidgetItem("");
+    auto *visibleItem = new QTableWidgetItem("");
 
     table_->setItem(r, 0, nameItem);
     table_->setItem(r, 1, stateItem);
-    table_->setItem(r, 2, drawItem);
+    table_->setItem(r, 2, visibleItem);
 
-    nameItem ->setData(Qt::UserRole, camera->id());
-    stateItem->setData(Qt::UserRole, camera->id());
-    drawItem ->setData(Qt::UserRole, camera->id());
+    nameItem   ->setData(Qt::UserRole, camera->id());
+    stateItem  ->setData(Qt::UserRole, camera->id());
+    visibleItem->setData(Qt::UserRole, camera->id());
 
     ++r;
   }
@@ -158,8 +158,10 @@ tableClickSlot(const QModelIndex &index)
 
   if      (index.column() == 1)
     canvas_->setCurrentCamera(camera);
-  else if (index.column() == 2)
-    camera1->setVisible(! camera1->isVisible());
+  else if (index.column() == 2) {
+    if (camera1)
+      camera1->setVisible(! camera1->isVisible());
+  }
   else
     return;
 
@@ -275,7 +277,7 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
     if (index.column() == 1)
       checked = (canvas->getCurrentCamera() == camera);
     else
-      checked = camera1->isVisible();
+      checked = (camera1 ? camera1->isVisible() : false);
 
     Qt::CheckState checkState = (checked ? Qt::Checked : Qt::Unchecked);
 

@@ -8,6 +8,8 @@
 #include <CQGLBuffer.h>
 #include <CQGLTexture.h>
 #include <CQGLUtil.h>
+#include <CQGLState.h>
+
 #include <CGeomScene3D.h>
 
 #include <QMouseEvent>
@@ -84,9 +86,9 @@ paintGL()
 
   //---
 
-  glEnable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-  glFrontFace(GL_CW);
+  auto oldDepthTest = CQGLStateInst->setDepthTest(true);
+  auto oldCullFace  = CQGLStateInst->setCullFace(false);
+  auto oldFrontFace = CQGLStateInst->setFrontFace(GL_CW);
 
   //---
 
@@ -99,6 +101,12 @@ paintGL()
   //---
 
   drawGeometry();
+
+  //---
+
+  CQGLStateInst->setDepthTest(oldDepthTest);
+  CQGLStateInst->setCullFace(oldCullFace);
+  CQGLStateInst->setFrontFace(oldFrontFace);
 }
 
 void

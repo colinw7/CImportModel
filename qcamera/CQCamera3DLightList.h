@@ -30,7 +30,7 @@ class CQCamera3DLightList : public QFrame {
 
   CQCamera3DLight *lightFromIndex(const QModelIndex &index) const;
 
-  void updateAll();
+  void updateAll(bool geom=false);
 
   void resizeEvent(QResizeEvent *) override;
 
@@ -49,12 +49,12 @@ class CQCamera3DLightList : public QFrame {
   void currentItemChanged();
 
  private:
-  CQCamera3DCanvas*              canvas_      { nullptr };
-  QTableWidget*                  table_       { nullptr };
+  CQCamera3DCanvas*            canvas_      { nullptr };
+  QTableWidget*                table_       { nullptr };
   CQCamera3DLightListDelegate* delegate_    { nullptr };
   CQCamera3DLightListHeader*   header_      { nullptr };
-  int                            selectedInd_ { -1 };
-  bool                           valid_       { false };
+  int                          selectedInd_ { -1 };
+  bool                         valid_       { false };
 };
 
 //---
