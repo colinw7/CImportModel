@@ -59,6 +59,7 @@ CQCamera3DWidget.cpp \
 \
 CQCamera3DGeomObject.cpp \
 CQCamera3DGeomFace.cpp \
+CQCamera3DGeomEdge.cpp \
 CQCamera3DGeomLine.cpp \
 \
 CQCamera3DAnimChooser.cpp \

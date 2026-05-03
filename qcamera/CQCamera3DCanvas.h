@@ -65,12 +65,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   using SelectInds       = std::set<int>;
   using ObjectSelectInds = std::map<CGeomObject3D *, SelectInds>;
 
-  using Cameras = std::vector<CGLCameraIFace *>;
-  using Lights  = std::vector<CQCamera3DLight *>;
-  using Objects = std::vector<CGeomObject3D *>;
-  using Faces   = std::vector<CGeomFace3D *>;
-
-  using Edges     = std::vector<int>;
+  using Cameras   = std::vector<CGLCameraIFace *>;
+  using Lights    = std::vector<CQCamera3DLight *>;
+  using Objects   = std::vector<CGeomObject3D *>;
+  using Faces     = std::vector<CGeomFace3D *>;
+  using Edges     = std::vector<CGeomEdge3D *>;
   using FaceEdges = std::map<CGeomFace3D *, Edges>;
 
   using SelectData = CQCamera3DSelectData;
@@ -144,6 +143,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void rotateObject(CGeomObject3D *object, double da, const CVector3D &axis);
 
   void moveFace(CGeomFace3D *face, const CVector3D &d);
+
+  void moveEdge(CGeomEdge3D *edge, const CVector3D &d);
 
   //---
 
@@ -360,7 +361,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool selectFaces(const Faces &faces, bool clear, bool update=true);
   bool selectFace(CGeomFace3D *face, bool clear, bool update=true);
 
-  void selectFaceEdge(CGeomFace3D *face, int ind, bool clear, bool update=true);
+  void selectEdge(CGeomEdge3D *edge, bool clear, bool update=true);
+  void selectFaceEdge(CGeomFace3D *face, CGeomEdge3D *edge, bool clear, bool update=true);
 
   bool selectVertex(CGeomVertex3D *vertex, bool clear, bool update=true);
   bool selectVertices(const ObjectSelectInds &vertices, bool update=true);
@@ -368,6 +370,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool deselectAll(bool update=true);
 
   SelectData getSelection() const;
+  SelectData getSelection(SelectType type) const;
 
   void updateCurrentObject();
 
@@ -418,6 +421,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void setCurrentVertex(CGeomVertex3D *vertex, bool update);
 
   FaceEdges getSelectedFaceEdges() const;
+
+  Edges getSelectedEdges() const;
 
   //---
 

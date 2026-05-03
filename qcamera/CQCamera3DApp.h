@@ -26,6 +26,7 @@ class CGeomScene3D;
 class CGeomObject3D;
 class CGeomFace3D;
 class CGeomVertex3D;
+class CGeomEdge3D;
 class CGeomTexture;
 class CGeomMaterial;
 
@@ -99,8 +100,8 @@ struct CQCamera3DSelectData {
 
   using Objects   = std::vector<CGeomObject3D *>;
   using Faces     = std::vector<CGeomFace3D *>;
-  using Edges     = std::vector<int>;
-  using FaceEdges = std::map<CGeomFace3D *, Edges>;
+  using Edges     = std::vector<CGeomEdge3D *>;
+//using FaceEdges = std::map<CGeomFace3D *, Edges>;
 
   using SelectInds       = std::set<int>;
   using ObjectSelectInds = std::map<CGeomObject3D *, SelectInds>;
@@ -108,7 +109,8 @@ struct CQCamera3DSelectData {
   SelectType       type { SelectType::OBJECT };
   Objects          objects;
   Faces            faces;
-  FaceEdges        faceEdges;
+//FaceEdges        faceEdges;
+  Edges            edges;
   ObjectSelectInds vertices;
 };
 

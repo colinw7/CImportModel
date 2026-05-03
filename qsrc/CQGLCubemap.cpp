@@ -17,7 +17,7 @@ bool checkError(const char *msg) {
   GLenum err = glGetError();
 
   if (err != GL_NO_ERROR) {
-    std::cerr << "OpenGL Error: " << gluErrorString(err) << "(" <<  msg << ")\n";
+    std::cerr << "OpenGL Error: " << gluErrorString(err) << "(" << msg << ")\n";
     return false;
   }
 

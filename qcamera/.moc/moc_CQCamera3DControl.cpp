@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DControl_t {
-    QByteArrayData data[178];
-    char stringdata0[2783];
+    QByteArrayData data[179];
+    char stringdata0[2793];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -141,75 +141,76 @@ QT_MOC_LITERAL(105, 1551, 19), // "emissiveTextureSlot"
 QT_MOC_LITERAL(106, 1571, 19), // "connectMaterialEdit"
 QT_MOC_LITERAL(107, 1591, 8), // "swapSlot"
 QT_MOC_LITERAL(108, 1600, 10), // "invertSlot"
-QT_MOC_LITERAL(109, 1611, 14), // "addTextureSlot"
-QT_MOC_LITERAL(110, 1626, 18), // "loadTextureMapSlot"
-QT_MOC_LITERAL(111, 1645, 18), // "saveTextureMapSlot"
-QT_MOC_LITERAL(112, 1664, 19), // "loadMaterialMapSlot"
-QT_MOC_LITERAL(113, 1684, 19), // "saveMaterialMapSlot"
-QT_MOC_LITERAL(114, 1704, 15), // "addMaterialSlot"
-QT_MOC_LITERAL(115, 1720, 16), // "selectParentSlot"
-QT_MOC_LITERAL(116, 1737, 15), // "selectFacesSlot"
-QT_MOC_LITERAL(117, 1753, 16), // "selectPointsSlot"
-QT_MOC_LITERAL(118, 1770, 17), // "selectRelatedSlot"
-QT_MOC_LITERAL(119, 1788, 12), // "deselectSlot"
-QT_MOC_LITERAL(120, 1801, 14), // "selectDumpSlot"
-QT_MOC_LITERAL(121, 1816, 16), // "objectSelectSlot"
-QT_MOC_LITERAL(122, 1833, 14), // "objectZoomSlot"
-QT_MOC_LITERAL(123, 1848, 11), // "addConeSlot"
-QT_MOC_LITERAL(124, 1860, 11), // "addCubeSlot"
-QT_MOC_LITERAL(125, 1872, 15), // "addCylinderSlot"
-QT_MOC_LITERAL(126, 1888, 14), // "addPyramidSlot"
-QT_MOC_LITERAL(127, 1903, 13), // "addSphereSlot"
-QT_MOC_LITERAL(128, 1917, 12), // "addTorusSlot"
-QT_MOC_LITERAL(129, 1930, 13), // "loadModelSlot"
-QT_MOC_LITERAL(130, 1944, 13), // "saveModelSlot"
-QT_MOC_LITERAL(131, 1958, 19), // "currentMaterialSlot"
-QT_MOC_LITERAL(132, 1978, 19), // "materialAmbientSlot"
-QT_MOC_LITERAL(133, 1998, 19), // "materialDiffuseSlot"
-QT_MOC_LITERAL(134, 2018, 20), // "materialSpecularSlot"
-QT_MOC_LITERAL(135, 2039, 20), // "materialEmissionSlot"
-QT_MOC_LITERAL(136, 2060, 21), // "materialShininessSlot"
-QT_MOC_LITERAL(137, 2082, 24), // "materialTransparencySlot"
-QT_MOC_LITERAL(138, 2107, 26), // "materialAmbientTextureSlot"
-QT_MOC_LITERAL(139, 2134, 26), // "materialDiffuseTextureSlot"
-QT_MOC_LITERAL(140, 2161, 25), // "materialNormalTextureSlot"
-QT_MOC_LITERAL(141, 2187, 27), // "materialSpecularTextureSlot"
-QT_MOC_LITERAL(142, 2215, 27), // "materialEmissiveTextureSlot"
-QT_MOC_LITERAL(143, 2243, 24), // "currentObjectChangedSlot"
-QT_MOC_LITERAL(144, 2268, 20), // "objectAutoSelectSlot"
-QT_MOC_LITERAL(145, 2289, 22), // "overviewEqualScaleSlot"
-QT_MOC_LITERAL(146, 2312, 21), // "overviewModelTypeSlot"
-QT_MOC_LITERAL(147, 2334, 18), // "overviewCameraSlot"
-QT_MOC_LITERAL(148, 2353, 18), // "overviewLightsSlot"
-QT_MOC_LITERAL(149, 2372, 17), // "uvTextureTypeSlot"
-QT_MOC_LITERAL(150, 2390, 17), // "uvTextureWrapSlot"
-QT_MOC_LITERAL(151, 2408, 15), // "textureWrapSlot"
-QT_MOC_LITERAL(152, 2424, 15), // "bonesObjectSlot"
-QT_MOC_LITERAL(153, 2440, 14), // "bonesModelSlot"
-QT_MOC_LITERAL(154, 2455, 17), // "bonesBoneNodeSlot"
-QT_MOC_LITERAL(155, 2473, 20), // "bonesPointJointsSlot"
-QT_MOC_LITERAL(156, 2494, 19), // "bonesOnlyJointsSlot"
-QT_MOC_LITERAL(157, 2514, 20), // "bonesTranslationSlot"
-QT_MOC_LITERAL(158, 2535, 17), // "bonesRotationSlot"
-QT_MOC_LITERAL(159, 2553, 14), // "bonesScaleSlot"
-QT_MOC_LITERAL(160, 2568, 15), // "currentBoneSlot"
-QT_MOC_LITERAL(161, 2584, 11), // "updateBones"
-QT_MOC_LITERAL(162, 2596, 17), // "updateCurrentBone"
-QT_MOC_LITERAL(163, 2614, 10), // "updateAnim"
-QT_MOC_LITERAL(164, 2625, 9), // "timerSlot"
-QT_MOC_LITERAL(165, 2635, 14), // "animObjectSlot"
-QT_MOC_LITERAL(166, 2650, 12), // "animNameSlot"
-QT_MOC_LITERAL(167, 2663, 12), // "animTimeSlot"
-QT_MOC_LITERAL(168, 2676, 1), // "t"
-QT_MOC_LITERAL(169, 2678, 16), // "animTimeTypeSlot"
-QT_MOC_LITERAL(170, 2695, 16), // "animTimeStepSlot"
-QT_MOC_LITERAL(171, 2712, 18), // "animTimeFramesSlot"
-QT_MOC_LITERAL(172, 2731, 1), // "n"
-QT_MOC_LITERAL(173, 2733, 8), // "playSlot"
-QT_MOC_LITERAL(174, 2742, 9), // "pauseSlot"
-QT_MOC_LITERAL(175, 2752, 8), // "stepSlot"
-QT_MOC_LITERAL(176, 2761, 12), // "animNodeSlot"
-QT_MOC_LITERAL(177, 2774, 8) // "animStep"
+QT_MOC_LITERAL(109, 1611, 9), // "mergeSlot"
+QT_MOC_LITERAL(110, 1621, 14), // "addTextureSlot"
+QT_MOC_LITERAL(111, 1636, 18), // "loadTextureMapSlot"
+QT_MOC_LITERAL(112, 1655, 18), // "saveTextureMapSlot"
+QT_MOC_LITERAL(113, 1674, 19), // "loadMaterialMapSlot"
+QT_MOC_LITERAL(114, 1694, 19), // "saveMaterialMapSlot"
+QT_MOC_LITERAL(115, 1714, 15), // "addMaterialSlot"
+QT_MOC_LITERAL(116, 1730, 16), // "selectParentSlot"
+QT_MOC_LITERAL(117, 1747, 15), // "selectFacesSlot"
+QT_MOC_LITERAL(118, 1763, 16), // "selectPointsSlot"
+QT_MOC_LITERAL(119, 1780, 17), // "selectRelatedSlot"
+QT_MOC_LITERAL(120, 1798, 12), // "deselectSlot"
+QT_MOC_LITERAL(121, 1811, 14), // "selectDumpSlot"
+QT_MOC_LITERAL(122, 1826, 16), // "objectSelectSlot"
+QT_MOC_LITERAL(123, 1843, 14), // "objectZoomSlot"
+QT_MOC_LITERAL(124, 1858, 11), // "addConeSlot"
+QT_MOC_LITERAL(125, 1870, 11), // "addCubeSlot"
+QT_MOC_LITERAL(126, 1882, 15), // "addCylinderSlot"
+QT_MOC_LITERAL(127, 1898, 14), // "addPyramidSlot"
+QT_MOC_LITERAL(128, 1913, 13), // "addSphereSlot"
+QT_MOC_LITERAL(129, 1927, 12), // "addTorusSlot"
+QT_MOC_LITERAL(130, 1940, 13), // "loadModelSlot"
+QT_MOC_LITERAL(131, 1954, 13), // "saveModelSlot"
+QT_MOC_LITERAL(132, 1968, 19), // "currentMaterialSlot"
+QT_MOC_LITERAL(133, 1988, 19), // "materialAmbientSlot"
+QT_MOC_LITERAL(134, 2008, 19), // "materialDiffuseSlot"
+QT_MOC_LITERAL(135, 2028, 20), // "materialSpecularSlot"
+QT_MOC_LITERAL(136, 2049, 20), // "materialEmissionSlot"
+QT_MOC_LITERAL(137, 2070, 21), // "materialShininessSlot"
+QT_MOC_LITERAL(138, 2092, 24), // "materialTransparencySlot"
+QT_MOC_LITERAL(139, 2117, 26), // "materialAmbientTextureSlot"
+QT_MOC_LITERAL(140, 2144, 26), // "materialDiffuseTextureSlot"
+QT_MOC_LITERAL(141, 2171, 25), // "materialNormalTextureSlot"
+QT_MOC_LITERAL(142, 2197, 27), // "materialSpecularTextureSlot"
+QT_MOC_LITERAL(143, 2225, 27), // "materialEmissiveTextureSlot"
+QT_MOC_LITERAL(144, 2253, 24), // "currentObjectChangedSlot"
+QT_MOC_LITERAL(145, 2278, 20), // "objectAutoSelectSlot"
+QT_MOC_LITERAL(146, 2299, 22), // "overviewEqualScaleSlot"
+QT_MOC_LITERAL(147, 2322, 21), // "overviewModelTypeSlot"
+QT_MOC_LITERAL(148, 2344, 18), // "overviewCameraSlot"
+QT_MOC_LITERAL(149, 2363, 18), // "overviewLightsSlot"
+QT_MOC_LITERAL(150, 2382, 17), // "uvTextureTypeSlot"
+QT_MOC_LITERAL(151, 2400, 17), // "uvTextureWrapSlot"
+QT_MOC_LITERAL(152, 2418, 15), // "textureWrapSlot"
+QT_MOC_LITERAL(153, 2434, 15), // "bonesObjectSlot"
+QT_MOC_LITERAL(154, 2450, 14), // "bonesModelSlot"
+QT_MOC_LITERAL(155, 2465, 17), // "bonesBoneNodeSlot"
+QT_MOC_LITERAL(156, 2483, 20), // "bonesPointJointsSlot"
+QT_MOC_LITERAL(157, 2504, 19), // "bonesOnlyJointsSlot"
+QT_MOC_LITERAL(158, 2524, 20), // "bonesTranslationSlot"
+QT_MOC_LITERAL(159, 2545, 17), // "bonesRotationSlot"
+QT_MOC_LITERAL(160, 2563, 14), // "bonesScaleSlot"
+QT_MOC_LITERAL(161, 2578, 15), // "currentBoneSlot"
+QT_MOC_LITERAL(162, 2594, 11), // "updateBones"
+QT_MOC_LITERAL(163, 2606, 17), // "updateCurrentBone"
+QT_MOC_LITERAL(164, 2624, 10), // "updateAnim"
+QT_MOC_LITERAL(165, 2635, 9), // "timerSlot"
+QT_MOC_LITERAL(166, 2645, 14), // "animObjectSlot"
+QT_MOC_LITERAL(167, 2660, 12), // "animNameSlot"
+QT_MOC_LITERAL(168, 2673, 12), // "animTimeSlot"
+QT_MOC_LITERAL(169, 2686, 1), // "t"
+QT_MOC_LITERAL(170, 2688, 16), // "animTimeTypeSlot"
+QT_MOC_LITERAL(171, 2705, 16), // "animTimeStepSlot"
+QT_MOC_LITERAL(172, 2722, 18), // "animTimeFramesSlot"
+QT_MOC_LITERAL(173, 2741, 1), // "n"
+QT_MOC_LITERAL(174, 2743, 8), // "playSlot"
+QT_MOC_LITERAL(175, 2752, 9), // "pauseSlot"
+QT_MOC_LITERAL(176, 2762, 8), // "stepSlot"
+QT_MOC_LITERAL(177, 2771, 12), // "animNodeSlot"
+QT_MOC_LITERAL(178, 2784, 8) // "animStep"
 
     },
     "CQCamera3DControl\0viewTypeSlot\0\0"
@@ -256,20 +257,21 @@ QT_MOC_LITERAL(177, 2774, 8) // "animStep"
     "objectColorSlot\0diffuseTextureSlot\0"
     "normalTextureSlot\0specularTextureSlot\0"
     "emissiveTextureSlot\0connectMaterialEdit\0"
-    "swapSlot\0invertSlot\0addTextureSlot\0"
-    "loadTextureMapSlot\0saveTextureMapSlot\0"
-    "loadMaterialMapSlot\0saveMaterialMapSlot\0"
-    "addMaterialSlot\0selectParentSlot\0"
-    "selectFacesSlot\0selectPointsSlot\0"
-    "selectRelatedSlot\0deselectSlot\0"
-    "selectDumpSlot\0objectSelectSlot\0"
-    "objectZoomSlot\0addConeSlot\0addCubeSlot\0"
-    "addCylinderSlot\0addPyramidSlot\0"
-    "addSphereSlot\0addTorusSlot\0loadModelSlot\0"
-    "saveModelSlot\0currentMaterialSlot\0"
-    "materialAmbientSlot\0materialDiffuseSlot\0"
-    "materialSpecularSlot\0materialEmissionSlot\0"
-    "materialShininessSlot\0materialTransparencySlot\0"
+    "swapSlot\0invertSlot\0mergeSlot\0"
+    "addTextureSlot\0loadTextureMapSlot\0"
+    "saveTextureMapSlot\0loadMaterialMapSlot\0"
+    "saveMaterialMapSlot\0addMaterialSlot\0"
+    "selectParentSlot\0selectFacesSlot\0"
+    "selectPointsSlot\0selectRelatedSlot\0"
+    "deselectSlot\0selectDumpSlot\0"
+    "objectSelectSlot\0objectZoomSlot\0"
+    "addConeSlot\0addCubeSlot\0addCylinderSlot\0"
+    "addPyramidSlot\0addSphereSlot\0addTorusSlot\0"
+    "loadModelSlot\0saveModelSlot\0"
+    "currentMaterialSlot\0materialAmbientSlot\0"
+    "materialDiffuseSlot\0materialSpecularSlot\0"
+    "materialEmissionSlot\0materialShininessSlot\0"
+    "materialTransparencySlot\0"
     "materialAmbientTextureSlot\0"
     "materialDiffuseTextureSlot\0"
     "materialNormalTextureSlot\0"
@@ -299,7 +301,7 @@ static const uint qt_meta_data_CQCamera3DControl[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-     173,   14, // methods
+     174,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -307,179 +309,180 @@ static const uint qt_meta_data_CQCamera3DControl[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,  879,    2, 0x08 /* Private */,
-       3,    0,  880,    2, 0x08 /* Private */,
-       4,    1,  881,    2, 0x08 /* Private */,
-       4,    0,  884,    2, 0x28 /* Private | MethodCloned */,
-       6,    1,  885,    2, 0x08 /* Private */,
-       6,    0,  888,    2, 0x28 /* Private | MethodCloned */,
-       7,    1,  889,    2, 0x08 /* Private */,
-       7,    0,  892,    2, 0x28 /* Private | MethodCloned */,
-       8,    1,  893,    2, 0x08 /* Private */,
-       8,    0,  896,    2, 0x28 /* Private | MethodCloned */,
-       9,    1,  897,    2, 0x08 /* Private */,
-      10,    1,  900,    2, 0x08 /* Private */,
-      11,    1,  903,    2, 0x08 /* Private */,
-      12,    1,  906,    2, 0x08 /* Private */,
-      13,    1,  909,    2, 0x08 /* Private */,
-      15,    1,  912,    2, 0x08 /* Private */,
-      16,    1,  915,    2, 0x08 /* Private */,
-      17,    1,  918,    2, 0x08 /* Private */,
-      18,    1,  921,    2, 0x08 /* Private */,
-      20,    1,  924,    2, 0x08 /* Private */,
-      21,    1,  927,    2, 0x08 /* Private */,
-      22,    1,  930,    2, 0x08 /* Private */,
-      23,    1,  933,    2, 0x08 /* Private */,
-      24,    1,  936,    2, 0x08 /* Private */,
-      25,    0,  939,    2, 0x08 /* Private */,
-      26,    1,  940,    2, 0x08 /* Private */,
-      27,    1,  943,    2, 0x08 /* Private */,
-      28,    1,  946,    2, 0x08 /* Private */,
-      29,    1,  949,    2, 0x08 /* Private */,
-      31,    1,  952,    2, 0x08 /* Private */,
-      32,    1,  955,    2, 0x08 /* Private */,
-      33,    1,  958,    2, 0x08 /* Private */,
-      34,    1,  961,    2, 0x08 /* Private */,
-      35,    1,  964,    2, 0x08 /* Private */,
-      36,    1,  967,    2, 0x08 /* Private */,
-      37,    0,  970,    2, 0x08 /* Private */,
-      38,    1,  971,    2, 0x08 /* Private */,
-      39,    1,  974,    2, 0x08 /* Private */,
-      40,    1,  977,    2, 0x08 /* Private */,
-      41,    1,  980,    2, 0x08 /* Private */,
-      42,    1,  983,    2, 0x08 /* Private */,
-      43,    1,  986,    2, 0x08 /* Private */,
-      44,    1,  989,    2, 0x08 /* Private */,
-      45,    1,  992,    2, 0x08 /* Private */,
-      46,    1,  995,    2, 0x08 /* Private */,
-      47,    1,  998,    2, 0x08 /* Private */,
-      48,    1, 1001,    2, 0x08 /* Private */,
-      49,    1, 1004,    2, 0x08 /* Private */,
-      50,    1, 1007,    2, 0x08 /* Private */,
-      51,    1, 1010,    2, 0x08 /* Private */,
-      52,    0, 1013,    2, 0x08 /* Private */,
-      53,    0, 1014,    2, 0x08 /* Private */,
-      54,    0, 1015,    2, 0x08 /* Private */,
-      55,    0, 1016,    2, 0x08 /* Private */,
-      56,    0, 1017,    2, 0x08 /* Private */,
-      57,    0, 1018,    2, 0x08 /* Private */,
-      58,    1, 1019,    2, 0x08 /* Private */,
-      60,    0, 1022,    2, 0x08 /* Private */,
-      61,    0, 1023,    2, 0x08 /* Private */,
-      62,    0, 1024,    2, 0x08 /* Private */,
-      63,    0, 1025,    2, 0x08 /* Private */,
-      64,    0, 1026,    2, 0x08 /* Private */,
-      65,    1, 1027,    2, 0x08 /* Private */,
-      66,    1, 1030,    2, 0x08 /* Private */,
-      67,    1, 1033,    2, 0x08 /* Private */,
-      68,    1, 1036,    2, 0x08 /* Private */,
-      69,    1, 1039,    2, 0x08 /* Private */,
-      70,    1, 1042,    2, 0x08 /* Private */,
-      71,    1, 1045,    2, 0x08 /* Private */,
-      72,    1, 1048,    2, 0x08 /* Private */,
-      73,    0, 1051,    2, 0x08 /* Private */,
-      74,    1, 1052,    2, 0x08 /* Private */,
-      75,    0, 1055,    2, 0x08 /* Private */,
-      76,    1, 1056,    2, 0x08 /* Private */,
-      77,    1, 1059,    2, 0x08 /* Private */,
-      78,    1, 1062,    2, 0x08 /* Private */,
-      79,    1, 1065,    2, 0x08 /* Private */,
-      80,    0, 1068,    2, 0x08 /* Private */,
-      81,    1, 1069,    2, 0x08 /* Private */,
-      82,    1, 1072,    2, 0x08 /* Private */,
-      83,    1, 1075,    2, 0x08 /* Private */,
-      84,    0, 1078,    2, 0x08 /* Private */,
-      85,    0, 1079,    2, 0x08 /* Private */,
-      86,    1, 1080,    2, 0x08 /* Private */,
-      87,    1, 1083,    2, 0x08 /* Private */,
-      88,    1, 1086,    2, 0x08 /* Private */,
-      89,    1, 1089,    2, 0x08 /* Private */,
-      90,    1, 1092,    2, 0x08 /* Private */,
-      91,    1, 1095,    2, 0x08 /* Private */,
-      92,    1, 1098,    2, 0x08 /* Private */,
-      93,    1, 1101,    2, 0x08 /* Private */,
-      94,    1, 1104,    2, 0x08 /* Private */,
-      95,    1, 1107,    2, 0x08 /* Private */,
-      96,    0, 1110,    2, 0x08 /* Private */,
-      97,    1, 1111,    2, 0x08 /* Private */,
-      98,    0, 1114,    2, 0x08 /* Private */,
-      99,    0, 1115,    2, 0x08 /* Private */,
-     100,    0, 1116,    2, 0x08 /* Private */,
-     101,    1, 1117,    2, 0x08 /* Private */,
-     102,    0, 1120,    2, 0x08 /* Private */,
-     103,    0, 1121,    2, 0x08 /* Private */,
-     104,    0, 1122,    2, 0x08 /* Private */,
-     105,    0, 1123,    2, 0x08 /* Private */,
-     106,    0, 1124,    2, 0x08 /* Private */,
-     107,    0, 1125,    2, 0x08 /* Private */,
-     108,    0, 1126,    2, 0x08 /* Private */,
-     109,    0, 1127,    2, 0x08 /* Private */,
-     110,    0, 1128,    2, 0x08 /* Private */,
-     111,    0, 1129,    2, 0x08 /* Private */,
-     112,    0, 1130,    2, 0x08 /* Private */,
-     113,    0, 1131,    2, 0x08 /* Private */,
-     114,    0, 1132,    2, 0x08 /* Private */,
-     115,    0, 1133,    2, 0x08 /* Private */,
-     116,    0, 1134,    2, 0x08 /* Private */,
-     117,    0, 1135,    2, 0x08 /* Private */,
-     118,    0, 1136,    2, 0x08 /* Private */,
-     119,    0, 1137,    2, 0x08 /* Private */,
-     120,    0, 1138,    2, 0x08 /* Private */,
-     121,    0, 1139,    2, 0x08 /* Private */,
-     122,    0, 1140,    2, 0x08 /* Private */,
-     123,    0, 1141,    2, 0x08 /* Private */,
-     124,    0, 1142,    2, 0x08 /* Private */,
-     125,    0, 1143,    2, 0x08 /* Private */,
-     126,    0, 1144,    2, 0x08 /* Private */,
-     127,    0, 1145,    2, 0x08 /* Private */,
-     128,    0, 1146,    2, 0x08 /* Private */,
-     129,    0, 1147,    2, 0x08 /* Private */,
-     130,    0, 1148,    2, 0x08 /* Private */,
-     131,    0, 1149,    2, 0x08 /* Private */,
-     132,    1, 1150,    2, 0x08 /* Private */,
-     133,    1, 1153,    2, 0x08 /* Private */,
-     134,    1, 1156,    2, 0x08 /* Private */,
-     135,    1, 1159,    2, 0x08 /* Private */,
-     136,    1, 1162,    2, 0x08 /* Private */,
-     137,    1, 1165,    2, 0x08 /* Private */,
-     138,    0, 1168,    2, 0x08 /* Private */,
-     139,    0, 1169,    2, 0x08 /* Private */,
-     140,    0, 1170,    2, 0x08 /* Private */,
-     141,    0, 1171,    2, 0x08 /* Private */,
-     142,    0, 1172,    2, 0x08 /* Private */,
-     143,    0, 1173,    2, 0x08 /* Private */,
-     144,    1, 1174,    2, 0x08 /* Private */,
-     145,    1, 1177,    2, 0x08 /* Private */,
-     146,    1, 1180,    2, 0x08 /* Private */,
-     147,    1, 1183,    2, 0x08 /* Private */,
-     148,    1, 1186,    2, 0x08 /* Private */,
-     149,    1, 1189,    2, 0x08 /* Private */,
-     150,    1, 1192,    2, 0x08 /* Private */,
-     151,    1, 1195,    2, 0x08 /* Private */,
-     152,    0, 1198,    2, 0x08 /* Private */,
-     153,    1, 1199,    2, 0x08 /* Private */,
-     154,    1, 1202,    2, 0x08 /* Private */,
-     155,    1, 1205,    2, 0x08 /* Private */,
-     156,    1, 1208,    2, 0x08 /* Private */,
-     157,    0, 1211,    2, 0x08 /* Private */,
-     158,    0, 1212,    2, 0x08 /* Private */,
-     159,    0, 1213,    2, 0x08 /* Private */,
-     160,    0, 1214,    2, 0x08 /* Private */,
-     161,    0, 1215,    2, 0x08 /* Private */,
-     162,    0, 1216,    2, 0x08 /* Private */,
-     163,    0, 1217,    2, 0x08 /* Private */,
-     164,    0, 1218,    2, 0x08 /* Private */,
-     165,    0, 1219,    2, 0x08 /* Private */,
-     166,    0, 1220,    2, 0x08 /* Private */,
-     167,    1, 1221,    2, 0x08 /* Private */,
-     169,    1, 1224,    2, 0x08 /* Private */,
-     170,    1, 1227,    2, 0x08 /* Private */,
-     171,    1, 1230,    2, 0x08 /* Private */,
-     173,    0, 1233,    2, 0x08 /* Private */,
-     174,    0, 1234,    2, 0x08 /* Private */,
-     175,    0, 1235,    2, 0x08 /* Private */,
-     176,    0, 1236,    2, 0x08 /* Private */,
-     177,    0, 1237,    2, 0x08 /* Private */,
+       1,    0,  884,    2, 0x08 /* Private */,
+       3,    0,  885,    2, 0x08 /* Private */,
+       4,    1,  886,    2, 0x08 /* Private */,
+       4,    0,  889,    2, 0x28 /* Private | MethodCloned */,
+       6,    1,  890,    2, 0x08 /* Private */,
+       6,    0,  893,    2, 0x28 /* Private | MethodCloned */,
+       7,    1,  894,    2, 0x08 /* Private */,
+       7,    0,  897,    2, 0x28 /* Private | MethodCloned */,
+       8,    1,  898,    2, 0x08 /* Private */,
+       8,    0,  901,    2, 0x28 /* Private | MethodCloned */,
+       9,    1,  902,    2, 0x08 /* Private */,
+      10,    1,  905,    2, 0x08 /* Private */,
+      11,    1,  908,    2, 0x08 /* Private */,
+      12,    1,  911,    2, 0x08 /* Private */,
+      13,    1,  914,    2, 0x08 /* Private */,
+      15,    1,  917,    2, 0x08 /* Private */,
+      16,    1,  920,    2, 0x08 /* Private */,
+      17,    1,  923,    2, 0x08 /* Private */,
+      18,    1,  926,    2, 0x08 /* Private */,
+      20,    1,  929,    2, 0x08 /* Private */,
+      21,    1,  932,    2, 0x08 /* Private */,
+      22,    1,  935,    2, 0x08 /* Private */,
+      23,    1,  938,    2, 0x08 /* Private */,
+      24,    1,  941,    2, 0x08 /* Private */,
+      25,    0,  944,    2, 0x08 /* Private */,
+      26,    1,  945,    2, 0x08 /* Private */,
+      27,    1,  948,    2, 0x08 /* Private */,
+      28,    1,  951,    2, 0x08 /* Private */,
+      29,    1,  954,    2, 0x08 /* Private */,
+      31,    1,  957,    2, 0x08 /* Private */,
+      32,    1,  960,    2, 0x08 /* Private */,
+      33,    1,  963,    2, 0x08 /* Private */,
+      34,    1,  966,    2, 0x08 /* Private */,
+      35,    1,  969,    2, 0x08 /* Private */,
+      36,    1,  972,    2, 0x08 /* Private */,
+      37,    0,  975,    2, 0x08 /* Private */,
+      38,    1,  976,    2, 0x08 /* Private */,
+      39,    1,  979,    2, 0x08 /* Private */,
+      40,    1,  982,    2, 0x08 /* Private */,
+      41,    1,  985,    2, 0x08 /* Private */,
+      42,    1,  988,    2, 0x08 /* Private */,
+      43,    1,  991,    2, 0x08 /* Private */,
+      44,    1,  994,    2, 0x08 /* Private */,
+      45,    1,  997,    2, 0x08 /* Private */,
+      46,    1, 1000,    2, 0x08 /* Private */,
+      47,    1, 1003,    2, 0x08 /* Private */,
+      48,    1, 1006,    2, 0x08 /* Private */,
+      49,    1, 1009,    2, 0x08 /* Private */,
+      50,    1, 1012,    2, 0x08 /* Private */,
+      51,    1, 1015,    2, 0x08 /* Private */,
+      52,    0, 1018,    2, 0x08 /* Private */,
+      53,    0, 1019,    2, 0x08 /* Private */,
+      54,    0, 1020,    2, 0x08 /* Private */,
+      55,    0, 1021,    2, 0x08 /* Private */,
+      56,    0, 1022,    2, 0x08 /* Private */,
+      57,    0, 1023,    2, 0x08 /* Private */,
+      58,    1, 1024,    2, 0x08 /* Private */,
+      60,    0, 1027,    2, 0x08 /* Private */,
+      61,    0, 1028,    2, 0x08 /* Private */,
+      62,    0, 1029,    2, 0x08 /* Private */,
+      63,    0, 1030,    2, 0x08 /* Private */,
+      64,    0, 1031,    2, 0x08 /* Private */,
+      65,    1, 1032,    2, 0x08 /* Private */,
+      66,    1, 1035,    2, 0x08 /* Private */,
+      67,    1, 1038,    2, 0x08 /* Private */,
+      68,    1, 1041,    2, 0x08 /* Private */,
+      69,    1, 1044,    2, 0x08 /* Private */,
+      70,    1, 1047,    2, 0x08 /* Private */,
+      71,    1, 1050,    2, 0x08 /* Private */,
+      72,    1, 1053,    2, 0x08 /* Private */,
+      73,    0, 1056,    2, 0x08 /* Private */,
+      74,    1, 1057,    2, 0x08 /* Private */,
+      75,    0, 1060,    2, 0x08 /* Private */,
+      76,    1, 1061,    2, 0x08 /* Private */,
+      77,    1, 1064,    2, 0x08 /* Private */,
+      78,    1, 1067,    2, 0x08 /* Private */,
+      79,    1, 1070,    2, 0x08 /* Private */,
+      80,    0, 1073,    2, 0x08 /* Private */,
+      81,    1, 1074,    2, 0x08 /* Private */,
+      82,    1, 1077,    2, 0x08 /* Private */,
+      83,    1, 1080,    2, 0x08 /* Private */,
+      84,    0, 1083,    2, 0x08 /* Private */,
+      85,    0, 1084,    2, 0x08 /* Private */,
+      86,    1, 1085,    2, 0x08 /* Private */,
+      87,    1, 1088,    2, 0x08 /* Private */,
+      88,    1, 1091,    2, 0x08 /* Private */,
+      89,    1, 1094,    2, 0x08 /* Private */,
+      90,    1, 1097,    2, 0x08 /* Private */,
+      91,    1, 1100,    2, 0x08 /* Private */,
+      92,    1, 1103,    2, 0x08 /* Private */,
+      93,    1, 1106,    2, 0x08 /* Private */,
+      94,    1, 1109,    2, 0x08 /* Private */,
+      95,    1, 1112,    2, 0x08 /* Private */,
+      96,    0, 1115,    2, 0x08 /* Private */,
+      97,    1, 1116,    2, 0x08 /* Private */,
+      98,    0, 1119,    2, 0x08 /* Private */,
+      99,    0, 1120,    2, 0x08 /* Private */,
+     100,    0, 1121,    2, 0x08 /* Private */,
+     101,    1, 1122,    2, 0x08 /* Private */,
+     102,    0, 1125,    2, 0x08 /* Private */,
+     103,    0, 1126,    2, 0x08 /* Private */,
+     104,    0, 1127,    2, 0x08 /* Private */,
+     105,    0, 1128,    2, 0x08 /* Private */,
+     106,    0, 1129,    2, 0x08 /* Private */,
+     107,    0, 1130,    2, 0x08 /* Private */,
+     108,    0, 1131,    2, 0x08 /* Private */,
+     109,    0, 1132,    2, 0x08 /* Private */,
+     110,    0, 1133,    2, 0x08 /* Private */,
+     111,    0, 1134,    2, 0x08 /* Private */,
+     112,    0, 1135,    2, 0x08 /* Private */,
+     113,    0, 1136,    2, 0x08 /* Private */,
+     114,    0, 1137,    2, 0x08 /* Private */,
+     115,    0, 1138,    2, 0x08 /* Private */,
+     116,    0, 1139,    2, 0x08 /* Private */,
+     117,    0, 1140,    2, 0x08 /* Private */,
+     118,    0, 1141,    2, 0x08 /* Private */,
+     119,    0, 1142,    2, 0x08 /* Private */,
+     120,    0, 1143,    2, 0x08 /* Private */,
+     121,    0, 1144,    2, 0x08 /* Private */,
+     122,    0, 1145,    2, 0x08 /* Private */,
+     123,    0, 1146,    2, 0x08 /* Private */,
+     124,    0, 1147,    2, 0x08 /* Private */,
+     125,    0, 1148,    2, 0x08 /* Private */,
+     126,    0, 1149,    2, 0x08 /* Private */,
+     127,    0, 1150,    2, 0x08 /* Private */,
+     128,    0, 1151,    2, 0x08 /* Private */,
+     129,    0, 1152,    2, 0x08 /* Private */,
+     130,    0, 1153,    2, 0x08 /* Private */,
+     131,    0, 1154,    2, 0x08 /* Private */,
+     132,    0, 1155,    2, 0x08 /* Private */,
+     133,    1, 1156,    2, 0x08 /* Private */,
+     134,    1, 1159,    2, 0x08 /* Private */,
+     135,    1, 1162,    2, 0x08 /* Private */,
+     136,    1, 1165,    2, 0x08 /* Private */,
+     137,    1, 1168,    2, 0x08 /* Private */,
+     138,    1, 1171,    2, 0x08 /* Private */,
+     139,    0, 1174,    2, 0x08 /* Private */,
+     140,    0, 1175,    2, 0x08 /* Private */,
+     141,    0, 1176,    2, 0x08 /* Private */,
+     142,    0, 1177,    2, 0x08 /* Private */,
+     143,    0, 1178,    2, 0x08 /* Private */,
+     144,    0, 1179,    2, 0x08 /* Private */,
+     145,    1, 1180,    2, 0x08 /* Private */,
+     146,    1, 1183,    2, 0x08 /* Private */,
+     147,    1, 1186,    2, 0x08 /* Private */,
+     148,    1, 1189,    2, 0x08 /* Private */,
+     149,    1, 1192,    2, 0x08 /* Private */,
+     150,    1, 1195,    2, 0x08 /* Private */,
+     151,    1, 1198,    2, 0x08 /* Private */,
+     152,    1, 1201,    2, 0x08 /* Private */,
+     153,    0, 1204,    2, 0x08 /* Private */,
+     154,    1, 1205,    2, 0x08 /* Private */,
+     155,    1, 1208,    2, 0x08 /* Private */,
+     156,    1, 1211,    2, 0x08 /* Private */,
+     157,    1, 1214,    2, 0x08 /* Private */,
+     158,    0, 1217,    2, 0x08 /* Private */,
+     159,    0, 1218,    2, 0x08 /* Private */,
+     160,    0, 1219,    2, 0x08 /* Private */,
+     161,    0, 1220,    2, 0x08 /* Private */,
+     162,    0, 1221,    2, 0x08 /* Private */,
+     163,    0, 1222,    2, 0x08 /* Private */,
+     164,    0, 1223,    2, 0x08 /* Private */,
+     165,    0, 1224,    2, 0x08 /* Private */,
+     166,    0, 1225,    2, 0x08 /* Private */,
+     167,    0, 1226,    2, 0x08 /* Private */,
+     168,    1, 1227,    2, 0x08 /* Private */,
+     170,    1, 1230,    2, 0x08 /* Private */,
+     171,    1, 1233,    2, 0x08 /* Private */,
+     172,    1, 1236,    2, 0x08 /* Private */,
+     174,    0, 1239,    2, 0x08 /* Private */,
+     175,    0, 1240,    2, 0x08 /* Private */,
+     176,    0, 1241,    2, 0x08 /* Private */,
+     177,    0, 1242,    2, 0x08 /* Private */,
+     178,    0, 1243,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -611,6 +614,7 @@ static const uint qt_meta_data_CQCamera3DControl[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void,
     QMetaType::Void, QMetaType::QColor,   19,
     QMetaType::Void, QMetaType::QColor,   19,
     QMetaType::Void, QMetaType::QColor,   19,
@@ -646,10 +650,10 @@ static const uint qt_meta_data_CQCamera3DControl[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::Double,  168,
+    QMetaType::Void, QMetaType::Double,  169,
     QMetaType::Void, QMetaType::Int,    2,
-    QMetaType::Void, QMetaType::Double,  168,
-    QMetaType::Void, QMetaType::Int,  172,
+    QMetaType::Void, QMetaType::Double,  169,
+    QMetaType::Void, QMetaType::Int,  173,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -771,73 +775,74 @@ void CQCamera3DControl::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
         case 103: _t->connectMaterialEdit(); break;
         case 104: _t->swapSlot(); break;
         case 105: _t->invertSlot(); break;
-        case 106: _t->addTextureSlot(); break;
-        case 107: _t->loadTextureMapSlot(); break;
-        case 108: _t->saveTextureMapSlot(); break;
-        case 109: _t->loadMaterialMapSlot(); break;
-        case 110: _t->saveMaterialMapSlot(); break;
-        case 111: _t->addMaterialSlot(); break;
-        case 112: _t->selectParentSlot(); break;
-        case 113: _t->selectFacesSlot(); break;
-        case 114: _t->selectPointsSlot(); break;
-        case 115: _t->selectRelatedSlot(); break;
-        case 116: _t->deselectSlot(); break;
-        case 117: _t->selectDumpSlot(); break;
-        case 118: _t->objectSelectSlot(); break;
-        case 119: _t->objectZoomSlot(); break;
-        case 120: _t->addConeSlot(); break;
-        case 121: _t->addCubeSlot(); break;
-        case 122: _t->addCylinderSlot(); break;
-        case 123: _t->addPyramidSlot(); break;
-        case 124: _t->addSphereSlot(); break;
-        case 125: _t->addTorusSlot(); break;
-        case 126: _t->loadModelSlot(); break;
-        case 127: _t->saveModelSlot(); break;
-        case 128: _t->currentMaterialSlot(); break;
-        case 129: _t->materialAmbientSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 130: _t->materialDiffuseSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 131: _t->materialSpecularSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 132: _t->materialEmissionSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
-        case 133: _t->materialShininessSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 134: _t->materialTransparencySlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 135: _t->materialAmbientTextureSlot(); break;
-        case 136: _t->materialDiffuseTextureSlot(); break;
-        case 137: _t->materialNormalTextureSlot(); break;
-        case 138: _t->materialSpecularTextureSlot(); break;
-        case 139: _t->materialEmissiveTextureSlot(); break;
-        case 140: _t->currentObjectChangedSlot(); break;
-        case 141: _t->objectAutoSelectSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 142: _t->overviewEqualScaleSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 143: _t->overviewModelTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 144: _t->overviewCameraSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 145: _t->overviewLightsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 146: _t->uvTextureTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 147: _t->uvTextureWrapSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 148: _t->textureWrapSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 149: _t->bonesObjectSlot(); break;
-        case 150: _t->bonesModelSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 151: _t->bonesBoneNodeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 152: _t->bonesPointJointsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 153: _t->bonesOnlyJointsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 154: _t->bonesTranslationSlot(); break;
-        case 155: _t->bonesRotationSlot(); break;
-        case 156: _t->bonesScaleSlot(); break;
-        case 157: _t->currentBoneSlot(); break;
-        case 158: _t->updateBones(); break;
-        case 159: _t->updateCurrentBone(); break;
-        case 160: _t->updateAnim(); break;
-        case 161: _t->timerSlot(); break;
-        case 162: _t->animObjectSlot(); break;
-        case 163: _t->animNameSlot(); break;
-        case 164: _t->animTimeSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 165: _t->animTimeTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 166: _t->animTimeStepSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 167: _t->animTimeFramesSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 168: _t->playSlot(); break;
-        case 169: _t->pauseSlot(); break;
-        case 170: _t->stepSlot(); break;
-        case 171: _t->animNodeSlot(); break;
-        case 172: _t->animStep(); break;
+        case 106: _t->mergeSlot(); break;
+        case 107: _t->addTextureSlot(); break;
+        case 108: _t->loadTextureMapSlot(); break;
+        case 109: _t->saveTextureMapSlot(); break;
+        case 110: _t->loadMaterialMapSlot(); break;
+        case 111: _t->saveMaterialMapSlot(); break;
+        case 112: _t->addMaterialSlot(); break;
+        case 113: _t->selectParentSlot(); break;
+        case 114: _t->selectFacesSlot(); break;
+        case 115: _t->selectPointsSlot(); break;
+        case 116: _t->selectRelatedSlot(); break;
+        case 117: _t->deselectSlot(); break;
+        case 118: _t->selectDumpSlot(); break;
+        case 119: _t->objectSelectSlot(); break;
+        case 120: _t->objectZoomSlot(); break;
+        case 121: _t->addConeSlot(); break;
+        case 122: _t->addCubeSlot(); break;
+        case 123: _t->addCylinderSlot(); break;
+        case 124: _t->addPyramidSlot(); break;
+        case 125: _t->addSphereSlot(); break;
+        case 126: _t->addTorusSlot(); break;
+        case 127: _t->loadModelSlot(); break;
+        case 128: _t->saveModelSlot(); break;
+        case 129: _t->currentMaterialSlot(); break;
+        case 130: _t->materialAmbientSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 131: _t->materialDiffuseSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 132: _t->materialSpecularSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 133: _t->materialEmissionSlot((*reinterpret_cast< const QColor(*)>(_a[1]))); break;
+        case 134: _t->materialShininessSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 135: _t->materialTransparencySlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 136: _t->materialAmbientTextureSlot(); break;
+        case 137: _t->materialDiffuseTextureSlot(); break;
+        case 138: _t->materialNormalTextureSlot(); break;
+        case 139: _t->materialSpecularTextureSlot(); break;
+        case 140: _t->materialEmissiveTextureSlot(); break;
+        case 141: _t->currentObjectChangedSlot(); break;
+        case 142: _t->objectAutoSelectSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 143: _t->overviewEqualScaleSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 144: _t->overviewModelTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 145: _t->overviewCameraSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 146: _t->overviewLightsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 147: _t->uvTextureTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 148: _t->uvTextureWrapSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 149: _t->textureWrapSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 150: _t->bonesObjectSlot(); break;
+        case 151: _t->bonesModelSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 152: _t->bonesBoneNodeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 153: _t->bonesPointJointsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 154: _t->bonesOnlyJointsSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 155: _t->bonesTranslationSlot(); break;
+        case 156: _t->bonesRotationSlot(); break;
+        case 157: _t->bonesScaleSlot(); break;
+        case 158: _t->currentBoneSlot(); break;
+        case 159: _t->updateBones(); break;
+        case 160: _t->updateCurrentBone(); break;
+        case 161: _t->updateAnim(); break;
+        case 162: _t->timerSlot(); break;
+        case 163: _t->animObjectSlot(); break;
+        case 164: _t->animNameSlot(); break;
+        case 165: _t->animTimeSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 166: _t->animTimeTypeSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 167: _t->animTimeStepSlot((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 168: _t->animTimeFramesSlot((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 169: _t->playSlot(); break;
+        case 170: _t->pauseSlot(); break;
+        case 171: _t->stepSlot(); break;
+        case 172: _t->animNodeSlot(); break;
+        case 173: _t->animStep(); break;
         default: ;
         }
     }
@@ -872,13 +877,13 @@ int CQCamera3DControl::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 173)
+        if (_id < 174)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 173;
+        _id -= 174;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 173)
+        if (_id < 174)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 173;
+        _id -= 174;
     }
     return _id;
 }

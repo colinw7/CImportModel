@@ -15,6 +15,7 @@
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DGeomFace.h>
 #include <CQCamera3DGeomLine.h>
+#include <CQCamera3DGeomEdge.h>
 
 #include <CQMetaEdit.h>
 #include <CQAppOptions.h>
@@ -136,6 +137,10 @@ class CQCamera3DGeomFactory : public CGeometryFactory {
 
   CGeomLine3D *createLine3D() const override {
     return new CQCamera3DGeomLine;
+  }
+
+  CGeomEdge3D *createEdge3D() const override {
+    return new CQCamera3DGeomEdge;
   }
 
   CGeomLight3D *createLight3D(CGeomScene3D *pscene, const std::string &name) const override {

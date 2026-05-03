@@ -112,15 +112,15 @@ class CImportBlend : public CImportBase {
   bool readBlock(char *code);
   bool processBlock(char *code);
 
-  bool readSDNA(const uchar *buffer, uint size);
+  bool readSDNA(const uchar *buffer, ulong size);
 
   void printData(const Name &n, const Type &t, uchar *data) const;
 
   void decodeNameData(Name &type) const;
 
-  uint decodeInteger(const uchar *data) const;
-  ushort decodeShort(const uchar *data) const;
-  float decodeFloat(const uchar *data) const;
+  uint   decodeInteger(const uchar *data) const;
+  ushort decodeShort  (const uchar *data) const;
+  float  decodeFloat  (const uchar *data) const;
 
  private:
   CGeomScene3D*  scene_   { nullptr };
@@ -130,11 +130,13 @@ class CImportBlend : public CImportBase {
 
   CFile* file_ { nullptr };
 
-  uint pointerSize_  { 0 };
+  uint pointerSize_  { 8 };
   bool littleEndian_ { true };
 
+  bool legacy_ { true };
+
   uchar *buffer_     { nullptr };
-  uint   bufferSize_ { 0 };
+  ulong  bufferSize_ { 0 };
 
   char *name_    { nullptr };
   uint  nameLen_ { 0 };

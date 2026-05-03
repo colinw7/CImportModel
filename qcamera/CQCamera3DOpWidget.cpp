@@ -71,7 +71,7 @@ setOptions(CQCamera3DOptions *options)
 
   delete frame_;
 
-  if (options) {
+  if (options_) {
     frame_ = new QFrame;
     layout_->addWidget(frame_);
 
@@ -80,11 +80,11 @@ setOptions(CQCamera3DOptions *options)
 
     CQCamera3DUI ui(this, frameLayout_);
 
-    options->addOptions(&ui);
+    options_->addOptions(&ui);
 
     layout_->invalidate();
 
-    widget_->setWindowTitle(options->title());
+    widget_->setWindowTitle(options_->title());
   }
   else
     frame_ = nullptr;

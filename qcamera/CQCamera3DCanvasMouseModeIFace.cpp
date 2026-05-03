@@ -74,6 +74,14 @@ moveFace(CGeomFace3D *face, const CVector3D &d)
 
 void
 CQCamera3DCanvasMouseModeIFace::
+moveEdge(CGeomEdge3D *edge, const CVector3D &d)
+{
+  canvas_->moveEdge(edge, d);
+  canvas_->update();
+}
+
+void
+CQCamera3DCanvasMouseModeIFace::
 scaleObject(CGeomObject3D *object, const CVector3D &d)
 {
   canvas_->scaleObject(object, d);

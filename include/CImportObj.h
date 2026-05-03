@@ -33,6 +33,8 @@ class CImportObj : public CImportBase {
     return object_;
   }
 
+  bool write(CFile *file, CGeomScene3D *scene) const override;
+
  private:
   struct Material;
 
@@ -98,19 +100,20 @@ class CImportObj : public CImportBase {
   CGeomObject3D* currentObject_ { nullptr };
   Materials      materials_;
   Material*      material_      { nullptr };
-  CFile*         file_          { nullptr };
   int            vnum_          { 0 };
   int            vnnum_         { 0 };
   int            vtnum_         { 0 };
-  int            voffset_       { 1 };
-  int            vnoffset_      { 1 };
-  int            vtoffset_      { 1 };
+  int            voffset_       { 0 };
+  int            vnoffset_      { 0 };
+  int            vtoffset_      { 0 };
   std::string    groupName_;
 //TexturePoints  texturePoints_;
 //NormalPoints   normalPoints_;
 
   int  numObjects_      { 0 };
   bool splitByMaterial_ { true };
+
+  mutable CFile* file_ { nullptr };
 };
 
 #endif

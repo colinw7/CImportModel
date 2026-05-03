@@ -36,6 +36,7 @@
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
 #include <CGeomFace3D.h>
+#include <CGeomEdge3D.h>
 #include <CGeomNodeData.h>
 #include <CGeomTexture.h>
 
@@ -847,6 +848,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   ui.addStretch();
 
+  ui.addButton("Merge", SLOT(mergeSlot()));
+
   ui.endTabPage();
 
   //------
@@ -1416,6 +1419,7 @@ updateWidgets()
     selectionData_.objectInfoText->setText(objStr);
   }
   else if (selectType == CQCamera3DSelectType::EDGE) {
+#if 0
     auto faceEdges = canvas->getSelectedFaceEdges();
 
     QString objStr;
@@ -1423,13 +1427,26 @@ updateWidgets()
     for (const auto &pf : faceEdges) {
       auto faceStr = QString("Face %1: Ind:").arg(pf.first->getInd());
 
-      for (const auto &edge : pf.second)
-        faceStr += QString(" %1").arg(edge);
+      for (auto *edge : pf.second)
+        faceStr += QString(" %1").arg(edge->getInd());
 
       objStr += faceStr + "\n";
     }
 
     selectionData_.objectInfoText->setText(objStr);
+#else
+    auto edges = canvas->getSelectedEdges();
+
+    QString objStr;
+
+    for (auto *edge : edges) {
+      auto edgeStr = QString("Edge %1").arg(edge->getInd());
+
+      objStr += edgeStr + "\n";
+    }
+
+    selectionData_.objectInfoText->setText(objStr);
+#endif
   }
   else if (selectType == CQCamera3DSelectType::POINT) {
     auto *vertex = canvas->currentVertex();
@@ -3446,11 +3463,11 @@ void
 CQCamera3DControl::
 invertSlot()
 {
-  auto name = qobject_cast<QPushButton *>(sender())->text();
-
   auto *canvas = app_->canvas();
   auto *object = canvas->currentObject(/*includeRoot*/true);
   if (! object) return;
+
+  auto name = qobject_cast<QPushButton *>(sender())->text();
 
   if      (name == "Invert X")
     object->invertX();
@@ -3458,6 +3475,30 @@ invertSlot()
     object->invertY();
   else if (name == "Invert Z")
     object->invertZ();
+
+  updateObjects();
+}
+
+void
+CQCamera3DControl::
+mergeSlot()
+{
+  auto *canvas = app_->canvas();
+
+  auto selectedVertices = canvas->getSelectedVertices();
+  if (selectedVertices.empty()) return;
+
+  auto *object = selectedVertices.begin()->first;
+
+  const auto &vertices = selectedVertices.begin()->second;
+  if (vertices.size() != 2) return;
+
+  auto pv = vertices.begin();
+
+  auto v1 = *pv; ++pv;
+  auto v2 = *pv;
+
+  object->mergeVertices(v1, v2);
 
   updateObjects();
 }

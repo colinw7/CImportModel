@@ -34,7 +34,7 @@ CQCamera3DSelectData
 CQCamera3DOverviewMouseModeIFace::
 getSelection() const
 {
-  return canvas_->getSelection();
+  return canvas_->getSelection(overview_->selectType());
 }
 
 const CBBox3D &
@@ -81,6 +81,14 @@ moveFace(CGeomFace3D *face, const CVector3D &d)
 {
   canvas_->moveFace(face, d);
   overview_->update();
+}
+
+void
+CQCamera3DOverviewMouseModeIFace::
+moveEdge(CGeomEdge3D *edge, const CVector3D &d)
+{
+  canvas_->moveEdge(edge, d);
+  canvas_->update();
 }
 
 void

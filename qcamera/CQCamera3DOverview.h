@@ -199,9 +199,9 @@ class CQCamera3DOverview : public QFrame {
 
   void drawLights();
 
-  void drawModelPolygon(const std::vector<CPoint3D> &points) const;
-  void drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const;
-  void drawModelPoint(const CPoint3D &p) const;
+  void drawModelPolygon(const std::vector<CPoint3D> &points, bool selected=false) const;
+  void drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected=false) const;
+  void drawModelPoint(const CPoint3D &p, bool selected=false) const;
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
 
@@ -241,17 +241,27 @@ class CQCamera3DOverview : public QFrame {
     bool                  stroked     { false };
     CRGBA                 fillColor   { CRGBA::white() };
     CRGBA                 strokeColor { CRGBA::black() };
+    bool                  selected    { false };
   };
 
   struct LineData {
-    CGeomLine3D*          line  { nullptr };
+    CGeomLine3D*          line     { nullptr };
     std::vector<CPoint3D> points;
-    CRGBA                 color { CRGBA::white() };
+    CRGBA                 color    { CRGBA::white() };
+    bool                  selected { false };
+  };
+
+  struct EdgeData {
+    CGeomEdge3D*          edge     { nullptr };
+    std::vector<CPoint3D> points;
+    CRGBA                 color    { CRGBA::white() };
+    bool                  selected { false };
   };
 
   struct VertexData {
     CPoint3D p;
-    CRGBA    color { CRGBA::white() };
+    CRGBA    color    { CRGBA::white() };
+    bool     selected { false };
   };
 
   //---
@@ -293,7 +303,8 @@ class CQCamera3DOverview : public QFrame {
 
   using FaceDatas   = std::vector<FaceData *>;
   using LineDatas   = std::vector<LineData *>;
-  using VertexDatas = std::vector<VertexData *>;
+  using EdgeDatas   = std::vector<EdgeData *>;
+  using VertexDatas = std::map<uint, VertexData *>;
 
   struct GeomData {
     CMatrix3DH modelMatrix;
@@ -303,22 +314,32 @@ class CQCamera3DOverview : public QFrame {
 
     FaceDatas   faceDatas;
     LineDatas   lineDatas;
+    EdgeDatas   edgeDatas;
     VertexDatas vertexDatas;
   };
 
   using Polygon2D = std::vector<QPointF>;
 
   struct PolygonData {
+    bool    selected { false };
     QBrush    brush;
     QPen      pen;
     Polygon2D points;
   };
 
+  struct PointData {
+    bool    selected { false };
+    QBrush  brush;
+    QPen    pen;
+    QPointF point;
+  };
+
   using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
 
   using Polygon2DArray           = std::vector<PolygonData>;
+  using Point2DArray             = std::vector<PointData>;
   using SortedPolygon2DArray     = std::map<double, Polygon2DArray>;
-  using SortedPoint2DArray       = std::map<double, Polygon2D>;
+  using SortedPoint2DArray       = std::map<double, Point2DArray>;
   using ViewSortedPolygon2DArray = std::map<int, SortedPolygon2DArray>;
   using ViewSortedLine2DArray    = std::map<int, SortedPolygon2DArray>;
   using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;

@@ -60,10 +60,9 @@ void
 CQCamera3DOverlay::
 drawGeometry()
 {
-  assert(CQGLStateInst->isCullFace());
-
   auto oldDepthTest = CQGLStateInst->setDepthTest(false);
   auto oldFrontFace = CQGLStateInst->setFrontFace(GL_CCW);
+  bool oldCullFace  = CQGLStateInst->setCullFace(true);
 
   //---
 
@@ -138,4 +137,5 @@ drawGeometry()
 
   CQGLStateInst->setDepthTest(oldDepthTest);
   CQGLStateInst->setFrontFace(oldFrontFace);
+  CQGLStateInst->setCullFace(oldCullFace);
 }

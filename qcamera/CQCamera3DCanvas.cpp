@@ -21,6 +21,7 @@
 #include <CQCamera3DTexture.h>
 #include <CQCamera3DGeomObject.h>
 #include <CQCamera3DGeomFace.h>
+#include <CQCamera3DGeomEdge.h>
 #include <CQCamera3DCanvasMouseModeIFace.h>
 #include <CQCamera3DMouseMode.h>
 #include <CQCamera3DOpWidget.h>
@@ -41,6 +42,7 @@ struct CQPerfTrace {
 
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
+#include <CGeomEdge3D.h>
 #include <CGeomTexture.h>
 #include <CGeomNodeData.h>
 #include <CGeometry3D.h>
@@ -1883,14 +1885,18 @@ drawObjects(ShaderProgram *program)
           ++iv;
         }
 
-        auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(face);
+        //auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(face);
 
-        auto &selectedEdges1 = selectedFaceEdges[face1->getInd()];
+        if (face->edgesValid()) {
+          auto &selectedEdges1 = selectedFaceEdges[face->getInd()];
 
-        const auto &selectedEdges = face1->selectedEdges();
+          const auto &edges = face->getEdges();
 
-        for (const auto &selectedEdge : selectedEdges)
-          selectedEdges1.push_back(faceData.pos + selectedEdge);
+          for (auto *edge : edges) {
+            if (edge->getSelected())
+              selectedEdges1.push_back(edge->getInd());
+          }
+        }
       }
       else if (faceData.line) {
         auto *line = faceData.line;
@@ -2284,6 +2290,8 @@ setEditType(const EditType &v)
 
     mouseModeMgr_->startMode(mode);
   }
+  else
+    mouseModeMgr_->endAllModes();
 
   Q_EMIT editTypeChanged();
 }
@@ -2464,14 +2472,28 @@ selectFaces(const std::vector<CGeomFace3D *> &faces, bool clear, bool update)
 
 void
 CQCamera3DCanvas::
-selectFaceEdge(CGeomFace3D *face, int ind, bool clear, bool update)
+selectEdge(CGeomEdge3D *edge, bool clear, bool update)
 {
   if (clear)
     deselectAll(/*update*/ false);
 
-  auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+  edge->setSelected(true);
 
-  face1->selectEdge(ind);
+  if (update) {
+    this->update();
+
+    Q_EMIT stateChanged();
+  }
+}
+
+void
+CQCamera3DCanvas::
+selectFaceEdge(CGeomFace3D *, CGeomEdge3D *edge, bool clear, bool update)
+{
+  if (clear)
+    deselectAll(/*update*/ false);
+
+  edge->setSelected(true);
 
   if (update) {
     this->update();
@@ -2586,11 +2608,13 @@ deselectAll(bool update)
           changed = true;
         }
       }
+    }
 
-      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+    const auto &edges = object->getEdges();
 
-      if (face1->hasSelectedEdge()) {
-        face1->deselecttEdges();
+    for (auto *edge : edges) {
+      if (edge->getSelected()) {
+        edge->setSelected(false);
         changed = true;
       }
     }
@@ -2615,16 +2639,27 @@ CQCamera3DCanvas::SelectData
 CQCamera3DCanvas::
 getSelection() const
 {
+  auto type = calcSelectType();
+
+  return getSelection(type);
+}
+
+CQCamera3DCanvas::SelectData
+CQCamera3DCanvas::
+getSelection(SelectType type) const
+{
   SelectData selectData;
 
-  selectData.type = calcSelectType();
+  selectData.type = type;
 
   if      (selectData.type == SelectType::OBJECT)
     selectData.objects = getSelectedObjects();
   else if (selectData.type == SelectType::FACE)
     selectData.faces = getSelectedFaces();
-  else if (selectData.type == SelectType::EDGE)
-    selectData.faceEdges = getSelectedFaceEdges();
+  else if (selectData.type == SelectType::EDGE) {
+    //selectData.faceEdges = getSelectedFaceEdges();
+    selectData.edges = getSelectedEdges();
+  }
   else if (selectData.type == SelectType::POINT)
     selectData.vertices = getSelectedVertices();
 
@@ -2939,7 +2974,7 @@ selectObjectAtMouse()
   struct InsideFace {
     uint                  ind    { 0 };
     CGeomFace3D*          face   { nullptr };
-    int                   edge   { -1 };
+    CGeomEdge3D*          edge   { nullptr };
     int                   vertex { -1 };
     std::vector<CPoint3D> points;
     CPoint3D              ipoint;
@@ -3020,14 +3055,8 @@ selectObjectAtMouse()
       if (! face->getVisible())
         continue;
 
-      // get face points
-      std::vector<CPoint3D> points;
-
-      const auto &vertices = face->getVertices();
-
-      for (const auto &v : vertices) {
-        const auto &vertex = object->getVertex(v);
-        const auto &model  = vertex.getModel();
+      auto calcVertexPoint = [&](const CGeomVertex3D &vertex) {
+        const auto &model = vertex.getModel();
 
         auto p = model;
 
@@ -3044,6 +3073,21 @@ selectObjectAtMouse()
 
         auto view    = viewMatrix*modelMatrix*p;
         auto project = projectionMatrix*view;
+
+        return project;
+      };
+
+      //---
+
+      // get face points
+      std::vector<CPoint3D> points;
+
+      const auto &vertices = face->getVertices();
+
+      for (const auto &v : vertices) {
+        const auto &vertex = object->getVertex(v);
+
+        auto project = calcVertexPoint(vertex);
 
         points.push_back(project);
       }
@@ -3109,23 +3153,29 @@ selectObjectAtMouse()
         if (! ipoints.empty()) {
           auto pi = ipoints[0];
 
-          int minInd = -1;
+          CGeomEdge3D* minEdge = nullptr;
 
-          size_t i1 = np - 1;
+          const auto &edges = face->getEdges();
 
-          for (size_t i2 = 0; i2 < np; i1 = i2++) {
+          for (auto *edge : edges) {
+            const auto &v1 = object->getVertex(edge->getStart());
+            const auto &v2 = object->getVertex(edge->getEnd  ());
+
+            auto p1 = calcVertexPoint(v1);
+            auto p2 = calcVertexPoint(v2);
+
             double dist = 0.0;
-            (void) CMathGeom3D::PointLineDistance(pi, CLine3D(points[i1], points[i2]), &dist);
+            (void) CMathGeom3D::PointLineDistance(pi, CLine3D(p1, p2), &dist);
 
-            if (minInd < 0 || dist < minLineDist) {
-              minInd      = i1;
+            if (! minEdge || dist < minLineDist) {
+              minEdge     = edge;
               minLineDist = dist;
             }
           }
 
-          if (minInd >= 0) {
+          if (minEdge) {
             insideFace.face = face;
-            insideFace.edge = minInd;
+            insideFace.edge = minEdge;
           }
         }
       }
@@ -3663,13 +3713,14 @@ void
 CQCamera3DCanvas::
 edgeKeyPress(QKeyEvent *e)
 {
+#if 0
   auto faceEdges = getSelectedFaceEdges();
   if (faceEdges.empty()) return;
 
   const auto &pf = faceEdges.begin();
 
-  auto *face    = (*pf).first;
-  auto  edgeNum = (*pf).second[0];
+  auto *face = (*pf).first;
+  auto *edge = (*pf).second[0];
 
   auto d = bbox_.getMaxSize()/100.0;
 
@@ -3680,14 +3731,10 @@ edgeKeyPress(QKeyEvent *e)
   else
     face->calcModelNormal(n);
 
-  auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
-
-  const auto &edge = face1->edge(edgeNum);
-
   auto *object = face->getObject();
 
-  auto &v1 = object->getVertex(edge.v1);
-  auto &v2 = object->getVertex(edge.v2);
+  auto &v1 = object->getVertex(edge->getStart());
+  auto &v2 = object->getVertex(edge->getEnd  ());
 
   if      (e->key() == Qt::Key_Up) {
     if (editType() == EditType::MOVE) {
@@ -3703,6 +3750,36 @@ edgeKeyPress(QKeyEvent *e)
       updateObjectsData();
     }
   }
+#else
+  auto edges = getSelectedEdges();
+  if (edges.empty()) return;
+
+  auto d = bbox_.getMaxSize()/100.0;
+
+  CVector3D n(0, 1, 0);
+
+  for (auto *edge : edges) {
+    auto *object = edge->getObject();
+
+    auto &v1 = object->getVertex(edge->getStart());
+    auto &v2 = object->getVertex(edge->getEnd  ());
+
+    if      (e->key() == Qt::Key_Up) {
+      if (editType() == EditType::MOVE) {
+        v1.setModel(v1.getModel() + d*n);
+        v2.setModel(v2.getModel() + d*n);
+        updateObjectsData();
+      }
+    }
+    else if (e->key() == Qt::Key_Down) {
+      if (editType() == EditType::MOVE) {
+        v1.setModel(v1.getModel() - d*n);
+        v2.setModel(v2.getModel() - d*n);
+        updateObjectsData();
+      }
+    }
+  }
+#endif
 }
 
 void
@@ -3767,6 +3844,15 @@ CQCamera3DCanvas::
 moveFace(CGeomFace3D *face, const CVector3D &d)
 {
   face->moveBy(d);
+}
+
+//---
+
+void
+CQCamera3DCanvas::
+moveEdge(CGeomEdge3D *edge, const CVector3D &d)
+{
+  edge->moveBy(d);
 }
 
 //---
@@ -4182,16 +4268,34 @@ getSelectedFaceEdges() const
 
   for (auto *object : scene->getObjects()) {
     for (auto *face : object->getFaces()) {
-      auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+      const auto &edges = face->getEdges();
 
-      const auto &edges = face1->selectedEdges();
-
-      for (const auto &edge : edges)
-        faceEdges[face].push_back(edge);
+      for (auto *edge : edges) {
+        if (edge->getSelected())
+          faceEdges[face].push_back(edge);
+      }
     }
   }
 
   return faceEdges;
+}
+
+CQCamera3DCanvas::Edges
+CQCamera3DCanvas::
+getSelectedEdges() const
+{
+  Edges edges;
+
+  auto *scene = app_->getScene();
+
+  for (auto *object : scene->getObjects()) {
+    for (auto *edge : object->getEdges()) {
+      if (edge->getSelected())
+        edges.push_back(edge);
+    }
+  }
+
+  return edges;
 }
 
 //---

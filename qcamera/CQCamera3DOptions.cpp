@@ -728,7 +728,8 @@ updateWidgets()
 
   auto *iface = mode_->mgr()->iface();
 
-  dirCombo_->setCurrentIndex(moveDirectionInd.typeToInd(iface->moveDirection()));
+  if (dirCombo_)
+    dirCombo_->setCurrentIndex(moveDirectionInd.typeToInd(iface->moveDirection()));
 
   const auto &selectData = mode_->selectData();
 

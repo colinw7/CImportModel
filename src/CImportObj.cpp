@@ -2,6 +2,8 @@
 #include <CGeometry3D.h>
 #include <CStrUtil.h>
 
+#include <set>
+
 namespace {
   static std::string s_line;
   static int         s_line_num { 0 };
@@ -453,6 +455,8 @@ readFace(const std::string &line)
   std::vector<CVector3D> normals1;
 
   for (size_t i = 0; i < ntp; ++i) {
+    assert(int(vertices[i]) >= voffset_);
+
     auto ind = vertices[i] - voffset_;
 
     auto &v = currentObject_->getVertex(ind);
@@ -964,4 +968,174 @@ addMaterial(const std::string &name)
   materials_[material->name] = material;
 
   return material;
+}
+
+//---
+
+bool
+CImportObj::
+write(CFile *file, CGeomScene3D *scene) const
+{
+  file_ = file;
+
+  //---
+
+  auto matfile = file->getName();
+
+  auto pn = matfile.find('.');
+  if (pn != std::string::npos)
+    matfile = matfile.substr(0, pn);
+
+  if (matfile == "")
+    matfile = "temp";
+
+  matfile += ".mat";
+
+  CFile mfile(matfile);
+  //std::cerr << matfile << "\n";
+
+  //---
+
+  using MaterialSet = std::set<CGeomMaterial *>;
+
+  MaterialSet materialSet;
+
+  CGeomMaterial *faceMaterial = nullptr;
+
+  file_->write("mtllib " + matfile + "\n");
+
+  uint voffset  = 1;
+  uint vtoffset = 1;
+
+  for (auto *object : scene->getObjects())
+    object->updateMaterials();
+
+  for (auto *object : scene->getObjects()) {
+    auto *material = object->getMaterialP();
+
+    file_->write("o " + object->getName() + "\n");
+
+    auto t = object->getHierTransform();
+
+    //---
+
+    // write all vertices
+    for (auto *vertex : object->getVertices()) {
+      auto model = t*vertex->getModel();
+
+      file_->write("v ");
+      file_->write(std::to_string(model.x) + " ");
+      file_->write(std::to_string(model.y) + " ");
+      file_->write(std::to_string(model.z));
+      file_->write("\n");
+    }
+
+    // write all normals
+    for (auto *vertex : object->getVertices()) {
+      auto normal = (vertex->hasNormal() ? vertex->getNormal() : CVector3D(0, 1, 0));
+
+      file_->write("vn ");
+      file_->write(std::to_string(normal.x()) + " ");
+      file_->write(std::to_string(normal.y()) + " ");
+      file_->write(std::to_string(normal.z()));
+      file_->write("\n");
+    }
+
+    // write all texture points
+    for (auto *face : object->getFaces()) {
+      for (const auto &tp : face->getTexturePoints()) {
+        file_->write("vt ");
+        file_->write(std::to_string(tp.x) + " ");
+        file_->write(std::to_string(tp.y) + " ");
+        file_->write("\n");
+      }
+    }
+
+    //---
+
+    // write faces and associated material
+    for (auto *face : object->getFaces()) {
+      auto *faceMaterial1 = face->getMaterialP();
+
+      if (! faceMaterial1)
+        faceMaterial1 = material;
+
+      bool newMaterial = false;
+
+      if (faceMaterial1) {
+        auto pm = materialSet.find(faceMaterial1);
+
+        if (pm == materialSet.end()) {
+          materialSet.insert(faceMaterial1);
+
+          newMaterial = true;
+        }
+      }
+
+      if (newMaterial) {
+        mfile.write("newmtl " + faceMaterial1->name() + "\n");
+
+        if (faceMaterial1->diffuse()) {
+          auto diffuse1 = faceMaterial1->getDiffuse();
+
+          mfile.write("Kd " + std::to_string(diffuse1.getRed()) + " " +
+                              std::to_string(diffuse1.getGreen()) + " " +
+                              std::to_string(diffuse1.getBlue()) + "\n");
+        }
+
+        if (faceMaterial1->diffuseTexture()) {
+          mfile.write("map_Kd " + faceMaterial1->diffuseTexture()->fileName());
+        }
+
+        mfile.write("\n");
+      }
+
+      if (faceMaterial1 != faceMaterial) {
+        faceMaterial = faceMaterial1;
+
+        auto diffuse1 = faceMaterial1->getDiffuse();
+
+        file_->write("usemtl " + faceMaterial1->name() + "\n");
+      }
+
+      file_->write("f");
+
+      const auto &vinds = face->getVertices();
+      const auto &tp    = face->getTexturePoints();
+
+      bool hasVt = (! tp.empty());
+
+      if (hasVt) {
+        assert(vinds.size() == tp.size());
+      }
+
+      // vertex/texture/normal
+      for (const auto &v : vinds) {
+        auto vstr = std::to_string(v + voffset);
+
+        auto vertex = object->getVertexP(v);
+
+        file_->write(" " + vstr);
+
+        if (hasVt) {
+          auto vtstr = std::to_string(vtoffset);
+
+          file_->write("/" + vtstr);
+
+          ++vtoffset;
+        }
+        else
+          file_->write("/");
+
+        if (vertex->hasNormal())
+          file_->write("/" + vstr);
+      }
+
+      file_->write("\n");
+    }
+
+    voffset += uint(object->getVertices().size());
+  }
+
+  return true;
 }

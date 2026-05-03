@@ -17,6 +17,7 @@
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 #include <CGeomObject3D.h>
+#include <CGeomEdge3D.h>
 #include <CGeomNodeData.h>
 #include <CLine3D.h>
 #include <CMatrix2D.h>
@@ -163,6 +164,9 @@ setEditType(const EditType &v)
   else if (editType_ == EditType::LIGHT) {
     tipStr = QString("Light: Shift=Position, Control=Direction");
   }
+  else {
+    mouseModeMgr_->endAllModes();
+  }
 
   app_->status()->setTipLabel(tipStr);
 
@@ -266,7 +270,7 @@ paintEvent(QPaintEvent *)
 
     QPen pen;
     pen.setColor(current ? Qt::red : Qt::black);
-    pen.setWidthF(current ? 2 : 0);
+    pen.setWidthF(current ? 3 : 0);
     painter.setPen(pen);
 
     QBrush brush(current ? QColor(220, 220, 240) : QColor(220, 220, 220));
@@ -360,7 +364,7 @@ drawModel()
 
       drawData_.painter->setPen(RGBAToQColor(faceData->strokeColor));
 
-      drawModelPolygon(faceData->points);
+      drawModelPolygon(faceData->points, faceData->selected);
     }
 
     for (auto *lineData : geomData.lineDatas) {
@@ -376,10 +380,25 @@ drawModel()
       }
     }
 
-    for (auto *vertexData : geomData.vertexDatas) {
+    for (auto *edgeData : geomData.edgeDatas) {
+      drawData_.painter->setPen(RGBAToQColor(edgeData->color));
+
+      size_t i = 0;
+
+      for (size_t j = 1; j < edgeData->points.size(); i = j++) {
+        auto p1 = edgeData->points[i];
+        auto p2 = edgeData->points[j];
+
+        drawModelLine(p1, p2, edgeData->selected);
+      }
+    }
+
+    for (const auto &pv : geomData.vertexDatas) {
+      auto *vertexData = pv.second;
+
       drawData_.painter->setPen(RGBAToQColor(vertexData->color));
 
-      drawModelPoint(vertexData->p);
+      drawModelPoint(vertexData->p, vertexData->selected);
     }
   }
 
@@ -398,15 +417,36 @@ drawModel()
     }
   }
 
+  for (auto &pv : drawData_.viewSortedLine2DArray) {
+    auto *view = views_[pv.first];
+
+    drawData_.painter->setClipRect(view->rect);
+
+    for (auto &pp : pv.second) {
+      for (auto &pd : pp.second) {
+        drawData_.painter->setPen(pd.pen);
+        drawData_.painter->setBrush(pd.brush);
+
+        auto p1 = pd.points[0];
+        auto p2 = pd.points[1];
+
+        drawData_.painter->drawLine(p1, p2);
+      }
+    }
+  }
+
   for (auto &pv : drawData_.viewSortedPoint2DArray) {
     auto *view = views_[pv.first];
 
     drawData_.painter->setClipRect(view->rect);
 
     for (auto &pp : pv.second) {
-      for (auto &point : pp.second) {
-        auto px = point.x();
-        auto py = point.y();
+      for (auto &pd : pp.second) {
+        drawData_.painter->setPen(pd.pen);
+        drawData_.painter->setBrush(pd.brush);
+
+        auto px = pd.point.x();
+        auto py = pd.point.y();
 
         drawData_.painter->drawLine(px - 4, py, px + 4, py);
         drawData_.painter->drawLine(px, py - 4, px, py + 4);
@@ -461,8 +501,11 @@ updateModel()
     for (auto *lineData : geomData.lineDatas)
       delete lineData;
 
-    for (auto *vertexData : geomData.vertexDatas)
-      delete vertexData;
+    for (auto *edgeData : geomData.edgeDatas)
+      delete edgeData;
+
+    for (auto &pv : geomData.vertexDatas)
+      delete pv.second;
   }
 
   drawData_.objectGeomData.clear();
@@ -540,6 +583,28 @@ updateModel()
       object1->setBBox(objBBox_);
 
       bbox_ += objBBox_;
+
+      //---
+
+      if (objVisible_ && object->edgesValid()) {
+        const auto &edges = object->getEdges();
+
+        for (auto *edge : edges) {
+          if (edge->getSelected()) {
+            auto *edgeData = new EdgeData;
+
+            edgeData->edge = edge;
+
+            edgeData->points.push_back(vertexPoint(edge->getStart()));
+            edgeData->points.push_back(vertexPoint(edge->getEnd  ()));
+
+            edgeData->color    = CRGBA::red();
+            edgeData->selected = true;
+
+            geomData_->edgeDatas.push_back(edgeData);
+          }
+        }
+      }
     }
 
     bool beginVisitFace(CGeomFace3D *face) override {
@@ -559,21 +624,6 @@ updateModel()
     void endVisitFace(CGeomFace3D *) override {
       if (! faceData_)
         return;
-
-      auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(faceData_->face);
-
-      const auto &selectedEdges = face1->selectedEdges();
-
-      for (const auto &selectedEdge : selectedEdges) {
-        const auto &edge = face1->edge(selectedEdge);
-
-        LineData lineData;
-
-        lineData.points.push_back(vertexPoint(edge.v1));
-        lineData.points.push_back(vertexPoint(edge.v2));
-
-        lineData.color = CRGBA::red();
-      }
 
       //---
 
@@ -595,9 +645,9 @@ updateModel()
 
       faceData_->stroked = true;
 
-      bool selected = (objSelected_ || faceData_->face->getSelected());
+      faceData_->selected = (objSelected_ || faceData_->face->getSelected());
 
-      if (selected)
+      if (faceData_->selected)
         faceData_->strokeColor = CRGBA::red();
       else
         faceData_->strokeColor = CRGBA(0, 0, 0, 0.1);
@@ -619,16 +669,18 @@ updateModel()
 
       objBBox_ += geomData_->modelMatrix*p;
 
-      if (vertex->isSelected()) {
+      if (objVisible_) {
         auto *vertexData = new VertexData;
 
-        vertexData->p     = p;
-        vertexData->color = CRGBA::red();
+        vertexData->p        = p;
+        vertexData->selected = vertex->isSelected();
 
-        if (objVisible_)
-          geomData_->vertexDatas.push_back(vertexData);
+        if (vertexData->selected)
+          vertexData->color = CRGBA::red();
         else
-          delete vertexData;
+          vertexData->color = CRGBA(0, 0, 0, 0.1);
+
+        geomData_->vertexDatas[vertex->getInd()] = vertexData;
       }
     }
 
@@ -656,24 +708,26 @@ updateModel()
 
         const auto &vertex = object_->getVertex(v);
 
-        if (vertex.isSelected()) {
+        if (objVisible_) {
           auto *vertexData = new VertexData;
 
-          vertexData->p     = p;
-          vertexData->color = CRGBA::red();
+          vertexData->p        = p;
+          vertexData->selected = vertex.isSelected();
 
-          if (objVisible_)
-            geomData_->vertexDatas.push_back(vertexData);
+          if (vertexData->selected)
+            vertexData->color = CRGBA::red();
           else
-            delete vertexData;
+            vertexData->color = CRGBA(0, 0, 0, 0.1);
+
+          geomData_->vertexDatas[vertex.getInd()] = vertexData;
         }
       }
 
       //---
 
-      bool selected = line->getSelected();
+      lineData->selected = line->getSelected();
 
-      if (selected)
+      if (lineData->selected)
         lineData->color = CRGBA::red();
       else
         lineData->color = CRGBA(0, 0, 0, 0.2);
@@ -927,13 +981,17 @@ drawLights()
 
 void
 CQCamera3DOverview::
-drawModelPolygon(const std::vector<CPoint3D> &points) const
+drawModelPolygon(const std::vector<CPoint3D> &points, bool selected) const
 {
   auto drawPolygon2D = [&](const ViewData &view, double pos, const std::vector<CPoint2D> &points) {
     PolygonData polygonData;
 
+    polygonData.selected = selected;
+
     polygonData.pen   = drawData_.painter->pen();
     polygonData.brush = drawData_.painter->brush();
+
+    polygonData.pen.setWidthF(polygonData.selected ? 3 : 0);
 
     for (const auto &p : points) {
       double px, py;
@@ -969,13 +1027,17 @@ drawModelPolygon(const std::vector<CPoint3D> &points) const
 
 void
 CQCamera3DOverview::
-drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const
+drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected) const
 {
   auto drawLine2D = [&](const ViewData &view, double pos, const CPoint2D &p1, const CPoint2D &p2) {
     PolygonData polygonData;
 
+    polygonData.selected = selected;
+
     polygonData.pen   = drawData_.painter->pen();
     polygonData.brush = drawData_.painter->brush();
+
+    polygonData.pen.setWidthF(polygonData.selected ? 3 : 0);
 
     double px1, py1;
     view.range.windowToPixel(p1.x, p1.y, &px1, &py1);
@@ -1005,13 +1067,24 @@ drawModelLine(const CPoint3D &p1, const CPoint3D &p2) const
 
 void
 CQCamera3DOverview::
-drawModelPoint(const CPoint3D &p) const
+drawModelPoint(const CPoint3D &p, bool selected) const
 {
   auto drawPoint2D = [&](const ViewData &view, double pos, const CPoint2D &p) {
+    PointData pointData;
+
+    pointData.selected = selected;
+
+    pointData.pen   = drawData_.painter->pen();
+    pointData.brush = drawData_.painter->brush();
+
+    pointData.pen.setWidthF(pointData.selected ? 3 : 0);
+
     double px, py;
     view.range.windowToPixel(p.x, p.y, &px, &py);
 
-    drawData_.viewSortedPoint2DArray[view.ind][-pos].push_back(QPointF(px, py));
+    pointData.point = QPointF(px, py);
+
+    drawData_.viewSortedPoint2DArray[view.ind][-pos].push_back(pointData);
   };
 
   auto p1 = drawData_.modelMatrix*p;
@@ -1466,6 +1539,22 @@ keyPressEvent(QKeyEvent *e)
   }
   else if (editType() == EditType::LIGHT) {
   }
+  else if (editType_ == EditType::SELECT) {
+    if (! mouseData_.isShift && ! mouseData_.isControl) {
+      if      (e->key() == Qt::Key_G) { // Grab
+        setEditType(EditType::MOVE);
+        return;
+      }
+      else if (e->key() == Qt::Key_S) { // Scale
+        setEditType(EditType::SCALE);
+        return;
+      }
+      else if (e->key() == Qt::Key_R) { // Rotate
+        setEditType(EditType::ROTATE);
+        return;
+      }
+    }
+  }
 
   if      (k == Qt::Key_Plus) {
     for (auto *v : views_)
@@ -1710,39 +1799,43 @@ selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear)
   else if (selectType == SelectType::EDGE) {
     auto pm = viewPoint(view.type, p);
 
-    auto *faceData = atFaces.begin()->second;
-    auto *face = faceData->face;
+    CGeomEdge3D* minEdge = nullptr;
+    double       minDist = 0.0;
 
-    auto *object = face->getObject();
+    for (auto &pg : drawData_.objectGeomData) {
+      auto *object = pg.first;
 
-    auto modelMatrix = CMatrix3DH(object->getHierTransform());
+      auto modelMatrix = CMatrix3DH(object->getHierTransform());
 
-    auto *face1 = dynamic_cast<CQCamera3DGeomFace *>(face);
+      const auto &geomData = pg.second;
 
-    const auto &vertices = face1->getVertices();
+      const auto &edges = object->getEdges();
 
-    auto nv = vertices.size();
+      for (auto *edge : edges) {
+        auto getEdgeVertex = [&](uint ind) {
+          auto pv = geomData.vertexDatas.find(ind);
+          assert(pv != geomData.vertexDatas.end());
+          return (*pv).second->p;
+        };
 
-    int    minInd  = -1;
-    double minDist = 0.0;
+        auto pe1 = getEdgeVertex(edge->getStart());
+        auto pe2 = getEdgeVertex(edge->getEnd  ());
 
-    size_t i1 = nv - 1;
+        auto pf1 = viewPoint(view.type, modelMatrix*pe1);
+        auto pf2 = viewPoint(view.type, modelMatrix*pe2);
 
-    for (size_t i2 = 0; i2 < nv; i1 = i2++) {
-      auto pf1 = viewPoint(view.type, modelMatrix*faceData->points[i1]);
-      auto pf2 = viewPoint(view.type, modelMatrix*faceData->points[i2]);
+        double dist = 0.0;
+        (void) CMathGeom2D::PointLineDistance(pm, CLine2D(pf1, pf2), &dist);
 
-      double dist = 0.0;
-      (void) CMathGeom2D::PointLineDistance(pm, CLine2D(pf1, pf2), &dist);
-
-      if (minInd < 0 || dist < minDist) {
-        minInd  = i1;
-        minDist = dist;
+        if (! minEdge || dist < minDist) {
+          minEdge = edge;
+          minDist = dist;
+        }
       }
     }
 
-    if (minInd >= 0)
-      canvas->selectFaceEdge(face, minInd, clear, /*update*/true);
+    if (minEdge)
+      canvas->selectEdge(minEdge, clear, /*update*/true);
   }
   else if (selectType == SelectType::POINT) {
     auto pm = viewPoint(view.type, p);

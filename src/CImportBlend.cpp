@@ -2,6 +2,18 @@
 #include <CGeometry3D.h>
 #include <CGeomScene3D.h>
 
+namespace {
+
+struct LargeBHead8 {
+  int      code   { 0 };
+  int      SDNAnr { 0 };
+  uint64_t old    { 0 };
+  int64_t  len    { 0 };
+  int64_t  nr     { 0 };
+};
+
+}
+
 CImportBlend::
 CImportBlend(CGeomScene3D *scene, const std::string &name) :
  scene_(scene)
@@ -33,10 +45,12 @@ read(CFile &file)
 {
   file_ = &file;
 
-  uchar header[13];
+  uchar header[18];
 
-  if (! file_->read(header, 12))
+  if (! file_->read(header, 12)) {
+    std::cerr << "Failed to read header\n";
     return false;
+  }
 
   header[13] = '\0';
 
@@ -45,19 +59,79 @@ read(CFile &file)
     return false;
   }
 
-  if      (header[7] == '_')
-    pointerSize_ = 4;
-  else if (header[7] == '-')
-    pointerSize_ = 8;
-  else
-    return false;
+  // legacy
+  if (header[7] == '_' || header[7] == '-') {
+    if      (header[7] == '_')
+      pointerSize_ = 4;
+    else if (header[7] == '-')
+      pointerSize_ = 8;
 
-  if      (header[8] == 'v')
+    if      (header[8] == 'v')
+      littleEndian_ = true;
+    else if (header[8] == 'V')
+      littleEndian_ = false;
+    else {
+      std::cerr << "Invalid endian char\n";
+      return false;
+    }
+
+    if (! isdigit(header[9]) || ! isdigit(header[10]) || ! isdigit(header[11])) {
+      std::cerr << "Invalid version\n";
+      return false;
+    }
+
+    legacy_ = true;
+  }
+  else {
+    if (! isdigit(header[7]) || ! isdigit(header[8])) {
+      std::cerr << "Invalid version\n";
+      return false;
+    }
+
+    char headerSizeStr[3];
+    memcpy(headerSizeStr, &header[7], 2);
+    headerSizeStr[2] = '\0';
+
+    int header_size = atoi(headerSizeStr);
+    if (header_size != 17) {
+      std::cerr << "Invalid header size\n";
+      return false;
+    }
+
+    file_->rewind();
+    if (! file_->read(header, 17)) {
+      std::cerr << "Failed to read header\n";
+      return false;
+    }
+
+    header[18] = '\0';
+
+    if (header[9] != '-') {
+      std::cerr << "Invalid pointer size char\n";
+      return false;
+    }
+
+    pointerSize_ = 8;
+
+    if (! isdigit(header[10]) || ! isdigit(header[11])) {
+      std::cerr << "Invalid version\n";
+      return false;
+    }
+
+    if (header[12] != 'v') {
+      std::cerr << "Invalid endian char\n";
+      return false;
+    }
+
     littleEndian_ = true;
-  else if (header[8] == 'V')
-    littleEndian_ = false;
-  else
-    return false;
+
+    if (! isdigit(header[13]) || ! isdigit(header[14]) || ! isdigit(header[15])) {
+      std::cerr << "Invalid version\n";
+      return false;
+    }
+
+    legacy_ = false;
+  }
 
   //---
 
@@ -65,8 +139,10 @@ read(CFile &file)
   char code[5];
 
   while (! file_->eof()) {
-    if (! readBlock(code))
+    if (! readBlock(code)) {
+      std::cerr << "Failed to read block\n";
       return false;
+    }
 
     if (strncmp(&code[0], "ENDB", 4) == 0)
       break;
@@ -76,15 +152,27 @@ read(CFile &file)
 
   file_->rewind();
 
-  if (! file_->read(header, 12))
-    return false;
+  if (legacy_) {
+    if (! file_->read(header, 12)) {
+      std::cerr << "Failed to read header\n";
+      return false;
+    }
+  }
+  else {
+    if (! file_->read(header, 17)) {
+      std::cerr << "Failed to read header\n";
+      return false;
+    }
+  }
 
   //---
 
   // process data using DNA
   while (! file_->eof()) {
-    if (! processBlock(code))
+    if (! processBlock(code)) {
+      std::cerr << "Failed to process block\n";
       return false;
+    }
 
     if (strncmp(&code[0], "ENDB", 4) == 0)
       break;
@@ -189,21 +277,46 @@ bool
 CImportBlend::
 readBlock(char *code)
 {
-  uchar header[25];
+  ulong size = 0;
 
-  if (pointerSize_ == 4) {
-    if (! file_->read(header, 20))
-      return false;
+  if (legacy_) {
+    uchar header[25];
+
+    if (pointerSize_ == 4) {
+      if (! file_->read(header, 20)) {
+        std::cerr << "Failed to read block header\n";
+        return false;
+      }
+    }
+    else {
+      if (! file_->read(header, 24)) {
+        std::cerr << "Failed to read block header\n";
+        return false;
+      }
+    }
+
+    memcpy(&code[0], &header[0], 4); // 0-3
+    code[4] = '\0';
+
+    size = decodeInteger(&header[4]); // 4-7
   }
   else {
-    if (! file_->read(header, 24))
+    LargeBHead8 lheader;
+
+    if (! file_->read(reinterpret_cast<uchar *>(&lheader), sizeof(lheader))) {
+      std::cerr << "Failed to read header structure\n";
       return false;
+    }
+
+    memcpy(code, &lheader.code, 4);
+    code[4] = '\0';
+
+    size = lheader.len;
   }
 
-  memcpy(&code[0], &header[0], 4); // 0-3
-  code[4] = '\0';
+  if (isDebug())
+    std::cerr << "Code: " << code << "\n";
 
-  auto size  = decodeInteger(&header[4]); // 4-7
   // pointer (8-11 or 8-15)
 //auto index = decodeInteger(&header[pointerSize_ == 4 ? 12 : 16]); // 12-15 or 16-19
 //auto count = decodeInteger(&header[pointerSize_ == 4 ? 16 : 20]); // 16-19 or 20-23
@@ -222,8 +335,10 @@ readBlock(char *code)
       buffer_ = new uchar [bufferSize_ + 1];
     }
 
-    if (! file_->read(buffer_, size))
+    if (! file_->read(buffer_, size)) {
+      std::cerr << "Failed to read block memory\n";
       return false;
+    }
   }
 
   if (strncmp(reinterpret_cast<char *>(&code[0]), "DNA1", 4) == 0)
@@ -236,24 +351,53 @@ bool
 CImportBlend::
 processBlock(char *code)
 {
-  uchar header[25];
+  ulong size  = 0;
+  ulong index = 0;
+  ulong count = 0;
 
-  if (pointerSize_ == 4) {
-    if (! file_->read(header, 20))
-      return false;
+  if (legacy_) {
+    uchar header[25];
+
+    if (pointerSize_ == 4) {
+      if (! file_->read(header, 20)) {
+        std::cerr << "Failed to read block header\n";
+        return false;
+      }
+    }
+    else {
+      if (! file_->read(header, 24)) {
+        std::cerr << "Failed to read block header\n";
+        return false;
+      }
+    }
+
+    memcpy(&code[0], &header[0], 4); // 0-3
+    code[4] = '\0';
+
+    size = decodeInteger(&header[4]); // 4-7
+
+    // pointer (8-11 or 8-15)
+    index = decodeInteger(&header[pointerSize_ == 4 ? 12 : 16]); // 12-15 or 16-19
+    count = decodeInteger(&header[pointerSize_ == 4 ? 16 : 20]); // 16-19 or 20-23
   }
   else {
-    if (! file_->read(header, 24))
+    LargeBHead8 lheader;
+
+    if (! file_->read(reinterpret_cast<uchar *>(&lheader), sizeof(lheader))) {
+      std::cerr << "Failed to read header structure\n";
       return false;
+    }
+
+    memcpy(code, &lheader.code, 4);
+    code[4] = '\0';
+
+    size  = lheader.len;
+    index = lheader.SDNAnr;
+    count = lheader.nr;
   }
 
-  memcpy(&code[0], &header[0], 4); // 0-3
-  code[4] = '\0';
-
-  auto size  = decodeInteger(&header[4]); // 4-7
-  // pointer (8-11 or 8-15)
-  auto index = decodeInteger(&header[pointerSize_ == 4 ? 12 : 16]); // 12-15 or 16-19
-  auto count = decodeInteger(&header[pointerSize_ == 4 ? 16 : 20]); // 16-19 or 20-23
+  if (isDebug())
+    std::cerr << "Code: " << code << "\n";
 
   if (size > 0) {
     if (bufferSize_ < size) {
@@ -264,8 +408,10 @@ processBlock(char *code)
       buffer_ = new uchar [bufferSize_ + 1];
     }
 
-    if (! file_->read(buffer_, size))
+    if (! file_->read(buffer_, size)) {
+      std::cerr << "Failed to read buffer memory\n";
       return false;
+    }
   }
 
   //---
@@ -369,8 +515,8 @@ processBlock(char *code)
   else if (t.name == "MVert") {
     assert(mesh_ && s.vars.size() >= 4 && structLen >= 16);
 
-    uint nv   = size/structLen;
-    uint pos1 = 0;
+    ulong nv   = size/structLen;
+    uint  pos1 = 0;
 
     for (uint i = 0; i < nv; ++i) {
       auto x = decodeFloat(&buffer_[pos1    ]);
@@ -506,13 +652,15 @@ printData(const Name &n, const Type &t, uchar *data) const
 
 bool
 CImportBlend::
-readSDNA(const uchar *buffer, uint size)
+readSDNA(const uchar *buffer, ulong size)
 {
   uint pos = 0;
 
   // SDNA 0-3
-  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "SDNA", 4) != 0)
+  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "SDNA", 4) != 0) {
+    std::cerr << "Invalid SDNA code\n";
     return false;
+  }
 
   pos += 4;
 
@@ -566,8 +714,10 @@ readSDNA(const uchar *buffer, uint size)
   //---
 
   // NAME 4-7
-  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "NAME", 4) != 0)
+  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "NAME", 4) != 0) {
+    std::cerr << "Invalid SDNA NAME\n";
     return false;
+  }
 
   pos += 4;
 
@@ -597,8 +747,10 @@ readSDNA(const uchar *buffer, uint size)
   //---
 
   // TYPE
-  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "TYPE", 4) != 0)
+  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "TYPE", 4) != 0) {
+    std::cerr << "Invalid SDNA TYPE\n";
     return false;
+  }
 
   pos += 4;
 
@@ -622,8 +774,10 @@ readSDNA(const uchar *buffer, uint size)
   //---
 
   // TLEN
-  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "TLEN", 4) != 0)
+  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "TLEN", 4) != 0) {
+    std::cerr << "Invalid SDNA TLEN\n";
     return false;
+  }
 
   pos += 4;
 
@@ -641,8 +795,10 @@ readSDNA(const uchar *buffer, uint size)
   //---
 
   // STRC
-  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "STRC", 4) != 0)
+  if (strncmp(reinterpret_cast<const char *>(&buffer[pos]), "STRC", 4) != 0) {
+    std::cerr << "Invalid SDNA STRC\n";
     return false;
+  }
 
   pos += 4;
 

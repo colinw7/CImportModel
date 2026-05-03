@@ -21,6 +21,7 @@ class CQCamera3DCanvasMouseModeIFace : public CQCamera3DMouseModeIFace {
 
   void moveObject(CGeomObject3D *object, const CVector3D &d) override;
   void moveFace(CGeomFace3D *face, const CVector3D &d) override;
+  void moveEdge(CGeomEdge3D *edge, const CVector3D &d) override;
 
   void scaleObject(CGeomObject3D *object, const CVector3D &d) override;
 

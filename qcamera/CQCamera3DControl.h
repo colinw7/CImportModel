@@ -205,6 +205,8 @@ class CQCamera3DControl : public QFrame {
   void swapSlot();
   void invertSlot();
 
+  void mergeSlot();
+
   void addTextureSlot();
   void loadTextureMapSlot();
   void saveTextureMapSlot();

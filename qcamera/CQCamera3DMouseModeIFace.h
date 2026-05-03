@@ -49,6 +49,7 @@ class CQCamera3DMouseModeIFace {
 
   virtual void moveObject(CGeomObject3D *object, const CVector3D &d) = 0;
   virtual void moveFace(CGeomFace3D *face, const CVector3D &d) = 0;
+  virtual void moveEdge(CGeomEdge3D *edge, const CVector3D &d) = 0;
 
   virtual void scaleObject(CGeomObject3D *object, const CVector3D &d) = 0;
 

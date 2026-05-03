@@ -372,6 +372,50 @@ keyPress(QKeyEvent *e)
 
     iface->endUpdateObjects();
   }
+  else if (selectData_.type == CQCamera3DSelectType::EDGE) {
+    iface->beginUpdateObjects();
+
+    for (auto *edge : selectData_.edges) {
+      if (! iface->is2D()) {
+        if      (e->key() == Qt::Key_Left) {
+          if (dir == MoveDirection::X)
+            iface->moveEdge(edge, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          if (dir == MoveDirection::X)
+            iface->moveEdge(edge, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          if      (dir == MoveDirection::Y)
+            iface->moveEdge(edge, CVector3D(0, d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveEdge(edge, CVector3D(0, 0, d));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          if      (dir == MoveDirection::Y)
+            iface->moveEdge(edge, CVector3D(0, -d, 0));
+          else if (dir == MoveDirection::Z)
+            iface->moveEdge(edge, CVector3D(0, 0, -d));
+        }
+      }
+      else {
+        if      (e->key() == Qt::Key_Left) {
+          iface->moveEdge(edge, CVector3D(-d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Right) {
+          iface->moveEdge(edge, CVector3D(d, 0, 0));
+        }
+        else if (e->key() == Qt::Key_Up) {
+          iface->moveEdge(edge, CVector3D(0, d, 0));
+        }
+        else if (e->key() == Qt::Key_Down) {
+          iface->moveEdge(edge, CVector3D(0, -d, 0));
+        }
+      }
+    }
+
+    iface->endUpdateObjects();
+  }
 
   options_->updateWidgets();
 }
