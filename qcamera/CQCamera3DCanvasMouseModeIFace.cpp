@@ -32,7 +32,7 @@ CQCamera3DSelectData
 CQCamera3DCanvasMouseModeIFace::
 getSelection() const
 {
-  return canvas_->getSelection();
+  return canvas_->getSelectData();
 }
 
 const CBBox3D &

@@ -179,6 +179,7 @@ class OverviewModelTypeInd : public ValueMap<CQCamera3DOverview::ModelType, int>
     add("None"     , CQCamera3DOverview::ModelType::NONE     , 0);
     add("Wireframe", CQCamera3DOverview::ModelType::WIREFRAME, 1);
     add("Solid"    , CQCamera3DOverview::ModelType::SOLID    , 2);
+    add("Orient"   , CQCamera3DOverview::ModelType::ORIENT   , 3);
   };
 
   CQCamera3DOverview::ModelType indToType(int ind) {
@@ -846,6 +847,13 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
   ui.endGroup();
 
+  ui.startGroup("Annotations");
+
+  overviewData_.pointLabelCheck = ui.addLabelEdit("Point Label", new QCheckBox);
+  overviewData_.edgeLabelCheck  = ui.addLabelEdit("Edge Label" , new QCheckBox);
+
+  ui.endGroup();
+
   ui.addStretch();
 
   ui.addButton("Merge", SLOT(mergeSlot()));
@@ -1419,22 +1427,6 @@ updateWidgets()
     selectionData_.objectInfoText->setText(objStr);
   }
   else if (selectType == CQCamera3DSelectType::EDGE) {
-#if 0
-    auto faceEdges = canvas->getSelectedFaceEdges();
-
-    QString objStr;
-
-    for (const auto &pf : faceEdges) {
-      auto faceStr = QString("Face %1: Ind:").arg(pf.first->getInd());
-
-      for (auto *edge : pf.second)
-        faceStr += QString(" %1").arg(edge->getInd());
-
-      objStr += faceStr + "\n";
-    }
-
-    selectionData_.objectInfoText->setText(objStr);
-#else
     auto edges = canvas->getSelectedEdges();
 
     QString objStr;
@@ -1446,7 +1438,6 @@ updateWidgets()
     }
 
     selectionData_.objectInfoText->setText(objStr);
-#endif
   }
   else if (selectType == CQCamera3DSelectType::POINT) {
     auto *vertex = canvas->currentVertex();
@@ -1561,8 +1552,10 @@ updateWidgets()
   overviewData_.modelTypeCombo->setCurrentIndex(
     overviewModelTypeInd.typeToInd(overview->modelType()));
 
-  overviewData_.cameraCheck->setChecked(overview->isCameraVisible());
-  overviewData_.lightsCheck->setChecked(overview->isLightsVisible());
+  overviewData_.cameraCheck    ->setChecked(overview->isCameraVisible());
+  overviewData_.lightsCheck    ->setChecked(overview->isLightsVisible());
+  overviewData_.pointLabelCheck->setChecked(overview->isVertexLabels());
+  overviewData_.edgeLabelCheck ->setChecked(overview->isEdgeLabels());
 
   // UV
   auto *uvMap = app_->uvMap();
@@ -1974,8 +1967,10 @@ connectSlots(bool b)
 
   connectComboBox(overviewData_.modelTypeCombo, SLOT(overviewModelTypeSlot(int)));
 
-  connectCheckBox(overviewData_.cameraCheck, SLOT(overviewCameraSlot(int)));
-  connectCheckBox(overviewData_.lightsCheck, SLOT(overviewLightsSlot(int)));
+  connectCheckBox(overviewData_.cameraCheck    , SLOT(overviewCameraSlot(int)));
+  connectCheckBox(overviewData_.lightsCheck    , SLOT(overviewLightsSlot(int)));
+  connectCheckBox(overviewData_.pointLabelCheck, SLOT(overviewPointLabelSlot(int)));
+  connectCheckBox(overviewData_.edgeLabelCheck , SLOT(overviewEdgeLabelSlot(int)));
 
   // UV
   connectComboBox(uvData_.typeCombo, SLOT(uvTextureTypeSlot(int)));
@@ -4236,6 +4231,24 @@ overviewLightsSlot(int i)
   auto *overview = app_->overview();
 
   overview->setLightsVisible(i);
+}
+
+void
+CQCamera3DControl::
+overviewPointLabelSlot(int i)
+{
+  auto *overview = app_->overview();
+
+  overview->setVertexLabels(i);
+}
+
+void
+CQCamera3DControl::
+overviewEdgeLabelSlot(int i)
+{
+  auto *overview = app_->overview();
+
+  overview->setEdgeLabels(i);
 }
 
 void

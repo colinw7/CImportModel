@@ -25,6 +25,7 @@ class CQCamera3DBillboard;
 class CQCamera3DNormals;
 class CQCamera3DBasis;
 class CQCamera3DBBox;
+class CQCamera3DSelection;
 class CQCamera3DOverlay;
 class CQCamera3DOverlay2D;
 class CQCamera3DFont;
@@ -102,6 +103,18 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   using MoveDirection = CQCamera3DMoveDirection;
   using ShaderProgram = CQCamera3DShaderProgram;
   using FaceDataList  = CQCamera3DFaceDataList;
+
+  struct SelectedLineData {
+    CPoint3D p1;
+    CPoint3D p2;
+  };
+
+  struct SelectedVertexData {
+    CPoint3D p;
+  };
+
+  using SelectedLineDatas   = std::vector<SelectedLineData>;
+  using SelectedVertexDatas = std::vector<SelectedVertexData>;
 
  private:
   struct TextureBuffer;
@@ -234,6 +247,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  // selection
+  CQCamera3DSelection *getSelection() const { return selection_; }
+
+  //---
+
   bool isShowEyeLine() const { return showEyeLine_; }
   void setShowEyeLine(bool b) { showEyeLine_ = b; }
 
@@ -362,15 +380,14 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool selectFace(CGeomFace3D *face, bool clear, bool update=true);
 
   void selectEdge(CGeomEdge3D *edge, bool clear, bool update=true);
-  void selectFaceEdge(CGeomFace3D *face, CGeomEdge3D *edge, bool clear, bool update=true);
 
   bool selectVertex(CGeomVertex3D *vertex, bool clear, bool update=true);
   bool selectVertices(const ObjectSelectInds &vertices, bool update=true);
 
   bool deselectAll(bool update=true);
 
-  SelectData getSelection() const;
-  SelectData getSelection(SelectType type) const;
+  SelectData getSelectData() const;
+  SelectData getSelectData(SelectType type) const;
 
   void updateCurrentObject();
 
@@ -420,7 +437,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CGeomVertex3D *currentVertex() const { return currentVertex_; }
   void setCurrentVertex(CGeomVertex3D *vertex, bool update);
 
-  FaceEdges getSelectedFaceEdges() const;
+  //FaceEdges getSelectedFaceEdges() const;
 
   Edges getSelectedEdges() const;
 
@@ -525,6 +542,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void initCameraData(CGLCameraIFace *camera);
 
+  //---
+
+  const SelectedLineDatas   &selectedLineDatas  () const { return selectedLineDatas_; }
+  const SelectedVertexDatas &selectedVertexDatas() const { return selectedVertexDatas_; }
+
  private:
   void drawScene();
 
@@ -617,8 +639,18 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
     //---
 
     // selection data
-    using VertexIndices           = std::vector<int>;
-    using FaceEdgeIndices         = std::map<int, VertexIndices>;
+    struct VertexData {
+      CPoint3D p;
+    };
+
+    struct EdgeData {
+      CPoint3D p1;
+      CPoint3D p2;
+    };
+
+    using VertexIndices           = std::map<uint, VertexData>;
+    using EdgeIndices             = std::map<uint, EdgeData>;
+    using FaceEdgeIndices         = std::map<int, EdgeIndices>;
     using SelectedObjectVertices  = std::map<int, VertexIndices>;
     using SelectedObjectFaceEdges = std::map<int, FaceEdgeIndices>;
 
@@ -721,6 +753,11 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   // bbox
   CQCamera3DBBox* bboxOverlay_ { nullptr};
   bool            showBBox_    { false };
+
+  // selection
+  CQCamera3DSelection* selection_ { nullptr};
+  SelectedLineDatas    selectedLineDatas_;
+  SelectedVertexDatas  selectedVertexDatas_;
 
   //---
 

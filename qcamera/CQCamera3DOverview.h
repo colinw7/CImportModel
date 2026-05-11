@@ -33,7 +33,8 @@ class CQCamera3DOverview : public QFrame {
   enum class ModelType {
     NONE,
     WIREFRAME,
-    SOLID
+    SOLID,
+    ORIENT
   };
 
   enum class ViewType {
@@ -134,6 +135,12 @@ class CQCamera3DOverview : public QFrame {
   bool isEyeLineVisible() const { return eyeLineVisible_; }
   void setEyeLineVisible(bool b) { eyeLineVisible_ = b; update(); }
 
+  bool isVertexLabels() const { return vertexLabels_; }
+  void setVertexLabels(bool b) { vertexLabels_ = b; update(); }
+
+  bool isEdgeLabels() const { return edgeLabels_; }
+  void setEdgeLabels(bool b) { edgeLabels_ = b; invalidate(); }
+
   //---
 
   void setOptions(CQCamera3DOptions *options);
@@ -200,8 +207,9 @@ class CQCamera3DOverview : public QFrame {
   void drawLights();
 
   void drawModelPolygon(const std::vector<CPoint3D> &points, bool selected=false) const;
-  void drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected=false) const;
-  void drawModelPoint(const CPoint3D &p, bool selected=false) const;
+  void drawModelLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label,
+                     bool selected=false) const;
+  void drawModelPoint(const CPoint3D &p, const QString &label, bool selected=false) const;
 
   void drawCone(const CVector3D &p, const CVector3D &d, double a) const;
 
@@ -239,6 +247,7 @@ class CQCamera3DOverview : public QFrame {
     std::vector<CPoint3D> points;
     bool                  filled      { true };
     bool                  stroked     { false };
+    bool                  orient      { false };
     CRGBA                 fillColor   { CRGBA::white() };
     CRGBA                 strokeColor { CRGBA::black() };
     bool                  selected    { false };
@@ -288,6 +297,8 @@ class CQCamera3DOverview : public QFrame {
   bool      cameraVisible_  { false };
   bool      lightsVisible_  { false };
   bool      eyeLineVisible_ { false };
+  bool      vertexLabels_   { false };
+  bool      edgeLabels_     { false };
 
   struct MouseData {
     bool   pressed   { false };
@@ -310,6 +321,7 @@ class CQCamera3DOverview : public QFrame {
     CMatrix3DH modelMatrix;
     CMatrix3DH meshMatrix;
     bool       filled  { true };
+    bool       orient  { false };
     bool       useAnim { false };
 
     FaceDatas   faceDatas;
@@ -321,10 +333,11 @@ class CQCamera3DOverview : public QFrame {
   using Polygon2D = std::vector<QPointF>;
 
   struct PolygonData {
-    bool    selected { false };
+    bool      selected { false };
     QBrush    brush;
     QPen      pen;
     Polygon2D points;
+    QString   label;
   };
 
   struct PointData {
@@ -332,6 +345,7 @@ class CQCamera3DOverview : public QFrame {
     QBrush  brush;
     QPen    pen;
     QPointF point;
+    QString label;
   };
 
   using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
@@ -368,7 +382,8 @@ class CQCamera3DOverview : public QFrame {
     CMatrix3DH     modelMatrix;
     CMatrix3DH     meshMatrix;
     ObjectGeomData objectGeomData;
-    bool           filled  { true };
+    bool           filled { true };
+    bool           orient { true };
 
     int         numPointLabels { 5 };
     PointLabels pointLabels[5];

@@ -34,7 +34,7 @@ CQCamera3DSelectData
 CQCamera3DOverviewMouseModeIFace::
 getSelection() const
 {
-  return canvas_->getSelection(overview_->selectType());
+  return canvas_->getSelectData(overview_->selectType());
 }
 
 const CBBox3D &

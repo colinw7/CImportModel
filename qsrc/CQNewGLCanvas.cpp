@@ -1285,16 +1285,16 @@ updateModelData(CBBox3D &bbox)
       if (isOrientColor()) {
         auto orient = face->orientation();
 
-        if      (orient == CPOLYGON_ORIENTATION_CLOCKWISE)
+        if      (orient == CPolygonOrientation::CLOCKWISE)
           ocolor = CRGBA(0, 1, 0);
-        else if (orient == CPOLYGON_ORIENTATION_ANTICLOCKWISE)
+        else if (orient == CPolygonOrientation::ANTICLOCKWISE)
           ocolor = CRGBA(0, 0, 1);
         else
           ocolor = CRGBA(1, 0, 0);
 
 #if 0
-        if ((  frontFace_ && orient == CPOLYGON_ORIENTATION_ANTICLOCKWISE) ||
-            (! frontFace_ && orient == CPOLYGON_ORIENTATION_CLOCKWISE))
+        if ((  frontFace_ && orient == CPolygonOrientation::ANTICLOCKWISE) ||
+            (! frontFace_ && orient == CPolygonOrientation::CLOCKWISE))
           continue;
 #endif
       }

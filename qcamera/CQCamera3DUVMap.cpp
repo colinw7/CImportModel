@@ -78,7 +78,7 @@ paintEvent(QPaintEvent *)
   std::vector<CGeomFace3D *> faces;
 
   if (! texture) {
-    auto selectData = canvas->getSelection();
+    auto selectData = canvas->getSelectData();
 
     faces = selectData.faces;
   }

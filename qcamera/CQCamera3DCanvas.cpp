@@ -11,6 +11,7 @@
 #include <CQCamera3DNormals.h>
 #include <CQCamera3DBasis.h>
 #include <CQCamera3DBBox.h>
+#include <CQCamera3DSelection.h>
 #include <CQCamera3DOverlay.h>
 #include <CQCamera3DOverlay2D.h>
 #include <CQCamera3DControl.h>
@@ -131,6 +132,8 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
   overlay_   = new CQCamera3DOverlay  (this);
 //overlay2D_ = new CQCamera3DOverlay2D(this);
+
+  selection_ = new CQCamera3DSelection(this);
 
   //---
 
@@ -897,6 +900,13 @@ drawContents(CGLCameraIFace *camera)
     bboxOverlay_->drawGeometry();
   }
 
+  //---
+
+  selection_->updateGeometry();
+  selection_->drawGeometry();
+
+  //---
+
   annotation_->drawGeometry();
 
   billboard_->drawGeometry();
@@ -1662,6 +1672,11 @@ void
 CQCamera3DCanvas::
 drawObjects(ShaderProgram *program)
 {
+  selectedLineDatas_  .clear();
+  selectedVertexDatas_.clear();
+
+  //---
+
   Objects objects;
 
   if (isLocalMode()) {
@@ -1874,15 +1889,22 @@ drawObjects(ShaderProgram *program)
 
         drawFace(faceData, 0.0);
 
-        int iv = faceData.pos;
-
         for (const auto &v : faceData.vertices) {
           const auto &vertex = object->getVertex(v);
 
-          if (vertex.isSelected())
-            selectedVertices.push_back(iv);
+          if (! vertex.isSelected())
+            continue;
 
-          ++iv;
+          CQGLBuffer::PointData data;
+          object1->buffer()->getPointData(v, data);
+
+          auto p = data.point.value();
+
+          PaintData::VertexData vertexData;
+
+          vertexData.p = modelMatrix*(meshMatrix*CPoint3D(p.x, p.y, p.z));
+
+          selectedVertices[v] = vertexData;
         }
 
         //auto *face1 = dynamic_cast<const CQCamera3DGeomFace *>(face);
@@ -1893,8 +1915,21 @@ drawObjects(ShaderProgram *program)
           const auto &edges = face->getEdges();
 
           for (auto *edge : edges) {
-            if (edge->getSelected())
-              selectedEdges1.push_back(edge->getInd());
+            if (! edge->getSelected())
+              continue;
+
+            CQGLBuffer::PointData data1, data2;
+            object1->buffer()->getPointData(edge->getStart(), data1);
+            object1->buffer()->getPointData(edge->getEnd  (), data2);
+
+            auto p1 = data1.point.value();
+            auto p2 = data2.point.value();
+
+            PaintData::EdgeData edgeData;
+            edgeData.p1 = modelMatrix*(meshMatrix*CPoint3D(p1.x, p1.y, p1.z));
+            edgeData.p2 = modelMatrix*(meshMatrix*CPoint3D(p2.x, p2.y, p2.z));
+
+            selectedEdges1[edge->getInd()] = edgeData;
           }
         }
       }
@@ -1945,25 +1980,32 @@ drawObjects(ShaderProgram *program)
     //---
 
     if (! selectedVertices.empty()) {
-      program->setUniformValue("isWireframe", true);
+      for (const auto &pv : selectedVertices) {
+        const auto &data = pv.second;
 
-      for (const auto &iv : selectedVertices) {
-        glDrawArrays(GL_POINTS, iv, 1);
+        SelectedVertexData selectedVertexData;
+
+        selectedVertexData.p = data.p;
+
+        selectedVertexDatas_.push_back(selectedVertexData);
       }
     }
 
     //---
 
     if (! selectedFaceEdges.empty()) {
-      program->setUniformValue("isWireframe", true);
-
       for (const auto &pf : selectedFaceEdges) {
-        const auto &vertices = pf.second;
+        const auto &edges = pf.second;
 
-        auto nv = vertices.size();
+        for (const auto &pe : edges) {
+          const auto &data = pe.second;
 
-        for (uint iv = 0; iv < nv; ++iv) {
-          glDrawArrays(GL_LINES, vertices[iv], 2);
+          SelectedLineData selectedLineData;
+
+          selectedLineData.p1 = data.p1;
+          selectedLineData.p2 = data.p2;
+
+          selectedLineDatas_.push_back(selectedLineData);
         }
       }
     }
@@ -2486,22 +2528,6 @@ selectEdge(CGeomEdge3D *edge, bool clear, bool update)
   }
 }
 
-void
-CQCamera3DCanvas::
-selectFaceEdge(CGeomFace3D *, CGeomEdge3D *edge, bool clear, bool update)
-{
-  if (clear)
-    deselectAll(/*update*/ false);
-
-  edge->setSelected(true);
-
-  if (update) {
-    this->update();
-
-    Q_EMIT stateChanged();
-  }
-}
-
 bool
 CQCamera3DCanvas::
 selectVertex(CGeomVertex3D *vertex, bool clear, bool update)
@@ -2637,16 +2663,16 @@ deselectAll(bool update)
 
 CQCamera3DCanvas::SelectData
 CQCamera3DCanvas::
-getSelection() const
+getSelectData() const
 {
   auto type = calcSelectType();
 
-  return getSelection(type);
+  return getSelectData(type);
 }
 
 CQCamera3DCanvas::SelectData
 CQCamera3DCanvas::
-getSelection(SelectType type) const
+getSelectData(SelectType type) const
 {
   SelectData selectData;
 
@@ -2656,10 +2682,8 @@ getSelection(SelectType type) const
     selectData.objects = getSelectedObjects();
   else if (selectData.type == SelectType::FACE)
     selectData.faces = getSelectedFaces();
-  else if (selectData.type == SelectType::EDGE) {
-    //selectData.faceEdges = getSelectedFaceEdges();
+  else if (selectData.type == SelectType::EDGE)
     selectData.edges = getSelectedEdges();
-  }
   else if (selectData.type == SelectType::POINT)
     selectData.vertices = getSelectedVertices();
 
@@ -2670,7 +2694,7 @@ void
 CQCamera3DCanvas::
 updateCurrentObject()
 {
-  auto selectData = getSelection();
+  auto selectData = getSelectData();
 
   setCurrentObject(nullptr, /*update*/ false);
   setCurrentFace  (nullptr, /*update*/ false);
@@ -3194,6 +3218,8 @@ selectObjectAtMouse()
     }
   }
 
+  //---
+
   // sort inside faces by z
   std::map<double, int> tfaces;
 
@@ -3239,7 +3265,7 @@ selectObjectAtMouse()
   }
   else if (selectType == SelectType::EDGE) {
     if (insideFace.face) {
-      selectFaceEdge(insideFace.face, insideFace.edge, /*clear*/true, /*update*/true);
+      selectEdge(insideFace.edge, /*clear*/true, /*update*/true);
       changed = true;
     }
   }
@@ -3713,44 +3739,6 @@ void
 CQCamera3DCanvas::
 edgeKeyPress(QKeyEvent *e)
 {
-#if 0
-  auto faceEdges = getSelectedFaceEdges();
-  if (faceEdges.empty()) return;
-
-  const auto &pf = faceEdges.begin();
-
-  auto *face = (*pf).first;
-  auto *edge = (*pf).second[0];
-
-  auto d = bbox_.getMaxSize()/100.0;
-
-  CVector3D n;
-
-  if (face->getNormalSet())
-    n = face->getNormal();
-  else
-    face->calcModelNormal(n);
-
-  auto *object = face->getObject();
-
-  auto &v1 = object->getVertex(edge->getStart());
-  auto &v2 = object->getVertex(edge->getEnd  ());
-
-  if      (e->key() == Qt::Key_Up) {
-    if (editType() == EditType::MOVE) {
-      v1.setModel(v1.getModel() + d*n);
-      v2.setModel(v2.getModel() + d*n);
-      updateObjectsData();
-    }
-  }
-  else if (e->key() == Qt::Key_Down) {
-    if (editType() == EditType::MOVE) {
-      v1.setModel(v1.getModel() - d*n);
-      v2.setModel(v2.getModel() - d*n);
-      updateObjectsData();
-    }
-  }
-#else
   auto edges = getSelectedEdges();
   if (edges.empty()) return;
 
@@ -3779,7 +3767,6 @@ edgeKeyPress(QKeyEvent *e)
       }
     }
   }
-#endif
 }
 
 void
@@ -4258,6 +4245,7 @@ setCurrentVertex(CGeomVertex3D *vertex, bool update)
     Q_EMIT stateChanged();
 }
 
+#if 0
 CQCamera3DCanvas::FaceEdges
 CQCamera3DCanvas::
 getSelectedFaceEdges() const
@@ -4279,6 +4267,7 @@ getSelectedFaceEdges() const
 
   return faceEdges;
 }
+#endif
 
 CQCamera3DCanvas::Edges
 CQCamera3DCanvas::

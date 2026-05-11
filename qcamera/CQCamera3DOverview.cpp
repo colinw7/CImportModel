@@ -357,7 +357,9 @@ drawModel()
     drawData_.filled      = geomData.filled;
 
     for (auto *faceData : geomData.faceDatas) {
-      if (faceData->filled)
+      if      (faceData->filled)
+        drawData_.painter->setBrush(RGBAToQColor(faceData->fillColor));
+      else if (faceData->orient)
         drawData_.painter->setBrush(RGBAToQColor(faceData->fillColor));
       else
         drawData_.painter->setBrush(Qt::NoBrush);
@@ -376,7 +378,7 @@ drawModel()
         auto p1 = lineData->points[i];
         auto p2 = lineData->points[j];
 
-        drawModelLine(p1, p2);
+        drawModelLine(p1, p2, "");
       }
     }
 
@@ -389,7 +391,12 @@ drawModel()
         auto p1 = edgeData->points[i];
         auto p2 = edgeData->points[j];
 
-        drawModelLine(p1, p2, edgeData->selected);
+        QString label;
+
+        if (isEdgeLabels())
+          label = QString("%1").arg(edgeData->edge->getInd());
+
+        drawModelLine(p1, p2, label, edgeData->selected);
       }
     }
 
@@ -398,7 +405,12 @@ drawModel()
 
       drawData_.painter->setPen(RGBAToQColor(vertexData->color));
 
-      drawModelPoint(vertexData->p, vertexData->selected);
+      QString label;
+
+      if (isVertexLabels())
+        label = QString("%1").arg(pv.first);
+
+      drawModelPoint(vertexData->p, label, vertexData->selected);
     }
   }
 
@@ -430,7 +442,14 @@ drawModel()
         auto p1 = pd.points[0];
         auto p2 = pd.points[1];
 
-        drawData_.painter->drawLine(p1, p2);
+        if (pd.selected)
+          drawData_.painter->drawLine(p1, p2);
+
+        if (pd.label != "") {
+          drawData_.painter->setPen(Qt::black);
+
+          drawData_.painter->drawText((p1.x() + p2.x())/2, (p1.y() + p2.y())/2, pd.label);
+        }
       }
     }
   }
@@ -450,6 +469,12 @@ drawModel()
 
         drawData_.painter->drawLine(px - 4, py, px + 4, py);
         drawData_.painter->drawLine(px, py - 4, px, py + 4);
+
+        if (pd.label != "") {
+          drawData_.painter->setPen(Qt::black);
+
+          drawData_.painter->drawText(px, py, pd.label);
+        }
       }
     }
   }
@@ -485,6 +510,7 @@ CQCamera3DOverview::
 updateModel()
 {
   drawData_.filled = (modelType() == ModelType::SOLID);
+  drawData_.orient = (modelType() == ModelType::ORIENT);
 
   for (auto i = 0; i < drawData_.numPointLabels; ++i)
     drawData_.pointLabels[i].points.clear();
@@ -526,6 +552,7 @@ updateModel()
       geomData_ = &drawData_.objectGeomData[object];
 
       geomData_->filled      = drawData_.filled;
+      geomData_->orient      = drawData_.orient;
       geomData_->modelMatrix = CMatrix3DH(object->getHierTransform());
       geomData_->meshMatrix  = CMatrix3DH(object->getMeshGlobalTransform());
 
@@ -586,11 +613,16 @@ updateModel()
 
       //---
 
-      if (objVisible_ && object->edgesValid()) {
+      bool edgesValid = false;
+
+      if (objVisible_)
+        edgesValid = (overview_->isEdgeLabels() || object->edgesValid());
+
+      if (edgesValid) {
         const auto &edges = object->getEdges();
 
         for (auto *edge : edges) {
-          if (edge->getSelected()) {
+          if (edge->getSelected() || overview_->isEdgeLabels()) {
             auto *edgeData = new EdgeData;
 
             edgeData->edge = edge;
@@ -599,7 +631,7 @@ updateModel()
             edgeData->points.push_back(vertexPoint(edge->getEnd  ()));
 
             edgeData->color    = CRGBA::red();
-            edgeData->selected = true;
+            edgeData->selected = edge->getSelected();
 
             geomData_->edgeDatas.push_back(edgeData);
           }
@@ -628,8 +660,9 @@ updateModel()
       //---
 
       faceData_->filled = geomData_->filled;
+      faceData_->orient = geomData_->orient;
 
-      if (faceData_->filled) {
+      if      (faceData_->filled) {
         auto *faceMaterial = faceData_->face->getMaterialP();
 
         if (! faceMaterial && objectMaterial_)
@@ -639,6 +672,16 @@ updateModel()
 
         if (faceMaterial && faceMaterial->diffuse())
           faceData_->fillColor = faceMaterial->diffuse().value();
+      }
+      else if (faceData_->orient) {
+        auto orient = faceData_->face->modelOrientation();
+
+        if      (orient == CPolygonOrientation::CLOCKWISE)
+          faceData_->fillColor = CRGBA::red();
+        else if (orient == CPolygonOrientation::ANTICLOCKWISE)
+          faceData_->fillColor = CRGBA::green();
+        else
+          faceData_->fillColor = CRGBA::white();
       }
 
       //---
@@ -1027,7 +1070,7 @@ drawModelPolygon(const std::vector<CPoint3D> &points, bool selected) const
 
 void
 CQCamera3DOverview::
-drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected) const
+drawModelLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label, bool selected) const
 {
   auto drawLine2D = [&](const ViewData &view, double pos, const CPoint2D &p1, const CPoint2D &p2) {
     PolygonData polygonData;
@@ -1046,6 +1089,8 @@ drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected) const
 
     polygonData.points.push_back(QPointF(px1, py1));
     polygonData.points.push_back(QPointF(px2, py2));
+
+    polygonData.label = label;
 
     drawData_.viewSortedLine2DArray[view.ind][-pos].push_back(polygonData);
   };
@@ -1067,7 +1112,7 @@ drawModelLine(const CPoint3D &p1, const CPoint3D &p2, bool selected) const
 
 void
 CQCamera3DOverview::
-drawModelPoint(const CPoint3D &p, bool selected) const
+drawModelPoint(const CPoint3D &p, const QString &label, bool selected) const
 {
   auto drawPoint2D = [&](const ViewData &view, double pos, const CPoint2D &p) {
     PointData pointData;
@@ -1083,6 +1128,7 @@ drawModelPoint(const CPoint3D &p, bool selected) const
     view.range.windowToPixel(p.x, p.y, &px, &py);
 
     pointData.point = QPointF(px, py);
+    pointData.label = label;
 
     drawData_.viewSortedPoint2DArray[view.ind][-pos].push_back(pointData);
   };

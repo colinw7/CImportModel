@@ -264,6 +264,8 @@ class CQCamera3DControl : public QFrame {
   void overviewModelTypeSlot(int i);
   void overviewCameraSlot(int i);
   void overviewLightsSlot(int i);
+  void overviewPointLabelSlot(int i);
+  void overviewEdgeLabelSlot(int i);
 
   // UV Map
   void uvTextureTypeSlot(int i);
@@ -538,6 +540,8 @@ class CQCamera3DControl : public QFrame {
     QComboBox* modelTypeCombo  { nullptr };
     QCheckBox* cameraCheck     { nullptr };
     QCheckBox* lightsCheck     { nullptr };
+    QCheckBox* pointLabelCheck { nullptr };
+    QCheckBox* edgeLabelCheck  { nullptr };
   };
 
   OverviewData overviewData_;
