@@ -235,28 +235,7 @@ paintEvent(QPaintEvent *)
 
   //---
 
-  // set window ranges from object bbox
-  if (! bboxSet_) {
-    CBBox3D bbox;
-
-    if (modelBBox_.isSet())
-      bbox = modelBBox_;
-    else
-      bbox = canvas->bbox();
-
-    auto c = bbox.getCenter();
-
-    xs_ = bbox.getXSize();
-    ys_ = bbox.getYSize();
-    zs_ = bbox.getZSize();
-
-    xview_.range.setWindowRange(c.x - xs_, c.y - ys_, c.x + xs_, c.y + ys_); // XY
-    yview_.range.setWindowRange(c.z + zs_, c.y - ys_, c.z - zs_, c.y + ys_); // ZY
-    zview_.range.setWindowRange(c.x - xs_, c.z + zs_, c.x + xs_, c.z - zs_); // XZ
-    pview_.range.setWindowRange(-1, -1, 1, 1); // 3D
-
-    bboxSet_ = true;
-  }
+  updateBBox();
 
   //---
 
@@ -264,6 +243,8 @@ paintEvent(QPaintEvent *)
   painter.fillRect(rect(), QColor(220, 220, 220));
 
   //---
+
+  // draw view borders (sets rect values)
 
   auto drawPixelBorder = [&](ViewData &view) {
     bool current = (view.ind == ind_);
@@ -287,10 +268,6 @@ paintEvent(QPaintEvent *)
 
     painter.setBrush(Qt::NoBrush);
   };
-
-  // draw border (sets rect values)
-  painter.setPen(Qt::black);
-  painter.setBrush(Qt::NoBrush);
 
   for (auto *view : views_)
     drawPixelBorder(*view);
@@ -328,6 +305,37 @@ paintEvent(QPaintEvent *)
 
   for (auto *view : views2d_)
     drawTitle(*view);
+}
+
+void
+CQCamera3DOverview::
+updateBBox()
+{
+  if (bboxSet_)
+    return;
+
+  bboxSet_ = true;
+
+  // set window ranges from object bbox
+  auto *canvas = app_->canvas();
+
+  CBBox3D bbox;
+
+  if (modelBBox_.isSet())
+    bbox = modelBBox_;
+  else
+    bbox = canvas->bbox();
+
+  auto c = bbox.getCenter();
+
+  xs_ = bbox.getXSize();
+  ys_ = bbox.getYSize();
+  zs_ = bbox.getZSize();
+
+  xview_.range.setWindowRange(c.x - xs_, c.y - ys_, c.x + xs_, c.y + ys_); // XY
+  yview_.range.setWindowRange(c.z + zs_, c.y - ys_, c.z - zs_, c.y + ys_); // ZY
+  zview_.range.setWindowRange(c.x - xs_, c.z + zs_, c.x + xs_, c.z - zs_); // XZ
+  pview_.range.setWindowRange(-1, -1, 1, 1); // 3D
 }
 
 void
@@ -674,7 +682,7 @@ updateModel()
           faceData_->fillColor = faceMaterial->diffuse().value();
       }
       else if (faceData_->orient) {
-        auto orient = faceData_->face->modelOrientation();
+        auto orient = faceData_->face->getModelOrientation();
 
         if      (orient == CPolygonOrientation::CLOCKWISE)
           faceData_->fillColor = CRGBA::red();
@@ -716,7 +724,7 @@ updateModel()
         auto *vertexData = new VertexData;
 
         vertexData->p        = p;
-        vertexData->selected = vertex->isSelected();
+        vertexData->selected = vertex->getSelected();
 
         if (vertexData->selected)
           vertexData->color = CRGBA::red();
@@ -755,7 +763,7 @@ updateModel()
           auto *vertexData = new VertexData;
 
           vertexData->p        = p;
-          vertexData->selected = vertex.isSelected();
+          vertexData->selected = vertex.getSelected();
 
           if (vertexData->selected)
             vertexData->color = CRGBA::red();

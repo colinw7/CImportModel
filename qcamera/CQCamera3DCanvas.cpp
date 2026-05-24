@@ -1892,7 +1892,7 @@ drawObjects(ShaderProgram *program)
         for (const auto &v : faceData.vertices) {
           const auto &vertex = object->getVertex(v);
 
-          if (! vertex.isSelected())
+          if (! vertex.getSelected())
             continue;
 
           CQGLBuffer::PointData data;
@@ -2537,7 +2537,7 @@ selectVertex(CGeomVertex3D *vertex, bool clear, bool update)
   if (clear)
     changed = deselectAll(update);
 
-  if (! vertex->isSelected()) {
+  if (! vertex->getSelected()) {
     vertex->setSelected(true);
     changed = true;
   }
@@ -2583,7 +2583,7 @@ selectVertices(const ObjectSelectInds &selectInds, bool update)
         if (! pvertex)
           pvertex = const_cast<CGeomVertex3D *>(&vertex);
 
-        if (! vertex.isSelected()) {
+        if (! vertex.getSelected()) {
           vertex.setSelected(true);
           changed = true;
         }
@@ -2629,7 +2629,7 @@ deselectAll(bool update)
       for (const auto &v : vertices) {
         auto &vertex = object->getVertex(v);
 
-        if (vertex.isSelected()) {
+        if (vertex.getSelected()) {
           vertex.setSelected(false);
           changed = true;
         }
@@ -2775,7 +2775,7 @@ getSelectedVertices() const
       for (const auto &v : vertices) {
         auto &vertex = object->getVertex(v);
 
-        if (vertex.isSelected())
+        if (vertex.getSelected())
           objectSelectInds[object].insert(v);
       }
     }
@@ -3880,9 +3880,9 @@ extrude()
   std::vector<CGeomFace3D *> newFaces;
 
   for (auto *face : faces) {
-    auto *newFace = face->extrude(d);
+    auto extrudeData = face->extrude(d);
 
-    newFaces.push_back(newFace);
+    newFaces.push_back(extrudeData.topFace);
   }
 
   updateObjectsData();

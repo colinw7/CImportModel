@@ -48,7 +48,7 @@ paintEvent(QPaintEvent *)
     auto x1 = textureData.rect.left() + (textureData.rect.width () - iw)/2;
     auto y1 = textureData.rect.top () + (textureData.rect.height() - ih)/2;
 
-    if (textureData.texture->isSelected()) {
+    if (textureData.texture->getSelected()) {
       painter.fillRect(textureData.rect, selectColor);
     }
 

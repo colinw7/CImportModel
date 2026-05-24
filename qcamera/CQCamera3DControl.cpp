@@ -1445,7 +1445,7 @@ updateWidgets()
     if (vertex) {
       selectionData_.indText->setText(QString("%1").arg(vertex->getInd()));
 
-      selectionData_.visCheck->setChecked(vertex->isSelected());
+      selectionData_.visCheck->setChecked(vertex->getSelected());
     }
 
     //---

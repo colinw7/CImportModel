@@ -840,7 +840,7 @@ readFaceArray(CImport3DSChunk *chunk, CGeomObject3D *object)
                                                   vertex3.getCurrent(),
                                                   CPoint3D(0, 0, 1));
 
-    if (orient == CPOLYGON_ORIENTATION_ANTICLOCKWISE)
+    if (orient == CPolygonOrientation::ANTICLOCKWISE)
       std::swap(vertices[0], vertices[2]);
 
     uint face_num = object->addFace(vertices);

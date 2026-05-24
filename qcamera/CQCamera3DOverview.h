@@ -177,6 +177,8 @@ class CQCamera3DOverview : public QFrame {
  private:
   void updateRange();
 
+  void updateBBox();
+
   void setCameraPosition(int x, int y);
   void setCameraOrigin(int x, int y);
 

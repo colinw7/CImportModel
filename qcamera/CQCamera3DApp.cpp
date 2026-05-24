@@ -45,10 +45,10 @@
 #include <svg/pause_svg.h>
 #include <svg/play_one_svg.h>
 
-#include <svg/point_select_svg.h>
-#include <svg/edge_select_svg.h>
-#include <svg/face_select_svg.h>
 #include <svg/object_select_svg.h>
+#include <svg/face_select_svg.h>
+#include <svg/edge_select_svg.h>
+#include <svg/point_select_svg.h>
 
 #include <svg/depth3d_svg.h>
 #include <svg/cull3d_svg.h>

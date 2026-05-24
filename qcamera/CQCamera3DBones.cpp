@@ -410,7 +410,7 @@ drawObjectModel(CGeomObject3D *object)
           jointNode.nodeId = nodeId;
 
           // add selected vertex joint nodes
-          if (vertex.isSelected())
+          if (vertex.getSelected())
             selectedJointNodes.push_back(jointNode);
 
           // add selected joint vertices
@@ -951,7 +951,7 @@ void
 CQCamera3DBones::
 mouseReleaseEvent(QMouseEvent *e)
 {
-   mouseData_.movePixel2 = e->pos();
+  mouseData_.movePixel2 = e->pos();
 
   if (mouseData_.button == Qt::LeftButton) {
     selectNode(mouseData_.pressPixel.x(), mouseData_.pressPixel.y());

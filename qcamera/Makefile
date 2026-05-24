@@ -1514,10 +1514,10 @@ CQCamera3DApp.o: CQCamera3DApp.cpp CQCamera3DApp.h \
 		svg/play_svg.h \
 		svg/pause_svg.h \
 		svg/play_one_svg.h \
-		svg/point_select_svg.h \
-		svg/edge_select_svg.h \
-		svg/face_select_svg.h \
 		svg/object_select_svg.h \
+		svg/face_select_svg.h \
+		svg/edge_select_svg.h \
+		svg/point_select_svg.h \
 		svg/depth3d_svg.h \
 		svg/cull3d_svg.h \
 		svg/front3d_svg.h \
@@ -2084,6 +2084,7 @@ CQCamera3DCanvas.o: CQCamera3DCanvas.cpp CQCamera3DCanvas.h \
 		CQCamera3DNormals.h \
 		CQCamera3DBasis.h \
 		CQCamera3DBBox.h \
+		CQCamera3DSelection.h \
 		CQCamera3DOverlay.h \
 		CQCamera3DOverlay2D.h \
 		CQCamera3DControl.h \
@@ -3975,7 +3976,8 @@ CQCamera3DGeomEdge.o: CQCamera3DGeomEdge.cpp CQCamera3DGeomEdge.h \
 		../../CMath/include/CPoint3D.h \
 		../../CMath/include/CPoint2D.h \
 		../../CMath/include/CIPoint3D.h \
-		../../CMath/include/CMathMacros.h
+		../../CMath/include/CMathMacros.h \
+		../../CMath/include/CLine3D.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CQCamera3DGeomEdge.o CQCamera3DGeomEdge.cpp
 
 CQCamera3DGeomLine.o: CQCamera3DGeomLine.cpp CQCamera3DGeomLine.h \
