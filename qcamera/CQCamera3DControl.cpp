@@ -889,8 +889,8 @@ CQCamera3DControl(CQCamera3DApp *app) :
 
 #if 0
   texturesData_.flipCheck = ui.addLabelEdit("Flip", new QCheckBox);
-#endif
   texturesData_.wrapCheck = ui.addLabelEdit("Wrap", new QCheckBox);
+#endif
 
   ui.endGroup();
 
@@ -1585,13 +1585,13 @@ updateTextureWidgets(bool disconnect)
   if (disconnect)
     connectSlots(false);
 
+#if 0
   auto *currentTexture = dynamic_cast<CQCamera3DTexture *>(
     app_->getTextureById(app_->currentTextureId()));
 
-#if 0
   texturesData_.flipCheck->setChecked(currentTexture ? currentTexture->isFlipped() : false);
-#endif
   texturesData_.wrapCheck->setChecked(currentTexture ? currentTexture->isWrapped() : false);
+#endif
 
   if (disconnect)
     connectSlots(true);
@@ -1982,8 +1982,8 @@ connectSlots(bool b)
 
 #if 0
   connectCheckBox(texturesData_.flipCheck, SLOT(textureFlipSlot(int)));
-#endif
   connectCheckBox(texturesData_.wrapCheck, SLOT(textureWrapSlot(int)));
+#endif
 
   // Bones
   CQUtil::connectDisconnect(b, bonesData_.objectChooser, SIGNAL(objectChanged()),
@@ -4284,6 +4284,7 @@ textureFlipSlot(int i)
 }
 #endif
 
+#if 0
 void
 CQCamera3DControl::
 textureWrapSlot(int i)
@@ -4296,6 +4297,7 @@ textureWrapSlot(int i)
 
   app_->textureAdded();
 }
+#endif
 
 //---
 

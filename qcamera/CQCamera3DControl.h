@@ -273,7 +273,7 @@ class CQCamera3DControl : public QFrame {
 
   // Textures
 //void textureFlipSlot(int i);
-  void textureWrapSlot(int i);
+//void textureWrapSlot(int i);
 
   // Bones
   void bonesObjectSlot();

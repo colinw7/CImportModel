@@ -99,9 +99,9 @@ updateTextures()
   int nt = scene->textures().size();
 
   table_->setRowCount   (nt + 1);
-  table_->setColumnCount(2);
+  table_->setColumnCount(3);
 
-  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Flip");
+  table_->setHorizontalHeaderLabels(QStringList() << "Name" << "Flip" << "Wrap");
 
   int r = 0;
 
@@ -114,14 +114,19 @@ updateTextures()
   for (auto *texture : scene->textures()) {
     auto textureName = QString::fromStdString(texture->name());
 
-    auto *nameItem  = new QTableWidgetItem(textureName);
-    auto *stateItem = new QTableWidgetItem("");
+    auto *nameItem = new QTableWidgetItem(textureName);
+    auto *flipItem = new QTableWidgetItem("");
+    auto *wrapItem = new QTableWidgetItem("");
 
-    table_->setItem(r  , 0, nameItem);
-    table_->setItem(r++, 1, stateItem);
+    table_->setItem(r, 0, nameItem);
+    table_->setItem(r, 1, flipItem);
+    table_->setItem(r, 2, wrapItem);
 
-    nameItem ->setData(Qt::UserRole, texture->id());
-    stateItem->setData(Qt::UserRole, texture->id());
+    nameItem->setData(Qt::UserRole, texture->id());
+    flipItem->setData(Qt::UserRole, texture->id());
+    wrapItem->setData(Qt::UserRole, texture->id());
+
+    ++r;
   }
 
   selectedInd_ = -1;
@@ -170,6 +175,8 @@ tableClickSlot(const QModelIndex &index)
 
   if      (index.column() == 1)
     texture->setFlipped(! texture->isFlipped());
+  else if (index.column() == 2)
+    texture->setWrapped(! texture->isWrapped());
   else
     return;
 
@@ -280,10 +287,8 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
   if (! texture)
     return QItemDelegate::paint(painter, option, index);
 
-  if      (index.column() == 1) {
-    bool flipped = texture->isFlipped();
-
-    Qt::CheckState checkState = (flipped ? Qt::Checked : Qt::Unchecked);
+  auto drawTick = [&](bool b) {
+    Qt::CheckState checkState = (b ? Qt::Checked : Qt::Unchecked);
 
     QFontMetrics fm(list_->font());
 
@@ -295,7 +300,12 @@ paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &
     auto rect = QRect(x, y, is, is);
 
     QItemDelegate::drawCheck(painter, option, rect, checkState);
-  }
+  };
+
+  if      (index.column() == 1)
+    drawTick(texture->isFlipped());
+  else if (index.column() == 2)
+    drawTick(texture->isWrapped());
   else
     QItemDelegate::paint(painter, option, index);
 }

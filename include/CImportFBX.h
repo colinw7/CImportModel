@@ -637,7 +637,7 @@ class CImportFBX : public CImportBase {
  public:
   CImportFBX(CGeomScene3D *scene=nullptr, const std::string &name="fbx");
 
- ~CImportFBX();
+ ~CImportFBX() override;
 
   bool read(CFile &file) override;
 

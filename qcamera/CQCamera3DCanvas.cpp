@@ -2636,12 +2636,14 @@ deselectAll(bool update)
       }
     }
 
-    const auto &edges = object->getEdges();
+    if (object->edgesValid()) {
+      const auto &edges = object->getEdges();
 
-    for (auto *edge : edges) {
-      if (edge->getSelected()) {
-        edge->setSelected(false);
-        changed = true;
+      for (auto *edge : edges) {
+        if (edge->getSelected()) {
+          edge->setSelected(false);
+          changed = true;
+        }
       }
     }
   }
