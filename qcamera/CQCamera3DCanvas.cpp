@@ -98,8 +98,8 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
   };
 
   perspectiveCamera_ = addCamera("perspective");
-
-  newCamera_ = addNewCamera("new");
+  orthoCamera_       = addCamera("ortho", /*perspective*/ false);
+  newCamera_         = addNewCamera("new");
 
   debugCamera_ = addCamera("debug");
 
@@ -962,6 +962,8 @@ setCurrentCameraInd(uint ind)
 
   if (! found)
     cameraInd_ = 1;
+
+  Q_EMIT cameraStateChanged();
 }
 
 bool
@@ -4359,6 +4361,7 @@ getViewCamera() const
 {
   switch (viewType()) {
     case ViewType::PERSPECTIVE: return perspectiveCamera_;
+    case ViewType::ORTHO      : return orthoCamera_;
     case ViewType::TOP        : return topCamera_;
     case ViewType::BOTTOM     : return bottomCamera_;
     case ViewType::LEFT       : return leftCamera_;

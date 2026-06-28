@@ -82,6 +82,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   enum class ViewType {
     PERSPECTIVE,
+    ORTHO,
     TOP,
     BOTTOM,
     LEFT,
@@ -700,6 +701,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   CameraData cameraData_;
 
   CGLCameraIFace *perspectiveCamera_ { nullptr };
+  CGLCameraIFace *orthoCamera_       { nullptr };
   CGLCameraIFace *topCamera_         { nullptr };
   CGLCameraIFace *bottomCamera_      { nullptr };
   CGLCameraIFace *frontCamera_       { nullptr };
