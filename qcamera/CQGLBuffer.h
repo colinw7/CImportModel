@@ -184,7 +184,7 @@ class CQGLBuffer {
   void clearBoneWeights  () { data_.boneWeights  .clear(); data_.dataValid = false; }
 
   void clearBuffers() {
-    clearPoints(); clearNormals(); clearColors(); clearTexturePoints();
+    clearInds(); clearPoints(); clearNormals(); clearColors(); clearTexturePoints();
     clearBoneIds(); clearBoneWeights();
   }
 
@@ -292,6 +292,7 @@ class CQGLBuffer {
   //---
 
   struct PointData {
+    std::optional<uint>         ind;
     std::optional<Point>        point;
     std::optional<Point>        normal;
     std::optional<Color>        color;
@@ -301,7 +302,10 @@ class CQGLBuffer {
   };
 
   void getPointData(int i, PointData &data) const {
-    assert(i < int(data_.points.size()));
+    auto np = data_.points.size();
+    assert(i < int(np));
+
+    if (numInds() == np) data.ind = data_.inds[i];
 
     if (hasPointPart  ()) data.point        = data_.points[i];
     if (hasNormalPart ()) data.normal       = data_.normals[i];
