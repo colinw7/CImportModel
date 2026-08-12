@@ -10,12 +10,13 @@ namespace {
   static std::string s_line1;
   static std::string s_value;
 
-  void error(const std::string &msg) {
-    std::cerr << "Error: " << msg << ": '" << s_line1 << "' @" << s_line_num << "\n";
+  bool error(const std::string &msg) {
+    std::cerr << "Error: " << msg << ": '" << s_line1 << "' Line:" << s_line_num << "\n";
+    return false;
   }
 
   void warning(const std::string &msg) {
-    std::cerr << "Warning: " << msg << ": '" << s_line1 << "' @" << s_line_num << "\n";
+    std::cerr << "Warning: " << msg << ": '" << s_line1 << "' Line:" << s_line_num << "\n";
   }
 }
 
@@ -574,11 +575,20 @@ bool
 CImportObj::
 readMaterialFile(const std::string &filename)
 {
-  CFile file(filename);
+  std::string filename1;
 
-  if (! file.exists())
+  if (! lookupFile(filename, filename1))
     return false;
 
+  CFile file(filename1);
+
+  return readMaterialFile1(file);
+}
+
+bool
+CImportObj::
+readMaterialFile1(CFile &file)
+{
   auto base = file.getBase();
 
   auto readRGB = [&](const std::string &line, CRGBA &rgba) {
@@ -598,10 +608,6 @@ readMaterialFile(const std::string &filename)
     rgba = CRGBA(r, g, b);
 
     return true;
-  };
-
-  auto fixFilename = [](const std::string &fname) {
-    return CStrUtil::replaceChar(CStrUtil::stripSpaces(fname), '\\', '/');
   };
 
   auto *material = addMaterial("default");
@@ -666,22 +672,20 @@ readMaterialFile(const std::string &filename)
     }
     // emissive map
     else if (nameMatch(line1, "map_Ke")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Ke");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->emissiveMap.image = image;
-        material->emissiveMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Ke");
+      material->emissiveMap.image = image;
+      material->emissiveMap.name  = imageFilename;
     }
     // specular
     else if (nameMatch(line1, "Ks")) {
@@ -746,60 +750,54 @@ readMaterialFile(const std::string &filename)
     }
     // ambient
     else if (nameMatch(line1, "map_Ka")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Ka");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->ambientMap.image = image;
-        material->ambientMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file '" + imageFilename + "' for map_Ka");
+      material->ambientMap.image = image;
+      material->ambientMap.name  = imageFilename;
     }
     // diffuse
     else if (nameMatch(line1, "map_Kd")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Kd");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->diffuseMap.image = image;
-        material->diffuseMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Kd");
+      material->diffuseMap.image = image;
+      material->diffuseMap.name  = imageFilename;
     }
     // specular
     else if (nameMatch(line1, "map_Ks")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Ks");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->specularMap.image = image;
-        material->specularMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Ks");
+      material->specularMap.image = image;
+      material->specularMap.name  = imageFilename;
     }
     // bump map
     else if (nameMatch(line1, "map_Bump") || nameMatch(line1, "map_bump")) {
@@ -809,22 +807,20 @@ readMaterialFile(const std::string &filename)
       if (words[0] == "-bm" && words.size() == 3)
         s_value = words[2];
 
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Bump");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->bumpMap.image = image;
-        material->bumpMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Bump");
+      material->bumpMap.image = image;
+      material->bumpMap.name  = imageFilename;
     }
     // Pm - physical based rendering (PBR) metallic value
     else if (nameMatch(line1, "Pm")) {
@@ -835,22 +831,20 @@ readMaterialFile(const std::string &filename)
     }
     // map_Pm - physical based rendering (PBR) metallic map
     else if (nameMatch(line1, "map_Pm")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Pm");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->metallicMap.image = image;
-        material->metallicMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Pm");
+      material->metallicMap.image = image;
+      material->metallicMap.name  = imageFilename;
     }
     // Pr - physical based rendering (PBR) roughness value
     else if (nameMatch(line1, "Pr")) {
@@ -861,22 +855,20 @@ readMaterialFile(const std::string &filename)
     }
     // map_Pr - physical based rendering (PBR) roughness map
     else if (nameMatch(line1, "map_Pr")) {
-      auto imageFilename = fixFilename(s_value);
+      std::string imageFilename;
+      if (! lookupFile(s_value, imageFilename))
+        return error("Invalid file '" + s_value + "' for map_Pr");
 
       CFile imageFile(imageFilename);
 
-      if (imageFile.exists()) {
-        CImageFileSrc src(imageFile);
+      CImageFileSrc src(imageFile);
 
-        auto image = CImageMgrInst->createImage(src);
+      auto image = CImageMgrInst->createImage(src);
 
-        image = image->flippedH();
+      image = image->flippedH();
 
-        material->roughnessMap.image = image;
-        material->roughnessMap.name  = imageFilename;
-      }
-      else
-        error("Invalid file for map_Pr");
+      material->roughnessMap.image = image;
+      material->roughnessMap.name  = imageFilename;
     }
     // map_Ns - physical based rendering (PBR) specular highlight map
     else if (nameMatch(line1, "map_Ns") || nameMatch(line1, "map_NS")) {
@@ -955,6 +947,37 @@ readMaterialFile(const std::string &filename)
   }
 
   return true;
+}
+
+bool
+CImportObj::
+lookupFile(const std::string &filename, std::string &filename1) const
+{
+  auto fixFilename = [](const std::string &fname) {
+    return CStrUtil::replaceChar(CStrUtil::stripSpaces(fname), '\\', '/');
+  };
+
+  std::string filename2 = fixFilename(filename);
+
+  CFile file(filename2);
+
+  if (file.exists()) {
+    filename1 = filename;
+    return true;
+  }
+
+  for (const auto &dir : modelDirs_) {
+    std::string filename3 = dir + "/" + filename2;
+
+    CFile file1(filename3);
+
+    if (file1.exists()) {
+      filename1 = filename3;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 CImportObj::Material *

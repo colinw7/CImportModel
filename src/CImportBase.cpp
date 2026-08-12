@@ -52,6 +52,18 @@ createModel(CGeom3DType type, const std::string &name)
   return base;
 }
 
+//---
+
+CImportBase::
+CImportBase()
+{
+}
+
+CImportBase::
+~CImportBase()
+{
+}
+
 bool
 CImportBase::
 readFileMap(const std::string &fileName)
@@ -123,4 +135,13 @@ remapFile(const std::string &oldName) const
     return (*pf).second;
 
   return oldName;
+}
+
+//---
+
+void
+CImportBase::
+addModelDir(const std::string &dirName)
+{
+  modelDirs_.push_back(dirName);
 }

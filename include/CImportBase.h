@@ -54,9 +54,9 @@ class CImportBase {
   static CImportBase *createModel(CGeom3DType type, const std::string &name="");
 
  public:
-  CImportBase() { }
+  CImportBase();
 
-  virtual ~CImportBase() { }
+  virtual ~CImportBase();
 
   //---
 
@@ -104,11 +104,19 @@ class CImportBase {
 
   virtual CGeomScene3D *releaseScene() { return nullptr; }
 
+  //---
+
   bool readFileMap(const std::string &fileName);
 
   void addFileMap(const std::string &oldName, const std::string &newName);
 
   std::string remapFile(const std::string &oldName) const;
+
+  //---
+
+  const std::vector<std::string> &modelDirs() const { return modelDirs_; }
+
+  void addModelDir(const std::string &dirName);
 
   //---
 
@@ -165,6 +173,8 @@ class CImportBase {
   using FileNameMap = std::map<std::string, std::string>;
 
   FileNameMap fileNameMap_;
+
+  std::vector<std::string> modelDirs_;
 };
 
 #endif

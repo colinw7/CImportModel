@@ -46,6 +46,9 @@ class CImportObj : public CImportBase {
   bool readFace(const std::string &line);
 
   bool readMaterialFile(const std::string &filename);
+  bool readMaterialFile1(CFile &file);
+
+  bool lookupFile(const std::string &filename, std::string &filename1) const;
 
   Material *addMaterial(const std::string &name);
 
