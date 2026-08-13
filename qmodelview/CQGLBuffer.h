@@ -184,7 +184,7 @@ class CQGLBuffer {
   void clearBoneWeights  () { data_.boneWeights  .clear(); data_.dataValid = false; }
 
   void clearBuffers() {
-    clearPoints(); clearNormals(); clearColors(); clearTexturePoints();
+    clearInds(); clearPoints(); clearNormals(); clearColors(); clearTexturePoints();
     clearBoneIds(); clearBoneWeights();
   }
 
