@@ -74,6 +74,10 @@ class CQCamera3DOverview : public QFrame {
       return p1;
     }
 
+    bool pressRange(const QPoint &pp, CPoint2D &p) const {
+      return pressRange(pp.x(), pp.y(), p);
+    }
+
     bool pressRange(int x, int y, CPoint2D &p) const {
       double xmin, ymin, xmax, ymax;
       range.getPixelRange(&xmin, &ymin, &xmax, &ymax);
@@ -179,13 +183,13 @@ class CQCamera3DOverview : public QFrame {
 
   void updateBBox();
 
-  void setCameraPosition(int x, int y);
-  void setCameraOrigin(int x, int y);
+  void setCameraPosition(const QPoint &p);
+  void setCameraOrigin(const QPoint &p);
 
-  void setLightPosition(int x, int y);
-  void setLightDirection(int x, int y);
+  void setLightPosition(const QPoint &p);
+  void setLightDirection(const QPoint &p);
 
-  void setCursorPosition(int x, int y);
+  void setCursorPosition(const QPoint &p);
 
   void selectObjectAt(const QPoint &p, bool clear) ;
   void selectObjectAt1(const ViewData &view, const CPoint3D &p, bool clear);
@@ -275,33 +279,6 @@ class CQCamera3DOverview : public QFrame {
     bool     selected { false };
   };
 
-  //---
-
-  CQCamera3DApp* app_ { nullptr };
-
-  ViewData xview_;
-  ViewData yview_;
-  ViewData zview_;
-  ViewData pview_;
-
-  std::vector<ViewData *> views_;   // all views
-  std::vector<ViewData *> views2d_; // 2d views
-
-  int ind_ { -1 };
-
-  bool equalScale_ { true };
-  bool valid_      { false };
-
-  EditType   editType_   { EditType::SELECT };
-  SelectType selectType_ { SelectType::OBJECT };
-
-  ModelType modelType_      { ModelType::WIREFRAME };
-  bool      cameraVisible_  { false };
-  bool      lightsVisible_  { false };
-  bool      eyeLineVisible_ { false };
-  bool      vertexLabels_   { false };
-  bool      edgeLabels_     { false };
-
   struct MouseData {
     bool   pressed   { false };
     bool   isShift   { false };
@@ -311,8 +288,6 @@ class CQCamera3DOverview : public QFrame {
     QPoint movePixel1;
     QPoint movePixel2;
   };
-
-  MouseData mouseData_;
 
   using FaceDatas   = std::vector<FaceData *>;
   using LineDatas   = std::vector<LineData *>;
@@ -350,16 +325,6 @@ class CQCamera3DOverview : public QFrame {
     QString label;
   };
 
-  using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
-
-  using Polygon2DArray           = std::vector<PolygonData>;
-  using Point2DArray             = std::vector<PointData>;
-  using SortedPolygon2DArray     = std::map<double, Polygon2DArray>;
-  using SortedPoint2DArray       = std::map<double, Point2DArray>;
-  using ViewSortedPolygon2DArray = std::map<int, SortedPolygon2DArray>;
-  using ViewSortedLine2DArray    = std::map<int, SortedPolygon2DArray>;
-  using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;
-
   struct PointLabel {
     CPoint3D point;
     QString  label;
@@ -376,11 +341,21 @@ class CQCamera3DOverview : public QFrame {
     std::vector<PointLabel> points;
   };
 
-  // draw data
+  using ObjectGeomData = std::map<CGeomObject3D *, GeomData>;
+
+  using Polygon2DArray           = std::vector<PolygonData>;
+  using Point2DArray             = std::vector<PointData>;
+  using SortedPolygon2DArray     = std::map<double, Polygon2DArray>;
+  using SortedPoint2DArray       = std::map<double, Point2DArray>;
+  using ViewSortedPolygon2DArray = std::map<int, SortedPolygon2DArray>;
+  using ViewSortedLine2DArray    = std::map<int, SortedPolygon2DArray>;
+  using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;
+
   struct DrawData {
     QPainter*      painter { nullptr };
     CMatrix3DH     projectionMatrix;
     CMatrix3DH     viewMatrix;
+    CMatrix3DH     pvMatrix;
     CMatrix3DH     modelMatrix;
     CMatrix3DH     meshMatrix;
     ObjectGeomData objectGeomData;
@@ -394,6 +369,35 @@ class CQCamera3DOverview : public QFrame {
     mutable ViewSortedLine2DArray    viewSortedLine2DArray;
     mutable ViewSortedPoint2DArray   viewSortedPoint2DArray;
   };
+
+  //---
+
+  CQCamera3DApp* app_ { nullptr };
+
+  ViewData xview_;
+  ViewData yview_;
+  ViewData zview_;
+  ViewData pview_;
+
+  std::vector<ViewData *> views_;   // all views
+  std::vector<ViewData *> views2d_; // 2d views
+
+  int ind_ { -1 };
+
+  bool equalScale_ { true };
+  bool valid_      { false };
+
+  EditType   editType_   { EditType::SELECT };
+  SelectType selectType_ { SelectType::OBJECT };
+
+  ModelType modelType_      { ModelType::WIREFRAME };
+  bool      cameraVisible_  { false };
+  bool      lightsVisible_  { false };
+  bool      eyeLineVisible_ { false };
+  bool      vertexLabels_   { false };
+  bool      edgeLabels_     { false };
+
+  MouseData mouseData_;
 
   DrawData drawData_;
 

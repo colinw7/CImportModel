@@ -81,15 +81,16 @@ CQCamera3DOverview(CQCamera3DApp *app) :
 
   //---
 
-  xview_.ind = 0; xview_.type = ViewType::XY    ; xview_.name = "XY";
-  yview_.ind = 1; yview_.type = ViewType::ZY    ; yview_.name = "ZY";
-  zview_.ind = 2; zview_.type = ViewType::XZ    ; zview_.name = "XZ";
-  pview_.ind = 3; pview_.type = ViewType::THREED; pview_.name = "3D";
+  auto initView = [&](ViewData &view, int ind, ViewType type, const QString &name) {
+    view.ind = ind; view.type = type; view.name = name;
 
-  views_.push_back(&xview_);
-  views_.push_back(&yview_);
-  views_.push_back(&zview_);
-  views_.push_back(&pview_);
+    views_.push_back(&view);
+  };
+
+  initView(xview_, 0, ViewType::XY    , "XY");
+  initView(yview_, 1, ViewType::ZY    , "ZY");
+  initView(zview_, 2, ViewType::XZ    , "XZ");
+  initView(pview_, 3, ViewType::THREED, "3D");
 
   views2d_.push_back(&xview_);
   views2d_.push_back(&yview_);
@@ -232,6 +233,7 @@ paintEvent(QPaintEvent *)
 
   drawData_.projectionMatrix = CMatrix3DH(camera->worldMatrix());
   drawData_.viewMatrix       = CMatrix3DH(camera->viewMatrix());
+  drawData_.pvMatrix         = drawData_.projectionMatrix*drawData_.viewMatrix;
 
   //---
 
@@ -246,8 +248,8 @@ paintEvent(QPaintEvent *)
 
   // draw view borders (sets rect values)
 
-  auto drawPixelBorder = [&](ViewData &view) {
-    bool current = (view.ind == ind_);
+  auto drawPixelBorder = [&](ViewData &viewData) {
+    bool current = (viewData.ind == ind_);
 
     QPen pen;
     pen.setColor(current ? Qt::red : Qt::black);
@@ -258,10 +260,10 @@ paintEvent(QPaintEvent *)
     painter.setBrush(brush);
 
     double pxmin, pymin, pxmax, pymax;
-    view.range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
+    viewData.range.getPixelRange(&pxmin, &pymin, &pxmax, &pymax);
 
-    view.rect = QRectF(pxmin, pymin, pxmax - pxmin - 1, pymax - pymin - 1);
-    painter.drawRect(view.rect);
+    viewData.rect = QRectF(pxmin, pymin, pxmax - pxmin - 1, pymax - pymin - 1);
+    painter.drawRect(viewData.rect);
 
     pen.setWidthF(0);
     painter.setPen(pen);
@@ -281,8 +283,6 @@ paintEvent(QPaintEvent *)
   drawCameras();
 
   drawCursor();
-
-  //---
 
   drawLights();
 
@@ -1063,7 +1063,7 @@ drawModelPolygon(const std::vector<CPoint3D> &points, bool selected) const
     ypoints.push_back(CPoint2D(p1.getZ(), p1.getY())); // ZY
     zpoints.push_back(CPoint2D(p1.getX(), p1.getZ())); // XZ
 
-    auto p2 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
+    auto p2 = drawData_.pvMatrix*p1;
 
     ppoints.push_back(CPoint2D(p2.getX(), p2.getY()));
   }
@@ -1112,8 +1112,8 @@ drawModelLine(const CPoint3D &p1, const CPoint3D &p2, const QString &label, bool
   drawLine2D(yview_, c.x, CPoint2D(pm1.getZ(), pm1.getY()), CPoint2D(pm2.getZ(), pm2.getY())); // ZY
   drawLine2D(zview_, c.y, CPoint2D(pm1.getX(), pm1.getZ()), CPoint2D(pm2.getX(), pm2.getZ())); // XZ
 
-  pm1 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
-  pm2 = drawData_.projectionMatrix*drawData_.viewMatrix*p2;
+  pm1 = drawData_.pvMatrix*p1;
+  pm2 = drawData_.pvMatrix*p2;
 
   drawLine2D(pview_, c.z, CPoint2D(pm1.getX(), pm1.getY()), CPoint2D(pm2.getX(), pm2.getY()));
 }
@@ -1147,7 +1147,7 @@ drawModelPoint(const CPoint3D &p, const QString &label, bool selected) const
   drawPoint2D(yview_, p.x, CPoint2D(p1.getZ(), p1.getY())); // ZY
   drawPoint2D(zview_, p.y, CPoint2D(p1.getX(), p1.getZ())); // XZ
 
-  auto p2 = drawData_.projectionMatrix*drawData_.viewMatrix*p1;
+  auto p2 = drawData_.pvMatrix*p1;
 
   drawPoint2D(pview_, p.z, CPoint2D(p2.getX(), p2.getY()));
 }
@@ -1362,29 +1362,30 @@ mousePressEvent(QMouseEvent *e)
 
   //---
 
-  int x = e->x();
-  int y = e->y();
-
-  if (mouseData_.button == Qt::LeftButton) {
+  if      (mouseData_.button == Qt::LeftButton) {
     if      (editType() == EditType::SELECT) {
       rubberBand_->setBounds(mouseData_.pressPixel, mouseData_.movePixel1);
       rubberBand_->show();
     }
     else if (editType() == EditType::CURSOR) {
-      setCursorPosition(x, y);
+      setCursorPosition(mouseData_.pressPixel);
     }
     else if (editType() == EditType::CAMERA) {
       if      (mouseData_.isShift)
-        setCameraPosition(x, y);
+        setCameraPosition(mouseData_.pressPixel);
       else if (mouseData_.isControl)
-        setCameraOrigin(x, y);
+        setCameraOrigin(mouseData_.pressPixel);
     }
     else if (editType() == EditType::LIGHT) {
       if      (mouseData_.isShift)
-        setLightPosition(x, y);
+        setLightPosition(mouseData_.pressPixel);
       else if (mouseData_.isControl)
-        setLightDirection(x, y);
+        setLightDirection(mouseData_.pressPixel);
     }
+  }
+  else if (mouseData_.button == Qt::MiddleButton) {
+  }
+  else if (mouseData_.button == Qt::RightButton) {
   }
 }
 
@@ -1403,9 +1404,6 @@ mouseMoveEvent(QMouseEvent *e)
 
   //---
 
-  int x = e->x();
-  int y = e->y();
-
   if (mouseData_.pressed) {
     if      (mouseData_.button == Qt::LeftButton) {
       if      (editType() == EditType::SELECT) {
@@ -1413,15 +1411,15 @@ mouseMoveEvent(QMouseEvent *e)
       }
       else if (editType() == EditType::CAMERA) {
         if      (mouseData_.isShift)
-          setCameraPosition(x, y);
+          setCameraPosition(mouseData_.movePixel2);
         else if (mouseData_.isControl)
-          setCameraOrigin(x, y);
+          setCameraOrigin(mouseData_.movePixel2);
       }
       else if (editType() == EditType::LIGHT) {
         if      (mouseData_.isShift)
-          setLightPosition(x, y);
+          setLightPosition(mouseData_.movePixel2);
         else if (mouseData_.isControl)
-          setLightDirection(x, y);
+          setLightDirection(mouseData_.movePixel2);
       }
     }
     else if (mouseData_.button == Qt::MiddleButton) {
@@ -1457,7 +1455,11 @@ mouseMoveEvent(QMouseEvent *e)
         invalidate();
       }
     }
+    else if (mouseData_.button == Qt::RightButton) {
+    }
   }
+
+  //---
 
   auto showPoint = [&](const CPoint3D &p1) {
     auto posStr = QString("X=%1, Y=%2, Z=%3").arg(p1.x).arg(p1.y).arg(p1.z);
@@ -1469,9 +1471,12 @@ mouseMoveEvent(QMouseEvent *e)
   ind_ = -1;
 
   CPoint2D p;
-  if (xview_.pressRange(x, y, p)) { ind_ = xview_.ind; showPoint(CPoint3D(p.x, p.y, 0.0)); } // XY
-  if (yview_.pressRange(x, y, p)) { ind_ = yview_.ind; showPoint(CPoint3D(0.0, p.y, p.x)); } // ZY
-  if (zview_.pressRange(x, y, p)) { ind_ = zview_.ind; showPoint(CPoint3D(p.x, 0.0, p.y)); } // XZ
+  if (xview_.pressRange(mouseData_.movePixel2, p)) {
+    ind_ = xview_.ind; showPoint(CPoint3D(p.x, p.y, 0.0)); } // XY
+  if (yview_.pressRange(mouseData_.movePixel2, p)) {
+    ind_ = yview_.ind; showPoint(CPoint3D(0.0, p.y, p.x)); } // ZY
+  if (zview_.pressRange(mouseData_.movePixel2, p)) {
+    ind_ = zview_.ind; showPoint(CPoint3D(p.x, 0.0, p.y)); } // XZ
 
   if (! mouseData_.pressed) {
     if (ind_ != ind)
@@ -1957,7 +1962,7 @@ pixelToView(ViewType viewType, const QPointF &p) const
 
 void
 CQCamera3DOverview::
-setCameraPosition(int x, int y)
+setCameraPosition(const QPoint &pressPos)
 {
   auto *camera = app_->canvas()->getInteractiveCamera();
 
@@ -1965,16 +1970,16 @@ setCameraPosition(int x, int y)
 
   CPoint2D p;
 
-  if (xview_.pressRange(x, y, p)) camera->setPosition(CVector3D(p.x, p.y, pos.z())); // XY
-  if (yview_.pressRange(x, y, p)) camera->setPosition(CVector3D(pos.x(), p.y, p.x)); // ZY
-  if (zview_.pressRange(x, y, p)) camera->setPosition(CVector3D(p.x, pos.y(), p.y)); // XZ
+  if (xview_.pressRange(pressPos, p)) camera->setPosition(CVector3D(p.x, p.y, pos.z())); // XY
+  if (yview_.pressRange(pressPos, p)) camera->setPosition(CVector3D(pos.x(), p.y, p.x)); // ZY
+  if (zview_.pressRange(pressPos, p)) camera->setPosition(CVector3D(p.x, pos.y(), p.y)); // XZ
 
   invalidate();
 }
 
 void
 CQCamera3DOverview::
-setCameraOrigin(int x, int y)
+setCameraOrigin(const QPoint &pressPos)
 {
   auto *camera = app_->canvas()->getInteractiveCamera();
 
@@ -1985,22 +1990,25 @@ setCameraOrigin(int x, int y)
 
   auto pos = camera->position();
 
-  if (xview_.pressRange(x, y, p)) camera->setRoll (pointAngle(pos.x(), pos.y())); // XY
-  if (yview_.pressRange(x, y, p)) camera->setPitch(pointAngle(pos.z(), pos.y())); // ZY
-  if (zview_.pressRange(x, y, p)) camera->setYaw  (pointAngle(pos.x(), pos.z()) - M_PI/2.0); // XZ
+  if (xview_.pressRange(pressPos, p))
+    camera->setRoll (pointAngle(pos.x(), pos.y())); // XY
+  if (yview_.pressRange(pressPos, p))
+    camera->setPitch(pointAngle(pos.z(), pos.y())); // ZY
+  if (zview_.pressRange(pressPos, p))
+    camera->setYaw  (pointAngle(pos.x(), pos.z()) - M_PI/2.0); // XZ
 #else
   auto origin = camera->origin();
 
   CPoint2D p;
 
 #if 0
-  if (xview_.pressRange(x, y, p)) camera->setOriginXY(CVector3D(p.x, p.y, origin.z())); // XY
-  if (yview_.pressRange(x, y, p)) camera->setOriginYZ(CVector3D(origin.x(), p.y, p.x)); // ZY
-  if (zview_.pressRange(x, y, p)) camera->setOriginXZ(CVector3D(p.x, origin.y(), p.y)); // XZ
+  if (xview_.pressRange(pressPos, p)) camera->setOriginXY(CVector3D(p.x, p.y, origin.z())); // XY
+  if (yview_.pressRange(pressPos, p)) camera->setOriginYZ(CVector3D(origin.x(), p.y, p.x)); // ZY
+  if (zview_.pressRange(pressPos, p)) camera->setOriginXZ(CVector3D(p.x, origin.y(), p.y)); // XZ
 #else
-  if (xview_.pressRange(x, y, p)) camera->setOrigin(CVector3D(p.x, p.y, origin.z())); // XY
-  if (yview_.pressRange(x, y, p)) camera->setOrigin(CVector3D(origin.x(), p.y, p.x)); // ZY
-  if (zview_.pressRange(x, y, p)) camera->setOrigin(CVector3D(p.x, origin.y(), p.y)); // XZ
+  if (xview_.pressRange(pressPos, p)) camera->setOrigin(CVector3D(p.x, p.y, origin.z())); // XY
+  if (yview_.pressRange(pressPos, p)) camera->setOrigin(CVector3D(origin.x(), p.y, p.x)); // ZY
+  if (zview_.pressRange(pressPos, p)) camera->setOrigin(CVector3D(p.x, origin.y(), p.y)); // XZ
 #endif
 #endif
 
@@ -2009,7 +2017,7 @@ setCameraOrigin(int x, int y)
 
 void
 CQCamera3DOverview::
-setLightPosition(int x, int y)
+setLightPosition(const QPoint &pressPos)
 {
   auto *canvas = app_->canvas();
   auto *light  = canvas->currentLight();
@@ -2018,9 +2026,9 @@ setLightPosition(int x, int y)
 
   CPoint2D p;
 
-  if (xview_.pressRange(x, y, p)) light->setPosition(CPoint3D(p.x, p.y, pos.z())); // XY
-  if (yview_.pressRange(x, y, p)) light->setPosition(CPoint3D(pos.x(), p.y, p.x)); // ZY
-  if (zview_.pressRange(x, y, p)) light->setPosition(CPoint3D(p.x, pos.y(), p.y)); // XZ
+  if (xview_.pressRange(pressPos, p)) light->setPosition(CPoint3D(p.x, p.y, pos.z())); // XY
+  if (yview_.pressRange(pressPos, p)) light->setPosition(CPoint3D(pos.x(), p.y, p.x)); // ZY
+  if (zview_.pressRange(pressPos, p)) light->setPosition(CPoint3D(p.x, pos.y(), p.y)); // XZ
 
   canvas->update();
 
@@ -2031,7 +2039,7 @@ setLightPosition(int x, int y)
 
 void
 CQCamera3DOverview::
-setLightDirection(int x, int y)
+setLightDirection(const QPoint &pressPos)
 {
   auto *canvas = app_->canvas();
   auto *light  = canvas->currentLight();
@@ -2053,9 +2061,9 @@ setLightDirection(int x, int y)
 
   CPoint2D p;
 
-  if (xview_.pressRange(x, y, p)) pos1 = CPoint3D(p.x, p.y, pos1.z()); // XY
-  if (yview_.pressRange(x, y, p)) pos1 = CPoint3D(pos1.x(), p.y, p.x); // ZY
-  if (zview_.pressRange(x, y, p)) pos1 = CPoint3D(p.x, pos1.y(), p.y); // XZ
+  if (xview_.pressRange(pressPos, p)) pos1 = CPoint3D(p.x, p.y, pos1.z()); // XY
+  if (yview_.pressRange(pressPos, p)) pos1 = CPoint3D(pos1.x(), p.y, p.x); // ZY
+  if (zview_.pressRange(pressPos, p)) pos1 = CPoint3D(p.x, pos1.y(), p.y); // XZ
 
   auto dir1 = (pos1 - pos).normalized();
 
@@ -2078,7 +2086,7 @@ setLightDirection(int x, int y)
 
 void
 CQCamera3DOverview::
-setCursorPosition(int x, int y)
+setCursorPosition(const QPoint &pressPos)
 {
   auto *canvas = app_->canvas();
 
@@ -2086,9 +2094,9 @@ setCursorPosition(int x, int y)
 
   CPoint2D p;
 
-  if (xview_.pressRange(x, y, p)) canvas->setCursor(CPoint3D(p.x, p.y, pos.z)); // XY
-  if (yview_.pressRange(x, y, p)) canvas->setCursor(CPoint3D(pos.x, p.y, p.x)); // ZY
-  if (zview_.pressRange(x, y, p)) canvas->setCursor(CPoint3D(p.x, pos.y, p.y)); // XZ
+  if (xview_.pressRange(pressPos, p)) canvas->setCursor(CPoint3D(p.x, p.y, pos.z)); // XY
+  if (yview_.pressRange(pressPos, p)) canvas->setCursor(CPoint3D(pos.x, p.y, p.x)); // ZY
+  if (zview_.pressRange(pressPos, p)) canvas->setCursor(CPoint3D(p.x, pos.y, p.y)); // XZ
 
   invalidate();
 }

@@ -1619,6 +1619,7 @@ updateCameraWidgets(bool disconnect)
 
   cameraData_.nearEdit->setValue(camera ? camera->near() : 0.0);
   cameraData_.farEdit ->setValue(camera ? camera->far () : 0.0);
+  cameraData_.fovEdit ->setValue(camera ? camera->fov () : 0.0);
 
   cameraData_.xOriginEdit->setValue(camera ? camera->origin().getX() : 0.0);
   cameraData_.yOriginEdit->setValue(camera ? camera->origin().getY() : 0.0);
@@ -1627,8 +1628,6 @@ updateCameraWidgets(bool disconnect)
   cameraData_.xEdit->setValue(camera ? camera->position().getX() : 0.0);
   cameraData_.yEdit->setValue(camera ? camera->position().getY() : 0.0);
   cameraData_.zEdit->setValue(camera ? camera->position().getZ() : 0.0);
-
-  cameraData_.fovEdit->setValue(camera ? camera->fov() : 0.0);
 
   cameraData_.eyeZ1Edit->setValue(canvas->eyeLineZ1());
   cameraData_.eyeZ2Edit->setValue(canvas->eyeLineZ2());
@@ -1832,6 +1831,7 @@ connectSlots(bool b)
 
   connectRealSpin(cameraData_.nearEdit, SLOT(nearSlot(double)));
   connectRealSpin(cameraData_.farEdit , SLOT(farSlot(double)));
+  connectRealSpin(cameraData_.fovEdit , SLOT(fovSlot(double)));
 
   connectRealSpin(cameraData_.xOriginEdit, SLOT(xOriginSlot(double)));
   connectRealSpin(cameraData_.yOriginEdit, SLOT(yOriginSlot(double)));
@@ -1841,7 +1841,6 @@ connectSlots(bool b)
   connectRealSpin(cameraData_.yEdit, SLOT(ySlot(double)));
   connectRealSpin(cameraData_.zEdit, SLOT(zSlot(double)));
 
-  connectRealSpin(cameraData_.fovEdit  , SLOT(fovSlot(double)));
   connectRealSpin(cameraData_.eyeZ1Edit, SLOT(eyeZ1Slot(double)));
   connectRealSpin(cameraData_.eyeZ2Edit, SLOT(eyeZ2Slot(double)));
 
