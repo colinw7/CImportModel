@@ -318,10 +318,11 @@ viewMatrix() const
     const_cast<CQCamera3DCamera *>(this)->calcVectors();
 
 #if 1
-  auto m2 = CMatrix3DH::translation(-position_.getX(), -position_.getY(), -position_.getZ());
-//  auto m3 = CMatrix3DH::translation( position_.getX(),  position_.getY(),  position_.getZ());
+//auto m3 = CMatrix3DH::translation( position_.getX(),  position_.getY(),  position_.getZ());
 
 #if 0
+  auto m2 = CMatrix3DH::translation(-position_.getX(), -position_.getY(), -position_.getZ());
+
   //auto mi = rotationMatrix_.inverse();
   auto mt = rotationMatrix_.transposed();
   //if (mi == mt) std::cerr << "Equal\n";
