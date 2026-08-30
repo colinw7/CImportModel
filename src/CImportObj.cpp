@@ -44,6 +44,8 @@ CImportObj(CGeomScene3D *scene, const std::string &name) :
 CImportObj::
 ~CImportObj()
 {
+  for (const auto &pm : materials_)
+    delete pm.second;
 }
 
 bool
@@ -177,15 +179,13 @@ read(CFile &file)
     else if (len > 6 && line1.substr(0, 6) == "usemtl" && line1[6] == ' ') {
       line1 = CStrUtil::stripSpaces(line1.substr(6));
 
-      auto pm = materials_.find(line1);
+      material_ = getMaterial(line1);
 
-      if (pm == materials_.end()) {
+      if (! material_) {
         warning("Invalid material name");
 
         material_ = addMaterial(line1);
       }
-      else
-        material_ = (*pm).second;
     }
     else {
       error("Unrecognised material line");
@@ -641,10 +641,10 @@ readMaterialFile1(CFile &file)
 
       material = addMaterial(s_value);
 
-      auto p = materials_.find(base);
+      auto *material1 = getMaterial(base);
 
-      if (p == materials_.end())
-        materials_[base] = material;
+      if (! material1)
+        baseMaterials_[base] = material1;
     }
     // ambient
     else if (nameMatch(line1, "Ka")) {
@@ -923,9 +923,7 @@ readMaterialFile1(CFile &file)
         std::cerr << "  " << name << ": " << v.name << "\n";
     };
 
-    for (const auto &pm : materials_) {
-      auto *material1 = pm.second;
-
+    auto printMaterial = [&](Material *material1) {
       std::cerr << "Material: '" << material1->name << "'\n";
 
       printOptValue("ambientColor"           , material1->ambientColor           );
@@ -943,7 +941,10 @@ readMaterialFile1(CFile &file)
       printMapImage("specularMap", material1->specularMap);
       printMapImage("emissiveMap", material1->emissiveMap);
       printMapImage("bumpMap"    , material1->bumpMap    );
-    }
+    };
+
+    for (const auto &pm : materials_)
+      printMaterial(pm.second);
   }
 
   return true;
@@ -991,6 +992,23 @@ addMaterial(const std::string &name)
   materials_[material->name] = material;
 
   return material;
+}
+
+CImportObj::Material *
+CImportObj::
+getMaterial(const std::string &name) const
+{
+  auto pm = materials_.find(name);
+
+  if (pm != materials_.end())
+    return (*pm).second;
+
+  auto pm1 = baseMaterials_.find(name);
+
+  if (pm1 == baseMaterials_.end())
+    return (*pm1).second;
+
+  return nullptr;
 }
 
 //---

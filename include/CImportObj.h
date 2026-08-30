@@ -9,7 +9,12 @@ class CImportObj : public CImportBase {
  public:
   CImportObj(CGeomScene3D *scene=nullptr, const std::string &name="obj");
 
+  CImportObj(const CImportObj &) = delete;
+  CImportObj &operator=(const CImportObj &) = delete;
+
  ~CImportObj();
+
+  //---
 
   bool isSplitByMaterial() const { return splitByMaterial_; }
   void setSplitByMaterial(bool b) { splitByMaterial_ = b; }
@@ -51,6 +56,8 @@ class CImportObj : public CImportBase {
   bool lookupFile(const std::string &filename, std::string &filename1) const;
 
   Material *addMaterial(const std::string &name);
+
+  Material *getMaterial(const std::string &name) const;
 
  private:
   using OptColor = std::optional<CRGBA>;
@@ -102,6 +109,7 @@ class CImportObj : public CImportBase {
   ObjectP        pobject_;
   CGeomObject3D* currentObject_ { nullptr };
   Materials      materials_;
+  Materials      baseMaterials_;
   Material*      material_      { nullptr };
   int            vnum_          { 0 };
   int            vnnum_         { 0 };
