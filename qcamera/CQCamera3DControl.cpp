@@ -1738,6 +1738,10 @@ connectSlots(bool b)
 
   CQUtil::connectDisconnect(b, canvas, SIGNAL(stateChanged()),
                             this, SLOT(updateWidgets()));
+  CQUtil::connectDisconnect(b, canvas, SIGNAL(lightChanged()),
+                            this, SLOT(updateWidgets()));
+  CQUtil::connectDisconnect(b, canvas, SIGNAL(cameraStateChanged()),
+                            this, SLOT(updateWidgets()));
 
   auto connectCheckBox = [&](QCheckBox *w, const char *slotName) {
     CQUtil::connectDisconnect(b, w, SIGNAL(stateChanged(int)), this, slotName);

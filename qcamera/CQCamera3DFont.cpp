@@ -84,7 +84,6 @@ updateFontData()
   auto path = app->buildDir() + "/fonts/" + name_;
 
   std::vector<uint8_t> fontData;
-
   if (! readFile(path.toLatin1().constData(), fontData))
     return false;
 
@@ -226,8 +225,7 @@ bool
 CQCamera3DFont::
 bindTexture()
 {
-  glEnable(GL_TEXTURE_2D);
-  //if (! checkError("glEnable")) return false;
+  CQGLStateInst->setEnableTexture(true);
 
   glBindTexture(GL_TEXTURE_2D, textureId());
   //if (! checkError("glBindTexture")) return false;
@@ -248,8 +246,7 @@ bindTexture()
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
   //if (! checkError("glTexParameterf")) return false;
 
-  glActiveTexture(GL_TEXTURE0);
-  //if (! checkError("glActiveTexture")) return false;
+  CQGLStateInst->setActiveTextureNum(0, true);
 
   return true;
 }
@@ -410,11 +407,13 @@ render(CQCamera3DCanvas *canvas)
 
   font_->bindTexture();
 
+  //---
+
 //program->setUniformValue("mainTex", font_->textureId());
   program->setUniformValue("mainTex", 0);
 
-//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//CQGLStateInst->setPolygonMode(GL_LINE);
+  CQGLStateInst->setPolygonMode(GL_FILL);
 
 //glDrawElements(GL_TRIANGLES, indexElementCount_, GL_UNSIGNED_SHORT, nullptr);
   glDrawArrays(GL_TRIANGLES, 0, int(buffer_->numPoints()));

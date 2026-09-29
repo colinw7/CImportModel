@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_CQCamera3DCanvas_t {
-    QByteArrayData data[18];
-    char stringdata0[246];
+    QByteArrayData data[19];
+    char stringdata0[267];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -39,27 +39,28 @@ QT_MOC_LITERAL(3, 31, 18), // "cameraStateChanged"
 QT_MOC_LITERAL(4, 50, 13), // "materialAdded"
 QT_MOC_LITERAL(5, 64, 11), // "cameraAdded"
 QT_MOC_LITERAL(6, 76, 10), // "lightAdded"
-QT_MOC_LITERAL(7, 87, 11), // "objectAdded"
-QT_MOC_LITERAL(8, 99, 14), // "objectsChanged"
-QT_MOC_LITERAL(9, 114, 14), // "eyeLineChanged"
-QT_MOC_LITERAL(10, 129, 15), // "editModeChanged"
-QT_MOC_LITERAL(11, 145, 17), // "selectTypeChanged"
-QT_MOC_LITERAL(12, 163, 15), // "editTypeChanged"
-QT_MOC_LITERAL(13, 179, 17), // "updateObjectsData"
-QT_MOC_LITERAL(14, 197, 8), // "addScene"
-QT_MOC_LITERAL(15, 206, 12), // "updateStatus"
-QT_MOC_LITERAL(16, 219, 13), // "cameraChanged"
-QT_MOC_LITERAL(17, 233, 12) // "lightChanged"
+QT_MOC_LITERAL(7, 87, 12), // "lightChanged"
+QT_MOC_LITERAL(8, 100, 11), // "objectAdded"
+QT_MOC_LITERAL(9, 112, 14), // "objectsChanged"
+QT_MOC_LITERAL(10, 127, 14), // "eyeLineChanged"
+QT_MOC_LITERAL(11, 142, 15), // "editModeChanged"
+QT_MOC_LITERAL(12, 158, 17), // "selectTypeChanged"
+QT_MOC_LITERAL(13, 176, 15), // "editTypeChanged"
+QT_MOC_LITERAL(14, 192, 17), // "updateObjectsData"
+QT_MOC_LITERAL(15, 210, 8), // "addScene"
+QT_MOC_LITERAL(16, 219, 12), // "updateStatus"
+QT_MOC_LITERAL(17, 232, 17), // "cameraChangedSlot"
+QT_MOC_LITERAL(18, 250, 16) // "lightChangedSlot"
 
     },
     "CQCamera3DCanvas\0stateChanged\0\0"
     "cameraStateChanged\0materialAdded\0"
-    "cameraAdded\0lightAdded\0objectAdded\0"
-    "objectsChanged\0eyeLineChanged\0"
+    "cameraAdded\0lightAdded\0lightChanged\0"
+    "objectAdded\0objectsChanged\0eyeLineChanged\0"
     "editModeChanged\0selectTypeChanged\0"
     "editTypeChanged\0updateObjectsData\0"
-    "addScene\0updateStatus\0cameraChanged\0"
-    "lightChanged"
+    "addScene\0updateStatus\0cameraChangedSlot\0"
+    "lightChangedSlot"
 };
 #undef QT_MOC_LITERAL
 
@@ -69,34 +70,36 @@ static const uint qt_meta_data_CQCamera3DCanvas[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      17,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      11,       // signalCount
+      12,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    0,   94,    2, 0x06 /* Public */,
-       3,    0,   95,    2, 0x06 /* Public */,
-       4,    0,   96,    2, 0x06 /* Public */,
-       5,    0,   97,    2, 0x06 /* Public */,
-       6,    0,   98,    2, 0x06 /* Public */,
-       7,    0,   99,    2, 0x06 /* Public */,
-       8,    0,  100,    2, 0x06 /* Public */,
-       9,    0,  101,    2, 0x06 /* Public */,
-      10,    0,  102,    2, 0x06 /* Public */,
-      11,    0,  103,    2, 0x06 /* Public */,
-      12,    0,  104,    2, 0x06 /* Public */,
+       1,    0,   99,    2, 0x06 /* Public */,
+       3,    0,  100,    2, 0x06 /* Public */,
+       4,    0,  101,    2, 0x06 /* Public */,
+       5,    0,  102,    2, 0x06 /* Public */,
+       6,    0,  103,    2, 0x06 /* Public */,
+       7,    0,  104,    2, 0x06 /* Public */,
+       8,    0,  105,    2, 0x06 /* Public */,
+       9,    0,  106,    2, 0x06 /* Public */,
+      10,    0,  107,    2, 0x06 /* Public */,
+      11,    0,  108,    2, 0x06 /* Public */,
+      12,    0,  109,    2, 0x06 /* Public */,
+      13,    0,  110,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      13,    0,  105,    2, 0x0a /* Public */,
-      14,    0,  106,    2, 0x0a /* Public */,
-      15,    0,  107,    2, 0x08 /* Private */,
-      16,    0,  108,    2, 0x08 /* Private */,
-      17,    0,  109,    2, 0x08 /* Private */,
+      14,    0,  111,    2, 0x0a /* Public */,
+      15,    0,  112,    2, 0x0a /* Public */,
+      16,    0,  113,    2, 0x08 /* Private */,
+      17,    0,  114,    2, 0x08 /* Private */,
+      18,    0,  115,    2, 0x08 /* Private */,
 
  // signals: parameters
+    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -130,17 +133,18 @@ void CQCamera3DCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         case 2: _t->materialAdded(); break;
         case 3: _t->cameraAdded(); break;
         case 4: _t->lightAdded(); break;
-        case 5: _t->objectAdded(); break;
-        case 6: _t->objectsChanged(); break;
-        case 7: _t->eyeLineChanged(); break;
-        case 8: _t->editModeChanged(); break;
-        case 9: _t->selectTypeChanged(); break;
-        case 10: _t->editTypeChanged(); break;
-        case 11: _t->updateObjectsData(); break;
-        case 12: _t->addScene(); break;
-        case 13: _t->updateStatus(); break;
-        case 14: _t->cameraChanged(); break;
-        case 15: _t->lightChanged(); break;
+        case 5: _t->lightChanged(); break;
+        case 6: _t->objectAdded(); break;
+        case 7: _t->objectsChanged(); break;
+        case 8: _t->eyeLineChanged(); break;
+        case 9: _t->editModeChanged(); break;
+        case 10: _t->selectTypeChanged(); break;
+        case 11: _t->editTypeChanged(); break;
+        case 12: _t->updateObjectsData(); break;
+        case 13: _t->addScene(); break;
+        case 14: _t->updateStatus(); break;
+        case 15: _t->cameraChangedSlot(); break;
+        case 16: _t->lightChangedSlot(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -182,43 +186,50 @@ void CQCamera3DCanvas::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::objectAdded)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::lightChanged)) {
                 *result = 5;
                 return;
             }
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::objectsChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::objectAdded)) {
                 *result = 6;
                 return;
             }
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::eyeLineChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::objectsChanged)) {
                 *result = 7;
                 return;
             }
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::editModeChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::eyeLineChanged)) {
                 *result = 8;
                 return;
             }
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::selectTypeChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::editModeChanged)) {
                 *result = 9;
                 return;
             }
         }
         {
             using _t = void (CQCamera3DCanvas::*)();
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::editTypeChanged)) {
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::selectTypeChanged)) {
                 *result = 10;
+                return;
+            }
+        }
+        {
+            using _t = void (CQCamera3DCanvas::*)();
+            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&CQCamera3DCanvas::editTypeChanged)) {
+                *result = 11;
                 return;
             }
         }
@@ -255,13 +266,13 @@ int CQCamera3DCanvas::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 17;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 17)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 16;
+        _id -= 17;
     }
     return _id;
 }
@@ -297,39 +308,45 @@ void CQCamera3DCanvas::lightAdded()
 }
 
 // SIGNAL 5
-void CQCamera3DCanvas::objectAdded()
+void CQCamera3DCanvas::lightChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 5, nullptr);
 }
 
 // SIGNAL 6
-void CQCamera3DCanvas::objectsChanged()
+void CQCamera3DCanvas::objectAdded()
 {
     QMetaObject::activate(this, &staticMetaObject, 6, nullptr);
 }
 
 // SIGNAL 7
-void CQCamera3DCanvas::eyeLineChanged()
+void CQCamera3DCanvas::objectsChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 7, nullptr);
 }
 
 // SIGNAL 8
-void CQCamera3DCanvas::editModeChanged()
+void CQCamera3DCanvas::eyeLineChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 8, nullptr);
 }
 
 // SIGNAL 9
-void CQCamera3DCanvas::selectTypeChanged()
+void CQCamera3DCanvas::editModeChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 9, nullptr);
 }
 
 // SIGNAL 10
-void CQCamera3DCanvas::editTypeChanged()
+void CQCamera3DCanvas::selectTypeChanged()
 {
     QMetaObject::activate(this, &staticMetaObject, 10, nullptr);
+}
+
+// SIGNAL 11
+void CQCamera3DCanvas::editTypeChanged()
+{
+    QMetaObject::activate(this, &staticMetaObject, 11, nullptr);
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

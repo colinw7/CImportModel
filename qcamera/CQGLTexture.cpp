@@ -1,31 +1,13 @@
 #include <CQGLTexture.h>
+
+#include <CQGLState.h>
 #include <CQImage.h>
 #include <CImageLib.h>
 #include <CMathGen.h>
 
 #include <QFileInfo>
 #include <QImageReader>
-
-#if 0
-#include <glad/glad.h>
-#endif
-#include <GL/glut.h>
-
-namespace {
-
-bool checkError(const char *msg) {
-  // check texture generated
-  GLenum err = glGetError();
-
-  if (err != GL_NO_ERROR) {
-    std::cerr << "OpenGL Error: " << gluErrorString(err) << "(" << msg << ")\n";
-    return false;
-  }
-
-  return true;
-}
-
-}
+#include <iostream>
 
 //---
 
@@ -105,7 +87,7 @@ setImage(const CImagePtr &image)
 
   type_ = Type::IMAGE;
 
-  QImage &qimage = dynamic_cast<CQImage *>(image.get())->getQImage();
+  auto &qimage = dynamic_cast<CQImage *>(image.get())->getQImage();
 
   init(qimage, /*flip*/false);
 }
@@ -127,37 +109,37 @@ setTarget(int w, int h)
       functions_->glGenFramebuffers(1, &frameBufferId_);
 
     functions_->glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId_);
-    if (! checkError("glBindFramebuffer")) return false;
+    if (! CQGLStateInst->checkError("glBindFramebuffer")) return false;
 
     // The texture we're going to render to
     if (id_ == 0) {
       glGenTextures(1, &id_);
-      if (! checkError("glGenTextures")) return false;
+      if (! CQGLStateInst->checkError("glGenTextures")) return false;
     }
 
     // generate texture
     glBindTexture(GL_TEXTURE_2D, id_);
-    if (! checkError("glBindTexture")) return false;
+    if (! CQGLStateInst->checkError("glBindTexture")) return false;
 
     // Give an empty image to OpenGL ( the last "0" )
     // no difference for GL_RGBA and GL_RGB (TODO: support multisample)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, targetWidth_, targetHeight_,
                  /*border*/0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    if (! checkError("glTexImage2D")) return false;
+    if (! CQGLStateInst->checkError("glTexImage2D")) return false;
 
     // Poor filtering (need min filter to avoid mip map use - not set)
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//  if (! checkError("glTexParameteri")) return false;
+//  if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//  if (! checkError("glTexParameteri")) return false;
+//  if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
 //  glBindTexture(GL_TEXTURE_2D, 0);
-//  if (! checkError("glBindTexture")) return false;
+//  if (! CQGLStateInst->checkError("glBindTexture")) return false;
 
     // allocate depth buffer
     if (depthRenderBuffer_ == 0)
@@ -174,7 +156,7 @@ setTarget(int w, int h)
     // attach it to currently bound framebuffer object
     //functions_->glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id_, 0);
     functions_->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id_, 0);
-    if (! checkError("glFramebufferTexture2D")) return false;
+    if (! CQGLStateInst->checkError("glFramebufferTexture2D")) return false;
 
     // generate render buffer
     // Set the list of draw buffers.
@@ -211,26 +193,26 @@ setShadow(int w, int h)
     // The texture we're going to render to
     if (id_ == 0) {
       glGenTextures(1, &id_);
-      if (! checkError("glGenTextures")) return false;
+      if (! CQGLStateInst->checkError("glGenTextures")) return false;
     }
 
     // make texture current
     glBindTexture(GL_TEXTURE_2D, id_);
-    if (! checkError("glBindTexture")) return false;
+    if (! CQGLStateInst->checkError("glBindTexture")) return false;
 
     // Give an empty image to OpenGL ( the last "0" )
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, targetWidth_, targetHeight_,
                  /*border*/0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    if (! checkError("glTexImage2D")) return false;
+    if (! CQGLStateInst->checkError("glTexImage2D")) return false;
 
     // Poor filtering (need min filter to avoid mip map use - not set)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
     // const depth on texture border for clipping of light view
     float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -241,19 +223,19 @@ setShadow(int w, int h)
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 #endif
 
 #if 0
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
     glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_ALPHA);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 #endif
 
 #if 0
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 #endif
 
     int width, height, depth;
@@ -264,11 +246,11 @@ setShadow(int w, int h)
 
     // make framebuffer current
     functions_->glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId_);
-    if (! checkError("glBindFramebuffer")) return false;
+    if (! CQGLStateInst->checkError("glBindFramebuffer")) return false;
 
     // use texture as frame buffer depth
     functions_->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, id_, 0);
-    if (! checkError("glFramebufferTexture2D")) return false;
+    if (! CQGLStateInst->checkError("glFramebufferTexture2D")) return false;
 
     glDrawBuffer(GL_NONE); // disable color buffers
     glReadBuffer(GL_NONE);
@@ -286,7 +268,7 @@ setShadow(int w, int h)
 
     // reset current frame buffer
     functions_->glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    if (! checkError("glBindFramebuffer")) return false;
+    if (! CQGLStateInst->checkError("glBindFramebuffer")) return false;
 
     valid_ = true;
   }
@@ -340,13 +322,13 @@ init(const QImage &image, bool flip)
 
   // allocate texture id
   glGenTextures(1, &id_);
-  if (! checkError("glGenTextures")) return false;
+  if (! CQGLStateInst->checkError("glGenTextures")) return false;
 
   valid_ = true;
 
   // set texture type
   glBindTexture(GL_TEXTURE_2D, id_);
-  if (! checkError("glBindTexture")) return false;
+  if (! CQGLStateInst->checkError("glBindTexture")) return false;
 
   if (wrapType() == WrapType::CLAMP) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -356,15 +338,15 @@ init(const QImage &image, bool flip)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   }
-  if (! checkError("glTexParameteri")) return false;
+  if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  if (! checkError("glTexParameteri")) return false;
+  if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
   // select modulate to mix texture with color for shading
   //glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-  //if (! checkError("glTexEnvf")) return false;
+  //if (! CQGLStateInst->checkError("glTexEnvf")) return false;
 
   // build our texture mipmaps
   GLint internalFormat = (useAlpha() ? GL_RGBA : GL_RGB);
@@ -373,19 +355,19 @@ init(const QImage &image, bool flip)
 #if 1
     // Hardware mipmap generation
     glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
-    if (! checkError("glTexParameteri")) return false;
+    if (! CQGLStateInst->checkError("glTexParameteri")) return false;
 
     glHint(GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST);
-    if (! checkError("glHint")) return false;
+    if (! CQGLStateInst->checkError("glHint")) return false;
 #endif
 
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width_, height_, 0,
                  GL_BGRA, GL_UNSIGNED_BYTE, &imageData_[0]);
-    if (! checkError("glTexImage2D")) return false;
+    if (! CQGLStateInst->checkError("glTexImage2D")) return false;
 
 #if 0
     glGenerateMipmap(GL_TEXTURE_2D);
-    if (! checkError("glGenerateMipmap")) return false;
+    if (! CQGLStateInst->checkError("glGenerateMipmap")) return false;
 #endif
   }
   else {
@@ -393,7 +375,7 @@ init(const QImage &image, bool flip)
     // good old gluBuild2DMipmaps function
     gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, width_, height_,
                       GL_BGRA, GL_UNSIGNED_BYTE, &imageData_[0]);
-    if (! checkError("gluBuild2DMipmaps")) return false;
+    if (! CQGLStateInst->checkError("gluBuild2DMipmaps")) return false;
   }
 
   return true;
@@ -403,7 +385,7 @@ void
 CQGLTexture::
 bind() const
 {
-  glEnable(GL_TEXTURE_2D);
+  enable(true);
 
   if      (type_ == Type::TARGET) {
     assert(frameBufferId_ > 0);
@@ -448,15 +430,13 @@ unbind() const
   }
   else
     glBindTexture(GL_TEXTURE_2D, 0);
-
-  glDisable(GL_TEXTURE_2D);
 }
 
 void
 CQGLTexture::
 bindBuffer() const
 {
-  glEnable(GL_TEXTURE_2D);
+  enable(true);
 
   if (frameBufferId_)
     glBindTexture(GL_TEXTURE_2D, id_);
@@ -468,18 +448,13 @@ unbindBuffer() const
 {
   if (frameBufferId_)
     glBindTexture(GL_TEXTURE_2D, 0);
-
-  glDisable(GL_TEXTURE_2D);
 }
 
 void
 CQGLTexture::
-enable(bool b)
+enable(bool b) const
 {
-  if (b)
-    glEnable(GL_TEXTURE_2D);
-  else
-    glDisable(GL_TEXTURE_2D);
+  CQGLStateInst->setEnableTexture(b);
 }
 
 void
@@ -547,7 +522,7 @@ displayFramebufferTexture(ShaderProgram *program, int vertexId)
     [...]
   }
 
-  glActiveTexture(GL_TEXTURE0);
+  CQGLStateInst->setActiveTextureNum(0, true);
 
   program->bind();
 

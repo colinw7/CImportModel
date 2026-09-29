@@ -593,6 +593,8 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   void calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose=false) const;
 
+  CPoint2D mapPixelToViewport(const CPoint2D &pos) const;
+
   //---
 
   void updateStateLabel();
@@ -605,9 +607,9 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
  private Q_SLOTS:
   void updateStatus();
 
-  void cameraChanged();
+  void cameraChangedSlot();
 
-  void lightChanged();
+  void lightChangedSlot();
 
  Q_SIGNALS:
   void stateChanged();
@@ -618,6 +620,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   void cameraAdded();
 
   void lightAdded();
+  void lightChanged();
 
   void objectAdded();
   void objectsChanged();

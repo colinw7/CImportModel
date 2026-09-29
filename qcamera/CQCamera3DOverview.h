@@ -352,12 +352,14 @@ class CQCamera3DOverview : public QFrame {
   using ViewSortedPoint2DArray   = std::map<int, SortedPoint2DArray>;
 
   struct DrawData {
-    QPainter*      painter { nullptr };
-    CMatrix3DH     projectionMatrix;
-    CMatrix3DH     viewMatrix;
-    CMatrix3DH     pvMatrix;
-    CMatrix3DH     modelMatrix;
-    CMatrix3DH     meshMatrix;
+    QPainter* painter { nullptr };
+
+    CMatrix3DH projectionMatrix;
+    CMatrix3DH viewMatrix;
+    CMatrix3DH pvMatrix;
+    CMatrix3DH modelMatrix;
+    CMatrix3DH meshMatrix;
+
     ObjectGeomData objectGeomData;
     bool           filled { true };
     bool           orient { true };

@@ -61,7 +61,7 @@ CQCamera3DOverlay::
 drawGeometry()
 {
   auto oldDepthTest = CQGLStateInst->setDepthTest(false);
-  auto oldFrontFace = CQGLStateInst->setFrontFace(GL_CCW);
+  auto oldFrontFace = CQGLStateInst->setFrontFaceFlag(true);
   bool oldCullFace  = CQGLStateInst->setCullFace(true);
 
   //---
@@ -115,14 +115,14 @@ drawGeometry()
     if (isWireframe()) {
       program->setUniformValue("isWireframe", true);
 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      CQGLStateInst->setPolygonMode(GL_LINE);
 
       glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
     }
 
     program->setUniformValue("isWireframe", false);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    CQGLStateInst->setPolygonMode(GL_FILL);
 
     glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
   }
@@ -136,6 +136,6 @@ drawGeometry()
   //---
 
   CQGLStateInst->setDepthTest(oldDepthTest);
-  CQGLStateInst->setFrontFace(oldFrontFace);
+  CQGLStateInst->setFrontFaceFlag(oldFrontFace);
   CQGLStateInst->setCullFace(oldCullFace);
 }

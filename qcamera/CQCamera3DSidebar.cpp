@@ -114,75 +114,89 @@ void
 CQCamera3DSidebar::
 selectSlot(bool)
 {
-  editType_ = EditType::SELECT;
+  if (editType_ != EditType::SELECT) {
+    editType_ = EditType::SELECT;
 
-  updateEditType();
-
-  updateButtonState();
-}
-
-void
-CQCamera3DSidebar::
-cursorSlot(bool state)
-{
-  editType_ = (state ? EditType::CURSOR : EditType::SELECT);
-
-  updateEditType();
+    updateEditType();
+  }
 
   updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
-cameraSlot(bool state)
+cursorSlot(bool)
 {
-  editType_ = (state ? EditType::CAMERA : EditType::SELECT);
+  if (editType_ != EditType::CURSOR) {
+    editType_ = EditType::CURSOR;
 
-  updateEditType();
+    updateEditType();
+  }
 
   updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
-lightSlot(bool state)
+cameraSlot(bool)
 {
-  editType_ = (state ? EditType::LIGHT : EditType::SELECT);
+  if (editType_ != EditType::CAMERA) {
+    editType_ = EditType::CAMERA;
 
-  updateEditType();
+    updateEditType();
+  }
 
   updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
-moveSlot(bool state)
+lightSlot(bool)
 {
-  editType_ = (state ? EditType::MOVE : EditType::SELECT);
+  if (editType_ != EditType::LIGHT) {
+    editType_ = EditType::LIGHT;
 
-  updateEditType();
+    updateEditType();
+  }
 
   updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
-rotateSlot(bool state)
+moveSlot(bool)
 {
-  editType_ = (state ? EditType::ROTATE : EditType::SELECT);
+  if (editType_ != EditType::MOVE) {
+    editType_ = EditType::MOVE;
 
-  updateEditType();
+    updateEditType();
+  }
 
   updateButtonState();
 }
 
 void
 CQCamera3DSidebar::
-scaleSlot(bool state)
+rotateSlot(bool)
 {
-  editType_ = (state ? EditType::SCALE : EditType::SELECT);
+  if (editType_ != EditType::ROTATE) {
+    editType_ = EditType::ROTATE;
 
-  updateEditType();
+    updateEditType();
+  }
+
+  updateButtonState();
+}
+
+void
+CQCamera3DSidebar::
+scaleSlot(bool)
+{
+  if (editType_ != EditType::SCALE) {
+    editType_ = EditType::SCALE;
+
+    updateEditType();
+  }
 
   updateButtonState();
 }

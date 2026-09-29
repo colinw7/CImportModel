@@ -72,7 +72,7 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
     camera->setVisible(false);
 
-    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChanged()));
+    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChangedSlot()));
 
     cameras_.push_back(camera);
 
@@ -90,7 +90,7 @@ CQCamera3DCanvas(CQCamera3DApp *app) :
 
     camera->setVisible(false);
 
-    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChanged()));
+    connect(camera, SIGNAL(stateChangedSignal()), this, SLOT(cameraChangedSlot()));
 
     cameras_.push_back(camera);
 
@@ -238,7 +238,7 @@ addLight()
 
   lights_.push_back(light1);
 
-  connect(light1, SIGNAL(stateChangedSignal()), this, SLOT(lightChanged()));
+  connect(light1, SIGNAL(stateChangedSignal()), this, SLOT(lightChangedSlot()));
 
   Q_EMIT lightAdded();
 }
@@ -1107,8 +1107,8 @@ addScene()
   auto *scene = app_->getScene();
 
   for (auto *object : scene->getObjects()) {
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-    assert(object1);
+    auto *geomObject = dynamic_cast<CQCamera3DGeomObject *>(object);
+    assert(geomObject);
 
     //---
 
@@ -1166,7 +1166,7 @@ addScene()
 
     //---
 
-    auto *buffer = object1->initBuffer(this);
+    auto *buffer = geomObject->initBuffer(this);
 
     //---
 
@@ -1371,7 +1371,7 @@ addScene()
 
       pos += faceData.len;
 
-      object1->addFaceData(faceData);
+      geomObject->addFaceData(faceData);
     };
 
     //---
@@ -1459,12 +1459,12 @@ addScene()
 
       pos += faceData.len;
 
-      object1->addFaceData(faceData);
+      geomObject->addFaceData(faceData);
     }
 
     //---
 
-    object1->setBBox(bbox1);
+    geomObject->setBBox(bbox1);
 
     bbox_ += bbox1;
 
@@ -1602,7 +1602,7 @@ drawScene()
 
 #if 1
   if (shaderType_ == ShaderType::MODEL && isShadowed()) {
-    glActiveTexture(GL_TEXTURE4);
+    CQGLStateInst->setActiveTextureNum(4, true);
     shadowTextureBuffer_.texture->bindBuffer();
 
     program->setUniformValue("shadowMap", 4);
@@ -1694,8 +1694,8 @@ drawObjects(ShaderProgram *program)
     if (! object->getVisible())
       continue;
 
-    auto *object1 = dynamic_cast<CQCamera3DGeomObject *>(object);
-    assert(object1);
+    auto *geomObject = dynamic_cast<CQCamera3DGeomObject *>(object);
+    assert(geomObject);
 
     auto &selectedVertices  = paintData_.selectedObjectVertices [object->getInd()];
     auto &selectedFaceEdges = paintData_.selectedObjectFaceEdges[object->getInd()];
@@ -1733,7 +1733,7 @@ drawObjects(ShaderProgram *program)
           hasMeshMatrix = true;
         }
         else {
-          std::cerr << "Bad meshMatrix anim time\n";
+          std::cerr << "Bad meshMatrix anim time (" << animTime << " (#" << frame << ")\n";
         }
       }
     }
@@ -1765,7 +1765,7 @@ drawObjects(ShaderProgram *program)
 
     bool objectSelected = object->getHierSelected();
 
-    object1->buffer()->bind();
+    geomObject->buffer()->bind();
 
     //---
 
@@ -1787,7 +1787,7 @@ drawObjects(ShaderProgram *program)
       program->setUniformValue("diffuseTexture.enabled", useDiffuseTexture);
 
       if (useDiffuseTexture) {
-        glActiveTexture(GL_TEXTURE0);
+        CQGLStateInst->setActiveTextureNum(0, true);
         faceData.diffuseTexture->bind();
 
         program->setUniformValue("diffuseTexture.texture", 0);
@@ -1800,7 +1800,7 @@ drawObjects(ShaderProgram *program)
       program->setUniformValue("normalTexture.enabled", useNormalTexture);
 
       if (useNormalTexture) {
-        glActiveTexture(GL_TEXTURE1);
+        CQGLStateInst->setActiveTextureNum(1, true);
         faceData.normalTexture->bind();
 
         program->setUniformValue("normalTexture.texture", 1);
@@ -1813,7 +1813,7 @@ drawObjects(ShaderProgram *program)
       program->setUniformValue("specularTexture.enabled", useSpecularTexture);
 
       if (useSpecularTexture) {
-        glActiveTexture(GL_TEXTURE2);
+        CQGLStateInst->setActiveTextureNum(2, true);
         faceData.specularTexture->bind();
 
         program->setUniformValue("specularTexture.texture", 2);
@@ -1826,7 +1826,7 @@ drawObjects(ShaderProgram *program)
       program->setUniformValue("emissiveTexture.enabled", useEmissiveTexture);
 
       if (useEmissiveTexture) {
-        glActiveTexture(GL_TEXTURE3);
+        CQGLStateInst->setActiveTextureNum(3, true);
         faceData.emissiveTexture->bind();
 
         program->setUniformValue("emissiveTexture.texture", 3);
@@ -1845,7 +1845,7 @@ drawObjects(ShaderProgram *program)
       if (isWireframe() || selected) {
         program->setUniformValue("isWireframe", true);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        CQGLStateInst->setPolygonMode(GL_LINE);
 
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
       }
@@ -1853,7 +1853,7 @@ drawObjects(ShaderProgram *program)
       if (isSolid() || selected) {
         program->setUniformValue("isWireframe", false);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        CQGLStateInst->setPolygonMode(GL_FILL);
 
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
       }
@@ -1872,7 +1872,7 @@ drawObjects(ShaderProgram *program)
     auto oldBlend     = CQGLStateInst->setBlend(false);
     auto oldDepthMask = CQGLStateInst->setDepthMask(true);
 
-    for (const auto &faceData : object1->faceDatas()) {
+    for (const auto &faceData : geomObject->faceDatas()) {
       if      (faceData.face) {
         auto *face = faceData.face;
 
@@ -1898,7 +1898,7 @@ drawObjects(ShaderProgram *program)
             continue;
 
           CQGLBuffer::PointData data;
-          object1->buffer()->getPointData(v, data);
+          geomObject->buffer()->getPointData(v, data);
 
           auto p = data.point.value();
 
@@ -1921,8 +1921,8 @@ drawObjects(ShaderProgram *program)
               continue;
 
             CQGLBuffer::PointData data1, data2;
-            object1->buffer()->getPointData(edge->getStart(), data1);
-            object1->buffer()->getPointData(edge->getEnd  (), data2);
+            geomObject->buffer()->getPointData(edge->getStart(), data1);
+            geomObject->buffer()->getPointData(edge->getEnd  (), data2);
 
             auto p1 = data1.point.value();
             auto p2 = data2.point.value();
@@ -1958,7 +1958,7 @@ drawObjects(ShaderProgram *program)
 
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-      for (const auto &faceData : object1->faceDatas()) {
+      for (const auto &faceData : geomObject->faceDatas()) {
         auto *face = faceData.face;
 
         if (face && ! face->getVisible())
@@ -2014,7 +2014,7 @@ drawObjects(ShaderProgram *program)
 
     //---
 
-    object1->buffer()->unbind();
+    geomObject->buffer()->unbind();
   }
 }
 
@@ -2103,7 +2103,7 @@ drawTexture(TextureBuffer &textureBuffer, bool isDepth)
 
   textureBuffer.buffer->bind();
 
-  glActiveTexture(GL_TEXTURE0);
+  CQGLStateInst->setActiveTextureNum(0, true);
 
   textureBuffer.texture->bindBuffer();
 
@@ -3960,20 +3960,9 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   //---
 
   // set pixel (mouse) position in GL coords
-  auto aspect = this->aspect();
+  auto pos1 = mapPixelToViewport(pos.toPoint2D());
 
-  double x1, y1;
-
-  if (aspect > 1.0) {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0, -aspect,  aspect);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,     1.0,    -1.0);
-  }
-  else {
-    x1 = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0,   -1.0,      1.0);
-    y1 = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,  aspect, -aspect);
-  }
-
-  //std::cerr << "PX: " << x1 << " " << y1 << "\n";
+  //std::cerr << "PX: " << pos1 << "\n";
 
   //---
 
@@ -4002,7 +3991,7 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
     auto z1 = CMathUtil::map(i, 0, 100, camera->near(), camera->far());
 
     CPoint3D pp, pv;
-    pointToView(CPoint3D(x1, y1, z1), pp, pv);
+    pointToView(CPoint3D(pos1, z1), pp, pv);
 
     viewPoints[pv.z] = pv;
   }
@@ -4010,10 +3999,10 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   auto pv1 = viewPoints.begin ()->second;
   auto pv2 = viewPoints.rbegin()->second;
 #else
-  //auto px1 = CPoint3D(x1, y1, eyeLineZ()      );
-  //auto px2 = CPoint3D(x1, y1, eyeLineZ() + 0.1);
-  auto px1 = CPoint3D(x1, y1, eyeLineZ1());
-  auto px2 = CPoint3D(x1, y1, eyeLineZ2());
+  //auto px1 = CPoint3D(pos1, eyeLineZ()      );
+  //auto px2 = CPoint3D(pos1, eyeLineZ() + 0.1);
+  auto px1 = CPoint3D(pos1, eyeLineZ1());
+  auto px2 = CPoint3D(pos1, eyeLineZ2());
 
   CPoint3D pp1, pv1;
   pointToView(px1, pp1, pv1);
@@ -4035,7 +4024,7 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   eyeLine.v = CVector3D(eyeLine.pv2, eyeLine.pv1).normalized();
 
   if (verbose)
-    std::cerr << CPoint2D(x1, y1) << " " << pv1 << "\n";
+    std::cerr << pos1 << " " << pv1 << "\n";
 
   //---
 
@@ -4052,11 +4041,31 @@ calcEyeLine(const CPoint3D &pos, EyeLine &eyeLine, bool verbose) const
   eyeLine.isSet = true;
 }
 
+CPoint2D
+CQCamera3DCanvas::
+mapPixelToViewport(const CPoint2D &pos) const
+{
+  auto aspect = this->aspect();
+
+  double x, y;
+
+  if (aspect > 1.0) {
+    x = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0, -aspect,  aspect);
+    y = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,     1.0,    -1.0);
+  }
+  else {
+    x = CMathUtil::map(pos.x, 0, pixelWidth () - 1.0,   -1.0,      1.0);
+    y = CMathUtil::map(pos.y, 0, pixelHeight() - 1.0,  aspect, -aspect);
+  }
+
+  return CPoint2D(x, y);
+}
+
 //---
 
 void
 CQCamera3DCanvas::
-cameraChanged()
+cameraChangedSlot()
 {
   if (isShowPlanes())
     updateAnnotation();
@@ -4120,11 +4129,13 @@ getCameraById(uint id) const
 
 void
 CQCamera3DCanvas::
-lightChanged()
+lightChangedSlot()
 {
   shape_->updateGeometry();
 
   update();
+
+  Q_EMIT lightChanged();
 }
 
 CQCamera3DLight *

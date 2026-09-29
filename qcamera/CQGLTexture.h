@@ -61,6 +61,8 @@ class CQGLTexture {
   // set as render target
   bool setTarget(int w, int h);
 
+  //---
+
   // set as shadow buffer
   bool setShadow(int w, int h);
 
@@ -79,7 +81,7 @@ class CQGLTexture {
 
   //---
 
-  void enable(bool b);
+  void enable(bool b) const;
 
   //---
 

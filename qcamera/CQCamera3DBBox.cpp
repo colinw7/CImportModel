@@ -9,6 +9,7 @@
 
 #include <CGeomScene3D.h>
 #include <CQGLBuffer.h>
+#include <CQGLState.h>
 #include <CQGLUtil.h>
 #include <COrientedBBox3D.h>
 
@@ -206,7 +207,7 @@ drawGeometry()
   //---
 
   for (const auto &faceData : faceDataList_.faceDatas) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    CQGLStateInst->setPolygonMode(GL_LINE);
 
     glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
   }

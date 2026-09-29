@@ -47,6 +47,7 @@ CQCamera3DOverlay2D.cpp \
 CQCamera3DOverlay.cpp \
 CQCamera3DOverview.cpp \
 CQCamera3DOverviewMouseModeIFace.cpp \
+CQCamera3DSelection.cpp \
 CQCamera3DShaderProgram.cpp \
 CQCamera3DShape.cpp \
 CQCamera3DShapes.cpp \
@@ -117,6 +118,7 @@ CQCamera3DOverlay2D.h \
 CQCamera3DOverlay.h \
 CQCamera3DOverview.h \
 CQCamera3DOverviewMouseModeIFace.h \
+CQCamera3DSelection.h \
 CQCamera3DShaderProgram.h \
 CQCamera3DShape.h \
 CQCamera3DShapes.h \

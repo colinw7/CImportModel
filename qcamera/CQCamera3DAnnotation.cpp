@@ -264,7 +264,7 @@ drawGeometry()
       program->setUniformValue("isWireframe", false);
       program->setUniformValue("isLine"     , true);
 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      CQGLStateInst->setPolygonMode(GL_LINE);
 
       glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
     }
@@ -272,7 +272,7 @@ drawGeometry()
       program->setUniformValue("isWireframe", false);
       program->setUniformValue("isLine"     , true);
 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      CQGLStateInst->setPolygonMode(GL_LINE);
 
       glDrawArrays(GL_LINES, faceData.pos, faceData.len);
     }
@@ -282,14 +282,14 @@ drawGeometry()
       if (isWireframe()) {
         program->setUniformValue("isWireframe", true);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        CQGLStateInst->setPolygonMode(GL_LINE);
 
         glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
       }
 
       program->setUniformValue("isWireframe", false);
 
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      CQGLStateInst->setPolygonMode(GL_FILL);
 
       glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
     }

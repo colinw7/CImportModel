@@ -117,6 +117,7 @@ CQCamera3DOverview(CQCamera3DApp *app) :
   connect(canvas, SIGNAL(objectAdded()), this, SLOT(invalidate()));
   connect(canvas, SIGNAL(eyeLineChanged()), this, SLOT(invalidate()));
   connect(canvas, SIGNAL(cameraStateChanged()), this, SLOT(invalidate()));
+  connect(canvas, SIGNAL(lightChanged()), this, SLOT(invalidate()));
 }
 
 void
@@ -1567,7 +1568,6 @@ keyPressEvent(QKeyEvent *e)
   //---
 
   auto *canvas = app_->canvas();
-  auto *camera = canvas->getInteractiveCamera();
 
   auto k = e->key();
 
@@ -1579,6 +1579,8 @@ keyPressEvent(QKeyEvent *e)
   auto d = bbox.getMaxSize()/100.0;
 
   if      (editType() == EditType::CAMERA) {
+    auto *camera = canvas->getInteractiveCamera();
+
     if      (k == Qt::Key_A) {
       if      (ind_ == 0)
         camera->moveAroundZ(-3*d);
@@ -1597,6 +1599,27 @@ keyPressEvent(QKeyEvent *e)
     }
   }
   else if (editType() == EditType::LIGHT) {
+    auto *light = canvas->currentLight();
+    if (! light) return;
+
+    if      (k == Qt::Key_A) {
+      light->moveRight(-d);
+    }
+    else if (k == Qt::Key_D) {
+      light->moveRight(d);
+    }
+    else if (k == Qt::Key_W) {
+      light->moveUp(d);
+    }
+    else if (k == Qt::Key_S) {
+      light->moveUp(-d);
+    }
+    else if (k == Qt::Key_Up) {
+      light->moveFront(-d);
+    }
+    else if (k == Qt::Key_Down) {
+      light->moveFront(d);
+    }
   }
   else if (editType_ == EditType::SELECT) {
     if (! mouseData_.isShift && ! mouseData_.isControl) {

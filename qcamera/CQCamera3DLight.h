@@ -19,10 +19,17 @@ class CQCamera3DLight : public CQCamera3DCamera, public CGeomLight3D {
 
   //---
 
+  void setPosition(const CVector3D &point) override {
+    CQCamera3DCamera::setPosition(point);
+    CGeomLight3D::setPosition(point.point());
+  }
+
   void setPosition(const CPoint3D &point) override {
     CQCamera3DCamera::setPosition(CVector3D(point));
     CGeomLight3D::setPosition(point);
   }
+
+  //---
 
   const CVector3D &getDirection() const override {
     static CVector3D dir;

@@ -7,6 +7,7 @@
 
 #include <CGeomScene3D.h>
 #include <CQGLBuffer.h>
+#include <CQGLState.h>
 #include <CQGLUtil.h>
 
 CQCamera3DNormals::
@@ -170,7 +171,7 @@ drawGeometry()
 
   //---
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  CQGLStateInst->setPolygonMode(GL_LINE);
 
   glDrawArrays(GL_LINES, 0, buffer_->numPoints());
 

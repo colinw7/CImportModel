@@ -40,37 +40,28 @@ void
 CQCamera3DWidget::
 enableDepthTest()
 {
-  if (isDepthTest())
-    CQGLStateInst->setDepthTest(true);
-  else
-    CQGLStateInst->setDepthTest(false);
+  CQGLStateInst->setDepthTest(isDepthTest());
 }
 
 void
 CQCamera3DWidget::
 enableCullFace()
 {
-  if (isCullFace())
-    CQGLStateInst->setCullFace(true);
-  else
-    CQGLStateInst->setCullFace(false);
+  CQGLStateInst->setCullFace(isCullFace());
 }
 
 void
 CQCamera3DWidget::
 enableFrontFace()
 {
-  CQGLStateInst->setFrontFace(isFrontFace() ? GL_CW : GL_CCW);
+  CQGLStateInst->setFrontFaceFlag(! isFrontFace());
 }
 
 void
 CQCamera3DWidget::
 enablePolygonLine()
 {
-  if (isPolygonLine())
-    CQGLStateInst->setPolygonOffsetLine(true);
-  else
-    CQGLStateInst->setPolygonOffsetLine(false);
+  CQGLStateInst->setPolygonOffsetLine(isPolygonLine());
 
   glPolygonOffset(-1.0f, -1.0f);
 }

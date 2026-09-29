@@ -217,7 +217,7 @@ drawGeometry()
   buffer_->bind();
 
   for (const auto &faceData : faceDataList_.faceDatas) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    CQGLStateInst->setPolygonMode(GL_FILL);
 
     glDrawArrays(GL_TRIANGLE_FAN, faceData.pos, faceData.len);
   }

@@ -9,6 +9,7 @@
 #include <CQCamera3DUtil.h>
 
 #include <CQGLBuffer.h>
+#include <CQGLState.h>
 #include <CQGLUtil.h>
 #include <CGeomObject3D.h>
 
@@ -117,7 +118,7 @@ drawGeometry()
   if (vertexIndex_ > lineIndex_) {
     glLineWidth(8);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    CQGLStateInst->setPolygonMode(GL_LINE);
 
     glDrawArrays(GL_LINES, lineIndex_, vertexIndex_ - lineIndex_);
 
@@ -127,7 +128,7 @@ drawGeometry()
   if (endIndex_ > vertexIndex_) {
     glPointSize(8);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    CQGLStateInst->setPolygonMode(GL_POINT);
 
     glDrawArrays(GL_POINTS, vertexIndex_, endIndex_ - vertexIndex_);
 
