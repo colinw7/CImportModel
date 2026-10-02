@@ -1,6 +1,10 @@
 #ifndef CQGLBuffer_H
 #define CQGLBuffer_H
 
+#include <CGLColor.h>
+#include <CGLVector2D.h>
+#include <CGLVector3D.h>
+
 #include <CBBox3D.h>
 #include <CPoint4D.h>
 #include <CRGBA.h>
@@ -42,6 +46,8 @@ class CQGLBuffer {
     }
 
     CPoint3D point() const { return CPoint3D(r, g, b); }
+
+    CRGBA rgba() const { return CRGBA(r, g, b); }
   };
 
   struct TexturePoint {
@@ -96,11 +102,12 @@ class CQGLBuffer {
 
  public:
   enum Parts {
-    POINT   = (1<<0),
-    NORMAL  = (1<<1),
-    COLOR   = (1<<2),
-    TEXTURE = (1<<3),
-    BONE    = (1<<4)
+    IND     = (1<<0),
+    POINT   = (1<<1),
+    NORMAL  = (1<<2),
+    COLOR   = (1<<3),
+    TEXTURE = (1<<4),
+    BONE    = (1<<5)
   };
 
  public:
@@ -137,11 +144,14 @@ class CQGLBuffer {
 
   //---
 
+  bool hasIndPart    () const { return (data_.types & static_cast<unsigned int>(Parts::IND    )); }
   bool hasPointPart  () const { return (data_.types & static_cast<unsigned int>(Parts::POINT  )); }
   bool hasNormalPart () const { return (data_.types & static_cast<unsigned int>(Parts::NORMAL )); }
   bool hasColorPart  () const { return (data_.types & static_cast<unsigned int>(Parts::COLOR  )); }
   bool hasTexturePart() const { return (data_.types & static_cast<unsigned int>(Parts::TEXTURE)); }
   bool hasBonesPart  () const { return (data_.types & static_cast<unsigned int>(Parts::BONE   )); }
+
+  bool hasIndices() const { return data_.indicesSet; }
 
   void disableTexturePart() { data_.types &= ~static_cast<unsigned int>(Parts::TEXTURE); }
 
@@ -191,6 +201,8 @@ class CQGLBuffer {
   //---
 
   void addInd(uint ind) {
+    data_.types |= static_cast<unsigned int>(Parts::IND);
+
     data_.inds.push_back(ind);
   }
 
@@ -209,8 +221,22 @@ class CQGLBuffer {
     return -1;
   }
 
+  //---
+
   void addPoint(float x, float y, float z) {
     addPoint(Point(x, y, z));
+  }
+
+  void addPoint(const CPoint3D &p) {
+    addPoint(Point(p.x, p.y, p.z));
+  }
+
+  void addPoint(const CGLVector3D &p) {
+    addPoint(Point(p.x(), p.y(), p.z()));
+  }
+
+  void addPoint(const CVector3D &p) {
+    addPoint(Point(p.x(), p.y(), p.z()));
   }
 
   void addPoint(const Point &p) {
@@ -223,8 +249,18 @@ class CQGLBuffer {
 
   uint numPoints() const { return data_.points.size(); }
 
+  //---
+
   void addNormal(float x, float y, float z) {
     addNormal(Point(x, y, z));
+  }
+
+  void addNormal(const CVector3D &n) {
+    addNormal(Point(n.x(), n.y(), n.z()));
+  }
+
+  void addNormal(const CGLVector3D &n) {
+    addNormal(Point(n.x(), n.y(), n.z()));
   }
 
   void addNormal(const Point &p) {
@@ -235,12 +271,22 @@ class CQGLBuffer {
     data_.dataValid = false;
   }
 
+  //---
+
   void addColor(const CRGBA &c) {
     addColor(Color(c.getRedF(), c.getGreenF(), c.getBlueF()));
   }
 
   void addColor(const QColor &c) {
     addColor(Color(c.redF(), c.greenF(), c.blueF()));
+  }
+
+  void addColor(const CGLColor &c) {
+    addColor(Color(c.r, c.g, c.b));
+  }
+
+  void addColor(const CGLVector3D &c) {
+    addColor(Color(c.x(), c.y(), c.z()));
   }
 
   void addColor(float r, float g, float b) {
@@ -255,8 +301,22 @@ class CQGLBuffer {
     data_.dataValid = false;
   }
 
+  //---
+
   void addTexturePoint(float x, float y) {
     addTexturePoint(TexturePoint(x, y));
+  }
+
+  void addTexturePoint(const CGLVector2D &v) {
+    addTexturePoint(TexturePoint(v.x(), v.y()));
+  }
+
+  void addTexturePoint(const CVector2D &v) {
+    addTexturePoint(TexturePoint(v.x(), v.y()));
+  }
+
+  void addTexturePoint(const CPoint2D &v) {
+    addTexturePoint(TexturePoint(v.x, v.y));
   }
 
   void addTexturePoint(const TexturePoint &p) {
@@ -266,6 +326,8 @@ class CQGLBuffer {
 
     data_.dataValid = false;
   }
+
+  //---
 
   void addBoneIds(int i1, int i2, int i3, int i4) {
     data_.types |= static_cast<unsigned int>(Parts::BONE);
@@ -283,15 +345,20 @@ class CQGLBuffer {
     data_.dataValid = false;
   }
 
+  //---
+
   void addIndex(int i) {
     data_.indices.push_back(i);
 
     data_.indicesSet = true;
   }
 
+  uint numIndices() const { return data_.indices.size(); }
+
   //---
 
   struct PointData {
+    int                         i { 0 };
     std::optional<uint>         ind;
     std::optional<Point>        point;
     std::optional<Point>        normal;
@@ -302,19 +369,28 @@ class CQGLBuffer {
   };
 
   void getPointData(int i, PointData &data) const {
-    auto np = data_.points.size();
-    assert(i < int(np));
+    auto i1 = i;
 
-    if (numInds() == np) data.ind = data_.inds[i];
+    if (hasIndices()) {
+      assert(i < int(data_.indices.size()));
 
-    if (hasPointPart  ()) data.point        = data_.points[i];
-    if (hasNormalPart ()) data.normal       = data_.normals[i];
-    if (hasColorPart  ()) data.color        = data_.colors[i];
-    if (hasTexturePart()) data.texturePoint = data_.texturePoints[i];
+      i1 = data_.indices[i];
+    }
+    else {
+      assert(i < int(data_.points.size()));
+    }
+
+    data.i = i;
+
+    if (hasIndPart    ()) data.ind          = data_.inds[i1];
+    if (hasPointPart  ()) data.point        = data_.points[i1];
+    if (hasNormalPart ()) data.normal       = data_.normals[i1];
+    if (hasColorPart  ()) data.color        = data_.colors[i1];
+    if (hasTexturePart()) data.texturePoint = data_.texturePoints[i1];
 
     if (hasBonesPart()) {
-      data.boneId     = data_.boneIds[i];
-      data.boneWeight = data_.boneWeights[i];
+      data.boneId     = data_.boneIds[i1];
+      data.boneWeight = data_.boneWeights[i1];
     }
   }
 
@@ -334,7 +410,7 @@ class CQGLBuffer {
     //data_.vertexBuffer->release();
 
     // send indices data to buffer
-    if (data_.indicesSet) {
+    if (hasIndices()) {
       data_.indBuffer->bind();
       data_.indBuffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
       data_.indBuffer->allocate(data_.indData, int(data_.numIndData*sizeof(int)));
@@ -392,7 +468,8 @@ class CQGLBuffer {
     // note that this is allowed, the call to setAttributeBuffer registered VBO as the
     // vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     data_.vertexBuffer->release();
-    if (data_.indicesSet)
+
+    if (hasIndices())
       data_.indBuffer->release();
 
     // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object
@@ -414,12 +491,12 @@ class CQGLBuffer {
     // but we'll do so to keep things a bit more organized
     data_.vObj->bind();
 
-    if (data_.indicesSet)
+    if (hasIndices())
       data_.indBuffer->bind();
   }
 
   void unbind() {
-    if (data_.indicesSet)
+    if (hasIndices())
       data_.indBuffer->release();
 
     data_.vObj->release();
@@ -429,6 +506,26 @@ class CQGLBuffer {
 
   void drawTriangles() {
     glDrawArrays(GL_TRIANGLES, 0, int(numPoints()));
+  }
+
+  void drawTriangleStrip() {
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, int(numPoints()));
+  }
+
+  void drawTriangleFan() {
+    glDrawArrays(GL_TRIANGLE_FAN, 0, int(numPoints()));
+  }
+
+  void drawLines() {
+    glDrawArrays(GL_LINES, 0, int(numPoints()));
+  }
+
+  void drawPoints() {
+    glDrawArrays(GL_POINTS, 0, int(numPoints()));
+  }
+
+  void drawTriangleIndices() {
+    glDrawElements(GL_TRIANGLES, int(numIndices()), GL_UNSIGNED_INT, nullptr);
   }
 
   //---
@@ -441,6 +538,16 @@ class CQGLBuffer {
 
     return bbox;
   }
+
+  //---
+
+  void addChild(CQGLBuffer *buffer) {
+    buffer->parent_ = this;
+
+    children_.push_back(buffer);
+  }
+
+  const std::vector<CQGLBuffer *> &children() const { return children_; }
 
  private:
   void term() {
@@ -482,10 +589,16 @@ class CQGLBuffer {
   }
 
   void initIds() {
-    data_.vObj->create();
+    bool rc;
 
-    data_.vertexBuffer->create();
-    data_.indBuffer   ->create();
+    rc = data_.vObj->create();
+    assert(rc);
+
+    rc = data_.vertexBuffer->create();
+    assert(rc);
+
+    rc = data_.indBuffer->create();
+    assert(rc);
   }
 
   void initData() {
@@ -602,6 +715,9 @@ class CQGLBuffer {
   }
 
  private:
+  CQGLBuffer*               parent_ { nullptr };
+  std::vector<CQGLBuffer *> children_;
+
   struct Data {
     QOpenGLShaderProgram *program { nullptr };
 

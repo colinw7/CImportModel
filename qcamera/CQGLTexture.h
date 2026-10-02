@@ -123,6 +123,8 @@ class CQGLTexture {
 
   void getRange(MinMax &minMax) const;
 
+  void printBufferStatus();
+
  private:
   CQGLTexture(const CQGLTexture &);
 

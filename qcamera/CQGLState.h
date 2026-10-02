@@ -26,6 +26,8 @@ class CQGLState {
       return old;
     }
 
+    void clear() { state_.clear(); }
+
    private:
     std::map<int, bool> state_;
   };
@@ -44,10 +46,31 @@ class CQGLState {
 
   //---
 
+  void reset() {
+    setDepthTest        (false  , /*force*/true);
+    setCullFace         (false  , /*force*/true);
+    setBlend            (false  , /*force*/true);
+    setPolygonOffsetLine(false  , /*force*/true);
+    setMultiSample      (false  , /*force*/true);
+    setStencilTest      (false  , /*force*/true);
+    setFrontFace        (GL_CCW , /*force*/true);
+    setDepthMask        (true   , /*force*/true);
+    setEnableTexture    (false  , /*force*/true);
+    setEnableCubeMap    (false  , /*force*/true);
+    setEnableLighting   (false  , /*force*/true);
+    setSmoothShade      (true   , /*force*/true);
+    setPolygonMode      (GL_FILL, /*force*/true);
+
+    textureNum_.clear();
+    clip_      .clear();
+  };
+
+  //---
+
   bool isDepthMask() const { return stenclTest_; }
 
-  bool setDepthMask(bool b) {
-    if (b != depthMask_) {
+  bool setDepthMask(bool b, bool force=false) {
+    if (force || b != depthMask_) {
       std::swap(depthMask_, b);
 
       if (depthMask_)
@@ -63,8 +86,8 @@ class CQGLState {
 
   bool isDepthTest() const { return depthTest_; }
 
-  bool setDepthTest(bool b) {
-    if (b != depthTest_) {
+  bool setDepthTest(bool b, bool force=false) {
+    if (force || b != depthTest_) {
       std::swap(depthTest_, b);
 
       if (depthTest_)
@@ -80,8 +103,8 @@ class CQGLState {
 
   bool isCullFace() const { return cullFace_; }
 
-  bool setCullFace(bool b) {
-    if (b != cullFace_) {
+  bool setCullFace(bool b, bool force=false) {
+    if (force || b != cullFace_) {
       std::swap(cullFace_, b);
 
       if (cullFace_)
@@ -97,8 +120,8 @@ class CQGLState {
 
   bool isEnableLighting() const { return lighting_; }
 
-  bool setEnableLighting(bool b) {
-    if (b != lighting_) {
+  bool setEnableLighting(bool b, bool force=false) {
+    if (force || b != lighting_) {
       std::swap(lighting_, b);
 
       if (lighting_)
@@ -114,10 +137,10 @@ class CQGLState {
 
   int getFrontFace() const { return frontFace_; }
 
-  int setFrontFace(int frontFace) {
+  int setFrontFace(int frontFace, bool force=false) {
     assert(frontFace == GL_CW || frontFace == GL_CCW);
 
-    if (frontFace != frontFace_) {
+    if (force || frontFace != frontFace_) {
       std::swap(frontFace_, frontFace);
 
       glFrontFace(frontFace_);
@@ -126,8 +149,8 @@ class CQGLState {
     return frontFace;
   }
 
-  bool setFrontFaceFlag(bool b) {
-    auto oldFrontFace = setFrontFace(b ? GL_CCW : GL_CW);
+  bool setFrontFaceFlag(bool b, bool force=false) {
+    auto oldFrontFace = setFrontFace(b ? GL_CCW : GL_CW, force);
     return (oldFrontFace == GL_CCW);
   }
 
@@ -135,8 +158,8 @@ class CQGLState {
 
   bool isSmoothShade() const { return smooth_; }
 
-  bool setSmoothShade(bool b) {
-    if (b != smooth_) {
+  bool setSmoothShade(bool b, bool force=false) {
+    if (force || b != smooth_) {
       std::swap(smooth_, b);
 
       if (smooth_)
@@ -152,8 +175,8 @@ class CQGLState {
 
   int getPolygonMode() const { return polygonMode_; }
 
-  int setPolygonMode(int mode) {
-    if (mode != polygonMode_) {
+  int setPolygonMode(int mode, bool force=false) {
+    if (force || mode != polygonMode_) {
       glPolygonMode(GL_FRONT_AND_BACK, mode);
 
       std::swap(polygonMode_, mode);
@@ -166,8 +189,8 @@ class CQGLState {
 
   bool isBlend() const { return blend_; }
 
-  bool setBlend(bool b) {
-    if (b != blend_) {
+  bool setBlend(bool b, bool force=false) {
+    if (force || b != blend_) {
       std::swap(blend_, b);
 
       if (blend_)
@@ -183,8 +206,8 @@ class CQGLState {
 
   bool isPolygonOffsetLine() const { return polygonOffsetLine_; }
 
-  bool setPolygonOffsetLine(bool b) {
-    if (b != polygonOffsetLine_) {
+  bool setPolygonOffsetLine(bool b, bool force=false) {
+    if (force || b != polygonOffsetLine_) {
       std::swap(polygonOffsetLine_, b);
 
       if (polygonOffsetLine_)
@@ -200,8 +223,8 @@ class CQGLState {
 
   bool isMultiSample() const { return multiSample_; }
 
-  bool setMultiSample(bool b) {
-    if (b != multiSample_) {
+  bool setMultiSample(bool b, bool force=false) {
+    if (force || b != multiSample_) {
       std::swap(multiSample_, b);
 
       if (multiSample_)
@@ -217,8 +240,8 @@ class CQGLState {
 
   bool isStencilTest() const { return stenclTest_; }
 
-  bool setStencilTest(bool b) {
-    if (b != stenclTest_) {
+  bool setStencilTest(bool b, bool force=false) {
+    if (force || b != stenclTest_) {
       std::swap(stenclTest_, b);
 
       if (stenclTest_)
@@ -234,8 +257,8 @@ class CQGLState {
 
   bool isEnableTexture() const { return texture_; }
 
-  bool setEnableTexture(bool b) {
-    if (b != texture_) {
+  bool setEnableTexture(bool b, bool force=false) {
+    if (force || b != texture_) {
       std::swap(texture_, b);
 
       if (texture_)
@@ -268,8 +291,8 @@ class CQGLState {
 
   bool isEnableCubeMap() const { return cubeMap_; }
 
-  bool setEnableCubeMap(bool b) {
-    if (b != cubeMap_) {
+  bool setEnableCubeMap(bool b, bool force=false) {
+    if (force || b != cubeMap_) {
       std::swap(cubeMap_, b);
 
       if (cubeMap_) {
@@ -326,7 +349,7 @@ class CQGLState {
   bool    multiSample_       { false };
   bool    stenclTest_        { false };
   int     frontFace_         { GL_CCW };
-  bool    depthMask_         { true };   // default true (GL_CCW)
+  bool    depthMask_         { true };   // default true
   bool    texture_           { false };
   bool    cubeMap_           { false };
   bool    lighting_          { false };

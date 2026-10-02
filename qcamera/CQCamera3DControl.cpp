@@ -301,14 +301,39 @@ CQCamera3DControl(CQCamera3DApp *app) :
   generalData_.showTexturedCheck  = ui.addCheck("Textured");
   generalData_.showPointsCheck    = ui.addCheck("Points");
   generalData_.showOutlineCheck   = ui.addCheck("Outline");
-  generalData_.showShadowCheck    = ui.addCheck("Shadow");
-  generalData_.textureBufferCheck = ui.addCheck("Buffer");
 
   ui.addStretch();
 
   ui.endFrame();
 
   generalData_.wireframeColorEdit = ui.addLabelEdit("Wireframe Color", new CQColorEdit);
+
+  ui.endGroup();
+
+  ui.startGroup("Texture Buffer");
+
+  ui.startFrame(/*horizontal*/true);
+
+  generalData_.textureBufferCheck = ui.addCheck("Enabled");
+  generalData_.textureLightCheck  = ui.addCheck("From Light");
+
+  ui.addStretch();
+
+  ui.endFrame();
+
+  ui.endGroup();
+
+  ui.startGroup("Shadow");
+
+  ui.startFrame(/*horizontal*/true);
+
+  generalData_.showShadowCheck  = ui.addCheck("Enabled");
+  generalData_.lightBufferCheck = ui.addCheck("From Light");
+  generalData_.shadowDebugCheck = ui.addCheck("Debug");
+
+  ui.addStretch();
+
+  ui.endFrame();
 
   ui.endGroup();
 
@@ -1140,8 +1165,13 @@ updateWidgets()
   generalData_.showTexturedCheck ->setChecked(canvas->isTextured());
   generalData_.showPointsCheck   ->setChecked(canvas->isPoints());
   generalData_.showOutlineCheck  ->setChecked(canvas->isOutlineObjects());
-  generalData_.showShadowCheck   ->setChecked(canvas->isShadowed());
+
   generalData_.textureBufferCheck->setChecked(canvas->isTextureBuffer());
+  generalData_.textureLightCheck ->setChecked(canvas->isLightTextureBuffer());
+
+  generalData_.showShadowCheck ->setChecked(canvas->isShadowed());
+  generalData_.lightBufferCheck->setChecked(canvas->isShadowLightBuffer());
+  generalData_.shadowDebugCheck->setChecked(canvas->isShadowDebug());
 
   generalData_.wireframeColorEdit->setColor(RGBAToQColor(canvas->wireframeColor()));
 
@@ -1789,8 +1819,13 @@ connectSlots(bool b)
   connectCheckBox(generalData_.showTexturedCheck , SLOT(showTexturedSlot(int)));
   connectCheckBox(generalData_.showPointsCheck   , SLOT(showPointsSlot(int)));
   connectCheckBox(generalData_.showOutlineCheck  , SLOT(showOutlineSlot(int)));
-  connectCheckBox(generalData_.showShadowCheck   , SLOT(showShadowSlot(int)));
+
   connectCheckBox(generalData_.textureBufferCheck, SLOT(textureBufferSlot(int)));
+  connectCheckBox(generalData_.textureLightCheck , SLOT(textureLightSlot(int)));
+
+  connectCheckBox(generalData_.showShadowCheck , SLOT(showShadowSlot(int)));
+  connectCheckBox(generalData_.lightBufferCheck, SLOT(lightBufferSlot(int)));
+  connectCheckBox(generalData_.shadowDebugCheck, SLOT(shadowDebugSlot(int)));
 
   connectColorEdit(generalData_.wireframeColorEdit, SLOT(wireframeColorSlot(const QColor &)));
 
@@ -2107,11 +2142,11 @@ showOutlineSlot(int i)
 
 void
 CQCamera3DControl::
-showShadowSlot(int i)
+textureLightSlot(int i)
 {
   auto *canvas = app_->canvas();
 
-  canvas->setShadowed(i);
+  canvas->setLightTextureBuffer(i);
 
   canvas->update();
 }
@@ -2123,6 +2158,39 @@ textureBufferSlot(int i)
   auto *canvas = app_->canvas();
 
   canvas->setTextureBuffer(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+showShadowSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setShadowed(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+lightBufferSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setShadowLightBuffer(i);
+
+  canvas->update();
+}
+
+void
+CQCamera3DControl::
+shadowDebugSlot(int i)
+{
+  auto *canvas = app_->canvas();
+
+  canvas->setShadowDebug(i);
 
   canvas->update();
 }

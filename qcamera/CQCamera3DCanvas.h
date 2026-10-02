@@ -294,20 +294,27 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   bool isAddNormalShader() const { return addNormalShader_; }
   void setAddNormalShader(bool b) { addNormalShader_ = b; }
 
-  bool isShadowed() const { return shadowed_; }
-  void setShadowed(bool b) { shadowed_ = b; }
+  //---
 
-  bool isTextureBuffer() const { return isTextureBuffer_; }
-  void setTextureBuffer(bool b) { isTextureBuffer_ = b; }
+  bool isTextureBuffer() const { return textureBufferData_.enabled; }
+  void setTextureBuffer(bool b) { textureBufferData_.enabled = b; }
 
-  int isLightBuffer() const { return lightBuffer_; }
-  void setLightBuffer(int i) { lightBuffer_ = i; }
+  bool isLightTextureBuffer() const { return textureBufferData_.isLight; }
+  void setLightTextureBuffer(bool b) { textureBufferData_.isLight = b; }
 
-  double shadowBias() const { return shadowBias_; }
-  void setShadowBias(double r) { shadowBias_ = r; }
+  //---
 
-  bool isShadowDebug() const { return shadowDebug_.getValue(); }
-  void setShadowDebug(bool b) { shadowDebug_.setValue(b); }
+  bool isShadowed() const { return shadowData_.enabled; }
+  void setShadowed(bool b) { shadowData_.enabled = b; }
+
+  int isShadowLightBuffer() const { return shadowData_.lightBuffer; }
+  void setShadowLightBuffer(int i) { shadowData_.lightBuffer = i; }
+
+  double shadowBias() const { return shadowData_.bias; }
+  void setShadowBias(double r) { shadowData_.bias = r; }
+
+  bool isShadowDebug() const { return shadowData_.debug.getValue(); }
+  void setShadowDebug(bool b) { shadowData_.debug.setValue(b); }
 
   //---
 
@@ -484,7 +491,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
   //---
 
   const ShaderType &shaderType() const { return shaderType_; }
-  void setShaderType(const ShaderType &t) { shaderType_ = t; }
+  ShaderType setShaderType(ShaderType t) { std::swap(shaderType_, t); return t; }
 
   //---
 
@@ -674,6 +681,16 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   //---
 
+  struct TextureBuffer {
+    CGLCameraIFace* camera        { nullptr };
+    CQGLTexture*    texture       { nullptr };
+    ShaderProgram*  shaderProgram { nullptr };
+    CQGLBuffer*     buffer        { nullptr };
+    FaceDataList    faceDataList;
+  };
+
+  //---
+
   // fonts
   CQCamera3DFont *font_ { nullptr };
 
@@ -849,15 +866,35 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   bool addNormalShader_ { false };
 
-  bool buffered_ { false };
-
-  bool shadowed_        { false };
+  bool buffered_        { false };
   bool isTextureBuffer_ { false };
-  bool lightBuffer_     { true };
 
-  double shadowBias_ { 0.01 };
+  uint textureAreaSize_ { 256 };
 
-  CEnvVar<bool> shadowDebug_ { "CQCAMERA_SHADOW_DEBUG" };
+  //---
+
+  struct TextureBufferData {
+    bool enabled { false };
+    bool isLight { false };
+
+    TextureBuffer textureBuffer;
+  };
+
+  TextureBufferData textureBufferData_;
+
+  //---
+
+  struct ShadowData {
+    bool          enabled     { false };
+    bool          lightBuffer { true };
+    double        bias        { 0.01 };
+    CEnvVar<bool> debug       { "CQCAMERA_SHADOW_DEBUG" };
+    int           size        { 1024 };
+
+    TextureBuffer textureBuffer;
+  };
+
+  ShadowData shadowData_;
 
   //---
 
@@ -896,19 +933,6 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   CQCamera3DCanvasMouseModeIFace* mouseModeIFace_ { nullptr };
   CQCamera3DMouseModeMgr*         mouseModeMgr_   { nullptr };
-
-  //---
-
-  struct TextureBuffer {
-    CGLCameraIFace* camera        { nullptr };
-    CQGLTexture*    texture       { nullptr };
-    ShaderProgram*  shaderProgram { nullptr };
-    CQGLBuffer*     buffer        { nullptr };
-    FaceDataList    faceDataList;
-  };
-
-  TextureBuffer textureBuffer_;
-  TextureBuffer shadowTextureBuffer_;
 };
 
 #endif

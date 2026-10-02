@@ -63,8 +63,13 @@ class CQCamera3DControl : public QFrame {
   void showTexturedSlot(int);
   void showPointsSlot(int i);
   void showOutlineSlot(int i);
-  void showShadowSlot(int i);
+
   void textureBufferSlot(int i);
+  void textureLightSlot(int i);
+
+  void showShadowSlot(int i);
+  void lightBufferSlot(int i);
+  void shadowDebugSlot(int i);
 
   void wireframeColorSlot(const QColor &c);
 
@@ -335,8 +340,13 @@ class CQCamera3DControl : public QFrame {
     QCheckBox* showTexturedCheck  { nullptr };
     QCheckBox* showPointsCheck    { nullptr };
     QCheckBox* showOutlineCheck   { nullptr };
-    QCheckBox* showShadowCheck    { nullptr };
+
     QCheckBox* textureBufferCheck { nullptr };
+    QCheckBox* textureLightCheck  { nullptr };
+
+    QCheckBox* showShadowCheck  { nullptr };
+    QCheckBox* lightBufferCheck { nullptr };
+    QCheckBox* shadowDebugCheck { nullptr };
 
     CQColorEdit* wireframeColorEdit { nullptr };
 

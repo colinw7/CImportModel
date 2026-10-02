@@ -91,6 +91,9 @@ void
 CQCamera3DSelection::
 drawGeometry()
 {
+  if (lineIndex_ == 0 && vertexIndex_ == 0)
+    return;
+
   auto *program = shaderProgram();
 
   buffer_->bind();

@@ -105,9 +105,12 @@ setTarget(int w, int h)
     targetHeight_ = h;
 
     // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-    if (frameBufferId_ == 0)
+    if (frameBufferId_ == 0) {
       functions_->glGenFramebuffers(1, &frameBufferId_);
+      if (! CQGLStateInst->checkError("glGenFramebuffers")) return false;
+    }
 
+    // bind framebuffer
     functions_->glBindFramebuffer(GL_FRAMEBUFFER, frameBufferId_);
     if (! CQGLStateInst->checkError("glBindFramebuffer")) return false;
 
@@ -117,7 +120,7 @@ setTarget(int w, int h)
       if (! CQGLStateInst->checkError("glGenTextures")) return false;
     }
 
-    // generate texture
+    // bind texture
     glBindTexture(GL_TEXTURE_2D, id_);
     if (! CQGLStateInst->checkError("glBindTexture")) return false;
 
@@ -187,8 +190,10 @@ setShadow(int w, int h)
     targetHeight_ = h;
 
     // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-    if (frameBufferId_ == 0)
+    if (frameBufferId_ == 0) {
       functions_->glGenFramebuffers(1, &frameBufferId_);
+      if (! CQGLStateInst->checkError("glGenFramebuffers")) return false;
+    }
 
     // The texture we're going to render to
     if (id_ == 0) {
@@ -752,4 +757,17 @@ getRange(MinMax &minMax) const
   }
 
   glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void
+CQGLTexture::
+printBufferStatus()
+{
+  // default is GL_BACK 0x0405 (1029)
+  GLint i;
+  glGetIntegerv(GL_READ_BUFFER, &i);
+  std::cerr << "Read Buffer: " << i << "\n";
+
+  glGetIntegerv(GL_DRAW_BUFFER, &i);
+  std::cerr << "Draw Buffer: " << i << "\n";
 }

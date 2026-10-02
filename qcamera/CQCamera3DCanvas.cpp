@@ -306,6 +306,20 @@ initializeGL()
 
   //---
 
+#if 0
+  textureBufferData_.textureBuffer.texture = new CQGLTexture;
+
+  textureBufferData_.textureBuffer.texture->setFunctions(this);
+#endif
+
+#if 0
+  shadowData_.textureBuffer.texture = new CQGLTexture;
+
+  shadowData_.textureBuffer.texture->setFunctions(this);
+#endif
+
+  //---
+
   addScene();
 
   //---
@@ -332,16 +346,6 @@ initializeGL()
 
   for (auto *light : lights_)
     resetLight(light);
-
-  //---
-
-  textureBuffer_.texture = new CQGLTexture;
-
-  textureBuffer_.texture->setFunctions(this);
-
-  shadowTextureBuffer_.texture = new CQGLTexture;
-
-  shadowTextureBuffer_.texture->setFunctions(this);
 
   //---
 
@@ -656,6 +660,8 @@ paintGL()
   //---
 
   // set GL state
+  CQGLStateInst->reset();
+
   enableDepthTest  ();
   enableCullFace   ();
   enableFrontFace  ();
@@ -668,35 +674,46 @@ paintGL()
 
   if (! isQuadView()) {
     if (isShadowed()) {
-      if (! shadowTextureBuffer_.texture->setShadow(1024, 1024))
+      if (! shadowData_.textureBuffer.texture) {
+        shadowData_.textureBuffer.texture = new CQGLTexture;
+
+        shadowData_.textureBuffer.texture->setFunctions(this);
+      }
+
+      if (! shadowData_.textureBuffer.texture->setShadow(shadowData_.size, shadowData_.size))
         std::cerr << "Set shadow texture failed\n";
 
-      auto shaderType = ShaderType::SHADOW;
-      std::swap(shaderType_, shaderType);
+      auto oldShaderType = setShaderType(ShaderType::SHADOW);
 
-      shadowTextureBuffer_.texture->bind();
+      shadowData_.textureBuffer.texture->bind();
 
-      if (isLightBuffer())
-        shadowTextureBuffer_.camera = currentLight();
+      if (isShadowLightBuffer())
+        shadowData_.textureBuffer.camera = currentLight();
       else
-        shadowTextureBuffer_.camera = getCurrentCamera();
+        shadowData_.textureBuffer.camera = getCurrentCamera();
 
-      initCameraData(shadowTextureBuffer_.camera);
+      initCameraData(shadowData_.textureBuffer.camera);
 
       drawScene();
 
-      std::swap(shaderType_, shaderType);
+      setShaderType(oldShaderType);
 
-      shadowTextureBuffer_.texture->unbind();
+      shadowData_.textureBuffer.texture->unbind();
     }
 
     //---
 
     if (isTextureBuffer()) {
-      if (! textureBuffer_.texture->setTarget(pixelWidth(), pixelHeight()))
+      if (! textureBufferData_.textureBuffer.texture) {
+        textureBufferData_.textureBuffer.texture = new CQGLTexture;
+
+        textureBufferData_.textureBuffer.texture->setFunctions(this);
+      }
+
+      if (! textureBufferData_.textureBuffer.texture->setTarget(pixelWidth(), pixelHeight()))
         std::cerr << "Set texture shader target failed\n";
 
-      textureBuffer_.texture->bind();
+      textureBufferData_.textureBuffer.texture->bind();
 
       auto oldMultiSample = CQGLStateInst->setMultiSample(true);
 
@@ -707,18 +724,14 @@ paintGL()
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      if (isShadowed()) {
-        if (isLightBuffer())
-          textureBuffer_.camera = currentLight();
-        else
-          textureBuffer_.camera = getCurrentCamera();
-      }
+      if (isLightTextureBuffer())
+        textureBufferData_.textureBuffer.camera = currentLight();
       else
-        textureBuffer_.camera = getCurrentCamera();
+        textureBufferData_.textureBuffer.camera = getCurrentCamera();
 
-      drawContents(textureBuffer_.camera);
+      drawContents(textureBufferData_.textureBuffer.camera);
 
-      textureBuffer_.texture->unbind();
+      textureBufferData_.textureBuffer.texture->unbind();
 
       CQGLStateInst->setMultiSample(oldMultiSample);
     }
@@ -738,26 +751,26 @@ paintGL()
 
     drawContents(camera);
 
-    //---
-
-    const int textureAreaSize = 256;
-
-    if (isShadowed() && isShadowDebug()) {
-      glViewport(0, 0, textureAreaSize, textureAreaSize);
-
-      drawTexture(shadowTextureBuffer_, /*isDepth*/true);
-    }
-
-    //---
-
-    if (isTextureBuffer()) {
-      glViewport(pixelWidth() - textureAreaSize, pixelHeight() - textureAreaSize,
-                 textureAreaSize, textureAreaSize);
-
-      drawTexture(textureBuffer_, /*isDepth*/false);
-    }
-
     CQGLStateInst->setMultiSample(oldMultiSample);
+
+    //---
+
+    // draw shadow texture (if debug)
+    if (isShadowed() && isShadowDebug()) {
+      glViewport(0, 0, textureAreaSize_, textureAreaSize_);
+
+      drawTexture(shadowData_.textureBuffer, /*isDepth*/true);
+    }
+
+    //---
+
+    // draw buffer texture
+    if (isTextureBuffer()) {
+      glViewport(pixelWidth() - textureAreaSize_, pixelHeight() - textureAreaSize_,
+                 textureAreaSize_, textureAreaSize_);
+
+      drawTexture(textureBufferData_.textureBuffer, /*isDepth*/false);
+    }
   }
   else {
     auto oldMultiSample = CQGLStateInst->setMultiSample(true);
@@ -787,6 +800,8 @@ paintGL()
     // right
     glViewport(xm, ym, w - xm, h - ym);
     drawContents(rightCamera_);
+
+    //---
 
     CQGLStateInst->setMultiSample(oldMultiSample);
   }
@@ -842,12 +857,11 @@ drawContents(CGLCameraIFace *camera)
 
     CQGLStateInst->setDepthTest(false);
 
-    auto shaderType = ShaderType::SINGLE_COLOR;
-    std::swap(shaderType_, shaderType);
+    auto oldShaderType = setShaderType(ShaderType::SINGLE_COLOR);
 
     drawScene();
 
-    std::swap(shaderType_, shaderType);
+    setShaderType(oldShaderType);
 
     glStencilMask(0xFF);
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -861,12 +875,11 @@ drawContents(CGLCameraIFace *camera)
   else if (isAddNormalShader()) {
     drawScene();
 
-    auto shaderType = ShaderType::NORMAL;
-    std::swap(shaderType_, shaderType);
+    auto oldShaderType = setShaderType(ShaderType::NORMAL);
 
     drawScene();
 
-    std::swap(shaderType_, shaderType);
+    setShaderType(oldShaderType);
   }
   else {
     drawScene();
@@ -1594,16 +1607,16 @@ drawScene()
   //---
 
 #if 0
-  if (shaderType_ == ShaderType::SHADOW)
+  if (shaderType() == ShaderType::SHADOW)
     program->setUniformValue("shadowScale", float(shadowScale()));
   else
     program->setUniformValue("shadowBias", float(shadowBias()));
 #endif
 
 #if 1
-  if (shaderType_ == ShaderType::MODEL && isShadowed()) {
+  if (shaderType() == ShaderType::MODEL && isShadowed()) {
     CQGLStateInst->setActiveTextureNum(4, true);
-    shadowTextureBuffer_.texture->bindBuffer();
+    shadowData_.textureBuffer.texture->bindBuffer();
 
     program->setUniformValue("shadowMap", 4);
     program->setUniformValue("useShadowMap", true);
@@ -2022,10 +2035,28 @@ void
 CQCamera3DCanvas::
 drawTexture(TextureBuffer &textureBuffer, bool isDepth)
 {
-  textureBuffer.shaderProgram = textureShaderProgram();
+  CQGLTexture::MinMax minMax;
+
+#if 0
+  textureBuffer.texture->getRange(minMax);
+  minMax.print("Texture Min Max");
+#endif
+
+  //---
+
+  if (! textureBuffer.shaderProgram) {
+    textureBuffer.shaderProgram = new CQCamera3DShaderProgram(app_);
+
+    textureBuffer.shaderProgram->addShaders("texture.vs", "texture.fs");
+  }
+
+  textureBuffer.shaderProgram->bind();
 
   textureBuffer.shaderProgram->setUniformValue("near_plane", float(textureBuffer.camera->near()));
-  textureBuffer.shaderProgram->setUniformValue("far_plane", float(textureBuffer.camera->far()));
+  textureBuffer.shaderProgram->setUniformValue("far_plane" , float(textureBuffer.camera->far ()));
+
+  textureBuffer.shaderProgram->setUniformValue("min_value", float(minMax.min.value_or(0.0)));
+  textureBuffer.shaderProgram->setUniformValue("max_value", float(minMax.max.value_or(1.0)));
 
   if (! textureBuffer.buffer) {
     textureBuffer.buffer = textureBuffer.shaderProgram->createBuffer();
@@ -2085,9 +2116,7 @@ drawTexture(TextureBuffer &textureBuffer, bool isDepth)
 
   //---
 
-  CQGLStateInst->setDepthTest(false);
-
-  textureBuffer.shaderProgram->bind();
+  auto oldDepthTest = CQGLStateInst->setDepthTest(false);
 
   //---
 
@@ -2119,7 +2148,7 @@ drawTexture(TextureBuffer &textureBuffer, bool isDepth)
 
   textureBuffer.shaderProgram->release();
 
-  CQGLStateInst->setDepthTest(true);
+  CQGLStateInst->setDepthTest(oldDepthTest);
 }
 
 void

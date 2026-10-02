@@ -161,18 +161,18 @@ vec3 calcDirectionalLight(int i, vec3 norm, vec3 diffuseColor, vec3 specColor, v
     shadow = shadowCalculation(FragPosLightSpace);
   }
 
-  float diffFactor = 1.0;
-
   vec3 lightDir = normalize(-lights[i].direction);
 
   // diffuse light color
+  float diffFactor = 1.0;
+
   if (! fixedDiffuse)
     diffFactor = calcDiffuseFactor(lightDir, norm);
 
-  vec3 result = (1 - shadow)*diffFactor*lights[i].color*diffuseColor;
-
   // specular light color
   float specFactor = calcSpecularFactor(lightDir, viewDir, norm, shininess);
+
+  vec3 result = (1 - shadow)*diffFactor*lights[i].color*diffuseColor;
 
   result += (1 - shadow)*specFactor*lights[i].color*specColor;
 
