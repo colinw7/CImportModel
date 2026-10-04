@@ -3,7 +3,7 @@
 in vec3 FragPos;
 in vec3 Normal;
 in vec3 Color;
-in vec2 TexCoords;
+in vec2 TexCoord;
 in vec4 FragPosLightSpace;
 
 out vec4 FragColor;
@@ -77,7 +77,7 @@ uniform float wireframeTransparency;
 
 vec3 calcNormal() {
   if (normalTexture.enabled) {
-    vec3 norm = texture(normalTexture.texture, TexCoords).rgb;
+    vec3 norm = texture(normalTexture.texture, TexCoord).rgb;
     norm = normalize(norm*2.0 - 1.0); // this normal is in tangent space
     return norm;
   }
@@ -92,7 +92,7 @@ float calcDiffuseFactor(vec3 lightDir, vec3 nrm) {
 
 vec3 calcDiffuseColor() {
   if (diffuseTexture.enabled) {
-    vec4 textureColor = texture(diffuseTexture.texture, TexCoords);
+    vec4 textureColor = texture(diffuseTexture.texture, TexCoord);
 
     if (textureColor.a < 0.1)
       discard;
@@ -117,14 +117,14 @@ float calcBlinnSpecularFactor(vec3 lightDir, vec3 viewDir, vec3 normal, float sh
 
 vec3 calcSpecularColor() {
   if (specularTexture.enabled)
-    return texture(specularTexture.texture, TexCoords).rgb;
+    return texture(specularTexture.texture, TexCoord).rgb;
   else
     return specularColor*specularStrength;
 }
 
 vec3 calcEmissionColor() {
   if (emissiveTexture.enabled)
-    return texture(emissiveTexture.texture, TexCoords).rgb;
+    return texture(emissiveTexture.texture, TexCoord).rgb;
   else
     return emissiveStrength*emissionColor;
 }
@@ -133,16 +133,16 @@ vec3 calcEmissionColor() {
 
 float shadowCalculation(vec4 fragPosLightSpace) {
   // perform perspective divide
-  vec3 projCoords = fragPosLightSpace.xyz/fragPosLightSpace.w;
+  vec3 projCoord = fragPosLightSpace.xyz/fragPosLightSpace.w;
 
   // transform to [0,1] range
-  projCoords = projCoords*0.5 + 0.5;
+  projCoord = projCoord*0.5 + 0.5;
 
   // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-  float closestDepth = texture(shadowMap, projCoords.xy).r; 
+  float closestDepth = texture(shadowMap, projCoord.xy).r; 
 
   // get depth of current fragment from light's perspective
-  float currentDepth = projCoords.z;
+  float currentDepth = projCoord.z;
 
   float bias = 0.00001;
 

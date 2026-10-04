@@ -866,8 +866,7 @@ class CQCamera3DCanvas : public CQCamera3DWidget {
 
   bool addNormalShader_ { false };
 
-  bool buffered_        { false };
-  bool isTextureBuffer_ { false };
+  //---
 
   uint textureAreaSize_ { 256 };
 

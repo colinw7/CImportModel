@@ -95,7 +95,7 @@ class CQGLTexture {
 
   //---
 
-  void enable(bool b);
+  void enable(bool b) const;
 
   //---
 

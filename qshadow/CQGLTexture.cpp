@@ -102,7 +102,7 @@ setImage(const CImagePtr &image)
 
   type_ = Type::IMAGE;
 
-  QImage &qimage = dynamic_cast<CQImage *>(image.get())->getQImage();
+  auto &qimage = dynamic_cast<CQImage *>(image.get())->getQImage();
 
   initImage(qimage, /*flip*/false);
 }
@@ -133,7 +133,7 @@ setTarget(int w, int h)
       if (! checkError("glGenTextures")) return false;
     }
 
-    // generate texture
+    // bind texture
     glBindTexture2D(textureId_);
 
     // Give an empty image to OpenGL ( the last "0" )
@@ -693,7 +693,7 @@ void
 CQGLTexture::
 bind() const
 {
-  glEnable(GL_TEXTURE_2D);
+  enable(true);
 
   // bind image texture
   if      (type_ == Type::IMAGE) {
@@ -776,7 +776,7 @@ bindBuffer() const
 
   assert(frameBufferId_);
 
-  glEnable(GL_TEXTURE_2D);
+  enable(true);
 
   if      (type_ == Type::TARGET) {
     glBindTexture2D(textureId_);
@@ -819,7 +819,7 @@ unbindBuffer() const
 
 void
 CQGLTexture::
-enable(bool b)
+enable(bool b) const
 {
   if (b)
     glEnable(GL_TEXTURE_2D);

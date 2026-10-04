@@ -2037,10 +2037,10 @@ drawTexture(TextureBuffer &textureBuffer, bool isDepth)
 {
   CQGLTexture::MinMax minMax;
 
-#if 0
-  textureBuffer.texture->getRange(minMax);
-  minMax.print("Texture Min Max");
-#endif
+  if (isDepth) {
+    textureBuffer.texture->getRange(minMax);
+    minMax.print("Texture Min Max");
+  }
 
   //---
 

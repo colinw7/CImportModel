@@ -1163,7 +1163,7 @@ drawScene(CGLCameraIFace *camera)
 
   // for shadow perspective adjust
   program->setUniformValue("near_plane", float(camera->near()));
-  program->setUniformValue("far_plane", float(camera->far()));
+  program->setUniformValue("far_plane" , float(camera->far ()));
 
 #if 1
   if      (shaderType_ == ShaderType::SCENE && isShadowed()) {

@@ -53,6 +53,9 @@ class CQGLTexture {
   const std::string &getName() const { return name_; }
   void setName(const std::string &s) { name_ = s; }
 
+  const QString &fileName() const { return fileName_; }
+  void setFileName(const QString &s) { fileName_ = s; }
+
   //---
 
   int getTargetWidth () const { return targetWidth_; }
@@ -143,6 +146,7 @@ class CQGLTexture {
 
   uint        id_       { 0 };
   std::string name_;
+  QString     fileName_;
   bool        valid_    { false };
   WrapType    wrapType_ { WrapType::REPEAT };
   bool        useAlpha_ { true };
