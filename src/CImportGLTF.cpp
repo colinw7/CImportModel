@@ -1989,7 +1989,7 @@ processMesh(Node *node, const Mesh &mesh)
         if (! getTexture(textureName, texture))
           return errorMsg("Invalid base color texture");
 
-        resolveTexture(textureName, texture);
+        resolveTexture(textureName, texture, CGeomTexture::Type::DIFFUSE);
 
         object->setDiffuseTexture(texture->texture);
 
@@ -2008,7 +2008,7 @@ processMesh(Node *node, const Mesh &mesh)
         if (! getTexture(IndName(material->normalTexture.index), texture))
           return errorMsg("Invalid normal texture");
 
-        resolveTexture(textureName, texture);
+        resolveTexture(textureName, texture, CGeomTexture::Type::NORMAL);
 
         object->setNormalTexture(texture->texture);
 
@@ -2042,7 +2042,7 @@ processMesh(Node *node, const Mesh &mesh)
         if (! getTexture(IndName(material->specularTexture.index), texture))
           return errorMsg("Invalid specular texture");
 
-        resolveTexture(textureName, texture);
+        resolveTexture(textureName, texture, CGeomTexture::Type::SPECULAR);
 
         object->setSpecularTexture(texture->texture);
 
@@ -2059,10 +2059,10 @@ processMesh(Node *node, const Mesh &mesh)
         emissionColor = vectorRGBA(material->emissiveFactor.value());
 
       if (emissionColor) {
-        object->setFaceEmission(*emissionColor);
-
         if (updateMaterial)
           material->materialP->setEmission(*emissionColor);
+        else
+          object->setFaceEmission(*emissionColor);
       }
 
       //---
@@ -2076,7 +2076,7 @@ processMesh(Node *node, const Mesh &mesh)
         if (! getTexture(IndName(material->emissiveTexture.index), texture))
           return errorMsg("Invalid emissive texture");
 
-        resolveTexture(textureName, texture);
+        resolveTexture(textureName, texture, CGeomTexture::Type::EMISSIVE);
 
         object->setEmissiveTexture(texture->texture);
 
@@ -2304,7 +2304,7 @@ getTexture(const IndName &indName, Texture* &texture) const
 
 bool
 CImportGLTF::
-resolveTexture(const IndName &textureName, Texture *texture)
+resolveTexture(const IndName &textureName, Texture *texture, const CGeomTexture::Type &type)
 {
   if (texture->texture)
     return true;
@@ -2322,6 +2322,7 @@ resolveTexture(const IndName &textureName, Texture *texture)
 
     texture->texture = CGeometry3DInst->createTexture(image.image);
 
+    texture->texture->setType(type);
     texture->texture->setName(textureName.to_string());
 
     scene_->addTexture(texture->texture);

@@ -5282,6 +5282,20 @@ loadTexture(TextureData *textureData, std::string &fileName)
     }
   }
 
+  if (fileName == "" && textureData->media != "") {
+    fileNames.clear();
+
+    for (const auto &dir : modelDirs_)
+      addFileName(dir + "/" + textureData->media);
+
+    for (const auto &fileName1 : fileNames) {
+      if (CFile::exists(fileName1)) {
+        fileName = fileName1;
+        break;
+      }
+    }
+  }
+
   if (fileName == "") {
     fileName = *fileNames.begin();
     return false;

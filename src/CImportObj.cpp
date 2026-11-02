@@ -57,6 +57,8 @@ read(CFile &file)
   vnum_  = 0;
   vnnum_ = 0;
 
+  material_ = nullptr;
+
   while (file_->readLine(s_line)) {
     ++s_line_num;
 
@@ -1005,7 +1007,7 @@ getMaterial(const std::string &name) const
 
   auto pm1 = baseMaterials_.find(name);
 
-  if (pm1 == baseMaterials_.end())
+  if (pm1 != baseMaterials_.end())
     return (*pm1).second;
 
   return nullptr;

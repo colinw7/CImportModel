@@ -2,8 +2,11 @@
 #define CImportGLTF_H
 
 #include <CImportBase.h>
+
 #include <CGeomObject3D.h>
 #include <CGeomAnimationData.h>
+#include <CGeomTexture.h>
+
 #include <CGLMatrix3D.h>
 #include <CFile.h>
 #include <CTranslate3D.h>
@@ -650,7 +653,8 @@ class CImportGLTF : public CImportBase {
   bool getAccessor  (const IndName &indName, Accessor &accessor) const;
   bool getMesh      (const IndName &indName, Mesh &mesh) const;
 
-  bool resolveTexture(const IndName &textureName, Texture *texture);
+  bool resolveTexture(const IndName &textureName, Texture *texture,
+                      const CGeomTexture::Type &type);
 
   bool getOrderedNode(int order, Node* &node) const;
 
