@@ -532,28 +532,28 @@ readFace(const std::string &line)
       auto *texture = getTexture(material_->diffuseMap.name, material_->diffuseMap.image);
 
       material->setDiffuseTexture(texture);
-      face    ->setDiffuseTexture(texture);
+//    face    ->setDiffuseTexture(texture);
     }
 
     if (! material_->bumpMap.name.empty()) {
       auto *texture = getTexture(material_->bumpMap.name, material_->bumpMap.image);
 
       material->setNormalTexture(texture);
-      face    ->setNormalTexture(texture);
+//    face    ->setNormalTexture(texture);
     }
 
     if (! material_->specularMap.name.empty()) {
       auto *texture = getTexture(material_->specularMap.name, material_->specularMap.image);
 
       material->setSpecularTexture(texture);
-      face    ->setSpecularTexture(texture);
+//    face    ->setSpecularTexture(texture);
     }
 
     if (! material_->emissiveMap.name.empty()) {
       auto *texture = getTexture(material_->emissiveMap.name, material_->emissiveMap.image);
 
       material->setEmissiveTexture(texture);
-      face    ->setEmissiveTexture(texture);
+//    face    ->setEmissiveTexture(texture);
     }
 
     if (material_->transparency)
