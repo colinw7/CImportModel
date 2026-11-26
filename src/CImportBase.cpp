@@ -6,6 +6,7 @@
 
 #include <CImport3DRW.h>
 #include <CImport3DS.h>
+#include <CImport3MF.h>
 #include <CImportBlend.h>
 #include <CImportDAE.h>
 #include <CImportDXF.h>
@@ -31,6 +32,7 @@ createModel(CGeom3DType type, const std::string &name)
   switch (type) {
     case CGEOM_3D_TYPE_3DRW:  base = new CImport3DRW     (nullptr, name); break;
     case CGEOM_3D_TYPE_3DS:   base = new CImport3DS      (nullptr, name); break;
+    case CGEOM_3D_TYPE_3MF:   base = new CImport3MF      (nullptr, name); break;
     case CGEOM_3D_TYPE_ASC:   base = new CGeomImportASC  (nullptr, name); break;
     case CGEOM_3D_TYPE_BLEND: base = new CImportBlend    (nullptr, name); break;
     case CGEOM_3D_TYPE_COB:   base = new CGeomImportCOB  (nullptr, name); break;

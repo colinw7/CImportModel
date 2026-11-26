@@ -22,7 +22,7 @@ CImportDAE(CGeomScene3D *scene, const std::string &name) :
   if (name1 == "")
     name1 = "dae";
 
-  object_  = CGeometry3DInst->createObject3D(scene_, name);
+  object_  = CGeometry3DInst->createObject3D(scene_, name1);
   pobject_ = ObjectP(object_);
 
   scene_->addObject(object_);

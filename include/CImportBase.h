@@ -31,6 +31,7 @@ class CImportBase {
   static CGeom3DType suffixToType(const std::string &suffix) {
     if      (suffix == "3ds"  ) return CGEOM_3D_TYPE_3DS;
     else if (suffix == "3drw" ) return CGEOM_3D_TYPE_3DRW;
+    else if (suffix == "3mf"  ) return CGEOM_3D_TYPE_3MF;
     else if (suffix == "asc"  ) return CGEOM_3D_TYPE_ASC;
     else if (suffix == "blend") return CGEOM_3D_TYPE_BLEND;
     else if (suffix == "cob"  ) return CGEOM_3D_TYPE_COB;

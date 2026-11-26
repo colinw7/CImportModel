@@ -19,6 +19,7 @@ CGeomImportCOB.cpp \
 CGeomImportPLG.cpp \
 CImport3DRW.cpp \
 CImport3DS.cpp \
+CImport3MF.cpp \
 CImportASC.cpp \
 CImportBlend.cpp \
 CImportCOB.cpp \
@@ -38,7 +39,15 @@ CImportBase.cpp \
 CDeflate.cpp \
 CSG.cpp \
 
+C_SRC = \
+miniz.c \
+miniz_tdef.c \
+miniz_tinfl.c \
+miniz_zip.c \
+
 CPP_OBJS = $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(CPP_SRC))
+
+C_OBJS = $(patsubst %.c,$(OBJ_DIR)/%.o,$(C_SRC))
 
 CPPFLAGS = \
 -std=c++17 \
@@ -60,6 +69,8 @@ $(CDEBUG) \
 -I../../CUtil/include \
 -I. \
 
+CFLAGS = \
+
 clean:
 	$(RM) -f $(OBJ_DIR)/*.o
 	$(RM) -f $(LIB_DIR)/libCImportModel.a
@@ -68,6 +79,9 @@ clean:
 
 $(CPP_OBJS): $(OBJ_DIR)/%.o: %.cpp
 	$(CPP_CC) -c $< -o $(OBJ_DIR)/$*.o $(CPPFLAGS)
+
+$(C_OBJS): $(OBJ_DIR)/%.o: %.c
+	$(C_CC) -c $< -o $(OBJ_DIR)/$*.o $(CFLAGS)
 
 $(LIB_DIR)/libCImportModel.a: $(CPP_OBJS) $(C_OBJS)
 	$(AR) crv $(LIB_DIR)/libCImportModel.a $(CPP_OBJS) $(C_OBJS)

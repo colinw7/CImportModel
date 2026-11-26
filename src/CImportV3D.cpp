@@ -46,7 +46,7 @@ read(CFile &file)
   for (int i = 0; i < num_vertices; i++) {
     file.readLine(line);
 
-    CStrWords words = CStrUtil::toWords(line, nullptr);
+    auto words = CStrUtil::toWords(line, nullptr);
 
     if (words.size() != 3)
       throw "Invalid Point";
@@ -64,7 +64,7 @@ read(CFile &file)
   int face_num = -1;
 
   while (file.readLine(line)) {
-    CStrWords words = CStrUtil::toWords(line, nullptr);
+    auto words = CStrUtil::toWords(line, nullptr);
 
     if (words.size() == 0)
       continue;
@@ -79,7 +79,7 @@ read(CFile &file)
       for (int i = 0; i < num_faces; i++) {
         file.readLine(line);
 
-        CStrWords words1 = CStrUtil::toWords(line, nullptr);
+        auto words1 = CStrUtil::toWords(line, nullptr);
 
         long num_vertices_1 = CStrUtil::toInteger(words1[0].getWord());
 
